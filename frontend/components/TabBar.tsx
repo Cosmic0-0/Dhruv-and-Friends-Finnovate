@@ -18,7 +18,8 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-card-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      // Fully opaque: a translucent bar let scrolled content read through it.
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-card-border bg-card pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="mx-auto flex max-w-app items-stretch justify-around px-4">
         {TABS.map(({ href, key, Icon, match }) => {
