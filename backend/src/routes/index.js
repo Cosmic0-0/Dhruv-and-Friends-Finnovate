@@ -1,7 +1,8 @@
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { analyzeMessage } from "../services/analysis/index.js";
-import { checkUrls } from "../services/domain-matching/index.js";
+import { checkUrls, extractLookalikeHosts } from "../services/domain-matching/index.js";
+import { attachDomainAges } from "../services/domain-age/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { reportSender, saveBatchHistory, getReportCount } from "../db/index.js";
@@ -88,8 +89,12 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
     return res.status(400).json({ error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
   try {
+    const urlSignals = checkUrls(message);
+    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(message));
+
     const result = await analyzeMessage(message, language);
-    result.signals.push(...checkUrls(message));
+    attachAges();
+    result.signals.push(...urlSignals);
     res.json(withSenderReports(result));
   } catch (err) {
     console.error(err);

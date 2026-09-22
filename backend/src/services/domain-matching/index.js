@@ -27,9 +27,12 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
-export function checkUrls(message) {
+// Shared by checkUrls() and extractLookalikeHosts() so the host used for the
+// (optional, separately-enriched) domainAgeDays lookup can never drift out
+// of sync with which URLs actually got flagged.
+function findLookalikes(message) {
   const urls = message.match(URL_PATTERN) || [];
-  const signals = [];
+  const found = [];
   for (const url of urls) {
     const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
     let host;
@@ -45,18 +48,31 @@ export function checkUrls(message) {
 
     // Either check firing should produce exactly one signal per URL.
     if (closest) {
-      signals.push({
+      found.push({
+        host,
         type: "lookalike_url",
         description: `${host} closely resembles legitimate domain ${closest}`,
         severity: "high",
       });
     } else if (brandToken) {
-      signals.push({
+      found.push({
+        host,
         type: "lookalike_url",
         description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
         severity: "high",
       });
     }
   }
-  return signals;
+  return found;
+}
+
+export function checkUrls(message) {
+  return findLookalikes(message).map(({ host, ...signal }) => signal);
+}
+
+// Same hosts, same order, as the signals checkUrls() returns for this
+// message - used to zip a best-effort domainAgeDays onto each signal
+// without checkUrls() itself gaining an LLM-adjacent async dependency.
+export function extractLookalikeHosts(message) {
+  return findLookalikes(message).map((f) => f.host);
 }
