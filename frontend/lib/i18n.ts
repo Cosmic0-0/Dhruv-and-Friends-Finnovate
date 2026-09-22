@@ -11,6 +11,7 @@
  */
 
 import type { ValidationReason } from "./api";
+import type { TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity } from "./types";
 
@@ -114,7 +115,84 @@ export interface Copy {
     missingTitle: string;
     missingBody: string;
   };
+  learn: {
+    headline: string;
+    streak: (days: number) => string;
+    quizLabel: string;
+    scam: string;
+    genuine: string;
+    progress: (n: number, total: number, right: number) => string;
+    correct: string;
+    incorrect: string;
+    isScam: string;
+    isGenuine: string;
+    whyLabel: string;
+    inEnglish: string;
+    next: string;
+    seeScore: string;
+    scoreLabel: string;
+    scoreLine: (right: number, total: number) => string;
+    scoreComment: (right: number, total: number) => string;
+    best: (best: number, total: number) => string;
+    playAgain: string;
+    /** Required by data/kreol-dataset/CLAUDE.md: synthetic examples must be identified as synthetic. */
+    syntheticNote: string;
+    trendsTitle: string;
+    trends: Record<TrendCategory, { tag: string; body: string }>;
+  };
 }
+
+/**
+ * A Kreol string not written yet because we weren't confident in it. It
+ * shows the English so the screen stays readable, and marks the spot for
+ * the Kreol reviewer: grep TODO_KREOL.
+ */
+const TODO_KREOL = <T,>(english: T): T => english;
+
+const LEARN_EN: Copy["learn"] = {
+  headline: "Learn to spot them",
+  streak: (d) => `${d}-day streak`,
+  quizLabel: "Scam or genuine?",
+  scam: "Scam",
+  genuine: "Genuine",
+  progress: (n, t, k) => `Question ${n} of ${t} · you got ${k} right so far`,
+  correct: "Right.",
+  incorrect: "Not quite.",
+  isScam: "This one is a scam.",
+  isGenuine: "This one is genuine.",
+  whyLabel: "Why",
+  inEnglish: "In English",
+  next: "Next",
+  seeScore: "See your score",
+  scoreLabel: "Your score",
+  scoreLine: (k, t) => `You spotted ${k} of ${t} correctly.`,
+  scoreComment: (k, t) =>
+    k === t
+      ? "Perfect. You'd spot these in real life too."
+      : k / t >= 0.75
+        ? "Sharp eyes. Play again to see a different mix."
+        : "These are tricky on purpose. Play again and watch for the warning signs.",
+  best: (b, t) => `Your best: ${b} / ${t}`,
+  playAgain: "Play again",
+  syntheticNote:
+    "The practice messages and examples on this page are made up, from our Kreol dataset. Names like OceanBank are fictional.",
+  // Not "this week": we have no data to evidence a time-based claim.
+  trendsTitle: "Common scam patterns",
+  trends: {
+    parcel_fee: {
+      tag: "Parcel fee",
+      body: "A text says your parcel is stuck at customs and asks for a small fee through a link. Real couriers don't collect fees by SMS link, so check on the courier's own website instead.",
+    },
+    fake_relative: {
+      tag: "Fake relative",
+      body: "Someone says they're your child or a relative on a new number, needs money urgently, and asks you not to tell anyone. Call them on the number you already have before you send anything.",
+    },
+    investment: {
+      tag: "Investment",
+      body: "A stranger promises to double or triple your money in days, with no risk. Guaranteed returns don't exist: the deposit is the scam.",
+    },
+  },
+};
 
 function relative(ms: number, words: { now: string; min: string; hour: string; day: string; ago: (s: string) => string }) {
   const minutes = Math.floor(ms / 60_000);
@@ -126,6 +204,77 @@ function relative(ms: number, words: { now: string; min: string; hour: string; d
 }
 
 const fmt = (n: number, locale: string) => n.toLocaleString(locale);
+
+const RESULT_EN: Copy["result"] = {
+  title: "Result",
+  fromSender: (s) => `SMS from ${s}`,
+  back: "Back",
+  warningSigns: (n) => (n === 0 ? "No warning signs" : n === 1 ? "1 warning sign" : `${n} warning signs`),
+  risk: (s) => `Risk ${s} / 100`,
+  scamAdvice: "Do not pay, do not open the link, and never share a code sent to your phone.",
+  messageYouSent: "The message you sent",
+  whyTitle: "Why this looks wrong",
+  signalTitles: {
+    sender_mismatch: "The sender is not who it claims",
+    lookalike_url: "The link is not the bank",
+    urgency_language: "It rushes you",
+    spoofed_identity: "It pretends to be someone you trust",
+    credential_request: "It asks for a code or personal details",
+    payment_request: "It asks you to pay or send money",
+    prize_offer: "It promises something too good to be true",
+    secrecy: "It asks you to keep it secret",
+  },
+  genericSignal: "Something doesn't look right",
+  severity: { low: "Low", medium: "Medium", high: "High" },
+  lookalikeDomain: (h, d) => `${h} looks like ${d}, but it isn't.`,
+  lookalikeBrand: (h, b) => `${h} uses the ${b} name, but it isn't a real ${b} website.`,
+  linkCheck: {
+    title: "Link check",
+    linkInMessage: "Link in the message",
+    imitates: "Imitates",
+    domainAge: "Domain age",
+    domainAgeValue: (d) => (d < 1 ? "Registered today" : d === 1 ? "1 day old" : `${d} days old`),
+    reportedByOthers: "Reported by others",
+    reportedValue: (n) => (n === 1 ? "1 time" : `${n} times`),
+  },
+  whatToDoTitle: "What to do now",
+  steps: {
+    dont_open_or_reply: "Don't open the link and don't reply.",
+    block_sender: "Block the sender so they can't contact you again.",
+    report_to_bank: "Tell your bank's fraud team, using the number printed on your card.",
+    verify_official:
+      "Check with the company directly, through its official app or website. Don't use the contact details in the message.",
+    dont_share_code: "Never share a code sent to your phone, whoever asks for it.",
+    call_bank_card: "If you're worried, call your bank on the number printed on your card.",
+    delete_and_report: "Delete the message and report it.",
+  },
+  whatWeCheckedTitle: "What we checked",
+  checks: {
+    no_link: "No link and nothing to click",
+    no_lookalike: "No link imitating a bank or telecom",
+    informs_not_asks: "It tells you something rather than asking you to act",
+    last_four_only: "Shows only the last 4 digits, as a real bank does",
+    no_pressure: "No urgency, no code requested, no secrecy",
+  },
+  safeCaveat:
+    "We cannot promise a message is real. If money is involved and you have any doubt, call your bank on the number on your card.",
+  report: {
+    reportSender: "Report this sender",
+    reportMessage: "Report this message",
+    senderLabel: "Who sent it?",
+    senderPlaceholder: "Phone number or name",
+    submit: "Send report",
+    sending: "Sending…",
+    done: (n) => (n > 1 ? `Reported. ${n} reports for this sender so far.` : "Reported. Thank you for warning others."),
+    failed: "We couldn't send the report. Please try again.",
+    note: "Reporting shares the sender's number with FraudLens so others can be warned.",
+  },
+  sentTitle: "What was sent for analysis",
+  sentBody: "Only this version left your phone. Phone numbers, emails and account numbers were replaced first.",
+  checkAnother: "Check another message",
+  missingTitle: "No check to show",
+  missingBody: "Paste a message on the Check screen to see a result here.",
+};
 
 export const COPY: Record<UiLanguage, Copy> = {
   en: {
@@ -214,76 +363,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       footerNote:
         'The closest thing to real trend data today: when you check a message, the result screen shows "reported by others" if that sender has been flagged before.',
     },
-    result: {
-      title: "Result",
-      fromSender: (s) => `SMS from ${s}`,
-      back: "Back",
-      warningSigns: (n) => (n === 0 ? "No warning signs" : n === 1 ? "1 warning sign" : `${n} warning signs`),
-      risk: (s) => `Risk ${s} / 100`,
-      scamAdvice: "Do not pay, do not open the link, and never share a code sent to your phone.",
-      messageYouSent: "The message you sent",
-      whyTitle: "Why this looks wrong",
-      signalTitles: {
-        sender_mismatch: "The sender is not who it claims",
-        lookalike_url: "The link is not the bank",
-        urgency_language: "It rushes you",
-        spoofed_identity: "It pretends to be someone you trust",
-        credential_request: "It asks for a code or personal details",
-        payment_request: "It asks you to pay or send money",
-        prize_offer: "It offers a prize that's too good to be true",
-        secrecy: "It asks you to keep it secret",
-      },
-      genericSignal: "Something doesn't look right",
-      severity: { low: "Low", medium: "Medium", high: "High" },
-      lookalikeDomain: (h, d) => `${h} looks like ${d}, but it isn't.`,
-      lookalikeBrand: (h, b) => `${h} uses the ${b} name, but it isn't a real ${b} website.`,
-      linkCheck: {
-        title: "Link check",
-        linkInMessage: "Link in the message",
-        imitates: "Imitates",
-        domainAge: "Domain age",
-        domainAgeValue: (d) => (d < 1 ? "Registered today" : d === 1 ? "1 day old" : `${d} days old`),
-        reportedByOthers: "Reported by others",
-        reportedValue: (n) => (n === 1 ? "1 time" : `${n} times`),
-      },
-      whatToDoTitle: "What to do now",
-      steps: {
-        dont_open_or_reply: "Don't open the link and don't reply.",
-        block_sender: "Block the sender so they can't contact you again.",
-        report_to_bank: "Tell your bank's fraud team, using the number printed on your card.",
-        verify_official:
-          "Check with the company directly, through its official app or website. Don't use the contact details in the message.",
-        dont_share_code: "Never share a code sent to your phone, whoever asks for it.",
-        call_bank_card: "If you're worried, call your bank on the number printed on your card.",
-        delete_and_report: "Delete the message and report it.",
-      },
-      whatWeCheckedTitle: "What we checked",
-      checks: {
-        no_link: "No link and nothing to click",
-        no_lookalike: "No link imitating a bank or telecom",
-        informs_not_asks: "It tells you something rather than asking you to act",
-        last_four_only: "Shows only the last 4 digits, as a real bank does",
-        no_pressure: "No urgency, no code requested, no secrecy",
-      },
-      safeCaveat:
-        "We cannot promise a message is real. If money is involved and you have any doubt, call your bank on the number on your card.",
-      report: {
-        reportSender: "Report this sender",
-        reportMessage: "Report this message",
-        senderLabel: "Who sent it?",
-        senderPlaceholder: "Phone number or name",
-        submit: "Send report",
-        sending: "Sending…",
-        done: (n) => (n > 1 ? `Reported. ${n} reports for this sender so far.` : "Reported. Thank you for warning others."),
-        failed: "We couldn't send the report. Please try again.",
-        note: "Reporting shares the sender's number with FraudLens so others can be warned.",
-      },
-      sentTitle: "What was sent for analysis",
-      sentBody: "Only this version left your phone. Phone numbers, emails and account numbers were replaced first.",
-      checkAnother: "Check another message",
-      missingTitle: "No check to show",
-      missingBody: "Paste a message on the Check screen to see a result here.",
-    },
+    result: RESULT_EN,
+    learn: LEARN_EN,
   },
 
   fr: {
@@ -390,7 +471,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         spoofed_identity: "Il se fait passer pour quelqu'un de confiance",
         credential_request: "Il demande un code ou des informations personnelles",
         payment_request: "Il vous demande de payer ou d'envoyer de l'argent",
-        prize_offer: "Il promet un gain trop beau pour être vrai",
+        prize_offer: "Il promet quelque chose de trop beau pour être vrai",
         secrecy: "Il vous demande de garder le secret",
       },
       genericSignal: "Quelque chose cloche",
@@ -444,6 +525,49 @@ export const COPY: Record<UiLanguage, Copy> = {
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
       missingBody: "Collez un message dans l'onglet Vérifier pour voir un résultat ici.",
+    },
+    learn: {
+      headline: "Apprenez à les repérer",
+      streak: (d) => `${d} jours d'affilée`,
+      quizLabel: "Arnaque ou authentique ?",
+      scam: "Arnaque",
+      genuine: "Authentique",
+      progress: (n, t, k) => `Question ${n} sur ${t} · ${k} bonne${k > 1 ? "s" : ""} réponse${k > 1 ? "s" : ""} jusqu'ici`,
+      correct: "Exact.",
+      incorrect: "Pas tout à fait.",
+      isScam: "C'est une arnaque.",
+      isGenuine: "Ce message est authentique.",
+      whyLabel: "Pourquoi",
+      inEnglish: "En anglais",
+      next: "Suivant",
+      seeScore: "Voir mon score",
+      scoreLabel: "Votre score",
+      scoreLine: (k, t) => `Vous en avez repéré ${k} sur ${t}.`,
+      scoreComment: (k, t) =>
+        k === t
+          ? "Parfait. Vous les repéreriez aussi dans la vraie vie."
+          : k / t >= 0.75
+            ? "Bon œil. Rejouez pour voir d'autres messages."
+            : "Ils sont piégeux exprès. Rejouez en guettant les signaux d'alerte.",
+      best: (b, t) => `Votre record : ${b} / ${t}`,
+      playAgain: "Rejouer",
+      syntheticNote:
+        "Les messages d'entraînement et les exemples de cette page sont fictifs, tirés de notre jeu de données en kreol. Les noms comme OceanBank sont inventés.",
+      trendsTitle: "Arnaques courantes",
+      trends: {
+        parcel_fee: {
+          tag: "Frais de colis",
+          body: "Un SMS dit que votre colis est bloqué en douane et demande de petits frais via un lien. Les vrais transporteurs ne font pas payer par lien SMS : vérifiez sur leur propre site.",
+        },
+        fake_relative: {
+          tag: "Faux proche",
+          body: "Quelqu'un se présente comme votre enfant ou un proche avec un nouveau numéro, a besoin d'argent en urgence et vous demande de n'en parler à personne. Appelez-le sur le numéro que vous connaissez avant d'envoyer quoi que ce soit.",
+        },
+        investment: {
+          tag: "Investissement",
+          body: "Un inconnu promet de doubler ou tripler votre argent en quelques jours, sans risque. Les rendements garantis n'existent pas : le dépôt, c'est l'arnaque.",
+        },
+      },
     },
   },
 
@@ -534,6 +658,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       footerNote:
         "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
     },
+    // Result screen: every string here is unreviewed. TODO_KREOL marks the
+    // ones we weren't confident enough to write (they show English for now).
     result: {
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
@@ -544,49 +670,48 @@ export const COPY: Record<UiLanguage, Copy> = {
       messageYouSent: "Mesaz ki ou finn avoye",
       whyTitle: "Kifer sa paret pa bon",
       signalTitles: {
-        sender_mismatch: "Sa kinn avoy li pa seki li dir li ete",
+        sender_mismatch: TODO_KREOL(RESULT_EN.signalTitles.sender_mismatch),
         lookalike_url: "Lien la pa pou labank",
-        urgency_language: "Li pe fors ou pou depese",
-        spoofed_identity: "Li pe fer krwar li enn dimoun ou fer konfians",
+        urgency_language: TODO_KREOL(RESULT_EN.signalTitles.urgency_language),
+        spoofed_identity: TODO_KREOL(RESULT_EN.signalTitles.spoofed_identity),
         credential_request: "Li pe dimann enn kod ouswa ou detay personel",
         payment_request: "Li pe dimann ou pey ouswa avoy larzan",
-        prize_offer: "Li pe promet enn pri ki tro bon pou vre",
+        prize_offer: "Li pe promet enn zafer ki tro bon pou vre",
         secrecy: "Li pe dir ou gard sa sekre",
       },
       genericSignal: "Ena kiksoz ki pa bon",
-      severity: { low: "Ba", medium: "Mwayen", high: "O" },
-      lookalikeDomain: (h, d) => `${h} resanble ${d}, me se pa vre sit la.`,
-      lookalikeBrand: (h, b) => `${h} servi nom ${b}, me se pa enn vre sit ${b}.`,
+      severity: TODO_KREOL(RESULT_EN.severity),
+      lookalikeDomain: TODO_KREOL(RESULT_EN.lookalikeDomain),
+      lookalikeBrand: TODO_KREOL(RESULT_EN.lookalikeBrand),
       linkCheck: {
         title: "Verifikasion lien",
         linkInMessage: "Lien dan mesaz la",
-        imitates: "Pe imit",
-        domainAge: "Laz domenn",
-        domainAgeValue: (d) => (d < 1 ? "Kree zordi" : `${d} zour`),
-        reportedByOthers: "Lezot inn rapor li",
-        reportedValue: (n) => `${n} fwa`,
+        imitates: TODO_KREOL(RESULT_EN.linkCheck.imitates),
+        domainAge: TODO_KREOL(RESULT_EN.linkCheck.domainAge),
+        domainAgeValue: TODO_KREOL(RESULT_EN.linkCheck.domainAgeValue),
+        reportedByOthers: TODO_KREOL(RESULT_EN.linkCheck.reportedByOthers),
+        // Kept with its label so the row isn't half English, half Kreol.
+        reportedValue: TODO_KREOL(RESULT_EN.linkCheck.reportedValue),
       },
       whatToDoTitle: "Ki pou fer aster",
       steps: {
         dont_open_or_reply: "Pa ouver lien la ek pa reponn.",
-        block_sender: "Blok sa kinn avoy li, pou li pa kapav kontak ou ankor.",
-        report_to_bank: "Averti servis fraud ou labank, lor nimero ki enprime lor ou kart.",
-        verify_official:
-          "Verifie direk ar lakonpani, par so app ouswa so sit ofisiel. Pa servi kontak ki dan mesaz la.",
-        dont_share_code: "Zame partaz enn kod ki ou gagn lor ou telefonn, ninport kisannla ki dimande.",
-        call_bank_card: "Si ou pe trakase, apel ou labank lor nimero ki enprime lor ou kart.",
+        block_sender: TODO_KREOL(RESULT_EN.steps.block_sender),
+        report_to_bank: TODO_KREOL(RESULT_EN.steps.report_to_bank),
+        verify_official: TODO_KREOL(RESULT_EN.steps.verify_official),
+        dont_share_code: TODO_KREOL(RESULT_EN.steps.dont_share_code),
+        call_bank_card: TODO_KREOL(RESULT_EN.steps.call_bank_card),
         delete_and_report: "Efas mesaz la ek rapor li.",
       },
       whatWeCheckedTitle: "Seki nou finn verifie",
       checks: {
         no_link: "Pena lien, nanye pou klike",
-        no_lookalike: "Okenn lien pa pe imit enn labank ouswa telekom",
-        informs_not_asks: "Li pe dir ou kiksoz, li pa pe dimann ou fer kiksoz",
-        last_four_only: "Li montre zis 4 dernie sif, parey kouma enn vre labank",
-        no_pressure: "Pa presse, pa dimann kod, pa sekre",
+        no_lookalike: TODO_KREOL(RESULT_EN.checks.no_lookalike),
+        informs_not_asks: TODO_KREOL(RESULT_EN.checks.informs_not_asks),
+        last_four_only: TODO_KREOL(RESULT_EN.checks.last_four_only),
+        no_pressure: TODO_KREOL(RESULT_EN.checks.no_pressure),
       },
-      safeCaveat:
-        "Nou pa kapav garanti ki enn mesaz vre. Si ena larzan ladan ek ou ena enn dout, apel ou labank lor nimero ki lor ou kart.",
+      safeCaveat: TODO_KREOL(RESULT_EN.safeCaveat),
       report: {
         reportSender: "Rapor sa kinn avoy li",
         reportMessage: "Rapor sa mesaz la",
@@ -594,15 +719,41 @@ export const COPY: Record<UiLanguage, Copy> = {
         senderPlaceholder: "Nimero ouswa nom",
         submit: "Avoy rapor la",
         sending: "Pe avoye…",
-        done: (n) => (n > 1 ? `Rapor finn fer. ${n} rapor pou sa nimero la ziska aster.` : "Rapor finn fer. Mersi pou averti lezot."),
-        failed: "Nou pa finn kapav avoy rapor la. Esey ankor.",
-        note: "Kan ou rapor, nimero sa kinn avoy li partaze ar FraudLens pou averti lezot.",
+        done: TODO_KREOL(RESULT_EN.report.done),
+        failed: TODO_KREOL(RESULT_EN.report.failed),
+        note: TODO_KREOL(RESULT_EN.report.note),
       },
       sentTitle: "Seki finn avoye pou analiz",
-      sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
+      sentBody: TODO_KREOL(RESULT_EN.sentBody),
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
+    },
+    // Learn tab: every string here is unreviewed. TODO_KREOL marks the ones we
+    // weren't confident enough to write at all (they show English for now).
+    learn: {
+      headline: "Aprann rekonet zot",
+      streak: TODO_KREOL(LEARN_EN.streak),
+      quizLabel: "Eskrokri ouswa vre?",
+      scam: "Eskrokri",
+      genuine: "Vre",
+      progress: (n, t, k) => `Kestion ${n} lor ${t} · ou finn gagn ${k} bon ziska aster`,
+      correct: "Bon repons.",
+      incorrect: "Pa bon.",
+      isScam: "Sa enn eskrokri.",
+      isGenuine: "Sa enn vre mesaz.",
+      whyLabel: "Kifer",
+      inEnglish: "An angle",
+      next: "Swivan",
+      seeScore: "Get ou skor",
+      scoreLabel: "Ou skor",
+      scoreLine: (k, t) => `Ou finn rekonet ${k} lor ${t}.`,
+      scoreComment: TODO_KREOL(LEARN_EN.scoreComment),
+      best: (b, t) => `Ou pli bon skor: ${b} / ${t}`,
+      playAgain: "Zwe ankor",
+      syntheticNote: TODO_KREOL(LEARN_EN.syntheticNote),
+      trendsTitle: TODO_KREOL(LEARN_EN.trendsTitle),
+      trends: TODO_KREOL(LEARN_EN.trends),
     },
   },
 };
