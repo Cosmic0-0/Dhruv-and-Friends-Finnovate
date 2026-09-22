@@ -57,6 +57,8 @@ export interface BatchScanRequest {
 export interface BatchScanResult extends AnalyzeResponse {
   /** Echoed back from the request. */
   message: string;
+  /** True when analysis failed and the result was synthesized (contract on main; optional until merged). */
+  analysisFailed?: boolean;
 }
 
 export interface BatchScanSummary {
@@ -64,6 +66,8 @@ export interface BatchScanSummary {
   scamCount: number;
   suspiciousCount: number;
   safeCount: number;
+  /** Count of results with analysisFailed (contract on main; optional until merged). */
+  unanalyzedCount?: number;
 }
 
 export interface BatchScanResponse {

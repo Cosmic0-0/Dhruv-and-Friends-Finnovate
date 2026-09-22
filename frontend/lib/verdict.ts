@@ -23,7 +23,7 @@ export interface VerdictDisplay {
   /** Tailwind classes for the same tokens, for className use. */
   classes: { text: string; bg: string; softBg: string; border: string };
   /** Icon name plus inline SVG path data (24x24 viewBox, stroke-based), so there's no icon-library dependency. */
-  icon: { name: "alert-octagon" | "alert-triangle" | "shield-check"; paths: readonly string[] };
+  icon: { name: "alert-triangle" | "alert-circle" | "check-circle"; paths: readonly string[] };
 }
 
 export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
@@ -36,11 +36,11 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     softColor: "var(--color-danger-soft)",
     classes: { text: "text-danger", bg: "bg-danger", softBg: "bg-danger-soft", border: "border-danger" },
     icon: {
-      name: "alert-octagon",
+      name: "alert-triangle",
       paths: [
-        "M7.86 2h8.28L22 7.86v8.28L16.14 22H7.86L2 16.14V7.86L7.86 2z",
-        "M12 8v4",
-        "M12 16h.01",
+        "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z",
+        "M12 9v4",
+        "M12 17h.01",
       ],
     },
   },
@@ -53,12 +53,8 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     softColor: "var(--color-caution-soft)",
     classes: { text: "text-caution", bg: "bg-caution", softBg: "bg-caution-soft", border: "border-caution" },
     icon: {
-      name: "alert-triangle",
-      paths: [
-        "M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z",
-        "M12 9v4",
-        "M12 17h.01",
-      ],
+      name: "alert-circle",
+      paths: ["M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z", "M12 8v4.5", "M12 16h.01"],
     },
   },
   safe: {
@@ -70,8 +66,8 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     softColor: "var(--color-safe-soft)",
     classes: { text: "text-safe", bg: "bg-safe", softBg: "bg-safe-soft", border: "border-safe" },
     icon: {
-      name: "shield-check",
-      paths: ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z", "m9 12 2 2 4-4"],
+      name: "check-circle",
+      paths: ["M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z", "m8.5 12.5 2.5 2.5 4.5-5"],
     },
   },
 };

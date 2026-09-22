@@ -95,6 +95,40 @@ export function RetryIcon(p: IconProps) {
   );
 }
 
+export function ChevronLeftIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="m15 18-6-6 6-6" />
+    </Svg>
+  );
+}
+
+export function CheckIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M20 6 9 17l-5-5" />
+    </Svg>
+  );
+}
+
+export function FlagIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 22V4" />
+      <path d="M4 4h12l-2 4 2 4H4" />
+    </Svg>
+  );
+}
+
+export function LinkIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" />
+      <path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" />
+    </Svg>
+  );
+}
+
 export function Spinner({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={`animate-spin ${className ?? ""}`}>

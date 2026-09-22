@@ -298,7 +298,12 @@ const BATCH_FAILURE_PREFIX = "Analysis failed:";
 function normaliseBatch(data: BatchScanResponse): ClientBatchScanResponse {
   let failedCount = 0;
   const results = data.results.map((r): ClientBatchResult => {
-    const failed = r.explanation.startsWith(BATCH_FAILURE_PREFIX) && r.signals.length === 0;
+    // Prefer the backend's explicit flag (newer contract). Older backends only
+    // signal failure through the explanation prefix with no signals.
+    const failed =
+      typeof r.analysisFailed === "boolean"
+        ? r.analysisFailed
+        : r.explanation.startsWith(BATCH_FAILURE_PREFIX) && r.signals.length === 0;
     if (!failed) return { ...r, analysisFailed: false };
     failedCount++;
     console.warn("[api] /api/batch-scan item failed:", r.explanation);
