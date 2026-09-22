@@ -28,10 +28,10 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex items-start justify-between gap-4 pt-2">
+      <header className="flex items-start justify-between gap-4">
         <h1>{copy.learn.headline}</h1>
         {stats && stats.streak >= STREAK_PILL_MIN && (
-          <span className="mt-2 shrink-0 rounded-pill bg-caution-soft px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-caution">
+          <span className="micro mt-2 shrink-0 bg-caution-soft px-2.5 py-1 whitespace-nowrap text-caution-ink">
             {copy.learn.streak(stats.streak)}
           </span>
         )}
@@ -109,9 +109,9 @@ function Quiz({
 
   if (finished) {
     return (
-      <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-4 rounded-card bg-ink p-6 text-on-ink" aria-live="polite">
-        <p className="text-[0.6875rem] font-semibold tracking-[0.14em] text-on-ink/60 uppercase">{L.scoreLabel}</p>
-        <p className="font-serif text-[3.5rem] leading-none font-medium tabular-nums">
+      <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-4 bg-ink px-5 py-6 text-on-ink" aria-live="polite">
+        <p className="micro text-on-ink/60">{L.scoreLabel}</p>
+        <p className="font-heading text-[3.5rem] leading-none font-medium tabular-nums">
           {score} <span className="text-on-ink/50">/ {round.length}</span>
         </p>
         <div className="flex flex-col gap-1">
@@ -129,7 +129,7 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="mt-1 flex min-h-14 items-center justify-center rounded-card bg-on-ink px-5 font-semibold text-ink"
+          className="pressable font-heading mt-1 flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-ink uppercase hover:opacity-90"
         >
           {L.playAgain}
         </button>
@@ -158,14 +158,17 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-5 rounded-card bg-ink p-6 text-on-ink" aria-labelledby="quiz-label">
-      <p id="quiz-label" className="text-[0.6875rem] font-semibold tracking-[0.14em] text-on-ink/60 uppercase">
+    <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-5 bg-ink px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
+      <p id="quiz-label" className="micro text-on-ink/60">
         {L.quizLabel}
       </p>
+      {/* A verbatim scam-or-genuine sample — same monospaced, rule-marked
+          treatment as a quoted scam sample elsewhere (see TrendsContent),
+          so it reads as quoted evidence rather than the app talking. */}
       <blockquote
         key={item.id}
         lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        className="font-serif text-[1.3125rem] leading-snug [overflow-wrap:anywhere]"
+        className="data border-l-2 border-l-white/20 bg-white/5 px-3.5 py-3 text-[0.9375rem] leading-relaxed text-on-ink [overflow-wrap:anywhere]"
       >
         &ldquo;{item.text}&rdquo;
       </blockquote>
@@ -180,7 +183,7 @@ function Quiz({
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
               aria-pressed={chosen}
-              className={`flex min-h-14 items-center justify-center rounded-card px-4 text-[1.0625rem] font-semibold text-white transition-opacity ${
+              className={`pressable font-heading flex min-h-14 items-center justify-center px-4 text-[1.0625rem] font-semibold tracking-[0.04em] text-white uppercase transition-opacity ${
                 isScamButton ? "bg-danger" : "bg-safe"
               } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white ring-offset-2 ring-offset-ink" : ""}`}
             >
@@ -201,7 +204,7 @@ function Quiz({
           ref={nextRef}
           type="button"
           onClick={next}
-          className="flex min-h-14 items-center justify-center rounded-card bg-on-ink px-5 font-semibold text-ink"
+          className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-ink uppercase hover:opacity-90"
         >
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>
@@ -219,21 +222,25 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
   const showMeaning = lang !== "kreol" && item.languageMix !== "en" && item.englishMeaning;
 
   return (
-    <div role="status" className="flex flex-col gap-3 rounded-xl bg-white/10 p-4">
+    <div role="status" className="flex flex-col gap-3 bg-white/10 p-4">
       <p className="text-[1.0625rem] font-semibold">
-        <span className={answer.correct ? "text-[#9fdcbf]" : "text-[#f4b1ab]"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
+        {/* Correct/incorrect reuses the same accent/danger tones as the
+            Genuine/Scam choice buttons above, rather than a separate
+            green/pink pair, so the feedback colour ties directly back to
+            the choice the player made. */}
+        <span className={answer.correct ? "text-accent" : "text-danger"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
         {item.isScam ? L.isScam : L.isGenuine}
       </p>
       {reasons.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-on-ink/60 uppercase">{L.whyLabel}</p>
+          <p className="micro text-on-ink/60">{L.whyLabel}</p>
           <ul className="flex flex-col gap-1.5">
             {reasons.map((r) => (
               <li key={r} className="flex items-start gap-2.5 text-[0.9375rem] leading-snug">
                 {item.isScam ? (
-                  <span aria-hidden="true" className="mt-[0.45em] size-1.5 shrink-0 rounded-full bg-[#f4b1ab]" />
+                  <span aria-hidden="true" className="mt-[0.45em] size-1.5 shrink-0 bg-danger" />
                 ) : (
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-[#9fdcbf]" strokeWidth={2.5} />
+                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-accent" strokeWidth={2.5} />
                 )}
                 {r}
               </li>
@@ -251,9 +258,9 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
 }
 
 const TAG_TONE: Record<TrendCard["category"], string> = {
-  parcel_fee: "bg-caution-soft text-caution",
-  fake_relative: "bg-danger-soft text-danger",
-  investment: "bg-muted-surface text-ink-soft",
+  parcel_fee: "bg-caution-soft text-caution-ink",
+  fake_relative: "bg-danger-soft text-danger-ink",
+  investment: "bg-muted-surface text-ink-muted",
 };
 
 /**
@@ -265,17 +272,17 @@ function Trends({ trends, copy }: { trends: TrendCard[]; copy: Copy }) {
   const L = copy.learn;
   return (
     <section className="flex flex-col gap-3" aria-labelledby="trends-label">
-      <h2 id="trends-label" className="font-sans text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase">
+      <h2 id="trends-label" className="micro text-ink-muted">
         {L.trendsTitle}
       </h2>
       <ul className="flex flex-col gap-3">
         {trends.map((t) => (
           <li key={t.category} className="card flex flex-col gap-3 p-5">
-            <span className={`w-fit rounded-pill px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.1em] uppercase ${TAG_TONE[t.category]}`}>
-              {L.trends[t.category].tag}
-            </span>
+            <span className={`micro w-fit px-1.5 py-1 ${TAG_TONE[t.category]}`}>{L.trends[t.category].tag}</span>
             {t.example && (
-              <p className="font-serif text-[1.0625rem] leading-snug text-ink [overflow-wrap:anywhere]">&ldquo;{t.example.text}&rdquo;</p>
+              <p className="data border-l-2 border-l-card-border bg-muted-surface px-3 py-2.5 leading-relaxed text-ink-soft [overflow-wrap:anywhere]">
+                &ldquo;{t.example.text}&rdquo;
+              </p>
             )}
             <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{L.trends[t.category].body}</p>
           </li>
