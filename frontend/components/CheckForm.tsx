@@ -1,59 +1,103 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { analyzeMessage, analyzeScreenshot, type ApiError } from "@/lib/api";
+import { analyzeMessage, type ApiError } from "@/lib/api";
 import { redact } from "@/lib/redact";
 import { addRecentCheck, saveResult } from "@/lib/storage";
-import { MAX_IMAGE_BYTES, MAX_MESSAGE_LENGTH } from "@/lib/types";
+import { MAX_MESSAGE_LENGTH } from "@/lib/types";
 import type { Copy } from "@/lib/i18n";
 import { useLanguage } from "./LanguageProvider";
-import { ImageIcon, RetryIcon, Spinner } from "./icons";
+import { ScreenshotRow, useScreenshot } from "./ScreenshotUpload";
+import { SUCCESS_DELAY_MS, useWaitStage, WaitFill, WaitStatus } from "./WaitProgress";
+import { ImageIcon, RetryIcon } from "./icons";
 
 /** Show the live character count once the message gets close to the API's limit. */
 const COUNT_FROM = 4500;
-/** A silent spinner past this point reads as a crash, so the label changes. */
-const SLOW_AFTER_MS = 8000;
-/** Backend sniffs actual bytes and accepts these three - see routes/index.js IMAGE_SIGNATURES. */
-const ACCEPTED_IMAGE_TYPES = "image/png,image/jpeg,image/webp";
+/** "finishing": the answer is in; the bar runs to 100% and holds before navigating. */
+type Status = "idle" | "loading" | "finishing" | "error";
 
-type Status = "idle" | "loading" | "error";
-/** Which submission is in flight/failed, so loading and retry target the right one. */
-type Kind = "text" | "image";
-
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(reader.error ?? new Error("FileReader failed"));
-    reader.readAsDataURL(file);
-  });
-}
-
+/**
+ * The Check screen form. Two ways in, one way out:
+ *  - typed/pasted text, and
+ *  - a screenshot, whose text is extracted by the backend OCR and put in the
+ *    textarea for the user to review and correct (ScreenshotUpload.tsx).
+ * Either way, only "Check this message" sends anything for analysis, and it
+ * always redacts in the browser first (lib/redact.ts), so identifiers never
+ * leave the device from this form. The backend also redacts OCR text
+ * server-side as a second layer.
+ */
 export default function CheckForm() {
   const router = useRouter();
   const { lang, copy } = useLanguage();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [kind, setKind] = useState<Kind>("text");
-  const [slow, setSlow] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  // True while the textarea holds text that came from a screenshot: the image
+  // itself went to the server, so the typed-text privacy promise doesn't apply.
+  const [textFromImage, setTextFromImage] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // Kept so "Try again" can resubmit an image error without re-picking the file.
-  const lastFileRef = useRef<File | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  const shot = useScreenshot({
+    lang,
+    onText: (extracted) => {
+      // Never overwrite what the user already typed: append after it.
+      setText((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${extracted}` : extracted));
+      setTextFromImage(true);
+      if (status === "error") setStatus("idle");
+      // Bring the text into view without focusing (a phone keyboard would cover it).
+      requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+    },
+  });
 
   // Cancel an in-flight check if the user leaves the screen.
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Grow the textarea to fit its content (from 6 rows up to a cap), so the
+  // whole message, including OCR text that needs checking, is visible without
+  // scrolling inside a small box.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const max = Math.round(window.innerHeight * 0.6);
+    el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }, [text]);
+
   const length = text.length;
   const overLimit = length > MAX_MESSAGE_LENGTH;
-  const loading = status === "loading";
-  const canSubmit = text.trim().length > 0 && !overLimit && !loading;
+  // Waiting covers the request and the short success finish, so the bar and
+  // the button stay in one state until the result screen takes over.
+  const loading = status === "loading" || status === "finishing";
+  const waitPhase = status === "finishing" ? "done" : "running";
+  const stage = useWaitStage(loading);
+  const canSubmit = text.trim().length > 0 && !overLimit && !loading && !shot.busy;
+  // The screenshot wording applies once an image is on its way to (or reached) the
+  // server. A file rejected in the browser (no preview) never left the device.
+  const s = shot.state;
+  const imageInvolved =
+    textFromImage ||
+    s.phase === "preparing" ||
+    s.phase === "reading" ||
+    s.phase === "done" ||
+    (s.phase === "error" && Boolean(s.previewUrl));
+
+  function removeScreenshot() {
+    shot.remove();
+    if (!text.trim()) setTextFromImage(false);
+  }
+
+  function typeInstead() {
+    removeScreenshot();
+    textareaRef.current?.focus();
+  }
 
   async function submit() {
     if (!canSubmit) return;
-    setKind("text");
 
     // Only the redacted text ever leaves the browser; the mapping stays local.
     const { redacted, redactions } = redact(text);
@@ -66,79 +110,39 @@ export default function CheckForm() {
 
     setStatus("loading");
     setError(null);
-    setSlow(false);
-    const slowTimer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
     const controller = new AbortController();
     abortRef.current = controller;
 
     const res = await analyzeMessage({ message: redacted, language: lang }, { signal: controller.signal });
-    clearTimeout(slowTimer);
+    if (controller.signal.aborted) return; // cancelled: cancel() already reset the form
 
     if (res.ok) {
       const at = Date.now();
-      saveResult({ response: res.data, redacted, redactions, language: lang, at });
+      saveResult({
+        response: res.data,
+        redacted,
+        redactions,
+        language: lang,
+        at,
+        source: textFromImage ? "screenshot" : "typed",
+      });
       addRecentCheck({ text: redacted, verdict: res.data.verdict, at });
-      router.push("/result");
-      return; // stay in the loading state until the result screen takes over
+      // Let the bar run to 100% and hold, then move on (stays "waiting" until the result screen takes over).
+      setStatus("finishing");
+      setTimeout(() => router.push("/result"), SUCCESS_DELAY_MS);
+      return;
     }
     if (res.error.kind === "aborted") return;
+    // The wait row is replaced by the error card: no bar left frozen mid-fill.
     setError(res.error);
     setStatus("error");
   }
 
-  async function submitScreenshot(file: File) {
-    if (loading) return;
-    lastFileRef.current = file;
-    setKind("image");
-
-    if (file.size > MAX_IMAGE_BYTES) {
-      setError({ kind: "validation", reason: "image_too_large", message: copy.errors.validation.image_too_large });
-      setStatus("error");
-      return;
-    }
-
-    setStatus("loading");
-    setError(null);
-    setSlow(false);
-    const slowTimer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    let dataUrl: string;
-    try {
-      dataUrl = await readAsDataUrl(file);
-    } catch {
-      clearTimeout(slowTimer);
-      setError({ kind: "validation", reason: "image_invalid", message: copy.errors.validation.image_invalid });
-      setStatus("error");
-      return;
-    }
-
-    // Backend content-sniffs the real bytes and redacts identifiers from the
-    // OCR text server-side (see backend/src/services/redact) - the raw image
-    // has to reach the server for OCR, so there's no client-side redaction
-    // step to run first here, unlike the pasted-text path above.
-    const res = await analyzeScreenshot({ image: dataUrl, language: lang }, { signal: controller.signal });
-    clearTimeout(slowTimer);
-
-    if (res.ok) {
-      const at = Date.now();
-      // No client-side "original" exists to restore (see backend redaction
-      // note above), so redactions is empty - the result screen shows the
-      // already-redacted extracted text as-is, not a restored original.
-      saveResult({ response: res.data, redacted: res.data.extractedText, redactions: [], language: lang, at });
-      addRecentCheck({ text: res.data.extractedText, verdict: res.data.verdict, at });
-      router.push("/result");
-      return;
-    }
-    if (res.error.kind === "aborted") return;
-    setError(res.error);
-    setStatus("error");
-  }
-
-  function retry() {
-    if (kind === "image" && lastFileRef.current) void submitScreenshot(lastFileRef.current);
-    else void submit();
+  /** Stop waiting: abort the request and return to the editable form (text kept). */
+  function cancel() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus("idle");
   }
 
   return (
@@ -149,9 +153,9 @@ export default function CheckForm() {
           void submit();
         }}
       >
-        {/* One sheet: field name, input and actions read as a single instrument
-            face separated by rules, not three stacked boxes. */}
-        <div className="sheet focus-within:border-accent">
+        {/* One sheet: field name, input, attached screenshot and actions read as a
+            single instrument face separated by rules, not stacked boxes. */}
+        <div ref={sheetRef} className="sheet scroll-mt-4 focus-within:border-accent">
           <div className="flex items-center justify-between gap-3 px-4 py-2.5">
             <label htmlFor="message" className="micro text-ink-muted">
               {copy.messageLabel}
@@ -166,6 +170,7 @@ export default function CheckForm() {
             )}
           </div>
           <textarea
+            ref={textareaRef}
             id="message"
             name="message"
             rows={6}
@@ -173,6 +178,8 @@ export default function CheckForm() {
             onChange={(e) => {
               setText(e.target.value);
               if (status === "error" && error?.kind === "validation") setStatus("idle");
+              // Cleared and no image attached: whatever is typed next is typed text.
+              if (!e.target.value.trim() && shot.state.phase === "none") setTextFromImage(false);
             }}
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}
@@ -185,54 +192,94 @@ export default function CheckForm() {
             </p>
           )}
 
+          <ScreenshotRow
+            state={shot.state}
+            copy={copy}
+            onRemove={removeScreenshot}
+            onRetry={shot.retry}
+            onTypeInstead={typeInstead}
+          />
+
           <div className="flex">
             {/* Disabled is a muted surface with dark muted text, not white on
-                pale grey — the label has to stay readable while inactive. */}
+                pale grey — the label has to stay readable while inactive.
+                While waiting it stays ink and shows a compact version of the
+                wait row (same stage, same fill), not a separate spinner. The
+                row below carries the live announcements, so this doesn't. */}
             <button
               type="submit"
               disabled={!canSubmit}
-              aria-busy={loading && kind === "text"}
-              className="pressable font-heading flex min-h-14 flex-1 items-center justify-center gap-2.5 px-5 text-[1.0625rem] font-semibold tracking-[0.06em] uppercase disabled:cursor-not-allowed bg-ink text-on-ink hover:bg-ink-2 disabled:bg-muted-surface disabled:text-ink-muted"
+              aria-busy={loading}
+              className={`pressable font-heading relative flex min-h-14 flex-1 items-center justify-center overflow-hidden bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+                loading
+                  ? "cursor-progress"
+                  : "hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+              }`}
             >
-              {loading && kind === "text" && <Spinner className="size-5 shrink-0" />}
-              <span aria-live="polite">
-                {loading && kind === "text" ? (slow ? copy.stillWorking : copy.checking) : copy.submit}
-              </span>
+              <span>{loading ? copy.wait.checkShort[stage] : copy.submit}</span>
+              {loading && (
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 block h-0.5 overflow-hidden bg-on-ink/20">
+                  <WaitFill phase={waitPhase} stage={stage} className="bg-on-ink" />
+                </span>
+              )}
             </button>
 
+            {/* image/*: the OS picker offers Photo Library / Take Photo on phones
+                (no custom camera). Anything the browser can decode is accepted,
+                because lib/image.ts re-encodes it as JPEG before upload, which is
+                one of the three formats the backend sniffs for. */}
             <input
-              ref={fileInputRef}
+              ref={fileRef}
               type="file"
-              accept={ACCEPTED_IMAGE_TYPES}
+              accept="image/*"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                e.target.value = ""; // allow re-picking the same file later
-                if (file) void submitScreenshot(file);
+                e.target.value = ""; // allow choosing the same file again
+                if (file) void shot.pick(file);
               }}
             />
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={loading}
-              aria-busy={loading && kind === "image"}
+              onClick={() => fileRef.current?.click()}
+              disabled={shot.busy || loading}
+              aria-busy={shot.busy}
               aria-label={copy.uploadScreenshot}
-              className="pressable flex min-h-14 shrink-0 flex-col items-center justify-center gap-1 border-l border-card-border px-4 text-ink-muted hover:bg-muted-surface disabled:cursor-not-allowed disabled:opacity-50"
+              title={copy.uploadScreenshot}
+              className={`pressable flex min-h-14 shrink-0 flex-col items-center justify-center gap-1 border-l border-card-border px-4 hover:bg-muted-surface disabled:cursor-not-allowed disabled:opacity-50 ${
+                shot.state.phase !== "none" ? "text-ink" : "text-ink-muted"
+              }`}
             >
-              {loading && kind === "image" ? (
-                <Spinner className="size-[18px] shrink-0" />
-              ) : (
-                <ImageIcon className="size-[18px]" />
-              )}
+              {/* No spinner here: the screenshot row shows the wait. */}
+              <ImageIcon className="size-[18px]" />
               <span className="micro text-[0.5625rem]">{copy.screenshotLabel}</span>
             </button>
           </div>
         </div>
       </form>
 
-      {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={retry} />}
+      {/* One slot: the wait row while checking, the error card if it fails. */}
+      {loading && (
+        <div className="flex items-start gap-4 border-l-2 border-l-accent bg-card px-4 py-3.5">
+          <WaitStatus phase={waitPhase} stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} />
+          {status === "loading" && (
+            <button
+              type="button"
+              onClick={cancel}
+              className="pressable micro -mr-1 min-h-9 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
+            >
+              {copy.wait.cancel}
+            </button>
+          )}
+        </div>
+      )}
+      {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
-      <p className="text-[0.8125rem] leading-snug text-ink-muted">{copy.privacyNote}</p>
+      {/* Each promise only where it's true: typed text is redacted in the browser
+          before anything leaves it; a screenshot goes to the server as it is. */}
+      <p className="text-[0.8125rem] leading-snug text-ink-muted" aria-live="polite">
+        {imageInvolved ? copy.imagePrivacyNote : copy.privacyNote}
+      </p>
     </section>
   );
 }

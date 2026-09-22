@@ -77,12 +77,8 @@ export function VerdictBanner({
 
       <SeverityGauge bandIndex={bandIndex} />
 
-      {risk.showScore && (
-        <div className="mt-4 flex items-baseline justify-between gap-3 border-t border-white/20 pt-3">
-          <p className="micro text-white/60">{copy.result.risk(risk.score)}</p>
-          <p className="data text-[1rem] font-medium text-white">{risk.score}</p>
-        </div>
-      )}
+      {/* Only when the API returned riskScore (getRiskDisplay): never derived client-side. */}
+      {risk.showScore && <RiskMeter score={risk.score} label={copy.result.risk(risk.score)} />}
 
       {response.verdict === "scam" && (
         <p className="mt-4 border-t border-white/20 pt-4 text-[0.9375rem] leading-snug text-white">
@@ -115,6 +111,32 @@ function SeverityGauge({ bandIndex }: { bandIndex: number }) {
           />
         );
       })}
+    </div>
+  );
+}
+
+/**
+ * The backend's riskScore (0–100) on a measuring scale: a filled bar with
+ * quarter ticks, in the same instrument language as the band gauge above.
+ * The score is printed once, as text, so it doesn't depend on the bar.
+ */
+function RiskMeter({ score, label }: { score: number; label: string }) {
+  return (
+    <div className="mt-4 flex flex-col gap-2.5 border-t border-white/20 pt-3">
+      <p className="data text-white/85">{label}</p>
+      <div
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={score}
+        aria-label={label}
+        className="relative h-2 bg-white/20"
+      >
+        <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${score}%` }} />
+        {[25, 50, 75].map((t) => (
+          <span key={t} aria-hidden="true" className="absolute inset-y-0 w-px bg-ink/25" style={{ left: `${t}%` }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -164,7 +186,7 @@ export function MessageCard({
   );
 }
 
-export function SentPanel({ redacted, copy }: { redacted: string; copy: Copy }) {
+export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string; fromScreenshot: boolean; copy: Copy }) {
   return (
     <details className="group border border-card-border bg-card">
       <summary className="micro pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-ink-muted hover:text-ink">
@@ -177,7 +199,8 @@ export function SentPanel({ redacted, copy }: { redacted: string; copy: Copy }) 
         </span>
       </summary>
       <div className="border-t border-card-border px-4 py-3.5">
-        <p className="text-sm text-ink-muted">{copy.result.sentBody}</p>
+        {/* "Only this version left your phone" is false when the text came from a screenshot. */}
+        <p className="text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
         <p className="data mt-3 bg-muted-surface px-3 py-2.5 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
           {redacted}
         </p>

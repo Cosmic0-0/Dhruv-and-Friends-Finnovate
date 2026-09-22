@@ -244,3 +244,122 @@
     transform: none;
   }
 }
+
+/*
+ * Daily-streak celebration (components/learn/Celebration.tsx). Pure CSS so it
+ * works offline. Sequence: scrim fades in (200ms), card scales up from 0.92
+ * with a slight overshoot, then the flame (streak 2+) or tick (day one) plays.
+ */
+@keyframes fl-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fl-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes fl-card-in {
+  0% { opacity: 0; transform: scale(0.92); }
+  60% { opacity: 1; transform: scale(1.03); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes fl-flame-grow {
+  from { opacity: 0; transform: scale(0.35); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes fl-flame-flicker {
+  0%, 100% { transform: scale(1, 1) skewX(0deg); }
+  20% { transform: scale(0.98, 1.06) skewX(-2deg); }
+  45% { transform: scale(1.02, 0.95) skewX(1.5deg); }
+  70% { transform: scale(0.99, 1.04) skewX(-1deg); }
+}
+@keyframes fl-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+.fl-scrim { animation: fl-fade-in 200ms ease-out both; }
+.fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both; }
+.fl-card { animation: fl-card-in 460ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 120ms both; }
+.fl-card[data-closing] { animation: fl-fade-out 200ms ease-in both; }
+
+.fl-flame { transform-box: fill-box; transform-origin: 50% 100%; }
+.fl-flame-grow { animation: fl-flame-grow 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 380ms both; }
+.fl-flame-outer { animation: fl-flame-flicker 1.3s ease-in-out 900ms infinite; }
+.fl-flame-inner { animation: fl-flame-flicker 0.9s ease-in-out 900ms infinite reverse; }
+
+.fl-tick-circle { stroke-dasharray: 152; stroke-dashoffset: 152; animation: fl-draw 520ms ease-out 420ms forwards; }
+.fl-tick-check { stroke-dasharray: 36; stroke-dashoffset: 36; animation: fl-draw 320ms ease-out 900ms forwards; }
+
+/* Reduced motion: no scale, no flame or drawing; the fades stay. These beat the
+   global reduce rule above (same !important, higher specificity). */
+@media (prefers-reduced-motion: reduce) {
+  .fl-scrim { animation: fl-fade-in 200ms ease-out both !important; }
+  .fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both !important; }
+  .fl-card { animation: fl-fade-in 200ms ease-out both !important; }
+  .fl-card[data-closing] { animation: fl-fade-out 200ms ease-in both !important; }
+  .fl-flame-grow,
+  .fl-flame-outer,
+  .fl-flame-inner,
+  .fl-tick-circle,
+  .fl-tick-check { animation: none !important; stroke-dashoffset: 0 !important; }
+}
+
+/*
+ * Wait progress (components/WaitProgress.tsx). There is no real progress
+ * server-side, so the fill never claims a percentage: it follows
+ * f(t) = 0.92·(1 − (1 + t/6)^−0.941), about 40% at 5s and 75% at 30s, then a
+ * creep that approaches but never reaches 92% (it holds at ~91% after 15 min).
+ * Sampled into linear keyframes, so the speed only ever decreases (no pulse at
+ * segment boundaries) and there is no JS re-render loop.
+ */
+@keyframes fl-wait-creep {
+  0% { transform: scaleX(0.0000); }
+  0.0278% { transform: scaleX(0.0347); }
+  0.0556% { transform: scaleX(0.0667); }
+  0.1111% { transform: scaleX(0.1242); }
+  0.1667% { transform: scaleX(0.1742); }
+  0.2222% { transform: scaleX(0.2182); }
+  0.2778% { transform: scaleX(0.2571); }
+  0.3333% { transform: scaleX(0.2918); }
+  0.4444% { transform: scaleX(0.3511); }
+  0.5556% { transform: scaleX(0.3999); }
+  0.6667% { transform: scaleX(0.4408); }
+  0.7778% { transform: scaleX(0.4756); }
+  0.8889% { transform: scaleX(0.5055); }
+  1.1111% { transform: scaleX(0.5544); }
+  1.3333% { transform: scaleX(0.5928); }
+  1.6667% { transform: scaleX(0.6370); }
+  2% { transform: scaleX(0.6704); }
+  2.4444% { transform: scaleX(0.7041); }
+  2.8889% { transform: scaleX(0.7296); }
+  3.3333% { transform: scaleX(0.7496); }
+  3.8889% { transform: scaleX(0.7692); }
+  4.4444% { transform: scaleX(0.7847); }
+  5.5556% { transform: scaleX(0.8075); }
+  6.6667% { transform: scaleX(0.8237); }
+  8.3333% { transform: scaleX(0.8405); }
+  10% { transform: scaleX(0.8523); }
+  13.3333% { transform: scaleX(0.8676); }
+  16.6667% { transform: scaleX(0.8771); }
+  20% { transform: scaleX(0.8837); }
+  26.6667% { transform: scaleX(0.8921); }
+  33.3333% { transform: scaleX(0.8973); }
+  46.6667% { transform: scaleX(0.9033); }
+  66.6667% { transform: scaleX(0.9080); }
+  100% { transform: scaleX(0.9118); }
+}
+
+.fl-wait-fill {
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: fl-wait-creep 900s linear forwards;
+  will-change: transform;
+}
+
+/* Reduced motion: no creep; discrete jumps between stages, set inline as --wait-step. */
+@media (prefers-reduced-motion: reduce) {
+  .fl-wait-fill {
+    animation: none !important;
+    transform: scaleX(var(--wait-step, 0.25));
+  }
+}

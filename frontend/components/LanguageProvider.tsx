@@ -8,6 +8,8 @@ interface LanguageContextValue {
   lang: UiLanguage;
   copy: Copy;
   setLang: (lang: UiLanguage) => void;
+  /** False until the saved choice has been read (the server render is always English). */
+  ready: boolean;
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
@@ -19,10 +21,12 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
  */
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<UiLanguage>("en");
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const saved = loadLanguage();
     if (saved) setLangState(saved);
+    setReady(true);
   }, []);
 
   useEffect(() => {
@@ -34,7 +38,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     saveLanguage(next);
   }, []);
 
-  return <LanguageContext.Provider value={{ lang, copy: getCopy(lang), setLang }}>{children}</LanguageContext.Provider>;
+  return (
+    <LanguageContext.Provider value={{ lang, copy: getCopy(lang), setLang, ready }}>{children}</LanguageContext.Provider>
+  );
 }
 
 export function useLanguage(): LanguageContextValue {

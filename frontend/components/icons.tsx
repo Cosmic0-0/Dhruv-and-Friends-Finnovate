@@ -129,6 +129,15 @@ export function LinkIcon(p: IconProps) {
   );
 }
 
+export function XIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </Svg>
+  );
+}
+
 export function Spinner({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={`animate-spin ${className ?? ""}`}>

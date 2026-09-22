@@ -33,6 +33,7 @@ import type {
  *
  * Call sites already pass the full "/api/..." path, so no prefix is added
  * here — doing so previously produced "/api/api/..." and 404'd every call.
+ * lib/api.test.ts pins the exact URLs so that can't come back.
  */
 
 export type ApiErrorKind =
@@ -41,6 +42,7 @@ export type ApiErrorKind =
   | "network" // frontend server unreachable, or the /api proxy can't reach the backend
   | "timeout" // no response within the timeout
   | "aborted" // cancelled by the caller (e.g. user navigated away)
+  | "ocr_failed" // /api/analyze/screenshot: the OCR worker itself failed (502 "OCR failed: …")
   | "unexpected"; // 2xx body that doesn't match the contract, or an unknown status
 
 export interface ApiError {
@@ -62,10 +64,11 @@ export type ValidationReason =
   | "batch_item_too_long"
   | "sender_empty"
   | "image_missing"
-  | "image_invalid"
+  | "image_invalid" // not a PNG/JPEG/WEBP, or not decodable as base64
   | "image_too_large"
-  | "image_unreadable"
+  | "image_unreadable" // couldn't be opened/decoded in the browser
   | "image_no_text"
+  | "image_text_too_long" // OCR found more text than one check allows
   | "invalid";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -88,6 +91,7 @@ export interface RequestOptions {
  */
 const DEFAULT_TIMEOUTS = {
   analyze: 130_000,
+  // OCR, then a full LLM analysis server-side, before the extracted text comes back.
   screenshot: 135_000,
   batch: 180_000,
   report: 15_000,
@@ -107,6 +111,9 @@ const FRIENDLY = {
   imageTooLarge: "That image is too large. Please keep it under 5MB.",
   imageUnreadable: "That image couldn't be read. Try a different file.",
   imageNoText: "We couldn't find any readable text in that screenshot.",
+  imageTextTooLong: "That screenshot has more text than we can check at once. Crop it to just the message.",
+  ocrFailed: "We couldn't read that screenshot right now. Try again, or type the message instead.",
+  rateLimited: "Lots of checks are running right now. Please try again in a moment.",
   llm: "Our analysis service is busy right now. Please try again in a moment.",
   network: "We can't reach FraudLens right now. Check your connection and try again.",
   timeout: "This is taking longer than usual. Please try again.",
@@ -132,7 +139,9 @@ const VALIDATION_MAP: Array<[RegExp, ValidationReason, string]> = [
   [/^image exceeds maximum size/i, "image_too_large", FRIENDLY.imageTooLarge],
   [/^image must be a valid/i, "image_invalid", FRIENDLY.imageInvalid],
   [/^no readable text was found/i, "image_no_text", FRIENDLY.imageNoText],
-  [/^extracted text exceeds maximum length/i, "message_too_long", FRIENDLY.messageTooLong],
+  // Its own reason (not message_too_long): the user didn't type anything too long,
+  // the screenshot held too much text, so the fix is different (crop it).
+  [/^extracted text exceeds maximum length/i, "image_text_too_long", FRIENDLY.imageTextTooLong],
 ];
 
 function friendlyValidation(raw: string | undefined): { reason: ValidationReason; message: string } {
@@ -168,7 +177,7 @@ async function postJson<T>(
   isValid: (data: unknown) => data is T,
   callerSignal?: AbortSignal,
 ): Promise<ApiResult<T>> {
-  const url = path;
+  const url = path; // already the full same-origin path, e.g. "/api/analyze"
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -215,6 +224,11 @@ async function postJson<T>(
         const { reason, message } = friendlyValidation(raw);
         return fail("validation", message, 400, reason);
       }
+      if (res.status === 429) {
+        // Per-IP rate limit (contract: 20 req / 15 min, shared by analyze and screenshot).
+        console.warn(`[api] ${path} 429 rate limited:`, raw);
+        return fail("llm_unavailable", FRIENDLY.rateLimited, 429);
+      }
       if (res.status >= 500) {
         if (raw === undefined) {
           // No JSON `{ error }` body means the backend never answered: the
@@ -226,6 +240,7 @@ async function postJson<T>(
         }
         // 502 carries raw LLM/provider error text: log only, never display.
         console.warn(`[api] ${path} ${res.status}:`, raw);
+        if (/^OCR failed/i.test(raw)) return fail("ocr_failed", FRIENDLY.ocrFailed, res.status);
         return fail("llm_unavailable", FRIENDLY.llm, res.status);
       }
       console.warn(`[api] ${path} unexpected status ${res.status}:`, raw);
@@ -283,8 +298,14 @@ function isAnalyzeResponse(v: unknown): v is AnalyzeResponse {
   return isObj(v) && VERDICTS.includes(v.verdict) && hasAnalysisShape(v);
 }
 
+/**
+ * Only `extractedText` is checked: it's the only field the UI uses. The
+ * server's verdict in the same response is ignored by design (the user
+ * reviews the text first; see AnalyzeScreenshotResponse), so a malformed
+ * verdict part must not throw away a perfectly good extraction.
+ */
 function isAnalyzeScreenshotResponse(v: unknown): v is AnalyzeScreenshotResponse {
-  return isObj(v) && isStr(v.extractedText) && isAnalyzeResponse(v);
+  return isObj(v) && isStr(v.extractedText);
 }
 
 function isBatchScanResult(v: unknown): v is BatchScanResult {
@@ -311,10 +332,11 @@ function isReportResponse(v: unknown): v is ReportResponse {
 // ---- Batch failure normalisation ----
 
 /**
- * The backend overloads verdict "suspicious" for a per-message analysis
- * failure and puts the raw error in `explanation` ("Analysis failed: ...").
- * We flag those results client-side and replace the raw text with safe copy,
- * so the UI can show "couldn't analyse" instead of a fake verdict.
+ * A per-message analysis failure comes back with `analysisFailed: true` and
+ * verdict "unknown" (older backends used "suspicious" plus an "Analysis
+ * failed: ..." explanation). Either way we flag it and replace the
+ * explanation with safe copy, so the UI shows "couldn't analyse" instead of
+ * a verdict, and never shows raw error text.
  */
 export interface ClientBatchResult extends BatchScanResult {
   /** Client-derived; not part of the API contract. */
@@ -323,7 +345,7 @@ export interface ClientBatchResult extends BatchScanResult {
 
 export interface ClientBatchScanResponse extends Omit<BatchScanResponse, "results"> {
   results: ClientBatchResult[];
-  /** Results that were analysis failures. The backend counts these in summary.suspiciousCount. */
+  /** Results that were analysis failures (the backend also reports these as summary.unanalyzedCount). */
   failedCount: number;
 }
 

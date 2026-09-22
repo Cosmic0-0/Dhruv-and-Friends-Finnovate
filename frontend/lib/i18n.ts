@@ -11,9 +11,12 @@
  */
 
 import type { ValidationReason } from "./api";
-import type { TrendCategory } from "./learn-content";
+import type { QuizLanguage, TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity } from "./types";
+
+/** One label per wait stage: 0–4s, 4–15s, 15–40s, 40s+ (see components/WaitProgress.tsx). */
+export type WaitStages = readonly [string, string, string, string];
 
 export type UiLanguage = Extract<LanguageHint, "en" | "fr" | "kreol">;
 
@@ -30,11 +33,34 @@ export interface Copy {
   messageLabel: string;
   placeholder: string;
   submit: string;
-  checking: string;
-  stillWorking: string;
+  /**
+   * Staged copy for a long wait (components/WaitProgress.tsx). Index = stage:
+   * 0–4s, 4–15s, 15–40s, 40s+. Never a percentage or a time estimate.
+   */
+  wait: {
+    check: WaitStages;
+    /** Compact versions on the disabled submit button: same stages, fewer words. */
+    checkShort: WaitStages;
+    screenshot: WaitStages;
+    /** Accessible name for the progress bar. */
+    progressLabel: string;
+    cancel: string;
+  };
   uploadScreenshot: string;
   /** Short micro-label under the upload button's icon. */
   screenshotLabel: string;
+  /**
+   * Replaces privacyNote whenever a screenshot is involved. Must describe what
+   * the server actually does: /api/analyze/screenshot receives the image as-is,
+   * then redacts the OCR text before analysing it.
+   */
+  imagePrivacyNote: string;
+  shot: {
+    remove: string;
+    alt: string;
+    extracted: string;
+    typeInstead: string;
+  };
   /** Must only claim what lib/redact.ts actually removes. */
   privacyNote: string;
   telegram: string;
@@ -52,6 +78,8 @@ export interface Copy {
     network: string;
     timeoutTitle: string;
     timeout: string;
+    ocrTitle: string;
+    ocr: string;
     unexpectedTitle: string;
     unexpected: string;
   };
@@ -105,6 +133,8 @@ export interface Copy {
     };
     sentTitle: string;
     sentBody: string;
+    /** "What was sent" explanation when the text came from a screenshot (the image itself also left the device). */
+    sentBodyScreenshot: string;
     checkAnother: string;
     missingTitle: string;
     missingBody: string;
@@ -133,6 +163,27 @@ export interface Copy {
     syntheticNote: string;
     trendsTitle: string;
     trends: Record<TrendCategory, { tag: string; body: string }>;
+    /** Language names as used inside a sentence in this UI language. */
+    languageName: Record<QuizLanguage, string>;
+    /** Shown instead of the quiz when the UI language has too few practice messages. */
+    fewItems: (language: string) => string;
+    offerOther: (language: string) => string;
+    /** Extra line when the offered set is Kreol, which is often code-switched. */
+    kreolMixNote: string;
+    practisingIn: (language: string) => string;
+    dailyProgress: (answered: number, goal: number) => string;
+    dailyDone: string;
+    celebrate: {
+      title: (days: number) => string;
+      dayOne: string;
+      streakLine: (days: number) => string;
+      score: (right: number, total: number) => string;
+      mistakesTitle: string;
+      allRight: string;
+      keepGoing: string;
+    };
+    /** Dev-only controls (visible in `next dev` only). */
+    dev: { title: string; reset: string; seed: string };
   };
 }
 
@@ -186,6 +237,23 @@ const LEARN_EN: Copy["learn"] = {
       body: "A stranger promises to double or triple your money in days, with no risk. Guaranteed returns don't exist: the deposit is the scam.",
     },
   },
+  languageName: { en: "English", fr: "French", kreol: "Kreol" },
+  fewItems: (l) => `More practice messages in ${l} are coming soon.`,
+  offerOther: (l) => `Practise in ${l} instead`,
+  kreolMixNote: "Kreol messages often mix in some English or French, like real texts in Mauritius.",
+  practisingIn: (l) => `Practising in ${l}`,
+  dailyProgress: (a, g) => `Today: ${a} of ${g} for your daily streak`,
+  dailyDone: "Today's practice is done.",
+  celebrate: {
+    title: (n) => `${n} day streak`,
+    dayOne: "Day one done. Come back tomorrow to start a streak.",
+    streakLine: (n) => `You've practised ${n} days in a row.`,
+    score: (r, t) => `Today: ${r} of ${t} right`,
+    mistakesTitle: "Worth another look",
+    allRight: "You got every one right today. Nothing to review.",
+    keepGoing: "Keep going",
+  },
+  dev: { title: "Dev tools", reset: "Reset streak", seed: "Pretend 2 days done" },
 };
 
 function relative(ms: number, words: { now: string; min: string; hour: string; day: string; ago: (s: string) => string }) {
@@ -265,9 +333,51 @@ const RESULT_EN: Copy["result"] = {
   },
   sentTitle: "What was sent for analysis",
   sentBody: "Only this version left your phone. Phone numbers, emails and account numbers were replaced first.",
+  sentBodyScreenshot:
+    "Your screenshot was sent to our server to read the text, with everything in it visible. Your result is based only on this redacted version of the text.",
   checkAnother: "Check another message",
   missingTitle: "No check to show",
   missingBody: "Paste a message on the Check screen to see a result here.",
+};
+
+// Screenshot upload copy (English), held in constants so Kreol can fall back via TODO_KREOL.
+// Matches backend/src/routes/index.js (/analyze/screenshot): the image arrives
+// as-is, and the OCR text is redacted (services/redact) before any analysis.
+const IMAGE_PRIVACY_EN =
+  "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
+
+/** Stage 3 (40s+) is shown once and stays: honest, calm, no repeated apology. */
+const STILL_WORKING_EN = "Still working — this can take a couple of minutes on our current setup.";
+
+const WAIT_EN: Copy["wait"] = {
+  check: ["Checking the message…", "Looking for warning signs…", "The AI is reading closely…", STILL_WORKING_EN],
+  checkShort: ["Checking…", "Looking for signs…", "Reading closely…", "Still working…"],
+  screenshot: ["Reading the screenshot…", "Pulling out the text…", "Reading the text carefully…", STILL_WORKING_EN],
+  progressLabel: "Progress",
+  cancel: "Cancel",
+};
+
+const SHOT_EN: Copy["shot"] = {
+  remove: "Remove screenshot",
+  alt: "Your screenshot",
+  extracted: "Text added from your screenshot. Check it and fix anything that's wrong, then press Check.",
+  typeInstead: "Type it instead",
+};
+
+type ImageReason = Extract<ValidationReason, `image_${string}`>;
+const IMAGE_ERRORS_EN: Record<ImageReason, string> = {
+  image_missing: "Choose a screenshot to upload.",
+  image_invalid: "That file isn't a PNG, JPEG, or WEBP image.",
+  image_too_large: "That image is too large. Please keep it under 5MB.",
+  image_unreadable: "That image couldn't be read. Try a different file.",
+  image_no_text: "We couldn't find any readable text in that screenshot.",
+  image_text_too_long:
+    "That screenshot has more text than we can check at once. Crop it to just the message, or paste the text.",
+};
+
+const OCR_ERROR_EN = {
+  ocrTitle: "We couldn't read that image",
+  ocr: "Something went wrong while reading the text. Try again, or type the message instead.",
 };
 
 export const COPY: Record<UiLanguage, Copy> = {
@@ -278,10 +388,11 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "The message",
     placeholder: "Paste the SMS, WhatsApp or email text here...",
     submit: "Check this message",
-    checking: "Checking…",
-    stillWorking: "The AI is still working…",
+    wait: WAIT_EN,
     uploadScreenshot: "Upload a screenshot",
     screenshotLabel: "Screenshot",
+    imagePrivacyNote: IMAGE_PRIVACY_EN,
+    shot: SHOT_EN,
     privacyNote: "Phone numbers, emails and account numbers are removed before anything is analysed.",
     telegram: "Or forward it to @FraudLensBot on Telegram.",
     recentTitle: "Recent checks",
@@ -299,11 +410,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "One of the messages is empty.",
         batch_item_too_long: "One of the messages is over 5,000 characters.",
         sender_empty: "Enter the sender's number or name.",
-        image_missing: "Choose a screenshot to upload.",
-        image_invalid: "That file isn't a PNG, JPEG, or WEBP image.",
-        image_too_large: "That image is too large. Please keep it under 5MB.",
-        image_unreadable: "That image couldn't be read. Try a different file.",
-        image_no_text: "We couldn't find any readable text in that screenshot.",
+        ...IMAGE_ERRORS_EN,
         invalid: "Something about that message didn't look right. Please check it and try again.",
       },
       llmTitle: "Our checker is busy",
@@ -312,6 +419,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       network: "The checking service can't be reached right now. Check your connection and try again.",
       timeoutTitle: "That took too long",
       timeout: "The check took longer than expected and was stopped. Try again, it's often faster the second time.",
+      ...OCR_ERROR_EN,
       unexpectedTitle: "Something went wrong",
       unexpected: "We got an answer we couldn't read. Please try again.",
     },
@@ -354,10 +462,34 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "Le message",
     placeholder: "Collez ici le texte du SMS, WhatsApp ou e-mail...",
     submit: "Vérifier ce message",
-    checking: "Vérification…",
-    stillWorking: "L'IA travaille encore…",
+    wait: {
+      check: [
+        "Vérification du message…",
+        "Recherche des signaux d'alerte…",
+        "L'IA lit attentivement…",
+        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+      ],
+      checkShort: ["Vérification…", "Recherche…", "Lecture attentive…", "Toujours en cours…"],
+      screenshot: [
+        "Lecture de la capture…",
+        "Extraction du texte…",
+        "Lecture attentive du texte…",
+        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+      ],
+      progressLabel: "Progression",
+      cancel: "Annuler",
+    },
     uploadScreenshot: "Importer une capture d'écran",
     screenshotLabel: "Capture d'écran",
+    imagePrivacyNote:
+      "Les captures d'écran sont envoyées telles quelles à notre serveur, noms et numéros visibles. Le serveur lit le texte et retire les numéros de téléphone, e-mails et numéros de compte avant toute analyse. Votre résultat repose uniquement sur le texte masqué, après votre relecture et votre appui sur Vérifier.",
+    shot: {
+      remove: "Retirer la capture",
+      alt: "Votre capture d'écran",
+      extracted:
+        "Texte ajouté depuis votre capture. Vérifiez-le et corrigez ce qui est faux, puis appuyez sur Vérifier.",
+      typeInstead: "Le saisir à la place",
+    },
     privacyNote: "Les numéros de téléphone, e-mails et numéros de compte sont retirés avant toute analyse.",
     telegram: "Ou transférez-le à @FraudLensBot sur Telegram.",
     recentTitle: "Vérifications récentes",
@@ -380,6 +512,8 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_too_large: "Cette image est trop grande. Limitez-vous à 5 Mo.",
         image_unreadable: "Cette image n'a pas pu être lue. Essayez un autre fichier.",
         image_no_text: "Nous n'avons trouvé aucun texte lisible dans cette capture d'écran.",
+        image_text_too_long:
+          "Cette capture contient trop de texte pour une seule vérification. Recadrez-la sur le message, ou collez le texte.",
         invalid: "Ce message pose un problème. Vérifiez-le et réessayez.",
       },
       llmTitle: "Notre service est occupé",
@@ -388,6 +522,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       network: "Le service de vérification est injoignable pour le moment. Vérifiez votre connexion et réessayez.",
       timeoutTitle: "C'était trop long",
       timeout: "La vérification a pris trop de temps et a été arrêtée. Réessayez, c'est souvent plus rapide la deuxième fois.",
+      ocrTitle: "Impossible de lire cette image",
+      ocr: "Un problème est survenu pendant la lecture du texte. Réessayez, ou saisissez le message.",
       unexpectedTitle: "Un problème est survenu",
       unexpected: "Nous avons reçu une réponse illisible. Veuillez réessayer.",
     },
@@ -486,6 +622,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       sentTitle: "Ce qui a été envoyé pour analyse",
       sentBody:
         "Seule cette version a quitté votre téléphone. Les numéros de téléphone, e-mails et numéros de compte ont d'abord été remplacés.",
+      sentBodyScreenshot:
+        "Votre capture a été envoyée à notre serveur pour lire le texte, avec tout son contenu visible. Votre résultat repose uniquement sur cette version masquée du texte.",
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
       missingBody: "Collez un message dans l'onglet Vérifier pour voir un résultat ici.",
@@ -532,6 +670,24 @@ export const COPY: Record<UiLanguage, Copy> = {
           body: "Un inconnu promet de doubler ou tripler votre argent en quelques jours, sans risque. Les rendements garantis n'existent pas : le dépôt, c'est l'arnaque.",
         },
       },
+      languageName: { en: "anglais", fr: "français", kreol: "kreol" },
+      fewItems: (l) => `D'autres messages d'entraînement en ${l} arrivent bientôt.`,
+      offerOther: (l) => `S'entraîner en ${l}`,
+      kreolMixNote:
+        "Les messages en kreol mélangent souvent un peu d'anglais ou de français, comme les vrais SMS à Maurice.",
+      practisingIn: (l) => `Entraînement en ${l}`,
+      dailyProgress: (a, g) => `Aujourd'hui : ${a} sur ${g} pour votre série`,
+      dailyDone: "L'entraînement du jour est fait.",
+      celebrate: {
+        title: (n) => `Série de ${n} jour${n > 1 ? "s" : ""}`,
+        dayOne: "Premier jour validé. Revenez demain pour lancer une série.",
+        streakLine: (n) => `Vous vous êtes entraîné ${n} jours d'affilée.`,
+        score: (r, t) => `Aujourd'hui : ${r} sur ${t} bonnes réponses`,
+        mistakesTitle: "À revoir",
+        allRight: "Tout juste aujourd'hui. Rien à revoir.",
+        keepGoing: "Continuer",
+      },
+      dev: { title: "Outils de dev", reset: "Réinitialiser la série", seed: "Simuler 2 jours faits" },
     },
   },
 
@@ -543,10 +699,35 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "Mesaz la",
     placeholder: "Kol text SMS, WhatsApp ouswa email la isi...",
     submit: "Verifie sa mesaz la",
-    checking: "Pe verifie…",
-    stillWorking: "LIA pe ankor travay…",
+    // Stage 0 reuses the reviewed "Pe verifie…" / "Pe lir text la…"; the rest is new and unreviewed.
+    wait: {
+      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel."],
+      checkShort: [
+        "Pe verifie…",
+        "Pe rod siny…",
+        "Pe lir bien…",
+        "Pe travay ankor…",
+      ],
+      screenshot: [
+        "Pe lir text la…",
+        "Pe tir text la…",
+        "Pe lir text la bien…",
+        "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel.",
+      ],
+      progressLabel: "Progre",
+      cancel: "Anile",
+    },
     uploadScreenshot: "Met enn screenshot",
     screenshotLabel: "Screenshot",
+    // Screenshot upload: Kreol drafted, pending the frontend owner's read-through.
+    imagePrivacyNote: 
+      "Screenshot la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor text la apre sa bann detay-la finn tire, apre ou finn relir li ek pes Verifie.",
+    shot: {
+      remove: "Tir screenshot la",
+      alt: "Ou screenshot",
+      extracted: "Text depi ou screenshot finn azoute. Relir li ek koriz seki pa bon, apre pes Verifie.",
+      typeInstead: "Ekrir li plito",
+    },
     privacyNote: "Nimero telefonn, email ek nimero kont tire avan nanye analize.",
     telegram: "Ouswa avoy li ar @FraudLensBot lor Telegram.",
     recentTitle: "Dernie verifikasion",
@@ -569,6 +750,8 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
         image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
         image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
+        image_text_too_long: 
+          "Ena tro boukou text dan sa screenshot la pou nou verifie enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",
@@ -577,6 +760,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       network: "Pa kapav kontak servis verifikasion la aster. Get ou koneksion ek esey ankor.",
       timeoutTitle: "Sa inn pran tro boukou letan",
       timeout: "Verifikasion la inn pran tro boukou letan, nou finn aret li. Esey ankor, souvan li pli vit dezyem fwa.",
+      ocrTitle: "Nou pa finn kapav lir sa imaz la",
+      ocr: "Enn problem finn arive pandan nou ti pe lir text la. Esey ankor, ouswa ekrir mesaz la plito.",
       unexpectedTitle: "Ena enn problem",
       unexpected: "Nou finn gagn enn repons ki nou pa kapav lir. Esey ankor.",
     },
@@ -607,8 +792,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       footerNote:
         "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
     },
-    // Result screen: every string here is unreviewed. TODO_KREOL marks the
-    // ones we weren't confident enough to write (they show English for now).
+    // Result screen: reviewed by the frontend owner.
     result: {
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
@@ -619,48 +803,49 @@ export const COPY: Record<UiLanguage, Copy> = {
       messageYouSent: "Mesaz ki ou finn avoye",
       whyTitle: "Kifer sa paret pa bon",
       signalTitles: {
-        sender_mismatch: TODO_KREOL(RESULT_EN.signalTitles.sender_mismatch),
+        sender_mismatch: "Sa kinn avoy li pa seki li dir li ete",
         lookalike_url: "Lien la pa pou labank",
-        urgency_language: TODO_KREOL(RESULT_EN.signalTitles.urgency_language),
-        spoofed_identity: TODO_KREOL(RESULT_EN.signalTitles.spoofed_identity),
+        urgency_language: "Li pe fors ou pou depese",
+        spoofed_identity: "Li pe fer krwar li enn dimoun ou fer konfians",
         credential_request: "Li pe dimann enn kod ouswa ou detay personel",
         payment_request: "Li pe dimann ou pey ouswa avoy larzan",
         prize_offer: "Li pe promet enn zafer ki tro bon pou vre",
         secrecy: "Li pe dir ou gard sa sekre",
       },
       genericSignal: "Ena kiksoz ki pa bon",
-      severity: TODO_KREOL(RESULT_EN.severity),
-      lookalikeDomain: TODO_KREOL(RESULT_EN.lookalikeDomain),
-      lookalikeBrand: TODO_KREOL(RESULT_EN.lookalikeBrand),
+      severity: { low: "Ba", medium: "Mwayen", high: "O" },
+      lookalikeDomain: (h, d) => `${h} resanble ${d}, me se pa vre sit la.`,
+      lookalikeBrand: (h, b) => `${h} servi nom ${b}, me se pa enn vre sit ${b}.`,
       linkCheck: {
         title: "Verifikasion lien",
         linkInMessage: "Lien dan mesaz la",
-        imitates: TODO_KREOL(RESULT_EN.linkCheck.imitates),
-        domainAge: TODO_KREOL(RESULT_EN.linkCheck.domainAge),
-        domainAgeValue: TODO_KREOL(RESULT_EN.linkCheck.domainAgeValue),
-        reportedByOthers: TODO_KREOL(RESULT_EN.linkCheck.reportedByOthers),
-        // Kept with its label so the row isn't half English, half Kreol.
-        reportedValue: TODO_KREOL(RESULT_EN.linkCheck.reportedValue),
+        imitates: "Pe imit",
+        domainAge: "Laz domenn",
+        domainAgeValue: (d) => (d < 1 ? "Kree zordi" : `${d} zour`),
+        reportedByOthers: "Lezot inn rapor li",
+        reportedValue: (n) => `${n} fwa`,
       },
       whatToDoTitle: "Ki pou fer aster",
       steps: {
         dont_open_or_reply: "Pa ouver lien la ek pa reponn.",
-        block_sender: TODO_KREOL(RESULT_EN.steps.block_sender),
-        report_to_bank: TODO_KREOL(RESULT_EN.steps.report_to_bank),
-        verify_official: TODO_KREOL(RESULT_EN.steps.verify_official),
-        dont_share_code: TODO_KREOL(RESULT_EN.steps.dont_share_code),
-        call_bank_card: TODO_KREOL(RESULT_EN.steps.call_bank_card),
+        block_sender: "Blok sa kinn avoy li, pou li pa kapav kontak ou ankor.",
+        report_to_bank: "Averti servis fraud ou labank, lor nimero ki enprime lor ou kart.",
+        verify_official:
+          "Verifie direk ar lakonpani, par so app ouswa so sit ofisiel. Pa servi kontak ki dan mesaz la.",
+        dont_share_code: "Zame partaz enn kod ki ou gagn lor ou telefonn, ninport kisannla ki dimande.",
+        call_bank_card: "Si ou pe trakase, apel ou labank lor nimero ki enprime lor ou kart.",
         delete_and_report: "Efas mesaz la ek rapor li.",
       },
       whatWeCheckedTitle: "Seki nou finn verifie",
       checks: {
         no_link: "Pena lien, nanye pou klike",
-        no_lookalike: TODO_KREOL(RESULT_EN.checks.no_lookalike),
-        informs_not_asks: TODO_KREOL(RESULT_EN.checks.informs_not_asks),
-        last_four_only: TODO_KREOL(RESULT_EN.checks.last_four_only),
-        no_pressure: TODO_KREOL(RESULT_EN.checks.no_pressure),
+        no_lookalike: "Okenn lien pa pe imit enn labank ouswa telekom",
+        informs_not_asks: "Li pe dir ou kiksoz, li pa pe dimann ou fer kiksoz",
+        last_four_only: "Li montre zis 4 dernie sif, parey kouma enn vre labank",
+        no_pressure: "Pa presse, pa dimann kod, pa sekre",
       },
-      safeCaveat: TODO_KREOL(RESULT_EN.safeCaveat),
+      safeCaveat:
+        "Nou pa kapav garanti ki enn mesaz vre. Si ena larzan ladan ek ou ena enn dout, apel ou labank lor nimero ki lor ou kart.",
       report: {
         reportSender: "Rapor sa kinn avoy li",
         reportMessage: "Rapor sa mesaz la",
@@ -668,21 +853,23 @@ export const COPY: Record<UiLanguage, Copy> = {
         senderPlaceholder: "Nimero ouswa nom",
         submit: "Avoy rapor la",
         sending: "Pe avoye…",
-        done: TODO_KREOL(RESULT_EN.report.done),
-        failed: TODO_KREOL(RESULT_EN.report.failed),
-        note: TODO_KREOL(RESULT_EN.report.note),
+        done: (n) => (n > 1 ? `Rapor finn fer. ${n} rapor pou sa nimero la ziska aster.` : "Rapor finn fer. Mersi pou averti lezot."),
+        failed: "Nou pa finn kapav avoy rapor la. Esey ankor.",
+        note: "Kan ou rapor, nimero sa kinn avoy li partaze ar FraudLens pou averti lezot.",
       },
       sentTitle: "Seki finn avoye pou analiz",
-      sentBody: TODO_KREOL(RESULT_EN.sentBody),
+      sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
+      sentBodyScreenshot: 
+        "Ou screenshot finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text-la kot detay personel finn tire.",
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
     },
-    // Learn tab: every string here is unreviewed. TODO_KREOL marks the ones we
-    // weren't confident enough to write at all (they show English for now).
+    // Learn tab: reviewed by the frontend owner. TODO_KREOL marks strings that
+    // have no Kreol translation yet (they show English until one is written).
     learn: {
       headline: "Aprann rekonet zot",
-      streak: TODO_KREOL(LEARN_EN.streak),
+      streak: (d) => `${d} zour ki swiv`,
       quizLabel: "Eskrokri ouswa vre?",
       scam: "Eskrokri",
       genuine: "Vre",
@@ -697,12 +884,48 @@ export const COPY: Record<UiLanguage, Copy> = {
       seeScore: "Get ou skor",
       scoreLabel: "Ou skor",
       scoreLine: (k, t) => `Ou finn rekonet ${k} lor ${t}.`,
-      scoreComment: TODO_KREOL(LEARN_EN.scoreComment),
+      scoreComment: (k, t) =>
+        k === t
+          ? "Parfe. Ou ti pou rekonet zot dan lavi reel osi."
+          : k / t >= 0.75
+            ? "Bon lizie. Zwe ankor pou gagn enn lot melanz."
+            : "Sa bann-la difisil ekspre. Zwe ankor ek get bien bann siny danze.",
       best: (b, t) => `Ou pli bon skor: ${b} / ${t}`,
       playAgain: "Zwe ankor",
-      syntheticNote: TODO_KREOL(LEARN_EN.syntheticNote),
-      trendsTitle: TODO_KREOL(LEARN_EN.trendsTitle),
-      trends: TODO_KREOL(LEARN_EN.trends),
+      syntheticNote: 
+        "Bann mesaz pratik ek egzanp lor sa paz-la inventer, depi nou dataset Kreol. Nom kouma OceanBank pa egziste.",
+      trendsTitle: "Bann kalite arnak kouran",
+      trends: {
+        parcel_fee: {
+          tag: "Fre koli",
+          body: "Enn SMS dir ou koli bloke ladwann ek demann ou pey enn ti fre atraver enn lien. Vre konpani livrezon pa pran fre par lien SMS, al get lor zot prop sit web plito.",
+        },
+        fake_relative: {
+          tag: "Fos fami",
+          body: "Enn dimounn dir li ou zanfan ouswa enn fami lor enn nouvo nimero, bizin larzan irzan, ek demann ou pa dir personn. Apel zot lor nimero ki ou deza ena avan ou avoy nanye.",
+        },
+        investment: {
+          tag: "Investisman",
+          body: "Enn etranze promet pou double ouswa triple ou larzan dan kek zour, san okenn risk. Profi garanti pa egziste: sa depo-la limem arnak la.",
+        },
+      },
+      languageName: { en: "Angle", fr: "Franse", kreol: "Kreol" },
+      fewItems: (l) => `Plis mesaz pratik an ${l} pe vini byento.`,
+      offerOther: (l) => `Pratik an ${l} plito`,
+      kreolMixNote: "Mesaz Kreol souvan melanz enn tigit Angle ouswa Franse, parey kouma vre SMS Moris.",
+      practisingIn: (l) => `Pe pratik an ${l}`,
+      dailyProgress: (a, g) => `Zordi: ${a} lor ${g} pou ou serie zour`,
+      dailyDone: "Pratik zordi fini.",
+      celebrate: {
+        title: (n) => `${n} zour ki swiv`,
+        dayOne: "Premie zour fini. Revini demin pou koumans enn serie.",
+        streakLine: (n) => `Ou finn pratik ${n} zour ki swiv.`,
+        score: (r, t) => `Zordi: ${r} lor ${t} bon`,
+        mistakesTitle: "Get sa bann-la ankor",
+        allRight: "Ou finn gagn tou bon zordi. Nanye pou relir.",
+        keepGoing: "Kontinie",
+      },
+      dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
   },
 };

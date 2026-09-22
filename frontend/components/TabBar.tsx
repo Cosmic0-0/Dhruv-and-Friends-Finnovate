@@ -18,7 +18,9 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      // Fully opaque (no /95, no backdrop-blur): a translucent bar let scrolled
+      // content read through it. The strong top rule is the design system's.
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card pb-[env(safe-area-inset-bottom)]"
     >
       <ul className="mx-auto flex max-w-app items-stretch">
         {TABS.map(({ href, key, Icon, match }) => {
