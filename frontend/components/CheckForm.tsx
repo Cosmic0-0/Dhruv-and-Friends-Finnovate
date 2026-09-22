@@ -9,14 +9,13 @@ import { MAX_MESSAGE_LENGTH } from "@/lib/types";
 import type { Copy } from "@/lib/i18n";
 import { useLanguage } from "./LanguageProvider";
 import { ScreenshotRow, useScreenshot } from "./ScreenshotUpload";
-import { ImageIcon, RetryIcon, Spinner } from "./icons";
+import { SUCCESS_DELAY_MS, useWaitStage, WaitFill, WaitStatus } from "./WaitProgress";
+import { ImageIcon, RetryIcon } from "./icons";
 
 /** Show the live character count once the message gets close to the API's limit. */
 const COUNT_FROM = 4500;
-/** A silent spinner past this point reads as a crash, so the label changes. */
-const SLOW_AFTER_MS = 8000;
-
-type Status = "idle" | "loading" | "error";
+/** "finishing": the answer is in; the bar runs to 100% and holds before navigating. */
+type Status = "idle" | "loading" | "finishing" | "error";
 
 /**
  * The Check screen form. Two ways in, one way out:
@@ -33,7 +32,6 @@ export default function CheckForm() {
   const { lang, copy } = useLanguage();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
-  const [slow, setSlow] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   // True while the textarea holds text that came from a screenshot: the image
   // itself went to the server, so the typed-text privacy promise doesn't apply.
@@ -72,7 +70,11 @@ export default function CheckForm() {
 
   const length = text.length;
   const overLimit = length > MAX_MESSAGE_LENGTH;
-  const loading = status === "loading";
+  // Waiting covers the request and the short success finish, so the bar and
+  // the button stay in one state until the result screen takes over.
+  const loading = status === "loading" || status === "finishing";
+  const waitPhase = status === "finishing" ? "done" : "running";
+  const stage = useWaitStage(loading);
   const canSubmit = text.trim().length > 0 && !overLimit && !loading && !shot.busy;
   // The screenshot wording applies once an image is on its way to (or reached) the
   // server. A file rejected in the browser (no preview) never left the device.
@@ -108,13 +110,11 @@ export default function CheckForm() {
 
     setStatus("loading");
     setError(null);
-    setSlow(false);
-    const slowTimer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
     const controller = new AbortController();
     abortRef.current = controller;
 
     const res = await analyzeMessage({ message: redacted, language: lang }, { signal: controller.signal });
-    clearTimeout(slowTimer);
+    if (controller.signal.aborted) return; // cancelled: cancel() already reset the form
 
     if (res.ok) {
       const at = Date.now();
@@ -127,12 +127,22 @@ export default function CheckForm() {
         source: textFromImage ? "screenshot" : "typed",
       });
       addRecentCheck({ text: redacted, verdict: res.data.verdict, at });
-      router.push("/result");
-      return; // stay in the loading state until the result screen takes over
+      // Let the bar run to 100% and hold, then move on (stays "waiting" until the result screen takes over).
+      setStatus("finishing");
+      setTimeout(() => router.push("/result"), SUCCESS_DELAY_MS);
+      return;
     }
     if (res.error.kind === "aborted") return;
+    // The wait row is replaced by the error card: no bar left frozen mid-fill.
     setError(res.error);
     setStatus("error");
+  }
+
+  /** Stop waiting: abort the request and return to the editable form (text kept). */
+  function cancel() {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStatus("idle");
   }
 
   return (
@@ -192,15 +202,26 @@ export default function CheckForm() {
 
           <div className="flex">
             {/* Disabled is a muted surface with dark muted text, not white on
-                pale grey — the label has to stay readable while inactive. */}
+                pale grey — the label has to stay readable while inactive.
+                While waiting it stays ink and shows a compact version of the
+                wait row (same stage, same fill), not a separate spinner. The
+                row below carries the live announcements, so this doesn't. */}
             <button
               type="submit"
               disabled={!canSubmit}
               aria-busy={loading}
-              className="pressable font-heading flex min-h-14 flex-1 items-center justify-center gap-2.5 bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+              className={`pressable font-heading relative flex min-h-14 flex-1 items-center justify-center overflow-hidden bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+                loading
+                  ? "cursor-progress"
+                  : "hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+              }`}
             >
-              {loading && <Spinner className="size-5 shrink-0" />}
-              <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
+              <span>{loading ? copy.wait.checkShort[stage] : copy.submit}</span>
+              {loading && (
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 block h-0.5 overflow-hidden bg-on-ink/20">
+                  <WaitFill phase={waitPhase} stage={stage} className="bg-on-ink" />
+                </span>
+              )}
             </button>
 
             {/* image/*: the OS picker offers Photo Library / Take Photo on phones
@@ -229,13 +250,29 @@ export default function CheckForm() {
                 shot.state.phase !== "none" ? "text-ink" : "text-ink-muted"
               }`}
             >
-              {shot.busy ? <Spinner className="size-[18px] shrink-0" /> : <ImageIcon className="size-[18px]" />}
+              {/* No spinner here: the screenshot row shows the wait. */}
+              <ImageIcon className="size-[18px]" />
               <span className="micro text-[0.5625rem]">{copy.screenshotLabel}</span>
             </button>
           </div>
         </div>
       </form>
 
+      {/* One slot: the wait row while checking, the error card if it fails. */}
+      {loading && (
+        <div className="flex items-start gap-4 border-l-2 border-l-accent bg-card px-4 py-3.5">
+          <WaitStatus phase={waitPhase} stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} />
+          {status === "loading" && (
+            <button
+              type="button"
+              onClick={cancel}
+              className="pressable micro -mr-1 min-h-9 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
+            >
+              {copy.wait.cancel}
+            </button>
+          )}
+        </div>
+      )}
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
       {/* Each promise only where it's true: typed text is redacted in the browser

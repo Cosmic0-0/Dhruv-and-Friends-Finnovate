@@ -5,7 +5,8 @@ import { analyzeScreenshot, type ApiErrorKind, type ValidationReason } from "@/l
 import { compressImage, ImageError, type ImageErrorCode } from "@/lib/image";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { MAX_IMAGE_BYTES } from "@/lib/types";
-import { CheckIcon, RetryIcon, Spinner, XIcon } from "./icons";
+import { CheckIcon, RetryIcon, XIcon } from "./icons";
+import { SUCCESS_DELAY_MS, useWaitStage, WaitStatus } from "./WaitProgress";
 
 /**
  * Screenshot → text, for the user to review. The image is compressed in the
@@ -22,14 +23,17 @@ import { CheckIcon, RetryIcon, Spinner, XIcon } from "./icons";
 type ServiceErrorKind = Exclude<ApiErrorKind, "validation" | "aborted">;
 export type ShotError = { kind: "image"; reason: ValidationReason } | { kind: ServiceErrorKind };
 
+/**
+ * preparing → reading → finishing → done. "finishing" is the short success
+ * run-in: the bar goes to 100% and holds, then the text is handed over.
+ */
 export type ShotState =
   | { phase: "none" }
   | { phase: "preparing" }
-  | { phase: "reading"; previewUrl: string; slow: boolean }
+  | { phase: "reading"; previewUrl: string }
+  | { phase: "finishing"; previewUrl: string }
   | { phase: "done"; previewUrl: string }
   | { phase: "error"; previewUrl?: string; error: ShotError; canRetry: boolean };
-
-const SLOW_AFTER_MS = 10_000;
 
 const IMAGE_ERROR_REASON: Record<ImageErrorCode, ValidationReason> = {
   not_image: "image_invalid",
@@ -66,14 +70,9 @@ export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (tex
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
-      setState({ phase: "reading", previewUrl, slow: false });
-      const slowTimer = setTimeout(
-        () => setState((s) => (s.phase === "reading" && s.previewUrl === previewUrl ? { ...s, slow: true } : s)),
-        SLOW_AFTER_MS,
-      );
+      setState({ phase: "reading", previewUrl });
 
       const res = await analyzeScreenshot({ image: dataUrl, language: lang }, { signal: controller.signal });
-      clearTimeout(slowTimer);
       if (controller.signal.aborted) return; // removed or replaced meanwhile
 
       if (res.ok) {
@@ -82,8 +81,13 @@ export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (tex
           setState({ phase: "error", previewUrl, error: { kind: "image", reason: "image_no_text" }, canRetry: false });
           return;
         }
-        setState({ phase: "done", previewUrl });
-        onTextRef.current(text);
+        // Run the bar to 100% and hold, then hand the text over (unless removed meanwhile).
+        setState({ phase: "finishing", previewUrl });
+        setTimeout(() => {
+          if (controller.signal.aborted || abortRef.current !== controller) return;
+          setState({ phase: "done", previewUrl });
+          onTextRef.current(text);
+        }, SUCCESS_DELAY_MS);
         return;
       }
       const e = res.error;
@@ -130,7 +134,8 @@ export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (tex
     setState({ phase: "none" });
   }, []);
 
-  return { state, pick, retry, remove, busy: state.phase === "preparing" || state.phase === "reading" };
+  const busy = state.phase === "preparing" || state.phase === "reading" || state.phase === "finishing";
+  return { state, pick, retry, remove, busy };
 }
 
 function errorCopy(error: ShotError, copy: Copy): { title: string; body: string } {
@@ -164,13 +169,23 @@ export function ScreenshotRow({
   onRetry: () => void;
   onTypeInstead: () => void;
 }) {
+  // The whole wait (compressing, uploading, reading) is one continuous bar and stage sequence.
+  const waiting = state.phase === "preparing" || state.phase === "reading" || state.phase === "finishing";
+  const stage = useWaitStage(waiting);
   if (state.phase === "none") return null;
   const previewUrl = "previewUrl" in state ? state.previewUrl : undefined;
-  const busy = state.phase === "preparing" || state.phase === "reading";
 
   let status: React.ReactNode = null;
-  if (state.phase === "preparing") status = copy.shot.preparing;
-  else if (state.phase === "reading") status = state.slow ? copy.shot.stillReading : copy.shot.reading;
+  if (waiting)
+    status = (
+      <WaitStatus
+        phase={state.phase === "finishing" ? "done" : "running"}
+        stage={stage}
+        labels={copy.wait.screenshot}
+        progressLabel={copy.wait.progressLabel}
+        textClassName="text-sm leading-snug text-ink-soft"
+      />
+    );
   else if (state.phase === "done")
     status = (
       <span className="flex items-start gap-2">
@@ -188,15 +203,16 @@ export function ScreenshotRow({
             // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
             <img src={previewUrl} alt={copy.shot.alt} className="size-full object-cover object-top" />
           )}
-          {busy && (
-            <div className="absolute inset-0 grid place-items-center bg-ink/45">
-              <Spinner className="size-6 text-white" />
-            </div>
-          )}
+          {/* Dimmed while waiting; the bar beside it shows the wait (no separate spinner). */}
+          {waiting && <div aria-hidden="true" className="absolute inset-0 bg-ink/25" />}
         </div>
-        <p className="min-w-0 flex-1 text-sm leading-snug text-ink-soft" aria-live="polite">
-          {status}
-        </p>
+        {waiting ? (
+          status
+        ) : (
+          <p className="min-w-0 flex-1 text-sm leading-snug text-ink-soft" aria-live="polite">
+            {status}
+          </p>
+        )}
         <button
           type="button"
           onClick={onRemove}

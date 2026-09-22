@@ -164,15 +164,15 @@ test("a language under the minimum gets an offer, English first when English has
   assert.equal(fr.fallback, "en", "English is offered when it has enough, even though Kreol is larger");
 });
 
-test("with the real corpus: Kreol is playable; English and French get a note offering Kreol", () => {
+test("with the real corpus: every language is playable on its own", () => {
   const raw = readFileSync(new URL("../../data/kreol-dataset/scam-corpus.jsonl", import.meta.url), "utf8");
   const items = toQuizItems(raw.trim().split(/\r?\n/).map((l) => JSON.parse(l)));
-  const kreol = languagePool(items, "kreol");
-  assert.ok(kreol.enough);
-  for (const lang of ["en", "fr"] as const) {
+  // Since the 10 English and 10 French rows landed in the corpus, each language
+  // has its own round; the short-set offer is covered by the test above.
+  for (const lang of ["kreol", "en", "fr"] as const) {
     const pool = languagePool(items, lang);
-    assert.equal(pool.enough, false, `${lang} has ${pool.items.length} items`);
-    assert.equal(pool.fallback, "kreol");
+    assert.equal(pool.enough, true, `${lang} has only ${pool.items.length} items`);
+    assert.equal(pool.fallback, undefined, "a language with enough items needs no offer");
   }
   assert.ok(itemsInLanguage(items, "en").every((i) => i.languageMix === "en"));
 });
