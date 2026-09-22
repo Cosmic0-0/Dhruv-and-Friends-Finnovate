@@ -6,7 +6,23 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const FALLBACK_PROVIDER = process.env.FALLBACK_PROVIDER || "anthropic";
 const FALLBACK_API_KEY = process.env.FALLBACK_API_KEY || "";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "liquid/lfm-2.5-2.6b:free";
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 15000;
+// 15s was measured to be unsafe, and this is NOT a one-off: liquid/lfm-2.5-
+// 2.6b:free has MANDATORY reasoning (OpenRouter rejects
+// `reasoning: {enabled: false}` for it with "Reasoning is mandatory for this
+// endpoint") and burns a highly variable number of hidden reasoning tokens
+// before the actual JSON answer. Five live runs against the real analyze
+// prompt on 2026-09-22 (Ollama down, this exact fallback path) took 19.5s,
+// 27.4s, 38.8s, 43.8s, and one that didn't finish inside 35s - reasoning
+// token counts of 323-1811 on the SAME prompt shape. This is not solvable by
+// picking a bigger number: it's an open reliability risk in the free-tier
+// fallback choice, not just a timeout tuning problem - see
+// backend/.env.example's FALLBACK_PROVIDER comment and
+// npm run test:fallback before assuming this is fixed. 60s gives real
+// (not guaranteed) margin against what's been observed so far; CheckForm.tsx
+// already shows a "still working" message past 8s so the wait doesn't read
+// as a hang, but a demo-day judge waiting up to a minute per check is a real
+// presentation risk worth revisiting before relying on this path live.
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 60000;
 const LLM_MODE = process.env.LLM_MODE || "auto"; // local | fallback | auto
 
 const FALLBACK_CONFIGURED = Boolean(FALLBACK_API_KEY);

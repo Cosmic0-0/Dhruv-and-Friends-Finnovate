@@ -110,14 +110,30 @@ export function LinkCheckPanel({ response, copy }: { response: AnalyzeResponse; 
   const lookalikes = response.signals.filter((s) => signalKind(s.type) === "lookalike_url");
   if (lookalikes.length === 0) return null;
 
-  const rows: Array<{ label: string; value: string; mono?: boolean }> = [];
+  // The LLM's own reasoning and the deterministic checkUrls() check can both
+  // flag the same URL, producing two lookalike_url signals for one host -
+  // collapse them to one row per host instead of showing the same link
+  // twice. Keeps the first resembles/domainAgeDays value seen for a host.
+  const byHost = new Map<string, { resembles: ReturnType<typeof parseLinkCheck>["resembles"]; domainAgeDays?: number }>();
   for (const s of lookalikes) {
     const { host, resembles } = parseLinkCheck(s);
-    if (host) rows.push({ label: copy.result.linkCheck.linkInMessage, value: host, mono: true });
+    if (!host) continue;
+    const existing = byHost.get(host);
+    const domainAgeDays =
+      existing?.domainAgeDays ??
+      (typeof s.domainAgeDays === "number" && Number.isFinite(s.domainAgeDays) && s.domainAgeDays >= 0
+        ? s.domainAgeDays
+        : undefined);
+    byHost.set(host, { resembles: existing?.resembles ?? resembles, domainAgeDays });
+  }
+
+  const rows: Array<{ label: string; value: string; mono?: boolean }> = [];
+  for (const [host, { resembles, domainAgeDays }] of byHost) {
+    rows.push({ label: copy.result.linkCheck.linkInMessage, value: host, mono: true });
     if (resembles)
       rows.push({ label: copy.result.linkCheck.imitates, value: resembles.value, mono: resembles.kind === "domain" });
-    if (typeof s.domainAgeDays === "number" && Number.isFinite(s.domainAgeDays) && s.domainAgeDays >= 0) {
-      rows.push({ label: copy.result.linkCheck.domainAge, value: copy.result.linkCheck.domainAgeValue(Math.floor(s.domainAgeDays)) });
+    if (domainAgeDays !== undefined) {
+      rows.push({ label: copy.result.linkCheck.domainAge, value: copy.result.linkCheck.domainAgeValue(Math.floor(domainAgeDays)) });
     }
   }
   if (typeof response.senderReports === "number" && response.senderReports > 0) {
