@@ -176,7 +176,9 @@ product. Judges and casual visitors notice these fast.
       `<script type="application/ld+json">` — content is a fixed constant,
       not user input, so no escaping concern.
 - [x] **Exactly one `<h1>` per page** — verified 2026-09-22: home
-      (`app/page.tsx`), Learn (`components/LearnContent.tsx`), Trends
+      (`app/page.tsx`), Learn (`components/learn/LearnScreen.tsx` — the
+      interactive quiz that replaced the old static-glossary
+      `LearnContent.tsx`), Trends
       (`components/TrendsContent.tsx`) each render one `<h1>`; the result page
       (`components/ResultView.tsx`) renders exactly one of two mutually
       exclusive `<h1>`s (the "missing result" state at line 38, or
