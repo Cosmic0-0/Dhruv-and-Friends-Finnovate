@@ -101,3 +101,32 @@ export function loadLanguage(): UiLanguage | null {
 export function saveLanguage(lang: UiLanguage): void {
   write(local, LANGUAGE_KEY, lang);
 }
+
+// ---------- Learn tab (streak + best score) ----------
+
+const LEARN_KEY = "fraudlens.learn.v1";
+
+export interface LearnStats {
+  streak: number;
+  /** Local YYYY-MM-DD of the last day a question was answered. */
+  lastDay: string | null;
+  best: { score: number; total: number } | null;
+}
+
+const EMPTY_LEARN: LearnStats = { streak: 0, lastDay: null, best: null };
+
+export function getLearnStats(): LearnStats {
+  const s = read<Partial<LearnStats>>(local, LEARN_KEY);
+  if (!s || typeof s !== "object") return EMPTY_LEARN;
+  const best =
+    s.best && typeof s.best.score === "number" && typeof s.best.total === "number" && s.best.total > 0 ? s.best : null;
+  return {
+    streak: typeof s.streak === "number" && s.streak > 0 ? Math.floor(s.streak) : 0,
+    lastDay: typeof s.lastDay === "string" ? s.lastDay : null,
+    best,
+  };
+}
+
+export function saveLearnStats(stats: LearnStats): void {
+  write(local, LEARN_KEY, stats);
+}

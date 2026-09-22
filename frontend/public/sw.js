@@ -1,19 +1,25 @@
 /*
  * FraudLens service worker: caches the app shell so the app opens offline.
  *
- * - Navigations: network-first, falling back to the cached shell ("/").
+ * - Navigations: network-first; every successful page is cached by path, and
+ *   offline falls back to that page, then to the shell ("/").
  * - Same-origin build assets (/_next/static, /icons): cache-first (they're
  *   content-hashed or versioned, so a cached copy is always correct).
- * - Everything else, including all API calls (cross-origin to the backend),
- *   goes straight to the network and is never cached. Verdicts must be live.
+ * - Everything else goes straight to the network and is never cached. API
+ *   calls are same-origin POSTs to /api/* (proxied to the backend) and are
+ *   skipped below because only GETs are handled. Verdicts must be live.
+ *
+ * /learn is precached: the Learn tab needs no backend, so it's the screen
+ * that still works when the LLM or the network is down during the demo.
  *
  * Bump CACHE_VERSION when the precache list changes.
  */
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_NAME = `fraudlens-shell-${CACHE_VERSION}`;
 const SHELL_URL = "/";
 const PRECACHE = [
   SHELL_URL,
+  "/learn",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -50,16 +56,17 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
+    const key = url.pathname; // ignore query strings for page caching
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok && url.pathname === SHELL_URL) {
+          if (response.ok && response.type === "basic") {
             const copy = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(SHELL_URL, copy));
+            caches.open(CACHE_NAME).then((cache) => cache.put(key, copy));
           }
           return response;
         })
-        .catch(() => caches.match(request).then((hit) => hit || caches.match(SHELL_URL))),
+        .catch(() => caches.match(key).then((hit) => hit || caches.match(SHELL_URL))),
     );
     return;
   }

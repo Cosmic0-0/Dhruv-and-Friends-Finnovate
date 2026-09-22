@@ -11,6 +11,7 @@
  */
 
 import type { ValidationReason } from "./api";
+import type { TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity } from "./types";
 
@@ -103,7 +104,83 @@ export interface Copy {
     missingTitle: string;
     missingBody: string;
   };
+  learn: {
+    headline: string;
+    streak: (days: number) => string;
+    quizLabel: string;
+    scam: string;
+    genuine: string;
+    progress: (n: number, total: number, right: number) => string;
+    correct: string;
+    incorrect: string;
+    isScam: string;
+    isGenuine: string;
+    whyLabel: string;
+    inEnglish: string;
+    next: string;
+    seeScore: string;
+    scoreLabel: string;
+    scoreLine: (right: number, total: number) => string;
+    scoreComment: (right: number, total: number) => string;
+    best: (best: number, total: number) => string;
+    playAgain: string;
+    /** Required by data/kreol-dataset/CLAUDE.md: synthetic examples must be identified as synthetic. */
+    syntheticNote: string;
+    trendsTitle: string;
+    trends: Record<TrendCategory, { tag: string; body: string }>;
+  };
 }
+
+/**
+ * A Kreol string not written yet because we weren't confident in it. It
+ * shows the English so the screen stays readable, and marks the spot for
+ * the Kreol reviewer: grep TODO_KREOL.
+ */
+const TODO_KREOL = <T,>(english: T): T => english;
+
+const LEARN_EN: Copy["learn"] = {
+  headline: "Learn to spot them",
+  streak: (d) => `${d}-day streak`,
+  quizLabel: "Scam or genuine?",
+  scam: "Scam",
+  genuine: "Genuine",
+  progress: (n, t, k) => `Question ${n} of ${t} · you got ${k} right so far`,
+  correct: "Right.",
+  incorrect: "Not quite.",
+  isScam: "This one is a scam.",
+  isGenuine: "This one is genuine.",
+  whyLabel: "Why",
+  inEnglish: "In English",
+  next: "Next",
+  seeScore: "See your score",
+  scoreLabel: "Your score",
+  scoreLine: (k, t) => `You spotted ${k} of ${t} correctly.`,
+  scoreComment: (k, t) =>
+    k === t
+      ? "Perfect. You'd spot these in real life too."
+      : k / t >= 0.75
+        ? "Sharp eyes. Play again to see a different mix."
+        : "These are tricky on purpose. Play again and watch for the warning signs.",
+  best: (b, t) => `Your best: ${b} / ${t}`,
+  playAgain: "Play again",
+  syntheticNote:
+    "The practice messages and examples on this page are made up, from our Kreol dataset. Names like OceanBank are fictional.",
+  trendsTitle: "Going around this week",
+  trends: {
+    parcel_fee: {
+      tag: "Parcel fee",
+      body: "A text says your parcel is stuck at customs and asks for a small fee through a link. Real couriers don't collect fees by SMS link, so check on the courier's own website instead.",
+    },
+    fake_relative: {
+      tag: "Fake relative",
+      body: "Someone says they're your child or a relative on a new number, needs money urgently, and asks you not to tell anyone. Call them on the number you already have before you send anything.",
+    },
+    investment: {
+      tag: "Investment",
+      body: "A stranger promises to double or triple your money in days, with no risk. Guaranteed returns don't exist: the deposit is the scam.",
+    },
+  },
+};
 
 function relative(ms: number, words: { now: string; min: string; hour: string; day: string; ago: (s: string) => string }) {
   const minutes = Math.floor(ms / 60_000);
@@ -181,7 +258,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         spoofed_identity: "It pretends to be someone you trust",
         credential_request: "It asks for a code or personal details",
         payment_request: "It asks you to pay or send money",
-        prize_offer: "It offers a prize that's too good to be true",
+        prize_offer: "It promises something too good to be true",
         secrecy: "It asks you to keep it secret",
       },
       genericSignal: "Something doesn't look right",
@@ -235,6 +312,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       missingTitle: "No check to show",
       missingBody: "Paste a message on the Check screen to see a result here.",
     },
+    learn: LEARN_EN,
   },
 
   fr: {
@@ -303,7 +381,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         spoofed_identity: "Il se fait passer pour quelqu'un de confiance",
         credential_request: "Il demande un code ou des informations personnelles",
         payment_request: "Il vous demande de payer ou d'envoyer de l'argent",
-        prize_offer: "Il promet un gain trop beau pour être vrai",
+        prize_offer: "Il promet quelque chose de trop beau pour être vrai",
         secrecy: "Il vous demande de garder le secret",
       },
       genericSignal: "Quelque chose cloche",
@@ -357,6 +435,49 @@ export const COPY: Record<UiLanguage, Copy> = {
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
       missingBody: "Collez un message dans l'onglet Vérifier pour voir un résultat ici.",
+    },
+    learn: {
+      headline: "Apprenez à les repérer",
+      streak: (d) => `${d} jours d'affilée`,
+      quizLabel: "Arnaque ou authentique ?",
+      scam: "Arnaque",
+      genuine: "Authentique",
+      progress: (n, t, k) => `Question ${n} sur ${t} · ${k} bonne${k > 1 ? "s" : ""} réponse${k > 1 ? "s" : ""} jusqu'ici`,
+      correct: "Exact.",
+      incorrect: "Pas tout à fait.",
+      isScam: "C'est une arnaque.",
+      isGenuine: "Ce message est authentique.",
+      whyLabel: "Pourquoi",
+      inEnglish: "En anglais",
+      next: "Suivant",
+      seeScore: "Voir mon score",
+      scoreLabel: "Votre score",
+      scoreLine: (k, t) => `Vous en avez repéré ${k} sur ${t}.`,
+      scoreComment: (k, t) =>
+        k === t
+          ? "Parfait. Vous les repéreriez aussi dans la vraie vie."
+          : k / t >= 0.75
+            ? "Bon œil. Rejouez pour voir d'autres messages."
+            : "Ils sont piégeux exprès. Rejouez en guettant les signaux d'alerte.",
+      best: (b, t) => `Votre record : ${b} / ${t}`,
+      playAgain: "Rejouer",
+      syntheticNote:
+        "Les messages d'entraînement et les exemples de cette page sont fictifs, tirés de notre jeu de données en kreol. Les noms comme OceanBank sont inventés.",
+      trendsTitle: "En circulation cette semaine",
+      trends: {
+        parcel_fee: {
+          tag: "Frais de colis",
+          body: "Un SMS dit que votre colis est bloqué en douane et demande de petits frais via un lien. Les vrais transporteurs ne font pas payer par lien SMS : vérifiez sur leur propre site.",
+        },
+        fake_relative: {
+          tag: "Faux proche",
+          body: "Quelqu'un se présente comme votre enfant ou un proche avec un nouveau numéro, a besoin d'argent en urgence et vous demande de n'en parler à personne. Appelez-le sur le numéro que vous connaissez avant d'envoyer quoi que ce soit.",
+        },
+        investment: {
+          tag: "Investissement",
+          body: "Un inconnu promet de doubler ou tripler votre argent en quelques jours, sans risque. Les rendements garantis n'existent pas : le dépôt, c'est l'arnaque.",
+        },
+      },
     },
   },
 
@@ -425,7 +546,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         spoofed_identity: "Li pe fer krwar li enn dimoun ou fer konfians",
         credential_request: "Li pe dimann enn kod ouswa ou detay personel",
         payment_request: "Li pe dimann ou pey ouswa avoy larzan",
-        prize_offer: "Li pe promet enn pri ki tro bon pou vre",
+        prize_offer: "Li pe promet enn zafer ki tro bon pou vre",
         secrecy: "Li pe dir ou gard sa sekre",
       },
       genericSignal: "Ena kiksoz ki pa bon",
@@ -478,6 +599,32 @@ export const COPY: Record<UiLanguage, Copy> = {
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
+    },
+    // Learn tab: every string here is unreviewed. TODO_KREOL marks the ones we
+    // weren't confident enough to write at all (they show English for now).
+    learn: {
+      headline: "Aprann rekonet zot",
+      streak: TODO_KREOL(LEARN_EN.streak),
+      quizLabel: "Eskrokri ouswa vre?",
+      scam: "Eskrokri",
+      genuine: "Vre",
+      progress: (n, t, k) => `Kestion ${n} lor ${t} · ou finn gagn ${k} bon ziska aster`,
+      correct: "Bon repons.",
+      incorrect: "Pa bon.",
+      isScam: "Sa enn eskrokri.",
+      isGenuine: "Sa enn vre mesaz.",
+      whyLabel: "Kifer",
+      inEnglish: "An angle",
+      next: "Swivan",
+      seeScore: "Get ou skor",
+      scoreLabel: "Ou skor",
+      scoreLine: (k, t) => `Ou finn rekonet ${k} lor ${t}.`,
+      scoreComment: TODO_KREOL(LEARN_EN.scoreComment),
+      best: (b, t) => `Ou pli bon skor: ${b} / ${t}`,
+      playAgain: "Zwe ankor",
+      syntheticNote: TODO_KREOL(LEARN_EN.syntheticNote),
+      trendsTitle: TODO_KREOL(LEARN_EN.trendsTitle),
+      trends: TODO_KREOL(LEARN_EN.trends),
     },
   },
 };
