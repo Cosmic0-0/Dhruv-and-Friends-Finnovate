@@ -14,16 +14,32 @@ db.exec(`
   );
 `);
 
+// Normalizes a sender identifier to a canonical digits-only form (assuming
+// the 230 Mauritius country code for 8-digit local numbers) so the same
+// number submitted in different formats ("+230 5789 1234", "+23057891234",
+// "57891234") dedupes to one row instead of three (see
+// data/test-payloads/FINDINGS.md #4). This is purely an internal DB key —
+// the API still echoes back the raw string the client submitted.
+function normalizeSender(raw) {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length > 0 && digits.length <= 8 && !digits.startsWith("230")) {
+    return `230${digits}`;
+  }
+  return digits;
+}
+
 export function reportSender(sender) {
+  const key = normalizeSender(sender);
   db.prepare(
     `INSERT INTO reports (sender, report_count) VALUES (?, 1)
      ON CONFLICT(sender) DO UPDATE SET report_count = report_count + 1`
-  ).run(sender);
-  return db.prepare("SELECT report_count FROM reports WHERE sender = ?").get(sender).report_count;
+  ).run(key);
+  return db.prepare("SELECT report_count FROM reports WHERE sender = ?").get(key).report_count;
 }
 
 export function getReportCount(sender) {
-  const row = db.prepare("SELECT report_count FROM reports WHERE sender = ?").get(sender);
+  const key = normalizeSender(sender);
+  const row = db.prepare("SELECT report_count FROM reports WHERE sender = ?").get(key);
   return row ? row.report_count : 0;
 }
 
