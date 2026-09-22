@@ -41,7 +41,15 @@ async function callOllama(prompt, signal) {
   const res = await fetch(`${OLLAMA_URL}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, format: "json", think: true }),
+    // think:false measured ~5x faster (10s vs 48.6s, same GPU/prompt) with
+    // no quality difference observed on a same-prompt A/B (both think modes
+    // gave the identical wrong verdict on a legitimate-but-alarming OTP
+    // message - the miss is a prompt-tuning gap, not something thinking
+    // mode fixes). qwen3 supports toggling this (unlike the OpenRouter
+    // fallback model, which has thinking mode mandatory) - see
+    // backend/src/services/analysis/llmClient.js's LLM_TIMEOUT_MS comment
+    // for the fallback-side version of this same reasoning-latency problem.
+    body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, format: "json", think: false }),
     signal,
   });
   if (!res.ok) throw new Error(`Ollama request failed: ${res.status}`);
