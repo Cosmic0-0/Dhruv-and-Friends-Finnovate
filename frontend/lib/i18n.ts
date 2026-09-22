@@ -33,10 +33,12 @@ export interface Copy {
   checking: string;
   stillWorking: string;
   uploadScreenshot: string;
+  /** Short micro-label under the upload button's icon. */
+  screenshotLabel: string;
   /**
    * Replaces privacyNote whenever a screenshot is involved. Must describe what
-   * the server actually does: /api/analyze/screenshot receives the image as-is
-   * and currently also runs its AI check on the raw OCR text before redaction.
+   * the server actually does: /api/analyze/screenshot receives the image as-is,
+   * then redacts the OCR text before analysing it.
    */
   imagePrivacyNote: string;
   shot: {
@@ -72,7 +74,12 @@ export interface Copy {
   };
   relativeTime: (ms: number) => string;
   tabs: { check: string; learn: string; trends: string };
-  placeholderPage: { learnTitle: string; trendsTitle: string; body: string };
+  trends: {
+    title: string;
+    intro: string;
+    categories: { title: string; body: string; example: string }[];
+    footerNote: string;
+  };
   result: {
     title: string;
     fromSender: (sender: string) => string;
@@ -323,8 +330,10 @@ const RESULT_EN: Copy["result"] = {
 };
 
 // Screenshot upload copy (English), held in constants so Kreol can fall back via TODO_KREOL.
+// Matches backend/src/routes/index.js (/analyze/screenshot): the image arrives
+// as-is, and the OCR text is redacted (services/redact) before any analysis.
 const IMAGE_PRIVACY_EN =
-  "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and, for now, also runs an AI check on it before anything is removed. Your result comes only from the redacted text, after you review it and press Check.";
+  "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
 
 const SHOT_EN: Copy["shot"] = {
   remove: "Remove screenshot",
@@ -339,10 +348,10 @@ const SHOT_EN: Copy["shot"] = {
 type ImageReason = Extract<ValidationReason, `image_${string}`>;
 const IMAGE_ERRORS_EN: Record<ImageReason, string> = {
   image_missing: "Choose a screenshot to upload.",
-  image_unreadable: "We couldn't open that image. Try another screenshot, or type the message instead.",
-  image_too_large: "That image is too large. Try a smaller screenshot, or crop it to just the message.",
-  image_not_supported: "That file isn't an image we can read. Choose a screenshot (PNG or JPEG).",
-  image_no_text: "We couldn't find any text in that image. Type or paste the message instead.",
+  image_invalid: "That file isn't a PNG, JPEG, or WEBP image.",
+  image_too_large: "That image is too large. Please keep it under 5MB.",
+  image_unreadable: "That image couldn't be read. Try a different file.",
+  image_no_text: "We couldn't find any readable text in that screenshot.",
   image_text_too_long:
     "That screenshot has more text than we can check at once. Crop it to just the message, or paste the text.",
 };
@@ -363,6 +372,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Checking…",
     stillWorking: "The AI is still working…",
     uploadScreenshot: "Upload a screenshot",
+    screenshotLabel: "Screenshot",
     imagePrivacyNote: IMAGE_PRIVACY_EN,
     shot: SHOT_EN,
     privacyNote: "Phone numbers, emails and account numbers are removed before anything is analysed.",
@@ -398,10 +408,29 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
     tabs: { check: "Check", learn: "Learn", trends: "Trends" },
-    placeholderPage: {
-      learnTitle: "Learn the warning signs",
-      trendsTitle: "Scam trends in Mauritius",
-      body: "This section is on its way.",
+    trends: {
+      title: "Known scam patterns in Mauritius",
+      intro:
+        "FraudLens doesn't have a live report feed yet, so this isn't a ranked trend chart — it's the scam formats reported often enough in Mauritius to be worth knowing by sight.",
+      categories: [
+        {
+          title: "Bank impersonation SMS",
+          body: "Messages posing as MCB, SBM, Absa Mauritius or Bank One, warning that your account is suspended or a transfer needs urgent confirmation.",
+          example: '"MCB Alert: Your account has been suspended. Verify now at mcb-secure.top"',
+        },
+        {
+          title: "Telecom prize scams",
+          body: "Fake My.t or Emtel messages claiming you've won data, airtime or cash, pushing you to click a link or call a premium number.",
+          example: '"Congratulations! Your number won Rs 25,000 from My.t. Claim now: myt-prize.win"',
+        },
+        {
+          title: "Mobile money fraud",
+          body: 'A caller posing as a mobile money agent asks for your PIN or OTP to "reverse" a wrong payment or "upgrade" your account.',
+          example: '"This is MCB Juice support. Share the OTP so we can cancel the wrong transfer."',
+        },
+      ],
+      footerNote:
+        'The closest thing to real trend data today: when you check a message, the result screen shows "reported by others" if that sender has been flagged before.',
     },
     result: RESULT_EN,
     learn: LEARN_EN,
@@ -418,8 +447,9 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Vérification…",
     stillWorking: "L'IA travaille encore…",
     uploadScreenshot: "Importer une capture d'écran",
+    screenshotLabel: "Capture d'écran",
     imagePrivacyNote:
-      "Les captures d'écran sont envoyées telles quelles à notre serveur, noms et numéros visibles. Le serveur lit le texte et, pour l'instant, le soumet aussi à une vérification par IA avant tout masquage. Votre résultat repose uniquement sur le texte masqué, après votre relecture et votre appui sur Vérifier.",
+      "Les captures d'écran sont envoyées telles quelles à notre serveur, noms et numéros visibles. Le serveur lit le texte et retire les numéros de téléphone, e-mails et numéros de compte avant toute analyse. Votre résultat repose uniquement sur le texte masqué, après votre relecture et votre appui sur Vérifier.",
     shot: {
       remove: "Retirer la capture",
       alt: "Votre capture d'écran",
@@ -447,11 +477,11 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "Un des messages est vide.",
         batch_item_too_long: "Un des messages dépasse 5 000 caractères.",
         sender_empty: "Indiquez le numéro ou le nom de l'expéditeur.",
-        image_missing: "Choisissez une capture d'écran à importer.",
-        image_unreadable: "Impossible d'ouvrir cette image. Essayez une autre capture, ou saisissez le message.",
-        image_too_large: "Cette image est trop lourde. Essayez une capture plus petite, ou recadrez-la sur le message.",
-        image_not_supported: "Ce fichier n'est pas une image lisible. Choisissez une capture d'écran (PNG ou JPEG).",
-        image_no_text: "Aucun texte trouvé dans cette image. Saisissez ou collez le message à la place.",
+        image_missing: "Choisissez une capture d'écran à envoyer.",
+        image_invalid: "Ce fichier n'est pas une image PNG, JPEG ou WEBP.",
+        image_too_large: "Cette image est trop grande. Limitez-vous à 5 Mo.",
+        image_unreadable: "Cette image n'a pas pu être lue. Essayez un autre fichier.",
+        image_no_text: "Nous n'avons trouvé aucun texte lisible dans cette capture d'écran.",
         image_text_too_long:
           "Cette capture contient trop de texte pour une seule vérification. Recadrez-la sur le message, ou collez le texte.",
         invalid: "Ce message pose un problème. Vérifiez-le et réessayez.",
@@ -470,10 +500,29 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
     tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances" },
-    placeholderPage: {
-      learnTitle: "Reconnaître les signaux d'alerte",
-      trendsTitle: "Tendances des arnaques à Maurice",
-      body: "Cette section arrive bientôt.",
+    trends: {
+      title: "Arnaques connues à Maurice",
+      intro:
+        "FraudLens n'a pas encore de flux de signalements en direct, ce n'est donc pas un classement en temps réel — ce sont les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil.",
+      categories: [
+        {
+          title: "SMS usurpant une banque",
+          body: "Des messages se faisant passer pour MCB, SBM, Absa Mauritius ou Bank One, annonçant que votre compte est suspendu ou qu'un virement doit être confirmé d'urgence.",
+          example: "« Alerte MCB : votre compte a été suspendu. Vérifiez maintenant sur mcb-secure.top »",
+        },
+        {
+          title: "Arnaques aux prix télécom",
+          body: "De faux messages My.t ou Emtel prétendant que vous avez gagné des données, du crédit ou de l'argent, vous poussant à cliquer sur un lien ou appeler un numéro surtaxé.",
+          example: "« Félicitations ! Votre numéro a gagné Rs 25 000 chez My.t. Réclamez maintenant : myt-prize.win »",
+        },
+        {
+          title: "Fraude au mobile money",
+          body: "Un appelant se faisant passer pour un agent mobile money demande votre code PIN ou OTP pour « annuler » un mauvais paiement ou « mettre à niveau » votre compte.",
+          example: "« Ici le support MCB Juice. Partagez le code reçu pour annuler le mauvais virement. »",
+        },
+      ],
+      footerNote:
+        "Ce qui se rapproche le plus d'une donnée de tendance aujourd'hui : quand vous vérifiez un message, l'écran de résultat indique si cet expéditeur a déjà été signalé par d'autres.",
     },
     result: {
       title: "Résultat",
@@ -623,6 +672,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Pe verifie…",
     stillWorking: "LIA pe ankor travay…",
     uploadScreenshot: "Met enn screenshot",
+    screenshotLabel: "Screenshot",
     // New with screenshot upload, not reviewed yet: TODO_KREOL ones show English.
     imagePrivacyNote: TODO_KREOL(IMAGE_PRIVACY_EN),
     shot: {
@@ -651,7 +701,12 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "Enn mesaz vid.",
         batch_item_too_long: "Enn mesaz depas 5 000 karakter.",
         sender_empty: "Met nimero ouswa nom sa kinn avoy li.",
-        ...TODO_KREOL(IMAGE_ERRORS_EN),
+        image_missing: "Swazir enn kaptir ekran pou anvoye.",
+        image_invalid: "Fisie la pa enn imaz PNG, JPEG, ouswa WEBP.",
+        image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
+        image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
+        image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
+        image_text_too_long: TODO_KREOL(IMAGE_ERRORS_EN.image_text_too_long),
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",
@@ -667,10 +722,29 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
     tabs: { check: "Verifie", learn: "Aprann", trends: "Tandans" },
-    placeholderPage: {
-      learnTitle: "Aprann rekonet bann siny",
-      trendsTitle: "Tandans eskrokri Moris",
-      body: "Sa seksion la pe vini byento.",
+    trends: {
+      title: "Bann eskrokri konplet dan Moris",
+      intro:
+        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel — se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
+      categories: [
+        {
+          title: "SMS ki imit enn labank",
+          body: "Bann mesaz ki fer krwar zot MCB, SBM, Absa Mauritius ouswa Bank One, ki dir ou kont finn sispann ouswa enn transfer bizin konfirme dirzans.",
+          example: "\"Alert MCB: Ou kont finn sispann. Verifie aster lor mcb-secure.top\"",
+        },
+        {
+          title: "Eskrokri pri telekom",
+          body: "Fos mesaz My.t ouswa Emtel ki dir ou finn gagn data, kredi ouswa larzan, ki pouse ou pou klik enn lien ouswa apel enn nimero pey.",
+          example: "\"Felisitasion! Ou nimero finn gagn Rs 25 000 kot My.t. Reklam aster: myt-prize.win\"",
+        },
+        {
+          title: "Fraud mobile money",
+          body: 'Enn dimoun ki fer krwar li enn azan mobile money dimann ou PIN ouswa OTP pou "aret" enn move peyman ouswa "amelior" ou kont.',
+          example: "\"Sa se sipor MCB Juice. Partaz kod la pou nou anile move transfer la.\"",
+        },
+      ],
+      footerNote:
+        "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
     },
     // Result screen: reviewed by the frontend owner.
     result: {

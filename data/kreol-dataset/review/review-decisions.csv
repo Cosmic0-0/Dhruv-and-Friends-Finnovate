@@ -1,1 +1,28 @@
 id,reviewer,decision,corrected_original_message,corrected_english_meaning,signals_to_add,signals_to_remove,review_notes,reviewed_at
+FL-KM-0001,Caellum,EDIT,Ou kont OceanBank pou bloke zordi si ou pa verifye. Klik lor oceanbank-verify-secure.test deswit.,,,SENSITIVE_INFO_REQUEST,,2026-09-22T11:11:13+00:00
+FL-KM-0001,Joshua,EDIT,Ou kont OceanBank pou bloke zordi si ou pa fer verification. Klik lor oceanbank-verify-secure.test deswit.,,,SENSITIVE_INFO_REQUEST,,2026-09-22T11:01:43+00:00
+FL-KM-0002,Caellum,EDIT,"Dear customer, IslandTrust Bank security equip pe demande ou konfirm OTP 583291 lor sa nimero-la pou anile enn transaksion sispek.",,,,,2026-09-22T11:12:52+00:00
+FL-KM-0002,Joshua,EDIT,"Ser client, lekip sekirite IslandTrust Bank pe demann ou konfirm OTP (583291) lor sa nimero-la pou anil enn transaksion sispe.","Dear customer, the IslandTrust Bank security team is asking you to confirm OTP (583291) on this number to cancel a suspicious transaction.",,SENSITIVE_INFO_REQUEST,,2026-09-22T11:04:20+00:00
+FL-KM-0003,Caellum,APPROVE,,,,,,2026-09-22T11:14:34+00:00
+FL-KM-0003,Joshua,EDIT,ALERT SunCoast Bank: To kart inn sispann pou rezon sekirite. Apel sa nimero-la dans 24 er temps: +230 5xxx xxxx.,,,,,2026-09-22T11:05:22+00:00
+FL-KM-0004,Joshua,EDIT,Ou compte Meridian Bank inn sispann temporairement. Verifye ou compte lor meridianbank-secure-login.test avan minwi.,Your Meridian Bank account has been temporarily suspended. Verify your account on meridianbank-secure-login.test before midnight.,,,,2026-09-22T11:07:50+00:00
+FL-KM-0005,Joshua,EDIT,"Ser client, ou compte OceanBank inn bloke pou bann raison de securite. Konfirm ou code PIN deswit lor sa lyen-la.",,,,,2026-09-22T11:09:54+00:00
+FL-KM-0006,Joshua,APPROVE,,,,,,2026-09-22T11:11:19+00:00
+FL-KM-0007,Joshua,EDIT,"Lannons MRA: Ou ena enn peyman tax outstanding de Rs 12,500. Si ou pa ressi fer li avan 48h ou kav gegn bann penalite ek prosekision legal.",,,,,2026-09-22T11:13:21+00:00
+FL-KM-0008,Joshua,EDIT,Ministre Finans/MRA: Ou dosye ranboursman bloke. Konfirm ou numero kont labank touswit lor sa form-la pou nou rezoud sa.,,,,,2026-09-22T11:14:04+00:00
+FL-KM-0009,Joshua,EDIT,"Salut, mo finn avoy larzan par erer lor to kont la banque. Silvouple reavoyy Rs 3,000 lor sa numero-la deswit.",,,,,2026-09-22T11:14:56+00:00
+FL-KM-0010,Joshua,EDIT,Nou ban detail la banque inn sanze pou sa payment-la. Nouvo compte beneficiaire: fer le necessaire avan ou fer transfer.,,,,,2026-09-22T11:16:37+00:00
+FL-KM-0011,Joshua,EDIT,Support PayIsle: Ou pou gagn enn erer lor ou transaksion. Avoy Rs 500 kouma enn frais verification pou nou debloke ou kont.,,,,,2026-09-22T11:17:20+00:00
+FL-KM-0012,Joshua,EDIT,"Ma, mo finn sanz numero. Mo dan enn problem, mo bizin Rs 2,000 deswit. Pa dir personn, avoy lor sa numero-la.",,,,,2026-09-22T11:17:37+00:00
+FL-KM-0013,Joshua,EDIT,"Bonojour mo mem ca, monn perdi mo portab et samem mo nouvo nimero. Pas kav fer bann appel la, urgent mo bizin pay enn bill, ou kapav avoy Rs 4,500 pou mwa?",,,,,2026-09-22T11:19:07+00:00
+FL-KM-0014,Joshua,EDIT,"Momem sa, monn gegn een problem urgent, mo pa kapav explik par telefone. Envoye Rs 3,500 silvouple, li tres urgent, pa dir papa.",,,,,2026-09-22T11:19:39+00:00
+FL-KM-0015,Joshua,EDIT,Colis pou ou finn ariv kot la douane. Peye Rs 650 kouma fre douane lor sa lyen-la avan li retourn expediteur.,,,,,2026-09-22T11:20:02+00:00
+FL-KM-0016,Joshua,EDIT,Ou parcel pa finn delivre. Update ou delivery address ek peye Rs 250 pou bann fre livraison lor track-parcel-mu.test.,,,,,2026-09-22T11:20:47+00:00
+FL-KM-0017,Joshua,EDIT,"Investi Rs 5,000 zordi, gagn Rs 15,000 dan 7 zour, garanti san risk. Kontakte mwa lor WhatsApp pou koumanse.",,,,,2026-09-22T11:20:58+00:00
+FL-KM-0018,Joshua,EDIT,"Zwen nou group exclusif trading, 30% retour garanti sak semenn. Minimum deposit Rs 10,000 lor crypto wallet.",,,,,2026-09-22T11:21:44+00:00
+FL-KM-0019,Joshua,EDIT,"Travay fasil work from home, gegn Rs 8,000 par semenn. Zis avoy Rs 500 pou fre inscription pou konfirm ou plas.",,,,,2026-09-22T11:22:15+00:00
+FL-KM-0020,Joshua,EDIT,"Nou pe rekrit bann dimoun pou online data entry, zero experience neceser, Rs 400 par zour. Pey Rs 800 registration fee pou gagn ou starter kit.",,,,,2026-09-22T11:58:56+00:00
+FL-KM-0021,Joshua,EDIT,"Felicitations! Ou'nn gagne enn loterie WhatsApp International, avecv enn prix de Rs 50,000. Avoye ou bann details bancaires pou reklam li avan 24h, li urgent!",,,,,2026-09-22T11:59:40+00:00
+FL-KM-0022,Joshua,EDIT,Ou statement mansyel disponib lor ou paz. Pena aksion pou fer si tou paret korek.,,,,,2026-09-22T12:00:09+00:00
+FL-KM-0023,Joshua,EDIT,"Ou mot de pass inn zanze le 12 Sep. Si li pas ti ou, contact lekip support lor app, pas lor messaz",,,,,2026-09-22T12:01:21+00:00
+FL-KM-0024,Joshua,EDIT,Rappel: ou ena enn rendez-vous ar ou konseye labank lindi prosen 10h. Kontakte labank si ou pa disponib.,,,,,2026-09-22T12:01:45+00:00

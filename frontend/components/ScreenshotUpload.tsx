@@ -32,7 +32,7 @@ export type ShotState =
 const SLOW_AFTER_MS = 10_000;
 
 const IMAGE_ERROR_REASON: Record<ImageErrorCode, ValidationReason> = {
-  not_image: "image_not_supported",
+  not_image: "image_invalid",
   too_large: "image_too_large",
   unreadable: "image_unreadable",
 };
@@ -173,16 +173,17 @@ export function ScreenshotRow({
   else if (state.phase === "reading") status = state.slow ? copy.shot.stillReading : copy.shot.reading;
   else if (state.phase === "done")
     status = (
-      <span className="flex items-start gap-2 text-safe">
-        <CheckIcon className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} />
+      <span className="flex items-start gap-2">
+        <CheckIcon className="mt-0.5 size-4 shrink-0 text-accent-ink" strokeWidth={2.5} />
         <span className="text-ink-soft">{copy.shot.extracted}</span>
       </span>
     );
 
+  // Sits inside CheckForm's .sheet, which draws the rule above it.
   return (
-    <div className="flex flex-col gap-3 border-t border-card-border pt-3">
+    <div className="flex flex-col gap-3 px-4 py-3">
       <div className="flex items-center gap-3">
-        <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-card-border bg-muted-surface">
+        <div className="relative size-16 shrink-0 overflow-hidden border border-card-border bg-muted-surface">
           {previewUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
             <img src={previewUrl} alt={copy.shot.alt} className="size-full object-cover object-top" />
@@ -201,16 +202,17 @@ export function ScreenshotRow({
           onClick={onRemove}
           aria-label={copy.shot.remove}
           title={copy.shot.remove}
-          className="grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-muted-surface hover:text-ink"
+          className="pressable grid size-10 shrink-0 place-items-center text-ink-muted hover:bg-muted-surface hover:text-ink"
         >
           <XIcon className="size-5" strokeWidth={2} />
         </button>
       </div>
 
       {state.phase === "error" && (
-        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-caution/30 bg-caution-soft p-4">
+        // Same treatment as CheckForm's ErrorCard: a left rule, not a floating box.
+        <div role="alert" className="flex flex-col gap-3 border-l-2 border-l-caution bg-caution-soft p-4">
           <div className="flex flex-col gap-1">
-            <p className="font-serif text-[1.0625rem] leading-tight font-medium text-ink">{errorCopy(state.error, copy).title}</p>
+            <p className="micro text-caution-ink">{errorCopy(state.error, copy).title}</p>
             <p className="text-sm leading-relaxed text-ink-soft">{errorCopy(state.error, copy).body}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -218,16 +220,16 @@ export function ScreenshotRow({
               <button
                 type="button"
                 onClick={onRetry}
-                className="flex items-center gap-2 rounded-pill bg-ink px-4 py-2 text-sm font-semibold text-on-ink"
+                className="pressable micro flex min-h-10 items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
               >
-                <RetryIcon className="size-4" strokeWidth={2} />
+                <RetryIcon className="size-3.5" strokeWidth={2} />
                 {copy.retry}
               </button>
             )}
             <button
               type="button"
               onClick={onTypeInstead}
-              className="rounded-pill border border-ink/20 bg-card px-4 py-2 text-sm font-semibold text-ink"
+              className="pressable micro min-h-10 border border-line-strong bg-card px-4 text-ink hover:bg-muted-surface"
             >
               {copy.shot.typeInstead}
             </button>

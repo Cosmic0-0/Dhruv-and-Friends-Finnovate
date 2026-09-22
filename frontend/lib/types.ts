@@ -1,9 +1,10 @@
 /**
  * Types mirroring docs/API-CONTRACT.md ("as implemented").
  *
- * Fields marked OPTIONAL-FUTURE are not in the contract yet; the backend may
- * add them later. The UI must render correctly whether they are present or
- * not — never assume them, never synthesise them client-side.
+ * Fields marked OPTIONAL are in the contract but best-effort: the backend
+ * omits them (rather than sending null/0) when it has no valid value. The UI
+ * must render correctly whether they are present or not — never assume them,
+ * never synthesise them client-side.
  */
 
 export type Verdict = "safe" | "suspicious" | "scam";
@@ -13,15 +14,21 @@ export type Severity = "low" | "medium" | "high";
 /** Free-form hint passed straight into the LLM prompt; not validated server-side. */
 export type LanguageHint = "en" | "fr" | "kreol" | "mixed";
 
+export type SignalSource = "message_text" | "url_parser" | "community_reports" | "llm_analysis" | "identity_check";
+
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+
 export interface Signal {
-  /** e.g. "sender_mismatch" | "urgency_language" | "lookalike_url" | "spoofed_identity" — free-form string */
+  /** e.g. "sender_mismatch" | "urgency_language" | "lookalike_url" | "spoofed_identity" | "IDENTITY_MISMATCH" — free-form string */
   type: string;
   description: string;
   severity: Severity;
-  /** OPTIONAL-FUTURE: the exact text/URL in the message that triggered this signal. */
+  /** OPTIONAL: the exact text/URL in the message that triggered this signal. */
   evidence?: string;
-  /** OPTIONAL-FUTURE: age of a linked domain in days (lookalike_url signals). */
+  /** OPTIONAL: age of a linked domain in days (lookalike_url signals). */
   domainAgeDays?: number;
+  /** OPTIONAL: where in the pipeline this signal came from. */
+  source?: SignalSource;
 }
 
 // ---- POST /api/analyze ----
@@ -39,29 +46,41 @@ export interface AnalyzeResponse {
   suggestedAction: string;
   /** Localized to the input language. */
   explanation: string;
-  /** OPTIONAL-FUTURE: backend-computed risk score. Absent → show band label only. */
+  /** OPTIONAL: backend-computed risk score. Absent → show band label only. */
   riskScore?: number;
-  /** OPTIONAL-FUTURE: sender identifier extracted from the message. */
+  /** OPTIONAL: sender identifier extracted from the message. */
   sender?: string;
-  /** OPTIONAL-FUTURE: crowdsourced report count for `sender`. */
+  /** OPTIONAL: crowdsourced report count for `sender`. */
   senderReports?: number;
+  /** OPTIONAL: risk broken into categories, derived from `signals`. */
+  riskCategories?: {
+    identity_risk: RiskLevel;
+    behavioral_risk: RiskLevel;
+    payment_risk: RiskLevel;
+    technical_risk: RiskLevel;
+    verification_risk: RiskLevel;
+  };
 }
 
 // ---- POST /api/analyze/screenshot ----
 
-export interface ScreenshotRequest {
-  /** Base64 image, max 5MB decoded; a `data:<mime>;base64,` prefix is accepted. PNG, JPEG or WEBP (sniffed server-side). */
+export interface AnalyzeScreenshotRequest {
+  /** Base64-encoded image, with or without a "data:<mime>;base64," prefix. PNG/JPEG/WEBP, ≤5MB decoded. */
   image: string;
   language?: LanguageHint | string;
 }
 
 /**
- * The server runs OCR, then analyses the extracted text. The UI uses only
- * `extractedText`: the user reviews and corrects it, and it's then redacted
- * and sent to /api/analyze like typed text. The server's own verdict here
- * is deliberately not shown (it was computed on unreviewed, unredacted OCR text).
+ * The server runs OCR, redacts identifiers from the extracted text
+ * (backend/src/services/redact), then analyses it. The UI uses only
+ * `extractedText`: it goes into the editable textarea for the user to review
+ * and correct, then through the browser's own redaction (lib/redact.ts) and
+ * /api/analyze like typed text. The server's own verdict in this response is
+ * deliberately not shown: it was computed on unreviewed OCR text, which can
+ * contain misreads the user hasn't had a chance to fix.
  */
-export interface ScreenshotResponse extends AnalyzeResponse {
+export interface AnalyzeScreenshotResponse extends AnalyzeResponse {
+  /** OCR output, already redacted server-side: this is what the server analysed. */
   extractedText: string;
 }
 
@@ -72,10 +91,17 @@ export interface BatchScanRequest {
   messages: string[];
 }
 
-export interface BatchScanResult extends AnalyzeResponse {
+export interface BatchScanResult extends Omit<AnalyzeResponse, "verdict"> {
+  /**
+   * "unknown" only appears here, never from /api/analyze directly - it's a
+   * batch-only synthesized value for a per-message analysis failure (paired
+   * with analysisFailed: true), so it never appears in scamCount/
+   * suspiciousCount/safeCount (see BatchScanSummary.unanalyzedCount).
+   */
+  verdict: Verdict | "unknown";
   /** Echoed back from the request. */
   message: string;
-  /** True when analysis failed and the result was synthesized (contract on main; optional until merged). */
+  /** True when analysis failed and the result was synthesized. Always sent by the backend; optional here for older backends. */
   analysisFailed?: boolean;
 }
 
@@ -84,7 +110,7 @@ export interface BatchScanSummary {
   scamCount: number;
   suspiciousCount: number;
   safeCount: number;
-  /** Count of results with analysisFailed (contract on main; optional until merged). */
+  /** Count of results with analysisFailed. Always sent by the backend; optional here for older backends. */
   unanalyzedCount?: number;
 }
 
@@ -120,5 +146,5 @@ export interface ApiErrorBody {
 
 export const MAX_MESSAGE_LENGTH = 5000;
 export const MAX_BATCH_SIZE = 50;
-/** /api/analyze/screenshot limit on the decoded image. */
+/** Decoded image size cap for /api/analyze/screenshot; backend also enforces this (backend/src/routes/index.js). */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

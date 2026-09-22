@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import AppHeader from "@/components/AppHeader";
-import PlaceholderScreen from "@/components/PlaceholderScreen";
+import TrendsContent from "@/components/TrendsContent";
 
-export const metadata: Metadata = { title: "Trends" };
+export const metadata: Metadata = { title: "Trends", alternates: { canonical: "/trends" } };
 
 export default function TrendsPage() {
   return (
-    <main className="flex flex-col gap-8">
+    <main>
       <AppHeader />
-      <PlaceholderScreen page="trends" />
+      <div className="gutter pt-7">
+        <TrendsContent />
+      </div>
     </main>
   );
 }

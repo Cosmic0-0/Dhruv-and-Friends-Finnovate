@@ -61,8 +61,8 @@ test("screenshot 400s map to specific reasons", async () => {
   const cases: Array<[string, string]> = [
     ["no readable text was found in the image", "image_no_text"],
     ["image exceeds maximum size of 5MB", "image_too_large"],
-    ["image must be a valid PNG, JPEG, or WEBP file (checked by content, not the declared type)", "image_not_supported"],
-    ["image could not be decoded as base64", "image_unreadable"],
+    ["image must be a valid PNG, JPEG, or WEBP file (checked by content, not the declared type)", "image_invalid"],
+    ["image could not be decoded as base64", "image_invalid"],
     ["extracted text exceeds maximum length of 5000 characters", "image_text_too_long"],
     ["image is required and must be a base64-encoded string", "image_missing"],
   ];
@@ -94,6 +94,23 @@ test("a non-JSON 5xx from the proxy means the backend is unreachable; 504 is a t
   stub(504, "Gateway Timeout", "text/plain");
   res = await analyzeMessage({ message: "hi" });
   assert.equal(!res.ok && res.error.kind, "timeout");
+});
+
+test("the current backend's sanitised 502 bodies are still classified correctly", async () => {
+  stub(502, { error: "OCR failed, try again shortly" });
+  let res = await analyzeScreenshot({ image: "x" });
+  assert.equal(!res.ok && res.error.kind, "ocr_failed");
+  stub(502, { error: "analysis failed, try again shortly" });
+  res = await analyzeScreenshot({ image: "x" });
+  assert.equal(!res.ok && res.error.kind, "llm_unavailable");
+});
+
+test("429 rate limiting reads as 'busy, try again', not an unexpected error", async () => {
+  stub(429, { error: "too many analyze requests, try again shortly" });
+  const res = await analyzeMessage({ message: "hi" });
+  assert.equal(!res.ok && res.error.kind, "llm_unavailable");
+  assert.equal(!res.ok && res.error.status, 429);
+  assert.doesNotMatch(!res.ok ? res.error.message : "", /too many analyze requests/);
 });
 
 test("a 404 or an off-contract body is 'unexpected', not a crash", async () => {

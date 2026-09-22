@@ -23,6 +23,12 @@ test("contract types and common LLM variants map to known kinds", () => {
   assert.equal(signalKind("otpRequest"), "credential_request");
   assert.equal(signalKind("prize_scam"), "prize_offer");
   assert.equal(signalKind("grammar_errors"), null);
+  // Types the merged backend actually returns (live response, qwen3:8b).
+  assert.equal(signalKind("IDENTITY_MISMATCH"), "sender_mismatch");
+  assert.equal(signalKind("impersonation"), "spoofed_identity");
+  assert.equal(signalKind("urgency"), "urgency_language");
+  assert.equal(signalKind("suspicious_url"), "lookalike_url");
+  assert.equal(signalKind("sensitive_info_request"), "credential_request");
 });
 
 test("unknown types get a readable fallback, never snake_case", () => {

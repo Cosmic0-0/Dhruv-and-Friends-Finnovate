@@ -187,6 +187,158 @@ collapsing to one exported constant.
 
 ---
 
+## 10. Brand-token check matches as a raw substring, flagging unrelated domains
+
+**Severity:** medium &nbsp;·&nbsp; `src/services/domain-matching/index.js`
+
+The round-1 fix for #3 added a brand-token check (`host.includes(token)`) to
+catch prefix/suffix phishing patterns the Levenshtein check misses. But a raw
+substring match fires on any hostname that happens to contain a token's
+letters in sequence, regardless of word boundaries:
+
+```js
+checkUrls("https://mythology-store.com/catalog")  // → [lookalike_url]  "myt" ⊂ "mythology"
+checkUrls("https://absalom-books.com/order/1")     // → [lookalike_url]  "absa" ⊂ "absalom"
+checkUrls("https://sbmarketing.co.uk/quote")       // → [lookalike_url]  "sbm" ⊂ "sbmarketing"
+```
+
+None of these are lookalikes of `mcb.mu`, `absa.mu`, or `sbmgroup.mu` — they're
+unrelated legitimate-looking domains that happen to start with the same
+letters. A deterministic signal that fires this easily on ordinary domains
+undermines the "structured signal breakdown, not a black box" pitch (a named
+judging differentiator) the moment a judge tries an off-script URL.
+
+**Suggested fix:** match whole hostname labels instead of a substring —
+split the hostname on `.` and `-` and check for an exact label match:
+
+```js
+const labels = host.split(/[.-]/);
+const brandToken = BRAND_TOKENS.find((token) => labels.includes(token));
+```
+
+This still catches `mcb-secure.top` (labels: `mcb`, `secure`, `top`) and
+`secure-absa.mu` (labels: `secure`, `absa`, `mu`) — the exact cases #3 was
+raised for — while no longer matching `mythology-store.com`,
+`absalom-books.com`, or `sbmarketing.co.uk`.
+
+**Status: FIXED IN THIS PASS.** Applied the label-split fix above and added
+regression tests for both the three false positives and a same-label true
+positive (`secure-absa.mu`). Full suite re-run: 19/19 passing.
+
+---
+
+## 11. Levenshtein-2 threshold false-positives on short, unrelated real domains
+
+**Severity:** medium &nbsp;·&nbsp; `src/services/domain-matching/index.js` &nbsp;·&nbsp; found while
+building the EN/FR payload set, reproduced directly against the module
+
+```js
+checkUrls("File at mra.mu before the deadline")
+// → [{ type: "lookalike_url", description: "mra.mu closely resembles legitimate domain mcb.mu", ... }]
+```
+
+`mra.mu` — the real Mauritius Revenue Authority domain, entirely unrelated to
+MCB — trips the distance-≤2 check against `mcb.mu`: both are 6 characters,
+differing only in the middle two letters (`r`/`a` vs `c`/`b`). For short,
+generic-shaped domains (`xyz.mu`), a flat distance-2 threshold is really just
+"any other short word starting with the same letter and ending in `.mu`" —
+2 of 3 label characters is a huge fraction to allow. I checked the other five
+`LEGIT_DOMAINS` and a few other real-looking `.mu`/`.com` domains directly
+against `checkUrls()`; only `mra.mu` collided, but the risk is systemic, not
+specific to this one string.
+
+This is exactly the "genuine-but-alarming precision" case the EN/FR payload
+set (`en.json`/`fr.json`, added in this pass) is designed to catch: a message
+that legitimately mentions a real, benign government domain would come back
+with an unexplained `lookalike_url` signal for `mcb.mu` — confusing at best,
+and a bad look in front of judges who recognise `mra.mu` as legitimate. I
+excluded `mra.mu` from the safe/genuine payloads rather than let the test set
+assert around a known bug; it's the demonstration case for the payload with
+`id: "EN-17"`/`"FR-17"` (see their `notes` field).
+
+Not fixed here — this is `domain-matching`, out of QA's role-gated area, and
+worth a design call rather than a quick patch: options include a
+length-scaled threshold (e.g. distance ≤1 for labels under ~5 characters),
+or requiring the compared label lengths to be within some delta before the
+distance check applies at all. Flagging for the backend owner.
+
+---
+
+## Round-1 re-verification (2026-09-22)
+
+Re-ran findings 2–9 against the current `caellum` branch — not inferred from
+reading the code, actually exercised:
+
+- **#2 scheme-less URLs / #3 lookalike domains** — `npm test`:
+  `checkUrls` unit tests for both cases pass (19/19 total after adding #10's
+  tests).
+- **#4 sender normalization** — live `POST /api/report` against a freshly
+  started `npm run dev`: `"+230 4444 5555"`, `"+2304444555 5"`, and
+  `"44445555"` accumulate to `reportCount: 1, 2, 3` — one shared row, as
+  intended.
+- **#5 malformed-JSON leak** — live `POST /api/report` with a broken JSON
+  body now returns `400 {"error":"invalid JSON body"}` (`Content-Type:
+  application/json`), not an HTML stack trace. Caught a real regression
+  while checking this: a stale `npm start` (no `--watch`) process from
+  earlier today was still bound to port 4000 serving pre-fix behavior —
+  not a code regression, but a reminder that `/health` responding isn't
+  proof the *current* code is what's actually running. Killed it and
+  re-verified against a clean `npm run dev`.
+- **#6 outage visibility / #7 batch skips domain matching / #8 concurrency
+  cap / #9 single batch-size constant** — all four are exercised directly by
+  `summarizeBatch`'s unit tests (analysisFailed/unanalyzedCount, injected
+  `analyze` ordering under concurrency, single exported `MAX_BATCH_SIZE`);
+  reading `routes/index.js` confirms `checkUrls()` is still computed before
+  the `try` in the batch route's `analyze` closure. No LLM endpoint yet, so
+  real per-message latency (the open half of #8) is still unmeasured.
+
+All nine hold up. No regressions found in the fixes themselves.
+
+## 12. OpenRouter free-tier fallback misses its own timeout budget about half the time
+
+**Severity:** high — this is the fallback path CLAUDE.md names as a blocking
+demo-readiness requirement &nbsp;·&nbsp; `backend/.env` /
+`scripts/check-llm-fallback.js`
+
+Now that a real `FALLBACK_API_KEY` is wired in (`FALLBACK_PROVIDER=openrouter`,
+`OPENROUTER_MODEL=liquid/lfm-2.5-2.6b:free`), I ran `npm run test:fallback`
+four times back to back, no cooldown between runs, against the actual
+OpenRouter API — not simulated:
+
+| Run | Result | Time |
+|---|---|---|
+| 1 | FAIL — aborted at timeout | 15018ms |
+| 2 | PASS | 13567ms |
+| 3 | FAIL — aborted at timeout | 15009ms |
+| 4 | PASS | 11045ms |
+
+2 of 4 (50%) didn't respond within `LLM_TIMEOUT_MS=15000` at all — not "slow
+but correct," a hard abort with no analysis result. The two passes were also
+both within ~1.5–4s of the budget, not comfortably under it. This roughly
+matches the "2 of 3" estimate already written in `.env`'s comment from
+whoever picked this model, so it isn't a fluke of my particular runs — it's
+the model's actual behavior under back-to-back load, which is exactly the
+condition a live demo Q&A session would create.
+
+If Ollama is genuinely unreachable on stage (the scenario this fallback
+exists for) with a roughly coin-flip chance of the fallback itself timing
+out, `/api/analyze` returns a 502 to the user with no result at all — the
+worst-case outcome CLAUDE.md's "reliability during the live demo" priority
+is specifically trying to prevent.
+
+**Suggested directions (not applied — a demo-strategy call, not a one-line
+fix):**
+- Raise `LLM_TIMEOUT_MS` specifically for demo conditions, if the UI can
+  tolerate a longer spinner without looking broken.
+- Try a different free OpenRouter model, or a cheap paid one, and re-run
+  `npm run test:fallback` several times before committing to it — one
+  `.env.example` comment's worth of testing may not be enough sample size;
+  this finding's 4 runs still aren't either.
+- Consider a pre-demo "warm-up" request to OpenRouter a few minutes before
+  going on stage, in case part of the latency is a cold start rather than
+  steady-state model speed — untested here, just a hypothesis worth
+  ruling in or out before the demo.
+
 ## What I need to continue
 
 An LLM endpoint — either the Tailscale `OLLAMA_URL` or a `FALLBACK_API_KEY`.

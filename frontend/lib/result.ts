@@ -46,7 +46,9 @@ export function normalizeType(type: string): string {
 // known kinds. Order matters: the first rule that matches wins.
 const KIND_RULES: ReadonlyArray<[SignalKind, RegExp]> = [
   ["lookalike_url", /^lookalike_url$|lookalike|phish|(suspicious|malicious|fake|spoofed)_(link|url|domain)|typosquat/],
-  ["sender_mismatch", /^sender_mismatch$|sender|unknown_number|spoofed_number/],
+  // IDENTITY_MISMATCH (backend identity-consistency check): claims to be a brand
+  // but the link or beneficiary doesn't match, i.e. "not who it claims".
+  ["sender_mismatch", /^sender_mismatch$|sender|unknown_number|spoofed_number|identity_mismatch/],
   ["urgency_language", /^urgency_language$|urgen|pressure|threat|deadline|time_limit/],
   ["spoofed_identity", /^spoofed_identity$|imperson|spoof|pretend|fake_identity|brand_abuse/],
   ["credential_request", /otp|code|pin|password|credential|sensitive|personal_info|card_detail|account_detail/],

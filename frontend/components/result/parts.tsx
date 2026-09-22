@@ -3,32 +3,35 @@ import Link from "next/link";
 import type { Copy } from "@/lib/i18n";
 import { highlightSegments, type EvidenceMark } from "@/lib/highlight";
 import type { AnalyzeResponse, Verdict } from "@/lib/types";
-import { getRiskDisplay, getVerdictDisplay } from "@/lib/verdict";
+import { getRiskDisplay, getVerdictBandIndex, getVerdictDisplay, VERDICT_BANDS } from "@/lib/verdict";
 import { ChevronLeftIcon } from "../icons";
 
 /** Small uppercase section label used across the result screen. */
 export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="font-sans text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase">
+    <h2 id={id} className="micro text-ink-muted">
       {children}
     </h2>
   );
 }
 
+/** Matches the home screen's instrument band so the two screens read as one tool. */
 export function ResultHeader({ copy, sender }: { copy: Copy; sender?: string }) {
   return (
-    <header className="flex items-center gap-3">
-      <Link
-        href="/"
-        aria-label={copy.result.back}
-        className="grid size-10 shrink-0 place-items-center rounded-full border border-card-border bg-card text-ink shadow-card"
-      >
-        <ChevronLeftIcon className="size-5" strokeWidth={2} />
-      </Link>
-      <p className="min-w-0 truncate text-[0.9375rem] font-semibold text-ink">
-        {copy.result.title}
-        {sender && <span className="font-normal text-ink-muted"> · {copy.result.fromSender(sender)}</span>}
-      </p>
+    <header className="bg-ink text-on-ink pt-[env(safe-area-inset-top)]">
+      <div className="gutter flex items-center gap-3 py-3">
+        <Link
+          href="/"
+          aria-label={copy.result.back}
+          className="pressable -ml-2 grid size-10 shrink-0 place-items-center text-on-ink hover:bg-white/10"
+        >
+          <ChevronLeftIcon className="size-5" strokeWidth={2} />
+        </Link>
+        <p className="micro min-w-0 truncate text-on-ink/60">
+          {copy.result.title}
+          {sender && <span className="text-on-ink/40"> · {copy.result.fromSender(sender)}</span>}
+        </p>
+      </div>
     </header>
   );
 }
@@ -43,51 +46,98 @@ export function VerdictBanner({
   copy: Copy;
 }) {
   const display = getVerdictDisplay(response.verdict);
+  const bandIndex = getVerdictBandIndex(response.verdict);
   // Only a backend-supplied riskScore is ever shown; none is derived here.
   const risk = getRiskDisplay(response);
   return (
-    <section className={`rounded-card px-6 py-7 text-white ${display.classes.bg}`} aria-labelledby="verdict-label">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth={2}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-        className="size-9"
-      >
-        {display.icon.paths.map((d) => (
-          <path key={d} d={d} />
-        ))}
-      </svg>
-      <h1 id="verdict-label" className="mt-4 text-[2.375rem] leading-[1.05] text-white">
-        {label}
-      </h1>
-      <p className="mt-2 text-[1.0625rem] font-medium text-white/85">{copy.result.warningSigns(response.signals.length)}</p>
-
-      {risk.showScore && (
-        <div className="mt-5 flex flex-col gap-2">
-          <p className="text-sm font-semibold tabular-nums text-white">{copy.result.risk(risk.score)}</p>
-          <div
-            className="h-2 overflow-hidden rounded-pill bg-white/25"
-            role="meter"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={risk.score}
-            aria-label={copy.result.risk(risk.score)}
-          >
-            <div className="h-full rounded-pill bg-white" style={{ width: `${risk.score}%` }} />
-          </div>
+    <section className={`px-5 py-6 text-white ${display.classes.bg}`} aria-labelledby="verdict-label">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="micro text-white/60">{copy.result.title}</p>
+          <h1 id="verdict-label" className="mt-2.5 text-[2.5rem] leading-none text-white">
+            {label}
+          </h1>
+          <p className="data mt-2.5 text-white/75">{copy.result.warningSigns(response.signals.length)}</p>
         </div>
-      )}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.75}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className="size-8 shrink-0 text-white/80"
+        >
+          {display.icon.paths.map((d) => (
+            <path key={d} d={d} />
+          ))}
+        </svg>
+      </div>
+
+      <SeverityGauge bandIndex={bandIndex} />
+
+      {/* Only when the API returned riskScore (getRiskDisplay): never derived client-side. */}
+      {risk.showScore && <RiskMeter score={risk.score} label={copy.result.risk(risk.score)} />}
 
       {response.verdict === "scam" && (
-        <p className="mt-5 border-t border-white/25 pt-4 text-[0.9375rem] leading-snug text-white">
+        <p className="mt-4 border-t border-white/20 pt-4 text-[0.9375rem] leading-snug text-white">
           {copy.result.scamAdvice}
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * The mockup's "Risk system": a three-band scale (safe / suspicious / scam)
+ * instead of a stoplight or a bare percentage. Severity is encoded twice —
+ * position (which slot) and shape (the reached band is taller) — so it reads
+ * before the label does, and still reads without colour.
+ *
+ * Reinforcement only: the verdict is already announced in text above, so this
+ * is aria-hidden rather than a second, redundant announcement.
+ */
+function SeverityGauge({ bandIndex }: { bandIndex: number }) {
+  return (
+    <div aria-hidden="true" className="mt-5 flex items-end gap-1">
+      {VERDICT_BANDS.map((band, i) => {
+        const reached = i <= bandIndex;
+        const current = i === bandIndex;
+        return (
+          <div
+            key={band}
+            className={`flex-1 ${current ? "h-2.5" : "h-1"} ${reached ? "bg-white" : "bg-white/25"}`}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * The backend's riskScore (0–100) on a measuring scale: a filled bar with
+ * quarter ticks, in the same instrument language as the band gauge above.
+ * The score is printed once, as text, so it doesn't depend on the bar.
+ */
+function RiskMeter({ score, label }: { score: number; label: string }) {
+  return (
+    <div className="mt-4 flex flex-col gap-2.5 border-t border-white/20 pt-3">
+      <p className="data text-white/85">{label}</p>
+      <div
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={score}
+        aria-label={label}
+        className="relative h-2 bg-white/20"
+      >
+        <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${score}%` }} />
+        {[25, 50, 75].map((t) => (
+          <span key={t} aria-hidden="true" className="absolute inset-y-0 w-px bg-ink/25" style={{ left: `${t}%` }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -114,11 +164,13 @@ export function MessageCard({
   const segments = verdict === "safe" ? [{ text }] : highlightSegments(text, marks);
   const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
   return (
-    <section className="card flex flex-col gap-3" aria-labelledby="message-label">
+    <section className="flex flex-col gap-2.5 px-5 py-5" aria-labelledby="message-label">
       <SectionLabel id="message-label">{copy.result.messageYouSent}</SectionLabel>
       <p className="text-[1rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {segments.map((s, i) =>
           s.severity ? (
+            // 3px is an inline text-highlight radius, not a surface — intentionally
+            // outside the sharp-corner rule that applies to every real surface.
             <mark
               key={i}
               className={`rounded-[3px] px-0.5 text-ink underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] ${tone}`}
@@ -136,20 +188,33 @@ export function MessageCard({
 
 export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string; fromScreenshot: boolean; copy: Copy }) {
   return (
-    <details className="card">
-      <summary className="cursor-pointer text-sm font-semibold text-ink">{copy.result.sentTitle}</summary>
-      {/* "Only this version left your phone" is false when the text came from a screenshot. */}
-      <p className="mt-3 text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
-      <p className="mt-3 rounded-lg bg-muted-surface px-3 py-2 font-mono text-[0.8125rem] whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
-        {redacted}
-      </p>
+    <details className="group border border-card-border bg-card">
+      <summary className="micro pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-ink-muted hover:text-ink">
+        {copy.result.sentTitle}
+        <span aria-hidden="true" className="text-[0.875rem] group-open:hidden">
+          +
+        </span>
+        <span aria-hidden="true" className="hidden text-[0.875rem] group-open:inline">
+          −
+        </span>
+      </summary>
+      <div className="border-t border-card-border px-4 py-3.5">
+        {/* "Only this version left your phone" is false when the text came from a screenshot. */}
+        <p className="text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
+        <p className="data mt-3 bg-muted-surface px-3 py-2.5 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
+          {redacted}
+        </p>
+      </div>
     </details>
   );
 }
 
 export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
-    <Link href="/" className="flex min-h-14 items-center justify-center rounded-card bg-ink px-5 font-semibold text-on-ink">
+    <Link
+      href="/"
+      className="pressable font-heading flex min-h-14 items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
+    >
       {copy.result.checkAnother}
     </Link>
   );

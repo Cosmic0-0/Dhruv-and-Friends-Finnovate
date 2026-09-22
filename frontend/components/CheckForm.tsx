@@ -18,6 +18,16 @@ const SLOW_AFTER_MS = 8000;
 
 type Status = "idle" | "loading" | "error";
 
+/**
+ * The Check screen form. Two ways in, one way out:
+ *  - typed/pasted text, and
+ *  - a screenshot, whose text is extracted by the backend OCR and put in the
+ *    textarea for the user to review and correct (ScreenshotUpload.tsx).
+ * Either way, only "Check this message" sends anything for analysis, and it
+ * always redacts in the browser first (lib/redact.ts), so identifiers never
+ * leave the device from this form. The backend also redacts OCR text
+ * server-side as a second layer.
+ */
 export default function CheckForm() {
   const router = useRouter();
   const { lang, copy } = useLanguage();
@@ -31,7 +41,7 @@ export default function CheckForm() {
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   const shot = useScreenshot({
     lang,
@@ -41,7 +51,7 @@ export default function CheckForm() {
       setTextFromImage(true);
       if (status === "error") setStatus("idle");
       // Bring the text into view without focusing (a phone keyboard would cover it).
-      requestAnimationFrame(() => cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+      requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
     },
   });
 
@@ -128,27 +138,22 @@ export default function CheckForm() {
   return (
     <section className="flex flex-col gap-4">
       <form
-        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
-        <div
-          ref={cardRef}
-          className="card flex scroll-mt-4 flex-col gap-2 transition-shadow focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10"
-        >
-          <div className="flex items-baseline justify-between gap-3">
-            <label
-              htmlFor="message"
-              className="text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase"
-            >
+        {/* One sheet: field name, input, attached screenshot and actions read as a
+            single instrument face separated by rules, not stacked boxes. */}
+        <div ref={sheetRef} className="sheet scroll-mt-4 focus-within:border-accent">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <label htmlFor="message" className="micro text-ink-muted">
               {copy.messageLabel}
             </label>
             {length > COUNT_FROM && (
               <span
                 aria-live="polite"
-                className={`text-xs tabular-nums ${overLimit ? "font-semibold text-danger" : "text-ink-muted"}`}
+                className={`data ${overLimit ? "font-medium text-danger-ink" : "text-ink-muted"}`}
               >
                 {copy.charCount(length, MAX_MESSAGE_LENGTH)}
               </span>
@@ -169,13 +174,14 @@ export default function CheckForm() {
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}
             aria-describedby={overLimit ? "message-too-long" : undefined}
-            className="w-full resize-none border-0 bg-transparent p-0 text-[1.0625rem] leading-relaxed text-ink outline-none placeholder:text-ink-muted/70 focus:outline-none focus-visible:outline-none"
+            className="block w-full resize-none border-0 bg-transparent px-4 py-3.5 text-[1.0625rem] leading-relaxed text-ink outline-none placeholder:text-ink-muted/60 focus:outline-none focus-visible:outline-none"
           />
           {overLimit && (
-            <p id="message-too-long" className="text-sm text-danger">
+            <p id="message-too-long" className="bg-danger-soft px-4 py-2.5 text-sm text-danger-ink">
               {copy.tooLong}
             </p>
           )}
+
           <ScreenshotRow
             state={shot.state}
             copy={copy}
@@ -183,51 +189,58 @@ export default function CheckForm() {
             onRetry={shot.retry}
             onTypeInstead={typeInstead}
           />
-        </div>
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            aria-busy={loading}
-            className="flex min-h-14 flex-1 items-center justify-center gap-2.5 rounded-card bg-ink px-5 text-base font-semibold text-on-ink transition-opacity disabled:cursor-not-allowed disabled:opacity-40 aria-busy:opacity-100"
-          >
-            {loading && <Spinner className="size-5 shrink-0" />}
-            <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
-          </button>
+          <div className="flex">
+            {/* Disabled is a muted surface with dark muted text, not white on
+                pale grey — the label has to stay readable while inactive. */}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              aria-busy={loading}
+              className="pressable font-heading flex min-h-14 flex-1 items-center justify-center gap-2.5 bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+            >
+              {loading && <Spinner className="size-5 shrink-0" />}
+              <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
+            </button>
 
-          {/* The OS picker offers Photo Library / Take Photo on phones; no custom camera. */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = ""; // allow choosing the same file again
-              if (file) void shot.pick(file);
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={shot.busy || loading}
-            aria-label={copy.uploadScreenshot}
-            title={copy.uploadScreenshot}
-            className={`grid size-14 shrink-0 place-items-center rounded-card border bg-card text-ink transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-              shot.state.phase !== "none" ? "border-ink/40" : "border-card-border hover:border-ink/30"
-            }`}
-          >
-            <ImageIcon className="size-6" />
-          </button>
+            {/* image/*: the OS picker offers Photo Library / Take Photo on phones
+                (no custom camera). Anything the browser can decode is accepted,
+                because lib/image.ts re-encodes it as JPEG before upload, which is
+                one of the three formats the backend sniffs for. */}
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = ""; // allow choosing the same file again
+                if (file) void shot.pick(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={shot.busy || loading}
+              aria-busy={shot.busy}
+              aria-label={copy.uploadScreenshot}
+              title={copy.uploadScreenshot}
+              className={`pressable flex min-h-14 shrink-0 flex-col items-center justify-center gap-1 border-l border-card-border px-4 hover:bg-muted-surface disabled:cursor-not-allowed disabled:opacity-50 ${
+                shot.state.phase !== "none" ? "text-ink" : "text-ink-muted"
+              }`}
+            >
+              {shot.busy ? <Spinner className="size-[18px] shrink-0" /> : <ImageIcon className="size-[18px]" />}
+              <span className="micro text-[0.5625rem]">{copy.screenshotLabel}</span>
+            </button>
+          </div>
         </div>
       </form>
 
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
-      {/* Each promise only where it's true: redaction happens in the browser for
-          typed text, but a screenshot is sent to the server as it is. */}
-      <p className="px-1 text-[0.8125rem] leading-snug text-ink-muted" aria-live="polite">
+      {/* Each promise only where it's true: typed text is redacted in the browser
+          before anything leaves it; a screenshot goes to the server as it is. */}
+      <p className="text-[0.8125rem] leading-snug text-ink-muted" aria-live="polite">
         {imageInvolved ? copy.imagePrivacyNote : copy.privacyNote}
       </p>
     </section>
@@ -257,20 +270,20 @@ function ErrorCard({ error, copy, onRetry }: { error: ApiError; copy: Copy; onRe
   return (
     <div
       role="alert"
-      className={`flex flex-col gap-3 rounded-card border p-5 ${
-        isInputProblem ? "border-caution/30 bg-caution-soft" : "border-danger/20 bg-danger-soft"
+      className={`flex flex-col gap-3 border-l-2 p-4 ${
+        isInputProblem ? "border-l-caution bg-caution-soft" : "border-l-danger bg-danger-soft"
       }`}
     >
       <div className="flex flex-col gap-1">
-        <p className="font-serif text-lg leading-tight font-medium text-ink">{title}</p>
+        <p className={`micro ${isInputProblem ? "text-caution-ink" : "text-danger-ink"}`}>{title}</p>
         <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{body}</p>
       </div>
       <button
         type="button"
         onClick={onRetry}
-        className="flex w-fit items-center gap-2 rounded-pill bg-ink px-4 py-2 text-sm font-semibold text-on-ink"
+        className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
       >
-        <RetryIcon className="size-4" strokeWidth={2} />
+        <RetryIcon className="size-3.5" strokeWidth={2} />
         {copy.retry}
       </button>
     </div>

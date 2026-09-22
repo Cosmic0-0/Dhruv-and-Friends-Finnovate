@@ -112,33 +112,33 @@ export default function Celebration({
         aria-labelledby="celebrate-title"
         aria-describedby="celebrate-line"
         data-closing={closing || undefined}
-        className="fl-card relative flex max-h-[88dvh] w-full max-w-[380px] flex-col items-center gap-4 overflow-y-auto rounded-card bg-card px-6 pt-7 pb-6 text-center shadow-[0_24px_60px_-20px_rgb(22_38_61/0.45)]"
+        className="fl-card relative flex max-h-[88dvh] w-full max-w-[380px] flex-col items-center gap-4 overflow-y-auto border border-line-strong bg-card px-6 pt-7 pb-6 text-center"
       >
         {streak >= 2 ? <Flame /> : <Tick />}
         <div className="flex flex-col gap-1.5">
-          <h2 id="celebrate-title" className="text-[2.125rem] leading-[1.05]">
+          <h2 id="celebrate-title" className="text-[2.5rem] leading-none">
             {L.celebrate.title(streak)}
           </h2>
           <p id="celebrate-line" className="text-[0.9375rem] text-ink-soft">
             {streak >= 2 ? L.celebrate.streakLine(streak) : L.celebrate.dayOne}
           </p>
-          <p className="text-sm font-semibold text-ink">{L.celebrate.score(right, total)}</p>
+          <p className="data mt-1 text-ink">{L.celebrate.score(right, total)}</p>
         </div>
 
         <div className="w-full border-t border-card-border pt-4 text-left">
           {mistakes.length === 0 ? (
-            <p className="text-center text-[0.9375rem] text-safe">{L.celebrate.allRight}</p>
+            <p className="text-center text-[0.9375rem] text-accent-ink">{L.celebrate.allRight}</p>
           ) : (
             <>
-              <p className="mb-2 text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase">
+              <p className="micro mb-3 text-ink-muted">
                 {L.celebrate.mistakesTitle}
               </p>
               <ul className="flex flex-col gap-3">
                 {mistakes.map((m) => (
                   <li key={m.id} className="flex flex-col gap-0.5">
-                    <p className="truncate text-[0.9375rem] text-ink">&ldquo;{m.text.replace(/\s+/g, " ")}&rdquo;</p>
+                    <p className="data truncate border-l-2 border-l-card-border pl-2 text-ink-soft">&ldquo;{m.text.replace(/\s+/g, " ")}&rdquo;</p>
                     <p className="text-[0.8125rem] leading-snug">
-                      <span className={`font-semibold ${m.isScam ? "text-danger" : "text-safe"}`}>
+                      <span className={`font-semibold ${m.isScam ? "text-danger-ink" : "text-accent-ink"}`}>
                         {m.isScam ? L.scam : L.genuine}
                       </span>
                       <span className="text-ink-muted"> · {reasonFor(m)}</span>
@@ -154,7 +154,7 @@ export default function Celebration({
           ref={buttonRef}
           type="button"
           onClick={close}
-          className="mt-1 flex min-h-14 w-full items-center justify-center rounded-card bg-ink px-5 font-semibold text-on-ink"
+          className="pressable font-heading mt-1 flex min-h-14 w-full items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
         >
           {L.celebrate.keepGoing}
         </button>
@@ -169,8 +169,8 @@ function Flame() {
     <svg viewBox="0 0 64 80" className="h-20 w-16" aria-hidden="true">
       <defs>
         <linearGradient id="fl-flame-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#f2b544" />
-          <stop offset="1" stopColor="#d9532b" />
+          <stop offset="0" style={{ stopColor: "var(--color-caution)" }} />
+          <stop offset="1" style={{ stopColor: "var(--color-danger)" }} />
         </linearGradient>
       </defs>
       <g className="fl-flame fl-flame-grow">
@@ -181,7 +181,7 @@ function Flame() {
         />
         <path
           className="fl-flame fl-flame-inner"
-          fill="#fde7a8"
+          style={{ fill: "var(--color-caution-soft)" }}
           d="M32 36c3.6 9 11 14.5 11 24 0 8.6-5 14-11 14s-11-5.4-11-14c0-6.8 4.2-11.2 7-16.5 1 4.6 2.8 7 5 8.3-1-5.2-1.6-10.3-1-15.8z"
         />
       </g>
@@ -191,7 +191,7 @@ function Flame() {
 
 function Tick() {
   return (
-    <svg viewBox="0 0 56 56" className="size-16 text-safe" aria-hidden="true">
+    <svg viewBox="0 0 56 56" className="size-16 text-accent" aria-hidden="true">
       <circle className="fl-tick-circle" cx="28" cy="28" r="24" fill="none" stroke="currentColor" strokeWidth="3.5" />
       <path
         className="fl-tick-check"

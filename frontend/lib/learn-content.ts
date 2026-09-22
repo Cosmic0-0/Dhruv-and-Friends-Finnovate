@@ -4,11 +4,11 @@
  * invented: lib/learn-data.ts reads that file at build time and these pure
  * functions map its rows onto the quiz. Unit-tested in lib/learn-content.test.ts.
  *
- * The corpus rows are synthetic (provenance "synthetic_claude") and, at the
- * time of writing, all "draft_generated" (not yet reviewed). The UI labels
- * them as made-up practice examples, per data/kreol-dataset/CLAUDE.md
- * ("Synthetic examples must be identified as synthetic"). When rows get
- * reviewed, reviewed ones are picked first automatically.
+ * The corpus rows are synthetic (provenance "synthetic_claude"), so the UI
+ * labels them as made-up practice examples, per data/kreol-dataset/CLAUDE.md
+ * ("Synthetic examples must be identified as synthetic"). Their review status
+ * is tracked separately: reviewed rows are picked first, and rejected rows are
+ * never used.
  *
  * DEMO NOTE (reliability fallback): the Learn tab makes no network call.
  * The corpus is baked in at build time, so it works with the backend down
