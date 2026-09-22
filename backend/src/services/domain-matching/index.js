@@ -1,12 +1,28 @@
 // Non-LLM, deterministic — must stay unit-testable independent of the LLM call path.
 
-export const LEGIT_DOMAINS = ["mcb.mu", "sbmgroup.mu", "absa.mu", "bankone.mu", "myt.mu", "emtel.com"];
+// Single source of truth for known-legit Mauritius bank/telecom/government
+// domains, keyed by the brand token used to spot them mentioned in message
+// text. Exported as a map (rather than two parallel arrays) so other
+// deterministic checks — e.g. services/identity-consistency — can look up
+// "what domain should this claimed identity's link point to" without
+// duplicating this knowledge.
+export const BRAND_DOMAIN_MAP = {
+  mcb: "mcb.mu",
+  sbm: "sbmgroup.mu",
+  absa: "absa.mu",
+  bankone: "bankone.mu",
+  myt: "myt.mu",
+  emtel: "emtel.com",
+  mra: "mra.gov.mu",
+};
+
+export const LEGIT_DOMAINS = Object.values(BRAND_DOMAIN_MAP);
 
 // Brand tokens checked as hostname substrings, independent of the
 // Levenshtein distance check below — catches prefix/suffix phishing
 // patterns like mcb-secure.top that a distance-2 threshold misses
 // (see data/test-payloads/FINDINGS.md #3).
-const BRAND_TOKENS = ["mcb", "sbm", "absa", "bankone", "myt", "emtel"];
+export const BRAND_TOKENS = Object.keys(BRAND_DOMAIN_MAP);
 
 // Requires a final all-alpha "TLD-like" label of 2-10 chars so scheme-less
 // matches don't fire on ordinary prose (e.g. "Rs.5000", "e.g.") while still
@@ -27,17 +43,28 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
-export function checkUrls(message) {
+// Extracts hostnames from any URL-shaped substrings in the message.
+// Exported so other deterministic (non-LLM) checks — e.g.
+// services/identity-consistency — can reuse this exact extraction instead
+// of reimplementing URL/domain parsing.
+export function extractHostnames(message) {
   const urls = message.match(URL_PATTERN) || [];
-  const signals = [];
+  const hostnames = [];
   for (const url of urls) {
     const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-    let host;
     try {
-      host = new URL(withScheme).hostname.replace(/^www\./, "").toLowerCase();
+      hostnames.push(new URL(withScheme).hostname.replace(/^www\./, "").toLowerCase());
     } catch {
       continue;
     }
+  }
+  return hostnames;
+}
+
+export function checkUrls(message) {
+  const hostnames = extractHostnames(message);
+  const signals = [];
+  for (const host of hostnames) {
     if (LEGIT_DOMAINS.includes(host)) continue;
 
     const closest = LEGIT_DOMAINS.find((d) => levenshtein(host, d) <= 2);
@@ -49,12 +76,14 @@ export function checkUrls(message) {
         type: "lookalike_url",
         description: `${host} closely resembles legitimate domain ${closest}`,
         severity: "high",
+        source: "url_parser",
       });
     } else if (brandToken) {
       signals.push({
         type: "lookalike_url",
         description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
         severity: "high",
+        source: "url_parser",
       });
     }
   }

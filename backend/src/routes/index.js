@@ -2,6 +2,8 @@ import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
+import { checkIdentityConsistency } from "../services/identity-consistency/index.js";
+import { computeRiskCategories } from "../services/risk-categories/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { reportSender, saveBatchHistory, getReportCount } from "../db/index.js";
@@ -89,7 +91,14 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   }
   try {
     const result = await analyzeMessage(message, language);
+    // Both non-LLM, deterministic checks — additive on top of the LLM's own
+    // signals, not a replacement (see services/domain-matching,
+    // services/identity-consistency).
     result.signals.push(...checkUrls(message));
+    result.signals.push(...checkIdentityConsistency(message));
+    // Structured risk-category breakdown, derived from the full signal set
+    // above. Additive alongside `riskScore` — see docs/API-CONTRACT.md.
+    result.riskCategories = computeRiskCategories(result.signals);
     res.json(withSenderReports(result));
   } catch (err) {
     console.error(err);

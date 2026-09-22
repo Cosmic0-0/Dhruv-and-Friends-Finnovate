@@ -9,6 +9,12 @@ test("checkUrls flags a scheme-less lookalike URL", () => {
   assert.equal(signals[0].severity, "high");
 });
 
+test("checkUrls tags every signal with source: url_parser", () => {
+  const signals = checkUrls("Verify at mcb.nu/verify now");
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0].source, "url_parser");
+});
+
 test("checkUrls flags a brand-substring lookalike domain", () => {
   const signals = checkUrls("Urgent: verify your account at https://mcb-secure.top/verify");
   assert.equal(signals.length, 1);
