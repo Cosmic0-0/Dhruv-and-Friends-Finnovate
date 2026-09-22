@@ -81,7 +81,9 @@ See "Role gating" below for the working-directory layout each role builds in.
 ## Tech stack
 
 - **Backend**: Node.js, REST API.
-- **Frontend**: Next.js.
+- **Frontend**: Next.js, shipped as an installable PWA (manifest + service
+  worker) so the same codebase covers both the web app and "mobile app" —
+  no separate native/React Native codebase for the hackathon window.
 - **Detection logic**: LLM-based analysis with structured JSON output (flagged
   signals, verdict, suggested action) + non-LLM domain-matching logic for URLs.
   The LLM runs **locally** (self-hosted inference, e.g. Ollama or similar) —
@@ -100,7 +102,7 @@ area, unless noted otherwise.
 |---|---|---|
 | Kshitij | Backend + browser extension (stretch, droppable under time pressure) | API design, prompt design and structured output schema, domain/lookalike-URL matching logic, database schema for reports and batch history, browser extension scaffolding (Manifest V3, content script) once the API is stable |
 | Joshua | Kreol language support | Kreol scam dataset, prompt tuning for Kreol/French/English code-switching, validating AI explanations read correctly in Kreol |
-| Oleg | UI | Main app frontend (input, verdict display, flagged-signal view, batch scan results), extension badge/warning UI once the backend endpoint is live |
+| Oleg | UI | Main app frontend (input, verdict display, flagged-signal view, batch scan results), PWA manifest/service worker so the app installs on mobile, extension badge/warning UI once the backend endpoint is live |
 | Dhruv | OCR ingestion + batch scan | Screenshot upload, OCR extraction pipeline, batch scan feature (multi-message upload and summary view) |
 | Caellum | Test payloads and QA | Scam message test set across English, French, and Kreol (Kreol set coordinated with Joshua), sender-reputation seed data for the crowdsourced feed demo, edge-case testing, demo script for final judging |
 
@@ -120,7 +122,7 @@ backend/
     services/ocr/              Dhruv    — screenshot upload + OCR extraction
     services/batch/            Dhruv    — batch scan aggregation/summary
     db/                        Kshitij  — schema for reports + batch history
-frontend/                      Oleg     — Next.js UI (input, verdict, batch views)
+frontend/                      Oleg     — Next.js UI (input, verdict, batch views) + PWA manifest/service worker
 extension/                     Kshitij  — browser extension (stretch, after core app is stable)
 data/kreol-dataset/            Joshua   — Kreol/French/English scam samples
 data/test-payloads/            Caellum  — cross-language scam test set
