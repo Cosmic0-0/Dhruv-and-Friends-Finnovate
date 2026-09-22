@@ -10,7 +10,7 @@
     "test:fallback": "node --env-file-if-exists=.env scripts/check-llm-fallback.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.3.0",
+    "better-sqlite3": "^12.11.1",
     "express": "^4.19.2",
     "tesseract.js": "^7.0.0"
   }
