@@ -2,6 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Judging Priorities (derived from docs/JURY-EVALUATION.md)
+
+- Reliability during the live demo is the single highest-weighted concern (part of
+  the 35-mark Implementation & Functionality criterion, the largest bucket). The
+  local-LLM-over-Tailscale architecture must have a working, tested fallback to a
+  hosted API. The fallback path is NOT optional polish, treat it as a blocking
+  requirement for demo readiness, not a stretch feature.
+- Differentiators (Kreol language support, localized scam dataset, structured
+  signal breakdown, domain/lookalike-URL matching, self-hosted inference) must be
+  visibly demonstrated in the live demo, not just present in code. When implementing
+  any of these features, also note in code comments or a demo-script file how it will
+  be shown/explained live, since Innovation & Technical Excellence (25 marks)
+  explicitly scores differentiation from other teams on the same challenge.
+  scalability and real-world impact explicitly.
+- Presentation coordination (15 marks) depends on a stable, rehearsed demo flow.
+  Flag any feature that introduces live network or hardware dependency (e.g. calling
+  out to a laptop-hosted model) as something that needs a pre-demo reliability test,
+  not just a functionality test.
+
+See `docs/JURY-EVALUATION.md` for the full rubric and `docs/BUILD-CHECKLIST.md` for
+tasks grouped and weighted by these criteria.
+
 ## Commit attribution
 
 Commits and PRs from this repo are attributed to the human pushing them only.
