@@ -18,9 +18,9 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-card-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur"
     >
-      <ul className="mx-auto flex max-w-app items-stretch justify-around px-4">
+      <ul className="mx-auto flex max-w-app items-stretch">
         {TABS.map(({ href, key, Icon, match }) => {
           const active = match(pathname);
           return (
@@ -28,11 +28,14 @@ export default function TabBar() {
               <Link
                 href={href}
                 aria-current={active ? "page" : undefined}
-                className={`flex h-(--tabbar-height) flex-col items-center justify-center gap-1 text-[0.6875rem] font-semibold tracking-wide ${
-                  active ? "text-ink" : "text-ink-muted hover:text-ink"
+                // The active tab is marked by a rule at the top edge, the way a
+                // selected tab is marked on an instrument, not by colour alone.
+                className={`pressable micro relative flex h-(--tabbar-height) flex-col items-center justify-center gap-1.5 ${
+                  active ? "text-ink" : "text-ink-muted hover:bg-muted-surface hover:text-ink"
                 }`}
               >
-                <Icon className="size-[22px]" strokeWidth={active ? 2.1 : 1.75} />
+                {active && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-accent" />}
+                <Icon className="size-5" strokeWidth={active ? 2.1 : 1.75} />
                 {copy.tabs[key]}
               </Link>
             </li>

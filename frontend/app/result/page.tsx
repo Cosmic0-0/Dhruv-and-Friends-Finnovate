@@ -5,7 +5,7 @@ export const metadata: Metadata = { title: "Result", robots: { index: false } };
 
 export default function ResultPage() {
   return (
-    <main className="flex flex-col gap-8">
+    <main>
       <ResultView />
     </main>
   );

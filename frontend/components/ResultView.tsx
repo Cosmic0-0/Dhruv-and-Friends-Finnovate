@@ -32,14 +32,19 @@ export default function ResultView() {
 
   if (result === null) {
     return (
-      <div className="flex flex-col gap-6">
+      <div>
         <ResultHeader copy={copy} />
-        <div className="card flex flex-col gap-3">
-          <h1 className="text-title">{copy.result.missingTitle}</h1>
-          <p>{copy.result.missingBody}</p>
-          <Link href="/" className="mt-2 font-semibold text-ink underline underline-offset-4">
-            {copy.result.checkAnother}
-          </Link>
+        <div className="gutter pt-6">
+          <div className="sheet flex flex-col gap-3 p-5">
+            <h1 className="text-title">{copy.result.missingTitle}</h1>
+            <p>{copy.result.missingBody}</p>
+            <Link
+              href="/"
+              className="micro mt-1 w-fit text-accent-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent"
+            >
+              {copy.result.checkAnother}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -62,23 +67,43 @@ export default function ResultView() {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div>
       <ResultHeader copy={copy} sender={sender} />
-      <VerdictBanner response={response} label={label} copy={copy} />
-      <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
 
-      {response.verdict === "safe" ? (
-        <SafeChecklist
-          checks={safeChecks(response.signals, original, redactions)}
-          explanation={response.explanation}
-          copy={copy}
-          show={show}
-        />
-      ) : (
-        <>
-          <WhySection signals={response.signals} explanation={response.explanation} copy={copy} lang={lang} show={show} />
-          <LinkCheckPanel response={response} copy={copy} />
-          <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
+      <div className="gutter flex flex-col gap-4 pt-5">
+        {/*
+         * One continuous report sheet: verdict, message and every analysis
+         * block are separated by hairline rules (.sheet > * + *) rather than
+         * sitting as separate floating cards. The actions below are a
+         * different kind of thing, so they stay outside it.
+         */}
+        <div className="sheet">
+          <VerdictBanner response={response} label={label} copy={copy} />
+          <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+
+          {response.verdict === "safe" ? (
+            <SafeChecklist
+              checks={safeChecks(response.signals, original, redactions)}
+              explanation={response.explanation}
+              copy={copy}
+              show={show}
+            />
+          ) : (
+            <>
+              <WhySection
+                signals={response.signals}
+                explanation={response.explanation}
+                copy={copy}
+                lang={lang}
+                show={show}
+              />
+              <LinkCheckPanel response={response} copy={copy} />
+              <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
+            </>
+          )}
+        </div>
+
+        {response.verdict !== "safe" && (
           <ReportButton
             sender={sender}
             redacted={redacted}
@@ -86,11 +111,11 @@ export default function ResultView() {
             onReported={onReported}
             copy={copy}
           />
-        </>
-      )}
+        )}
 
-      <CheckAnotherButton copy={copy} />
-      <SentPanel redacted={redacted} copy={copy} />
+        <CheckAnotherButton copy={copy} />
+        <SentPanel redacted={redacted} copy={copy} />
+      </div>
     </div>
   );
 }

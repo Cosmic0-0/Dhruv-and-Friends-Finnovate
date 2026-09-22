@@ -11,7 +11,7 @@ export default function LanguageSwitch() {
     <div
       role="radiogroup"
       aria-label={copy.languageSwitcher}
-      className="flex items-center rounded-pill border border-card-border bg-card p-1"
+      className="flex items-center divide-x divide-white/15 border border-white/20"
     >
       {UI_LANGUAGES.map((l) => {
         const active = l.id === lang;
@@ -23,8 +23,10 @@ export default function LanguageSwitch() {
             aria-checked={active}
             lang={l.htmlLang}
             onClick={() => setLang(l.id)}
-            className={`rounded-pill px-3 py-1.5 text-[0.6875rem] font-semibold tracking-[0.08em] transition-colors ${
-              active ? "bg-ink text-on-ink" : "text-ink-muted hover:text-ink"
+            // 40px min hit area: the visible chip is short, so height comes
+            // from padding rather than a cramped 24px tap target.
+            className={`micro pressable min-h-10 px-3 ${
+              active ? "bg-accent text-white" : "text-on-ink/55 hover:bg-white/10 hover:text-on-ink"
             }`}
           >
             {l.label}

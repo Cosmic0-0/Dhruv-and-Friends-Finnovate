@@ -33,10 +33,8 @@ export default function ReportButton({
 
   if (reported) {
     return (
-      <div role="status" className="flex items-center gap-3 rounded-card border border-card-border bg-card px-5 py-4">
-        <span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-safe text-white">
-          <CheckIcon className="size-4" strokeWidth={2.5} />
-        </span>
+      <div role="status" className="flex items-center gap-3 border-l-2 border-l-accent bg-accent-soft px-4 py-3.5">
+        <CheckIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2.5} />
         <p className="text-[0.9375rem] leading-snug font-medium text-ink">{r.done(reported.reportCount)}</p>
       </div>
     );
@@ -66,29 +64,31 @@ export default function ReportButton({
     <section className="flex flex-col gap-3">
       {showForm ? (
         <form
-          className="card flex flex-col gap-3"
+          className="sheet flex flex-col"
           onSubmit={(e) => {
             e.preventDefault();
             void send(value);
           }}
         >
-          <label htmlFor="report-sender" className="text-sm font-semibold text-ink">
-            {r.senderLabel}
-          </label>
-          <input
-            id="report-sender"
-            autoFocus
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            placeholder={r.senderPlaceholder}
-            inputMode="text"
-            autoComplete="off"
-            className="rounded-card border border-card-border bg-page px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted/70 focus:border-ink/40"
-          />
+          <div className="flex flex-col gap-2.5 p-4">
+            <label htmlFor="report-sender" className="micro text-ink-muted">
+              {r.senderLabel}
+            </label>
+            <input
+              id="report-sender"
+              autoFocus
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder={r.senderPlaceholder}
+              inputMode="text"
+              autoComplete="off"
+              className="data border border-card-border bg-page px-3 py-2.5 text-[0.9375rem] text-ink outline-none placeholder:text-ink-muted/60 focus:border-accent"
+            />
+          </div>
           <button
             type="submit"
             disabled={!value.trim() || sending}
-            className="flex min-h-12 items-center justify-center gap-2 rounded-card bg-ink px-5 font-semibold text-on-ink disabled:opacity-40"
+            className="pressable micro flex min-h-12 items-center justify-center gap-2 bg-ink px-5 text-on-ink hover:bg-ink-2 disabled:bg-ink/25"
           >
             {sending && <Spinner className="size-4" />}
             {sending ? r.sending : r.submit}
@@ -99,18 +99,18 @@ export default function ReportButton({
           type="button"
           disabled={sending}
           onClick={() => (sender ? void send(sender) : setStatus("form"))}
-          className="flex min-h-14 items-center justify-center gap-2.5 rounded-card border border-danger/30 bg-card px-5 font-semibold text-danger disabled:opacity-60"
+          className="pressable micro flex min-h-13 items-center justify-center gap-2.5 border border-danger/40 bg-card px-5 text-danger-ink hover:bg-danger-soft disabled:opacity-60"
         >
-          {sending ? <Spinner className="size-5" /> : <FlagIcon className="size-5" strokeWidth={2} />}
+          {sending ? <Spinner className="size-4" /> : <FlagIcon className="size-4" strokeWidth={2} />}
           {sending ? r.sending : sender ? r.reportSender : r.reportMessage}
         </button>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger">
+        <p role="alert" className="text-sm text-danger-ink">
           {error}
         </p>
       )}
-      <p className="px-1 text-[0.8125rem] leading-snug text-ink-muted">{r.note}</p>
+      <p className="text-[0.8125rem] leading-snug text-ink-muted">{r.note}</p>
     </section>
   );
 }

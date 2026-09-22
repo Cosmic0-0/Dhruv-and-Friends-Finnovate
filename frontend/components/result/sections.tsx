@@ -11,16 +11,17 @@ import type { AnalyzeResponse, Severity, Signal, Verdict } from "@/lib/types";
 import { CheckIcon, LinkIcon } from "../icons";
 import { SectionLabel } from "./parts";
 
-const SEVERITY_BORDER: Record<Severity, string> = {
-  high: "border-l-danger",
-  medium: "border-l-caution-bright",
-  low: "border-l-ink-muted/40",
+const SEVERITY_RULE: Record<Severity, string> = {
+  high: "bg-danger",
+  medium: "bg-caution",
+  low: "bg-ink-muted/35",
 };
 
-const SEVERITY_TEXT: Record<Severity, string> = {
-  high: "text-danger",
-  medium: "text-caution",
-  low: "text-ink-muted",
+/** Wash + darkened text, so the chip stays legible at label size. */
+const SEVERITY_CHIP: Record<Severity, string> = {
+  high: "bg-danger-soft text-danger-ink",
+  medium: "bg-caution-soft text-caution-ink",
+  low: "bg-muted-surface text-ink-muted",
 };
 
 /** A human title for any signal type. Unknown types never show as snake_case. */
@@ -60,24 +61,38 @@ export function WhySection({
 }) {
   const sorted = sortSignals(signals);
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="why-label">
-      <SectionLabel id="why-label">{copy.result.whyTitle}</SectionLabel>
-      {explanation && <p className="leading-relaxed text-ink-soft">{show(explanation)}</p>}
+    <section aria-labelledby="why-label">
+      <div className="flex flex-col gap-2.5 px-5 pt-5 pb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <SectionLabel id="why-label">{copy.result.whyTitle}</SectionLabel>
+          {sorted.length > 0 && <span className="data text-ink-muted">{String(sorted.length).padStart(2, "0")}</span>}
+        </div>
+        {explanation && <p className="leading-relaxed text-ink-soft">{show(explanation)}</p>}
+      </div>
       {sorted.length > 0 && (
-        <ul className="flex flex-col gap-3">
+        // Indexed rows separated by rules: a findings list in a report, not a
+        // stack of identical cards.
+        <ul className="flex flex-col border-t border-card-border">
           {sorted.map((s, i) => (
-            <li key={`${s.type}-${i}`} className={`card flex flex-col gap-1.5 border-l-4 p-5 ${SEVERITY_BORDER[s.severity]}`}>
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="font-sans text-[1.0625rem] leading-snug font-semibold text-ink">
-                  {signalTitle(s.type, copy, lang)}
-                </h3>
-                <span
-                  className={`mt-0.5 shrink-0 text-[0.6875rem] font-semibold tracking-wide uppercase ${SEVERITY_TEXT[s.severity]}`}
-                >
-                  {copy.result.severity[s.severity]}
-                </span>
+            <li
+              key={`${s.type}-${i}`}
+              className="flex gap-3.5 px-5 py-4 not-first:border-t not-first:border-card-border"
+            >
+              <span aria-hidden="true" className={`mt-1 w-0.5 shrink-0 self-stretch ${SEVERITY_RULE[s.severity]}`} />
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="font-sans text-[1.0625rem] leading-snug font-semibold text-ink">
+                    <span aria-hidden="true" className="data mr-2 text-ink-muted">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    {signalTitle(s.type, copy, lang)}
+                  </h3>
+                  <span className={`micro shrink-0 px-1.5 py-1 ${SEVERITY_CHIP[s.severity]}`}>
+                    {copy.result.severity[s.severity]}
+                  </span>
+                </div>
+                <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{signalDescription(s, copy, show)}</p>
               </div>
-              <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{signalDescription(s, copy, show)}</p>
             </li>
           ))}
         </ul>
@@ -114,16 +129,22 @@ export function LinkCheckPanel({ response, copy }: { response: AnalyzeResponse; 
   if (rows.length === 0) return null;
 
   return (
-    <section className="card flex flex-col gap-4" aria-labelledby="linkcheck-label">
+    <section className="flex flex-col gap-3 px-5 py-5" aria-labelledby="linkcheck-label">
       <div className="flex items-center gap-2">
-        <LinkIcon className="size-4 text-ink-muted" strokeWidth={2} />
+        <LinkIcon className="size-3.5 text-ink-muted" strokeWidth={2} />
         <SectionLabel id="linkcheck-label">{copy.result.linkCheck.title}</SectionLabel>
       </div>
-      <dl className="flex flex-col divide-y divide-card-border">
+      {/* Deterministic, non-LLM matcher output — presented as looked-up data,
+          which is why the values are monospaced rather than set as prose. */}
+      <dl className="flex flex-col divide-y divide-card-border border-y border-card-border">
         {rows.map((r, i) => (
-          <div key={i} className="flex items-baseline justify-between gap-4 py-2.5 first:pt-0 last:pb-0">
+          <div key={i} className="flex items-baseline justify-between gap-4 py-2.5">
             <dt className="shrink-0 text-sm text-ink-muted">{r.label}</dt>
-            <dd className={`min-w-0 text-right text-[0.9375rem] font-semibold text-ink [overflow-wrap:anywhere] ${r.mono ? "font-mono text-[0.875rem]" : ""}`}>
+            <dd
+              className={`min-w-0 text-right text-ink [overflow-wrap:anywhere] ${
+                r.mono ? "data font-medium" : "text-[0.9375rem] font-semibold"
+              }`}
+            >
               {r.value}
             </dd>
           </div>
@@ -147,20 +168,17 @@ export function WhatToDo({
   const { steps, prose } = actionPlan(verdict, suggestedAction);
   if (steps.length === 0 && !prose) return null;
   return (
-    <section className="flex flex-col gap-4 rounded-card border border-safe/15 bg-safe-soft p-6" aria-labelledby="todo-label">
-      <h2 id="todo-label" className="text-[1.5rem] leading-tight text-safe">
+    <section className="flex flex-col gap-4 bg-accent-soft px-5 py-5" aria-labelledby="todo-label">
+      <h2 id="todo-label" className="text-[1.5rem] leading-tight text-accent-ink">
         {copy.result.whatToDoTitle}
       </h2>
       {/* The model's own advice (when suggestedAction is a sentence) leads; the fixed steps follow. */}
       {prose && <p className="text-[0.9375rem] leading-relaxed text-ink">{show(prose)}</p>}
-      <ol className="flex flex-col gap-3">
+      <ol className="flex flex-col">
         {steps.map((k) => copy.result.steps[k]).map((text, i) => (
-          <li key={i} className="flex gap-3">
-            <span
-              aria-hidden="true"
-              className="grid size-6 shrink-0 place-items-center rounded-full bg-safe text-[0.75rem] font-semibold text-white"
-            >
-              {i + 1}
+          <li key={i} className="flex gap-3.5 border-t border-accent/20 py-3 first:border-t-0 first:pt-0 last:pb-0">
+            <span aria-hidden="true" className="data mt-0.5 shrink-0 font-medium text-accent-ink">
+              {String(i + 1).padStart(2, "0")}
             </span>
             <span className="text-[0.9375rem] leading-relaxed text-ink">{text}</span>
           </li>
@@ -182,22 +200,22 @@ export function SafeChecklist({
   show: (s: string) => string;
 }) {
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="checked-label">
-      <SectionLabel id="checked-label">{copy.result.whatWeCheckedTitle}</SectionLabel>
-      {explanation && <p className="leading-relaxed text-ink-soft">{show(explanation)}</p>}
+    <section aria-labelledby="checked-label">
+      <div className="flex flex-col gap-2.5 px-5 pt-5 pb-4">
+        <SectionLabel id="checked-label">{copy.result.whatWeCheckedTitle}</SectionLabel>
+        {explanation && <p className="leading-relaxed text-ink-soft">{show(explanation)}</p>}
+      </div>
       {checks.length > 0 && (
-        <ul className="card flex flex-col gap-3.5">
+        <ul className="flex flex-col border-t border-card-border">
           {checks.map((k) => (
-            <li key={k} className="flex items-start gap-3">
-              <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full bg-safe-soft text-safe">
-                <CheckIcon className="size-4" strokeWidth={2.5} />
-              </span>
+            <li key={k} className="flex items-start gap-3 px-5 py-3 not-first:border-t not-first:border-card-border">
+              <CheckIcon className="mt-0.5 size-4 shrink-0 text-accent" strokeWidth={2.5} />
               <span className="text-[0.9375rem] leading-snug text-ink">{copy.result.checks[k]}</span>
             </li>
           ))}
         </ul>
       )}
-      <p className="rounded-card bg-muted-surface px-4 py-3.5 text-sm leading-relaxed text-ink-muted">
+      <p className="border-t border-card-border bg-muted-surface px-5 py-4 text-sm leading-relaxed text-ink-muted">
         {copy.result.safeCaveat}
       </p>
     </section>

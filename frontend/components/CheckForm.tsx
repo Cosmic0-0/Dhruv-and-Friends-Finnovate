@@ -71,24 +71,22 @@ export default function CheckForm() {
   return (
     <section className="flex flex-col gap-4">
       <form
-        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
-        <div className="card flex flex-col gap-2 transition-shadow focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10">
-          <div className="flex items-baseline justify-between gap-3">
-            <label
-              htmlFor="message"
-              className="text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase"
-            >
+        {/* One sheet: field name, input and actions read as a single instrument
+            face separated by rules, not three stacked boxes. */}
+        <div className="sheet focus-within:border-accent">
+          <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <label htmlFor="message" className="micro text-ink-muted">
               {copy.messageLabel}
             </label>
             {length > COUNT_FROM && (
               <span
                 aria-live="polite"
-                className={`text-xs tabular-nums ${overLimit ? "font-semibold text-danger" : "text-ink-muted"}`}
+                className={`data ${overLimit ? "font-medium text-danger-ink" : "text-ink-muted"}`}
               >
                 {copy.charCount(length, MAX_MESSAGE_LENGTH)}
               </span>
@@ -106,45 +104,45 @@ export default function CheckForm() {
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}
             aria-describedby={overLimit ? "message-too-long" : undefined}
-            className="w-full resize-none border-0 bg-transparent p-0 text-[1.0625rem] leading-relaxed text-ink outline-none placeholder:text-ink-muted/70 focus:outline-none focus-visible:outline-none"
+            className="block w-full resize-none border-0 bg-transparent px-4 py-3.5 text-[1.0625rem] leading-relaxed text-ink outline-none placeholder:text-ink-muted/60 focus:outline-none focus-visible:outline-none"
           />
           {overLimit && (
-            <p id="message-too-long" className="text-sm text-danger">
+            <p id="message-too-long" className="bg-danger-soft px-4 py-2.5 text-sm text-danger-ink">
               {copy.tooLong}
             </p>
           )}
-        </div>
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={!canSubmit}
-            aria-busy={loading}
-            className="flex min-h-14 flex-1 items-center justify-center gap-2.5 rounded-card bg-ink px-5 text-base font-semibold text-on-ink transition-opacity disabled:cursor-not-allowed disabled:opacity-40 aria-busy:opacity-100"
-          >
-            {loading && <Spinner className="size-5 shrink-0" />}
-            <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
-          </button>
+          <div className="flex">
+            {/* Disabled is a muted surface with dark muted text, not white on
+                pale grey — the label has to stay readable while inactive. */}
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              aria-busy={loading}
+              className="pressable font-heading flex min-h-14 flex-1 items-center justify-center gap-2.5 px-5 text-[1.0625rem] font-semibold tracking-[0.06em] uppercase disabled:cursor-not-allowed bg-ink text-on-ink hover:bg-ink-2 disabled:bg-muted-surface disabled:text-ink-muted"
+            >
+              {loading && <Spinner className="size-5 shrink-0" />}
+              <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
+            </button>
 
-          {/* Screenshot/OCR belongs to the OCR owner; kept disabled until it's wired to its endpoint. */}
-          <button
-            type="button"
-            disabled
-            title={copy.comingSoon}
-            aria-label={`${copy.uploadScreenshot}. ${copy.comingSoon}`}
-            className="relative grid size-14 shrink-0 cursor-not-allowed place-items-center rounded-card border border-card-border bg-card text-ink-muted"
-          >
-            <ImageIcon className="size-6 opacity-60" />
-            <span className="absolute -top-2 -right-2 rounded-pill bg-muted-surface px-1.5 py-0.5 text-[0.625rem] font-semibold tracking-wide text-ink-muted ring-2 ring-page">
-              {copy.soon}
-            </span>
-          </button>
+            {/* Screenshot/OCR belongs to the OCR owner; kept disabled until it's wired to its endpoint. */}
+            <button
+              type="button"
+              disabled
+              title={copy.comingSoon}
+              aria-label={`${copy.uploadScreenshot}. ${copy.comingSoon}`}
+              className="flex min-h-14 shrink-0 cursor-not-allowed flex-col items-center justify-center gap-1 border-l border-card-border bg-muted-surface px-4 text-ink-muted"
+            >
+              <ImageIcon className="size-[18px]" />
+              <span className="micro text-[0.5625rem]">{copy.soon}</span>
+            </button>
+          </div>
         </div>
       </form>
 
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
-      <p className="px-1 text-[0.8125rem] leading-snug text-ink-muted">{copy.privacyNote}</p>
+      <p className="text-[0.8125rem] leading-snug text-ink-muted">{copy.privacyNote}</p>
     </section>
   );
 }
@@ -172,20 +170,20 @@ function ErrorCard({ error, copy, onRetry }: { error: ApiError; copy: Copy; onRe
   return (
     <div
       role="alert"
-      className={`flex flex-col gap-3 rounded-card border p-5 ${
-        isInputProblem ? "border-caution/30 bg-caution-soft" : "border-danger/20 bg-danger-soft"
+      className={`flex flex-col gap-3 border-l-2 p-4 ${
+        isInputProblem ? "border-l-caution bg-caution-soft" : "border-l-danger bg-danger-soft"
       }`}
     >
       <div className="flex flex-col gap-1">
-        <p className="font-serif text-lg leading-tight font-medium text-ink">{title}</p>
+        <p className={`micro ${isInputProblem ? "text-caution-ink" : "text-danger-ink"}`}>{title}</p>
         <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{body}</p>
       </div>
       <button
         type="button"
         onClick={onRetry}
-        className="flex w-fit items-center gap-2 rounded-pill bg-ink px-4 py-2 text-sm font-semibold text-on-ink"
+        className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
       >
-        <RetryIcon className="size-4" strokeWidth={2} />
+        <RetryIcon className="size-3.5" strokeWidth={2} />
         {copy.retry}
       </button>
     </div>

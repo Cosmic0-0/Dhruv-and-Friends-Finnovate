@@ -1,19 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Barlow, Barlow_Condensed, IBM_Plex_Mono } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
-const fraunces = Fraunces({
+// Condensed caps keep verdicts and numbers legible at a glance (headings).
+const barlowCondensed = Barlow_Condensed({
   subsets: ["latin", "latin-ext"],
-  variable: "--font-fraunces",
+  weight: ["500", "600", "700"],
+  variable: "--font-barlow-condensed",
   display: "swap",
 });
 
-const inter = Inter({
+// Plain grotesque body carries French and Kreol diacritics cleanly at any size.
+const barlow = Barlow({
   subsets: ["latin", "latin-ext"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-barlow",
+  display: "swap",
+});
+
+// Machine data only — domains, sender IDs, counts — so a looked-up value is
+// visibly not prose. Two weights only, to keep the font payload small.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  variable: "--font-plex-mono",
   display: "swap",
 });
 
@@ -59,13 +72,15 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#F5F1EA",
+  // Matches the dark instrument band at the top of the app, so the mobile
+  // status bar reads as part of the same chrome.
+  themeColor: "#15181C",
   colorScheme: "light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
+    <html lang="en" className={`${barlowCondensed.variable} ${barlow.variable} ${plexMono.variable}`}>
       <body>
         <LanguageProvider>
           <div className="app-shell">{children}</div>
