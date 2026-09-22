@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/*
+ * FraudLens design system — tokens from the approved mockup.
+ *
+ * Everything lives in @theme so each token is BOTH a plain CSS custom
+ * property (var(--color-ink)) and a Tailwind utility (bg-ink, text-danger,
+ * rounded-card, font-serif, …). Change a colour here, never inline.
+ *
+ * Mood: calm, warm, spacious. Mobile-first at 390px; the app column is
+ * capped at 430px and centred on larger screens.
+ */
+@theme {
+  /* ---- Surfaces ---- */
+  --color-page: #f5f1ea;          /* warm off-white page background */
+  --color-card: #ffffff;
+  --color-card-border: #e7e0d4;   /* soft 1px card border */
+  --color-muted-surface: #ede7dc; /* inputs, chips, subtle fills */
+
+  /* ---- Ink ---- */
+  --color-ink: #16263d;           /* headings, primary buttons, bot bubble */
+  --color-ink-soft: #3d4b60;      /* body copy */
+  --color-ink-muted: #6b7584;     /* captions, meta */
+  --color-on-ink: #f5f1ea;        /* text on ink surfaces */
+
+  /* ---- Verdict tones ---- */
+  --color-danger: #b3261e;        /* scam banner */
+  --color-danger-soft: #f7e3e1;
+  --color-caution: #9a5b00;       /* amber — "be careful"; dark enough for AA text on white */
+  --color-caution-bright: #e8a33d;
+  --color-caution-soft: #fbefd9;
+  --color-safe: #1b5e43;          /* genuine banner */
+  --color-safe-soft: #e0efe7;
+
+  /* ---- Typography ---- */
+  --font-serif: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --text-display: 2.5rem;         /* 40px hero heading */
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.02em;
+  --text-title: 1.75rem;          /* 28px section heading */
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.015em;
+
+  /* ---- Shape ---- */
+  --radius-card: 16px;
+  --radius-pill: 999px;
+
+  /* ---- Depth (kept very soft) ---- */
+  --shadow-card: 0 1px 2px rgb(22 38 61 / 0.04), 0 8px 24px -12px rgb(22 38 61 / 0.12);
+
+  /* ---- Layout ---- */
+  --container-app: 430px;
+  --spacing-gutter: 1.5rem;       /* 24px side padding at 390px */
+  --spacing-section: 2.5rem;      /* vertical rhythm between blocks */
+}
+
+@layer base {
+  :root {
+    --tabbar-height: 4.25rem;
+  }
+
+  html {
+    background-color: var(--color-page);
+    color: var(--color-ink-soft);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* Keep focused / scrolled-to elements clear of the fixed tab bar. */
+    scroll-padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
+  }
+
+  body {
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.6;
+    background-color: var(--color-page);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-serif);
+    color: var(--color-ink);
+    font-weight: 500;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    line-height: var(--text-display--line-height);
+    letter-spacing: var(--text-display--letter-spacing);
+  }
+
+  h2 {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    letter-spacing: var(--text-title--letter-spacing);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* Centred mobile column, respecting notches / home indicator
+     (viewport-fit=cover is set in layout.tsx). */
+  .app-shell {
+    margin-inline: auto;
+    width: 100%;
+    max-width: var(--container-app);
+    min-height: 100dvh;
+    padding-top: max(var(--spacing-gutter), env(safe-area-inset-top));
+    /* Clear the fixed bottom tab bar (components/TabBar.tsx). */
+    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--spacing-section));
+    padding-left: max(var(--spacing-gutter), env(safe-area-inset-left));
+    padding-right: max(var(--spacing-gutter), env(safe-area-inset-right));
+  }
+
+  .card {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-card-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

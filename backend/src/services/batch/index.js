@@ -35,7 +35,7 @@ async function mapWithConcurrency(items, limit, fn) {
  * `analyze` is injected (rather than imported from ../analysis directly)
  * so this stays testable and decoupled while that service is still in progress.
  * @param {string[]} messages
- * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam", signals: unknown[], suggestedAction: string, explanation: string, analysisFailed?: boolean }> }} deps
+ * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam"|"unknown", signals: unknown[], suggestedAction: string, explanation: string, analysisFailed?: boolean }> }} deps
  * @param {number} [concurrency] max number of analyze() calls in flight at once (default 4)
  * @returns {Promise<{ results: Array<{ message: string, verdict: string, signals: unknown[], suggestedAction: string, explanation: string, analysisFailed: boolean }>, summary: { total: number, scamCount: number, suspiciousCount: number, safeCount: number, unanalyzedCount: number } }>}
  */

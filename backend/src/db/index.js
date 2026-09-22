@@ -22,7 +22,17 @@ db.exec(`
 // the API still echoes back the raw string the client submitted.
 function normalizeSender(raw) {
   const digits = raw.replace(/\D/g, "");
-  if (digits.length > 0 && digits.length <= 8 && !digits.startsWith("230")) {
+  if (digits.length === 0) {
+    // Not phone-number-shaped at all - a brand/identity name like "MCB" or
+    // "Emtel Prize Team", as extracted by the LLM's `sender` field
+    // (backend/src/services/analysis/index.js), rather than a user-submitted
+    // phone number. Falling through to the digits-only key below would
+    // collapse every such sender to the same empty string, making
+    // senderReports meaningless for exactly the spoofed-identity case it
+    // exists for. Key on the normalized string itself instead.
+    return raw.trim().toLowerCase().replace(/\s+/g, " ");
+  }
+  if (digits.length <= 8 && !digits.startsWith("230")) {
     return `230${digits}`;
   }
   return digits;

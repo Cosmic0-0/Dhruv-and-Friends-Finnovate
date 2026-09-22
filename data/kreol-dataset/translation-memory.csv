@@ -1,40 +1,40 @@
 english,kreol_morisien,domain,status,reviewed_by,notes
-"Translation may need review.","Tradiksion-la kapav bizin verifye.",ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
-"Translate to Kreol.","Tradir an Kreol.",ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
-"Original English.","Text orizinal an Angle.",ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
-"Try again.","Re-seye.",ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
-"No internet connection.","Pena koneksion internet.",ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
-"The report includes a photo.","Rapor-la ena enn foto.",general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
-"There is photo evidence.","Ena enn foto kouma prev.",general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
-"The evidence needs review.","Prev-la bizin verifye.",general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
-"This case is high priority.","Sa ka-la enn gran priyorite.",general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
-"Recommended action: inspect the vessel.","Aksion rekomande: kontrol bato-la.",general,draft_generated,,"Ported from BlueNet as grammar reference only (Aksion rekomande: ... pattern) -- vessel-specific object needs swapping for a scam-suggestedAction phrase before reuse. Needs owner review."
-"Suspicious vessel","Bato sispek",general,draft_generated,,"Ported from BlueNet as grammar reference only (X sispek adjective pattern) -- not directly reusable, kept for the sispek adjective construction. Needs owner review."
-"Bank account","Kont labank",banking,draft_generated,,"Draft: labank = bank (from French la banque). Needs native-speaker review."
-"Your account will be blocked.","To kont pou ganny bloke.",banking,draft_generated,,"Draft: pou ganny X = passive future (will be X-ed). Needs native-speaker review."
-"Your card has been suspended.","To kart inn sispann.",banking,draft_generated,,"Draft: inn = present-perfect/past marker, matches BlueNet's inn convention (e.g. inn rant). Needs native-speaker review."
-"Verify your account.","Verifye to kont.",banking,draft_generated,,"Draft. Needs native-speaker review."
-"Confirm your identity.","Konfirm to lidantite.",banking,draft_generated,,"Draft: lidantite from French l'identite. Needs native-speaker review."
-"Enter your PIN.","Rant to PIN.",banking,draft_generated,,"Draft: PIN kept as loanword/acronym, uninflected. Needs native-speaker review -- verb choice (rant vs tape) uncertain."
-"Do not share your PIN with anyone.","Pa partaz to PIN ar personn.",banking,draft_generated,,"Draft: Pa + verb = negative imperative, matches BlueNet's Pa apros bato-la pattern. Needs native-speaker review."
-"One-time password","Kod OTP",banking,draft_generated,,"Draft: OTP kept as loanword acronym, kod = code. Needs native-speaker review -- may be more natural fully in English for this term."
-"Password","Modpas",banking,draft_generated,,"Draft. Needs native-speaker review."
-"Transfer money","Transfer larzan",banking,draft_generated,,"Draft: larzan = money. Needs native-speaker review."
-"Send money now.","Avoy larzan touswit.",banking,draft_generated,,"Draft: touswit = immediately, matches BlueNet's anti-French-drift rule (rejects tout de suite). Needs native-speaker review."
-"Report to your bank.","Rapor kot to labank.",banking,draft_generated,,"Draft: kot = at/to (location), matches general-domain rapor usage. Needs native-speaker review."
-"Official channel","Kanal ofisyel",banking,draft_generated,,"Draft. Needs native-speaker review."
-"Verify through the official channel before acting.","Verifye par kanal ofisyel avan azir.",banking,draft_generated,,"Draft. Needs native-speaker review."
-"This is a scam.","Sa enn arnak.",scam,draft_generated,,"Draft: arnak = scam/con, common Kreol Morisien borrowing. Needs native-speaker review."
-"Suspicious message","Mesaz sispek",scam,draft_generated,,"Draft: reuses BlueNet's X sispek adjective pattern from bato sispek. Needs native-speaker review."
-"Fraud","Fod",scam,draft_generated,,"Draft: alternate/near-synonym to arnak, uncertain which reads more natural in Mauritius. Needs native-speaker review to pick one as canonical."
-"Bank impersonation","Fer koumadir se labank",scam,draft_generated,,"Draft: fer koumadir = pretend/act as if. Needs native-speaker review."
-"Fake link","Fo lyen",scam,draft_generated,,"Draft: fo = fake, lyen = link (loanword). Needs native-speaker review."
-"Click this link.","Kliv lor sa lyen-la.",scam,draft_generated,,"Draft: kliv = click (loanword), lor = on, -la definite suffix matches BlueNet's bato-la convention. Needs native-speaker review."
-"Do not click unknown links.","Pa kliv lor bann lyen ki to pa kone.",scam,draft_generated,,"Draft. Needs native-speaker review."
-"Urgent","Irzan",scam,draft_generated,,"Draft. Needs native-speaker review."
-"Act now or lose your account.","Azir touswit sinon to pou perdi to kont.",scam,draft_generated,,"Draft: sinon = otherwise/or else. Needs native-speaker review."
-"You have won a prize.","To finn gagn enn prix.",scam,draft_generated,,"Draft: finn = present-perfect marker, gagn = win/get. Needs native-speaker review."
-"Claim your prize now.","Reklam to prix touswit.",scam,draft_generated,,"Draft. Needs native-speaker review."
-"Block the sender.","Bloke sender-la.",scam,draft_generated,,"Draft: sender kept as loanword, -la definite suffix. Needs native-speaker review -- may prefer a Kreol word over sender."
-"Mobile money fraud","Fod mobile money",mobile-money,draft_generated,,"Draft: mobile money likely stays as English/loanword locally. Needs native-speaker review."
-"Your mobile money account is locked.","To kont mobile money finn bloke.",mobile-money,draft_generated,,"Draft. Needs native-speaker review."
+Translation may need review.,Tradiksion-la kapav bizin verifye.,ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
+Translate to Kreol.,Tradir an Kreol.,ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
+Original English.,Text orizinal an Angle.,ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
+Try again.,Re-seye.,ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
+No internet connection.,Pena koneksion internet.,ui,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic UI phrase, unchanged)."
+The report includes a photo.,Rapor-la ena enn foto.,general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
+There is photo evidence.,Ena enn foto kouma prev.,general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
+The evidence needs review.,Prev-la bizin verifye.,general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
+This case is high priority.,Sa ka-la enn gran priyorite.,general,ported_reviewed,Joshua,"Ported from BlueNet Ocean Watch TM (domain-agnostic report phrase, unchanged)."
+Recommended action: inspect the vessel.,Aksion rekomande: kontrol bato-la.,general,rejected,Joshua,Ported from BlueNet as grammar reference only (Aksion rekomande: ... pattern) -- vessel-specific object needs swapping for a scam-suggestedAction phrase before reuse. Needs owner review.
+Suspicious vessel,Bato sispek,general,rejected,Joshua,"Ported from BlueNet as grammar reference only (X sispek adjective pattern) -- not directly reusable, kept for the sispek adjective construction. Needs owner review."
+Bank account,Kont labank,banking,owner_reviewed,Joshua,Draft: labank = bank (from French la banque). Needs native-speaker review.
+Your account will be blocked.,Ou kont pou bloke,banking,owner_reviewed,Joshua,Draft: pou ganny X = passive future (will be X-ed). Needs native-speaker review.
+Your card has been suspended.,Ou kart inn finn sispann.,banking,owner_reviewed,Joshua,"Draft: inn = present-perfect/past marker, matches BlueNet's inn convention (e.g. inn rant). Needs native-speaker review."
+Verify your account.,Verifye ou kont.,banking,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Confirm your identity.,Konfirm ou lidantite.,banking,owner_reviewed,Joshua,Draft: lidantite from French l'identite. Needs native-speaker review.
+Enter your PIN.,Mette ou PIN.,banking,owner_reviewed,Joshua,"Draft: PIN kept as loanword/acronym, uninflected. Needs native-speaker review -- verb choice (rant vs tape) uncertain."
+Do not share your PIN with anyone.,Pa partaz ou PIN ar personn.,banking,owner_reviewed,Joshua,"Draft: Pa + verb = negative imperative, matches BlueNet's Pa apros bato-la pattern. Needs native-speaker review."
+One-time password,Kod OTP,banking,owner_reviewed,Joshua,"Draft: OTP kept as loanword acronym, kod = code. Needs native-speaker review -- may be more natural fully in English for this term."
+Password,Modpas,banking,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Transfer money,Transfer kass,banking,owner_reviewed,Joshua,Draft: larzan = money. Needs native-speaker review.
+Send money now.,Avoy larzan aster la.,banking,owner_reviewed,Joshua,"Draft: touswit = immediately, matches BlueNet's anti-French-drift rule (rejects tout de suite). Needs native-speaker review."
+Report to your bank.,fer enn rapport ar labank,banking,owner_reviewed,Joshua,"Draft: kot = at/to (location), matches general-domain rapor usage. Needs native-speaker review."
+Official channel,channel ofisyel,banking,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Verify through the official channel before acting.,Verifye lor channel ofisyel avan azir.,banking,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+This is a scam.,Sa enn larnak.,scam,owner_reviewed,Joshua,"Draft: arnak = scam/con, common Kreol Morisien borrowing. Needs native-speaker review."
+Suspicious message,Mesaz sispe,scam,owner_reviewed,Joshua,Draft: reuses BlueNet's X sispek adjective pattern from bato sispek. Needs native-speaker review.
+Fraud,Fraud,scam,owner_reviewed,Joshua,"Draft: alternate/near-synonym to arnak, uncertain which reads more natural in Mauritius. Needs native-speaker review to pick one as canonical."
+Bank impersonation,Fer koumadir li labank,scam,owner_reviewed,Joshua,Draft: fer koumadir = pretend/act as if. Needs native-speaker review.
+Fake link,Fo lyen,scam,owner_reviewed,Joshua,"Draft: fo = fake, lyen = link (loanword). Needs native-speaker review."
+Click this link.,Klik lor sa lyen-la.,scam,owner_reviewed,Joshua,"Draft: kliv = click (loanword), lor = on, -la definite suffix matches BlueNet's bato-la convention. Needs native-speaker review."
+Do not click unknown links.,Pa klik lor bann lyen ki to pa kone.,scam,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Urgent,Irzan,scam,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Act now or lose your account.,Azir aster sinon to pou perdi to kont.,scam,owner_reviewed,Joshua,Draft: sinon = otherwise/or else. Needs native-speaker review.
+You have won a prize.,To finn gagn enn prix.,scam,owner_reviewed,Joshua,"Draft: finn = present-perfect marker, gagn = win/get. Needs native-speaker review."
+Claim your prize now.,Reklam to prix deswit.,scam,owner_reviewed,Joshua,Draft. Needs native-speaker review.
+Block the sender.,Bloke dimoun la.,scam,owner_reviewed,Joshua,"Draft: sender kept as loanword, -la definite suffix. Needs native-speaker review -- may prefer a Kreol word over sender."
+Mobile money fraud,Fraud mobile money,mobile-money,owner_reviewed,Joshua,Draft: mobile money likely stays as English/loanword locally. Needs native-speaker review.
+Your mobile money account is locked.,Ou kont mobile money finn bloke.,mobile-money,owner_reviewed,Joshua,Draft. Needs native-speaker review.

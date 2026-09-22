@@ -110,10 +110,11 @@ memory.
 
 ## Collaborative review app
 
-`scam-corpus.csv` needs two independent human reviewers before anything can be
-trusted: Joshua and Caellum. `review/review_app.py` is a local Streamlit tool
-that lets each of them review the 24 rows independently, without seeing the
-other's decisions until a separate read-only comparison view.
+Two datasets need independent human review before anything in them can be
+trusted: the 24-row `scam-corpus.csv` and the 30 `draft_generated` rows in
+`translation-memory.csv`. `review/review_app.py` is a local Streamlit tool
+that lets Joshua and Caellum review either one, independently, without seeing
+each other's decisions until a separate read-only comparison view.
 
 ```bash
 pip install -r data/kreol-dataset/review/requirements.txt
@@ -121,27 +122,34 @@ streamlit run data/kreol-dataset/review/review_app.py
 ```
 
 - The reviewer picks their identity (Joshua or Caellum) in the sidebar — never
-  inferred from Git/OS username.
+  inferred from Git/OS username — then picks a dataset (**Scam Corpus** or
+  **Translation Memory**) from a second sidebar selector. Progress, filters,
+  and navigation are all scoped to whichever dataset is active.
 - Per row, a reviewer marks `APPROVE` (row is fine as-is), `EDIT` (retain the
   row, correct the Kreol/English/signals/notes), or `REJECT` (unsuitable for
-  the trusted dataset). Decisions are stored in
-  `review/review-decisions.csv`, one record per `(id, reviewer)` — Joshua's
-  and Caellum's reviews never overwrite each other.
-- `scam-corpus.csv` (and `.jsonl`, and `translation-memory.*`) stay **read-only**
-  the whole time. The app never writes to them, never promotes a row to
-  `owner_reviewed`, and never merges the two reviewers' corrections — see
-  `CLAUDE.md` § Critical Rule: Never Fabricate Review.
-- The **Review Comparison** tab (read-only) shows agreement/disagreement
-  state per row (`AGREED_APPROVE`/`AGREED_EDIT`/`AGREED_REJECT`/
-  `DISAGREEMENT`/`ONE_REVIEW_PENDING`/`BOTH_PENDING`) so the team can find
-  rows that need human reconciliation. It does not decide who is right and
-  does not merge anything.
-- Applying reconciled decisions back to `scam-corpus.csv` (and deciding what
-  becomes `owner_reviewed`) is a separate, later, explicit task — not done by
-  this app.
-- `review-decisions.csv` is plain CSV, not a database: concurrent writes from
-  two people running the app at the same moment could race. In practice this
-  is fine since each person owns their own `(id, reviewer)` rows and the app
+  the trusted dataset). Decisions are stored separately per dataset —
+  `review/review-decisions.csv` for the scam corpus, `review/tm-review-decisions.csv`
+  for the translation memory — one record per `(id, reviewer)` (for TM, `id`
+  is the `english` column, since it's the existing unique key). Joshua's and
+  Caellum's reviews never overwrite each other.
+- The **app itself** never writes to `scam-corpus.csv`, `translation-memory.csv`,
+  or their `.jsonl` outputs, never promotes a row to `owner_reviewed`, and
+  never merges the two reviewers' corrections — see `CLAUDE.md` § Critical
+  Rule: Never Fabricate Review. (`scam-corpus.csv` has since been promoted to
+  24/24 `owner_reviewed` via a separate, explicit apply step outside this app,
+  after Joshua completed his review — see git history. The translation memory
+  has not been promoted yet.)
+- The **Review Comparison** / **TM Comparison** tab (read-only) shows
+  agreement/disagreement state per row (`AGREED_APPROVE`/`AGREED_EDIT`/
+  `AGREED_REJECT`/`DISAGREEMENT`/`ONE_REVIEW_PENDING`/`BOTH_PENDING`) so the
+  team can find rows that need human reconciliation. It does not decide who
+  is right and does not merge anything.
+- Applying reconciled decisions back to the source CSVs (and deciding what
+  becomes `owner_reviewed`) is a separate, explicit task each time — not done
+  by this app.
+- The decisions CSVs are plain CSV, not a database: concurrent writes from two
+  people running the app at the same moment could race. In practice this is
+  fine since each person owns their own `(id, reviewer)` rows and the app
   re-reads the file before every write, but true simultaneous saves are not
   locked.
 

@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "FraudLens AI — Link Guard",
+  "version": "0.1.0",
+  "description": "Warns when the current site's domain looks like a lookalike of a known Mauritius bank/telecom domain. Calls the FraudLens AI backend for every check — never classifies locally.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "FraudLens AI"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["activeTab", "tabs"],
+  "host_permissions": ["http://localhost:4000/*"]
+}
