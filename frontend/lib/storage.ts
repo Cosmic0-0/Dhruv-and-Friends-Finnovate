@@ -35,6 +35,8 @@ export interface StoredResult {
   redactions: Redaction[];
   language: UiLanguage;
   at: number;
+  /** Where the text came from. A screenshot means the image itself was sent to the server. */
+  source?: "typed" | "screenshot";
   /** Set after a successful POST /api/report, so a reload doesn't offer to report twice. */
   reported?: { sender: string; reportCount: number };
 }

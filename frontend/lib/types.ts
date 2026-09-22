@@ -47,6 +47,24 @@ export interface AnalyzeResponse {
   senderReports?: number;
 }
 
+// ---- POST /api/analyze/screenshot ----
+
+export interface ScreenshotRequest {
+  /** Base64 image, max 5MB decoded; a `data:<mime>;base64,` prefix is accepted. PNG, JPEG or WEBP (sniffed server-side). */
+  image: string;
+  language?: LanguageHint | string;
+}
+
+/**
+ * The server runs OCR, then analyses the extracted text. The UI uses only
+ * `extractedText`: the user reviews and corrects it, and it's then redacted
+ * and sent to /api/analyze like typed text. The server's own verdict here
+ * is deliberately not shown (it was computed on unreviewed, unredacted OCR text).
+ */
+export interface ScreenshotResponse extends AnalyzeResponse {
+  extractedText: string;
+}
+
 // ---- POST /api/batch-scan ----
 
 export interface BatchScanRequest {
@@ -102,3 +120,5 @@ export interface ApiErrorBody {
 
 export const MAX_MESSAGE_LENGTH = 5000;
 export const MAX_BATCH_SIZE = 50;
+/** /api/analyze/screenshot limit on the decoded image. */
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

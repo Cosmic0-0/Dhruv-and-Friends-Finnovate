@@ -20,16 +20,18 @@ import type {
   BatchScanResult,
   ReportRequest,
   ReportResponse,
+  ScreenshotRequest,
+  ScreenshotResponse,
   Signal,
   Verdict,
 } from "./types";
 
-/**
- * Requests go to same-origin `/api/*`; next.config.ts rewrites them to the
- * backend (BACKEND_URL). The browser never makes a cross-origin call, so the
- * backend needs no CORS and the app works from a phone on the LAN.
+/*
+ * Requests go to same-origin `/api/*` paths exactly as written below;
+ * next.config.ts rewrites them to the backend (BACKEND_URL). The browser
+ * never makes a cross-origin call, so the backend needs no CORS and the app
+ * works from a phone on the LAN. lib/api.test.ts pins the exact URLs.
  */
-const API_PREFIX = "/api";
 
 export type ApiErrorKind =
   | "validation" // 400: request rejected by backend validation
@@ -37,6 +39,7 @@ export type ApiErrorKind =
   | "network" // frontend server unreachable, or the /api proxy can't reach the backend
   | "timeout" // no response within the timeout
   | "aborted" // cancelled by the caller (e.g. user navigated away)
+  | "ocr_failed" // /api/analyze/screenshot: the OCR worker itself failed (502 "OCR failed: …")
   | "unexpected"; // 2xx body that doesn't match the contract, or an unknown status
 
 export interface ApiError {
@@ -57,6 +60,12 @@ export type ValidationReason =
   | "batch_item_empty"
   | "batch_item_too_long"
   | "sender_empty"
+  | "image_missing"
+  | "image_unreadable"
+  | "image_too_large"
+  | "image_not_supported"
+  | "image_no_text"
+  | "image_text_too_long"
   | "invalid";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -73,6 +82,8 @@ const DEFAULT_TIMEOUTS = {
   analyze: 45_000,
   batch: 180_000,
   report: 15_000,
+  // OCR, then a full LLM analysis server-side, before the text comes back.
+  screenshot: 150_000,
 } as const;
 
 const FRIENDLY = {
@@ -84,6 +95,7 @@ const FRIENDLY = {
   batchItemEmpty: "One of the messages is empty. Remove it or add some text.",
   batchItemTooLong: "One of the messages is over 5,000 characters. Please shorten it.",
   senderEmpty: "Enter the sender's number or name to report it.",
+  imageGeneric: "We couldn't read that screenshot. Try another image, or type the message instead.",
   llm: "Our analysis service is busy right now. Please try again in a moment.",
   network: "We can't reach FraudLens right now. Check your connection and try again.",
   timeout: "This is taking longer than usual. Please try again.",
@@ -104,6 +116,12 @@ const VALIDATION_MAP: Array<[RegExp, ValidationReason, string]> = [
   [/^every message in the batch must be a non-empty string/i, "batch_item_empty", FRIENDLY.batchItemEmpty],
   [/^every message must be 5000 characters or fewer/i, "batch_item_too_long", FRIENDLY.batchItemTooLong],
   [/^sender is required/i, "sender_empty", FRIENDLY.senderEmpty],
+  [/^image is required/i, "image_missing", FRIENDLY.imageGeneric],
+  [/^image could not be decoded/i, "image_unreadable", FRIENDLY.imageGeneric],
+  [/^image exceeds maximum size/i, "image_too_large", FRIENDLY.imageGeneric],
+  [/^image must be a valid/i, "image_not_supported", FRIENDLY.imageGeneric],
+  [/^no readable text was found/i, "image_no_text", FRIENDLY.imageGeneric],
+  [/^extracted text exceeds maximum length/i, "image_text_too_long", FRIENDLY.imageGeneric],
 ];
 
 function friendlyValidation(raw: string | undefined): { reason: ValidationReason; message: string } {
@@ -139,7 +157,7 @@ async function postJson<T>(
   isValid: (data: unknown) => data is T,
   callerSignal?: AbortSignal,
 ): Promise<ApiResult<T>> {
-  const url = `${API_PREFIX}${path}`;
+  const url = path; // already the full same-origin path, e.g. "/api/analyze"
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -197,6 +215,7 @@ async function postJson<T>(
         }
         // 502 carries raw LLM/provider error text: log only, never display.
         console.warn(`[api] ${path} ${res.status}:`, raw);
+        if (/^OCR failed/i.test(raw)) return fail("ocr_failed", FRIENDLY.imageGeneric, res.status);
         return fail("llm_unavailable", FRIENDLY.llm, res.status);
       }
       console.warn(`[api] ${path} unexpected status ${res.status}:`, raw);
@@ -330,6 +349,27 @@ export async function batchScan(
     opts.signal,
   );
   return res.ok ? { ok: true, data: normaliseBatch(res.data) } : res;
+}
+
+/**
+ * Only `extractedText` is checked and used; the server's verdict in the
+ * same response is ignored by design (see ScreenshotResponse).
+ */
+function isScreenshotResponse(v: unknown): v is ScreenshotResponse {
+  return isObj(v) && isStr(v.extractedText);
+}
+
+export function analyzeScreenshot(
+  req: ScreenshotRequest,
+  opts: RequestOptions = {},
+): Promise<ApiResult<ScreenshotResponse>> {
+  return postJson(
+    "/api/analyze/screenshot",
+    req,
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.screenshot,
+    isScreenshotResponse,
+    opts.signal,
+  );
 }
 
 export function reportSender(req: ReportRequest, opts: RequestOptions = {}): Promise<ApiResult<ReportResponse>> {

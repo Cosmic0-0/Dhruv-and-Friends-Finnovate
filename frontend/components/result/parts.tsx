@@ -134,11 +134,12 @@ export function MessageCard({
   );
 }
 
-export function SentPanel({ redacted, copy }: { redacted: string; copy: Copy }) {
+export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string; fromScreenshot: boolean; copy: Copy }) {
   return (
     <details className="card">
       <summary className="cursor-pointer text-sm font-semibold text-ink">{copy.result.sentTitle}</summary>
-      <p className="mt-3 text-sm text-ink-muted">{copy.result.sentBody}</p>
+      {/* "Only this version left your phone" is false when the text came from a screenshot. */}
+      <p className="mt-3 text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
       <p className="mt-3 rounded-lg bg-muted-surface px-3 py-2 font-mono text-[0.8125rem] whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
         {redacted}
       </p>

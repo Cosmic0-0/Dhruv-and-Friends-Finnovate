@@ -1,0 +1,239 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { analyzeScreenshot, type ApiErrorKind, type ValidationReason } from "@/lib/api";
+import { compressImage, ImageError, type ImageErrorCode } from "@/lib/image";
+import type { Copy, UiLanguage } from "@/lib/i18n";
+import { MAX_IMAGE_BYTES } from "@/lib/types";
+import { CheckIcon, RetryIcon, Spinner, XIcon } from "./icons";
+
+/**
+ * Screenshot → text, for the user to review. The image is compressed in the
+ * browser, sent to POST /api/analyze/screenshot (the backend's OCR; nothing
+ * is read client-side), and only `extractedText` is used: it goes into the
+ * editable textarea, never straight to a verdict. OCR misreads characters,
+ * so the user sees and fixes the text, then presses Check, which redacts it
+ * like typed text.
+ *
+ * DEMO NOTE: attach an SMS screenshot and let the extracted text appear in
+ * the box, fix a character live, then press Check.
+ */
+
+type ServiceErrorKind = Exclude<ApiErrorKind, "validation" | "aborted">;
+export type ShotError = { kind: "image"; reason: ValidationReason } | { kind: ServiceErrorKind };
+
+export type ShotState =
+  | { phase: "none" }
+  | { phase: "preparing" }
+  | { phase: "reading"; previewUrl: string; slow: boolean }
+  | { phase: "done"; previewUrl: string }
+  | { phase: "error"; previewUrl?: string; error: ShotError; canRetry: boolean };
+
+const SLOW_AFTER_MS = 10_000;
+
+const IMAGE_ERROR_REASON: Record<ImageErrorCode, ValidationReason> = {
+  not_image: "image_not_supported",
+  too_large: "image_too_large",
+  unreadable: "image_unreadable",
+};
+
+export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (text: string) => void }) {
+  const [state, setState] = useState<ShotState>({ phase: "none" });
+  const abortRef = useRef<AbortController | null>(null);
+  const previewRef = useRef<string | null>(null);
+  const dataUrlRef = useRef<string | null>(null);
+  const onTextRef = useRef(onText);
+  useEffect(() => {
+    onTextRef.current = onText;
+  });
+
+  const releasePreview = () => {
+    if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+    previewRef.current = null;
+  };
+
+  // Cancel an in-flight read and free the preview when leaving the screen.
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      releasePreview();
+    },
+    [],
+  );
+
+  const read = useCallback(
+    async (dataUrl: string, previewUrl: string) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setState({ phase: "reading", previewUrl, slow: false });
+      const slowTimer = setTimeout(
+        () => setState((s) => (s.phase === "reading" && s.previewUrl === previewUrl ? { ...s, slow: true } : s)),
+        SLOW_AFTER_MS,
+      );
+
+      const res = await analyzeScreenshot({ image: dataUrl, language: lang }, { signal: controller.signal });
+      clearTimeout(slowTimer);
+      if (controller.signal.aborted) return; // removed or replaced meanwhile
+
+      if (res.ok) {
+        const text = res.data.extractedText.trim();
+        if (!text) {
+          setState({ phase: "error", previewUrl, error: { kind: "image", reason: "image_no_text" }, canRetry: false });
+          return;
+        }
+        setState({ phase: "done", previewUrl });
+        onTextRef.current(text);
+        return;
+      }
+      const e = res.error;
+      if (e.kind === "aborted") return;
+      if (e.kind === "validation") {
+        setState({ phase: "error", previewUrl, error: { kind: "image", reason: e.reason ?? "invalid" }, canRetry: false });
+      } else {
+        setState({ phase: "error", previewUrl, error: { kind: e.kind }, canRetry: true });
+      }
+    },
+    [lang],
+  );
+
+  const pick = useCallback(
+    async (file: File) => {
+      abortRef.current?.abort();
+      releasePreview();
+      dataUrlRef.current = null;
+      setState({ phase: "preparing" });
+      try {
+        const img = await compressImage(file);
+        if (img.blob.size > MAX_IMAGE_BYTES) throw new ImageError("too_large");
+        const previewUrl = URL.createObjectURL(img.blob);
+        previewRef.current = previewUrl;
+        dataUrlRef.current = img.dataUrl;
+        await read(img.dataUrl, previewUrl);
+      } catch (err) {
+        const code: ImageErrorCode = err instanceof ImageError ? err.code : "unreadable";
+        if (!(err instanceof ImageError)) console.warn("[screenshot] couldn't prepare image", err);
+        setState({ phase: "error", error: { kind: "image", reason: IMAGE_ERROR_REASON[code] }, canRetry: false });
+      }
+    },
+    [read],
+  );
+
+  const retry = useCallback(() => {
+    if (dataUrlRef.current && previewRef.current) void read(dataUrlRef.current, previewRef.current);
+  }, [read]);
+
+  const remove = useCallback(() => {
+    abortRef.current?.abort();
+    releasePreview();
+    dataUrlRef.current = null;
+    setState({ phase: "none" });
+  }, []);
+
+  return { state, pick, retry, remove, busy: state.phase === "preparing" || state.phase === "reading" };
+}
+
+function errorCopy(error: ShotError, copy: Copy): { title: string; body: string } {
+  const e = copy.errors;
+  if (error.kind === "image") return { title: e.ocrTitle, body: e.validation[error.reason] };
+  switch (error.kind) {
+    case "network":
+      return { title: e.networkTitle, body: e.network };
+    case "timeout":
+      return { title: e.timeoutTitle, body: e.timeout };
+    case "llm_unavailable":
+      return { title: e.llmTitle, body: e.llm };
+    case "ocr_failed":
+      return { title: e.ocrTitle, body: e.ocr };
+    default:
+      return { title: e.unexpectedTitle, body: e.unexpected };
+  }
+}
+
+/** Thumbnail, progress and outcome for the attached screenshot. Never renders backend text. */
+export function ScreenshotRow({
+  state,
+  copy,
+  onRemove,
+  onRetry,
+  onTypeInstead,
+}: {
+  state: ShotState;
+  copy: Copy;
+  onRemove: () => void;
+  onRetry: () => void;
+  onTypeInstead: () => void;
+}) {
+  if (state.phase === "none") return null;
+  const previewUrl = "previewUrl" in state ? state.previewUrl : undefined;
+  const busy = state.phase === "preparing" || state.phase === "reading";
+
+  let status: React.ReactNode = null;
+  if (state.phase === "preparing") status = copy.shot.preparing;
+  else if (state.phase === "reading") status = state.slow ? copy.shot.stillReading : copy.shot.reading;
+  else if (state.phase === "done")
+    status = (
+      <span className="flex items-start gap-2 text-safe">
+        <CheckIcon className="mt-0.5 size-4 shrink-0" strokeWidth={2.5} />
+        <span className="text-ink-soft">{copy.shot.extracted}</span>
+      </span>
+    );
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-card-border pt-3">
+      <div className="flex items-center gap-3">
+        <div className="relative size-16 shrink-0 overflow-hidden rounded-lg border border-card-border bg-muted-surface">
+          {previewUrl && (
+            // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
+            <img src={previewUrl} alt={copy.shot.alt} className="size-full object-cover object-top" />
+          )}
+          {busy && (
+            <div className="absolute inset-0 grid place-items-center bg-ink/45">
+              <Spinner className="size-6 text-white" />
+            </div>
+          )}
+        </div>
+        <p className="min-w-0 flex-1 text-sm leading-snug text-ink-soft" aria-live="polite">
+          {status}
+        </p>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={copy.shot.remove}
+          title={copy.shot.remove}
+          className="grid size-10 shrink-0 place-items-center rounded-full text-ink-muted hover:bg-muted-surface hover:text-ink"
+        >
+          <XIcon className="size-5" strokeWidth={2} />
+        </button>
+      </div>
+
+      {state.phase === "error" && (
+        <div role="alert" className="flex flex-col gap-3 rounded-xl border border-caution/30 bg-caution-soft p-4">
+          <div className="flex flex-col gap-1">
+            <p className="font-serif text-[1.0625rem] leading-tight font-medium text-ink">{errorCopy(state.error, copy).title}</p>
+            <p className="text-sm leading-relaxed text-ink-soft">{errorCopy(state.error, copy).body}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {state.canRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="flex items-center gap-2 rounded-pill bg-ink px-4 py-2 text-sm font-semibold text-on-ink"
+              >
+                <RetryIcon className="size-4" strokeWidth={2} />
+                {copy.retry}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onTypeInstead}
+              className="rounded-pill border border-ink/20 bg-card px-4 py-2 text-sm font-semibold text-ink"
+            >
+              {copy.shot.typeInstead}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

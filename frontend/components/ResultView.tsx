@@ -90,7 +90,7 @@ export default function ResultView() {
       )}
 
       <CheckAnotherButton copy={copy} />
-      <SentPanel redacted={redacted} copy={copy} />
+      <SentPanel redacted={redacted} fromScreenshot={result.source === "screenshot"} copy={copy} />
     </div>
   );
 }

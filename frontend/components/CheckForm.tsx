@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { analyzeMessage, type ApiError } from "@/lib/api";
 import { redact } from "@/lib/redact";
@@ -8,6 +8,7 @@ import { addRecentCheck, saveResult } from "@/lib/storage";
 import { MAX_MESSAGE_LENGTH } from "@/lib/types";
 import type { Copy } from "@/lib/i18n";
 import { useLanguage } from "./LanguageProvider";
+import { ScreenshotRow, useScreenshot } from "./ScreenshotUpload";
 import { ImageIcon, RetryIcon, Spinner } from "./icons";
 
 /** Show the live character count once the message gets close to the API's limit. */
@@ -24,15 +25,64 @@ export default function CheckForm() {
   const [status, setStatus] = useState<Status>("idle");
   const [slow, setSlow] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
+  // True while the textarea holds text that came from a screenshot: the image
+  // itself went to the server, so the typed-text privacy promise doesn't apply.
+  const [textFromImage, setTextFromImage] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const shot = useScreenshot({
+    lang,
+    onText: (extracted) => {
+      // Never overwrite what the user already typed: append after it.
+      setText((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${extracted}` : extracted));
+      setTextFromImage(true);
+      if (status === "error") setStatus("idle");
+      // Bring the text into view without focusing (a phone keyboard would cover it).
+      requestAnimationFrame(() => cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+    },
+  });
 
   // Cancel an in-flight check if the user leaves the screen.
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // Grow the textarea to fit its content (from 6 rows up to a cap), so the
+  // whole message, including OCR text that needs checking, is visible without
+  // scrolling inside a small box.
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const max = Math.round(window.innerHeight * 0.6);
+    el.style.height = `${Math.min(el.scrollHeight, max)}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }, [text]);
+
   const length = text.length;
   const overLimit = length > MAX_MESSAGE_LENGTH;
   const loading = status === "loading";
-  const canSubmit = text.trim().length > 0 && !overLimit && !loading;
+  const canSubmit = text.trim().length > 0 && !overLimit && !loading && !shot.busy;
+  // The screenshot wording applies once an image is on its way to (or reached) the
+  // server. A file rejected in the browser (no preview) never left the device.
+  const s = shot.state;
+  const imageInvolved =
+    textFromImage ||
+    s.phase === "preparing" ||
+    s.phase === "reading" ||
+    s.phase === "done" ||
+    (s.phase === "error" && Boolean(s.previewUrl));
+
+  function removeScreenshot() {
+    shot.remove();
+    if (!text.trim()) setTextFromImage(false);
+  }
+
+  function typeInstead() {
+    removeScreenshot();
+    textareaRef.current?.focus();
+  }
 
   async function submit() {
     if (!canSubmit) return;
@@ -58,7 +108,14 @@ export default function CheckForm() {
 
     if (res.ok) {
       const at = Date.now();
-      saveResult({ response: res.data, redacted, redactions, language: lang, at });
+      saveResult({
+        response: res.data,
+        redacted,
+        redactions,
+        language: lang,
+        at,
+        source: textFromImage ? "screenshot" : "typed",
+      });
       addRecentCheck({ text: redacted, verdict: res.data.verdict, at });
       router.push("/result");
       return; // stay in the loading state until the result screen takes over
@@ -77,7 +134,10 @@ export default function CheckForm() {
           void submit();
         }}
       >
-        <div className="card flex flex-col gap-2 transition-shadow focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10">
+        <div
+          ref={cardRef}
+          className="card flex scroll-mt-4 flex-col gap-2 transition-shadow focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10"
+        >
           <div className="flex items-baseline justify-between gap-3">
             <label
               htmlFor="message"
@@ -95,6 +155,7 @@ export default function CheckForm() {
             )}
           </div>
           <textarea
+            ref={textareaRef}
             id="message"
             name="message"
             rows={6}
@@ -102,6 +163,8 @@ export default function CheckForm() {
             onChange={(e) => {
               setText(e.target.value);
               if (status === "error" && error?.kind === "validation") setStatus("idle");
+              // Cleared and no image attached: whatever is typed next is typed text.
+              if (!e.target.value.trim() && shot.state.phase === "none") setTextFromImage(false);
             }}
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}
@@ -113,6 +176,13 @@ export default function CheckForm() {
               {copy.tooLong}
             </p>
           )}
+          <ScreenshotRow
+            state={shot.state}
+            copy={copy}
+            onRemove={removeScreenshot}
+            onRetry={shot.retry}
+            onTypeInstead={typeInstead}
+          />
         </div>
 
         <div className="flex gap-3">
@@ -126,25 +196,40 @@ export default function CheckForm() {
             <span aria-live="polite">{loading ? (slow ? copy.stillWorking : copy.checking) : copy.submit}</span>
           </button>
 
-          {/* Screenshot/OCR belongs to the OCR owner; kept disabled until it's wired to its endpoint. */}
+          {/* The OS picker offers Photo Library / Take Photo on phones; no custom camera. */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = ""; // allow choosing the same file again
+              if (file) void shot.pick(file);
+            }}
+          />
           <button
             type="button"
-            disabled
-            title={copy.comingSoon}
-            aria-label={`${copy.uploadScreenshot}. ${copy.comingSoon}`}
-            className="relative grid size-14 shrink-0 cursor-not-allowed place-items-center rounded-card border border-card-border bg-card text-ink-muted"
+            onClick={() => fileRef.current?.click()}
+            disabled={shot.busy || loading}
+            aria-label={copy.uploadScreenshot}
+            title={copy.uploadScreenshot}
+            className={`grid size-14 shrink-0 place-items-center rounded-card border bg-card text-ink transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+              shot.state.phase !== "none" ? "border-ink/40" : "border-card-border hover:border-ink/30"
+            }`}
           >
-            <ImageIcon className="size-6 opacity-60" />
-            <span className="absolute -top-2 -right-2 rounded-pill bg-muted-surface px-1.5 py-0.5 text-[0.625rem] font-semibold tracking-wide text-ink-muted ring-2 ring-page">
-              {copy.soon}
-            </span>
+            <ImageIcon className="size-6" />
           </button>
         </div>
       </form>
 
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
-      <p className="px-1 text-[0.8125rem] leading-snug text-ink-muted">{copy.privacyNote}</p>
+      {/* Each promise only where it's true: redaction happens in the browser for
+          typed text, but a screenshot is sent to the server as it is. */}
+      <p className="px-1 text-[0.8125rem] leading-snug text-ink-muted" aria-live="polite">
+        {imageInvolved ? copy.imagePrivacyNote : copy.privacyNote}
+      </p>
     </section>
   );
 }
