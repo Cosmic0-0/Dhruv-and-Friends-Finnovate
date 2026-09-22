@@ -9,10 +9,7 @@ so the Kreol layer can be tested against what the fraud-analysis pipeline
 actually needs: entity preservation, risk-signal preservation, code-switch
 handling.
 
-No BlueNet Ocean Watch project file does this job directly -- its
-"corpus" is just the translation memory split for LoRA fine-tuning
-(train/validation/test.jsonl), not a message+entities+risk-signals
-schema. This script is new, but reuses tm_tool.py's proven Haitian/French
+This script is new, but reuses tm_tool.py's proven Haitian/French
 drift heuristics rather than re-deriving them (see the import below) and
 mirrors its CSV/JSONL/check/to-jsonl shape for consistency.
 
@@ -66,7 +63,7 @@ VALID_RISK_SIGNALS = {
 }
 
 VALID_STATUSES = {"owner_reviewed", "ported_reviewed", "draft_generated", "rejected"}
-VALID_PROVENANCE = {"synthetic_claude", "ported_bluenet", "owner_authored"}
+VALID_PROVENANCE = {"synthetic_claude", "owner_authored", "real_report_redacted"}
 
 OTP_WORDING = re.compile(r"\botp\b|\bpin\b|\bcode\b|\bkod\b", re.IGNORECASE)
 LONG_DIGIT_RUN = re.compile(r"\d{9,}")
