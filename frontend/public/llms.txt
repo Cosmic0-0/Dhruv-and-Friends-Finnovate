@@ -1,0 +1,11 @@
+# FraudLens AI
+
+> Paste a suspicious SMS, WhatsApp, or email message and get a structured
+> breakdown of scam warning signs (sender mismatch, urgency language,
+> lookalike links, spoofed identity) plus a suggested next action. Built for
+> Mauritius: works in English, French, and Kreol Morisien, including
+> messages that mix all three.
+
+- [Check a message](/): paste text or upload a screenshot for analysis.
+- [Learn the warning signs](/learn): the signal types FraudLens checks for.
+- [Known scam patterns](/trends): common Mauritius-specific scam formats.

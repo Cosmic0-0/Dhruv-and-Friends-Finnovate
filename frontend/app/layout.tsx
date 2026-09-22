@@ -26,6 +26,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: { default: TITLE, template: "%s · FraudLens AI" },
   description: DESCRIPTION,
+  alternates: { canonical: "/" },
   applicationName: "FraudLens AI",
   appleWebApp: { capable: true, title: "FraudLens", statusBarStyle: "default" },
   formatDetection: { telephone: false },
