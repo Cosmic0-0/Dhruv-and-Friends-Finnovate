@@ -1,64 +1,191 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buildRound, localDay, nextStreak, STREAK_PILL_MIN, type QuizItem, type TrendCard } from "@/lib/learn-content";
+import {
+  buildRound,
+  languagePool,
+  localDay,
+  STREAK_PILL_MIN,
+  type LanguagePool,
+  type QuizItem,
+  type QuizLanguage,
+  type TrendCard,
+} from "@/lib/learn-content";
 import { redact } from "@/lib/redact";
 import { safeChecks } from "@/lib/result";
-import { getLearnStats, saveLearnStats, type LearnStats } from "@/lib/storage";
+import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState } from "@/lib/streak";
+import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
 import { CheckIcon } from "../icons";
+import Celebration from "./Celebration";
+
+type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
 /**
  * Learn tab. Fully client-side over build-time corpus data: no API call.
  * Explanations reuse the result screen's exact wording (copy.result.*), so
  * a player recognises the same phrases when they check a real message.
+ *
+ * The quiz only ever shows messages in the selected language. If that
+ * language has too few, a note says more are coming and offers another set;
+ * it's never swapped in silently.
  */
 export default function LearnScreen({ items, trends }: { items: QuizItem[]; trends: TrendCard[] }) {
-  const { lang, copy } = useLanguage();
+  const { lang, copy, ready } = useLanguage();
   // null until mounted: localStorage isn't available during server render.
-  const [stats, setStats] = useState<LearnStats | null>(null);
+  const [state, setState] = useState<StreakState | null>(null);
+  const [acceptedFallback, setAcceptedFallback] = useState<QuizLanguage | null>(null);
+  const [celebration, setCelebration] = useState<CelebrationData | null>(null);
+  const today = localDay();
 
-  useEffect(() => setStats(getLearnStats()), []);
+  useEffect(() => setState(getStreakState()), []);
+  // A fallback accepted for one language doesn't carry over to another.
+  useEffect(() => setAcceptedFallback(null), [lang]);
 
-  const update = (next: LearnStats) => {
-    setStats(next);
-    saveLearnStats(next);
+  const save = (next: StreakState) => {
+    setState(next);
+    saveStreakState(next);
   };
+
+  const pool = languagePool(items, lang);
+  const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
+  const streakShown = state ? visibleStreak(state, today) : 0;
+  const doneToday = state?.lastCompletedDay === today;
 
   return (
     <div className="flex flex-col gap-8">
       <header className="flex items-start justify-between gap-4 pt-2">
         <h1>{copy.learn.headline}</h1>
-        {stats && stats.streak >= STREAK_PILL_MIN && (
+        {streakShown >= STREAK_PILL_MIN && (
           <span className="mt-2 shrink-0 rounded-pill bg-caution-soft px-3 py-1.5 text-xs font-semibold whitespace-nowrap text-caution">
-            {copy.learn.streak(stats.streak)}
+            {copy.learn.streak(streakShown)}
           </span>
         )}
       </header>
 
-      <Quiz
-        items={items}
-        copy={copy}
-        lang={lang}
-        onAnswered={() => {
-          const current = getLearnStats();
-          const today = localDay();
-          if (current.lastDay !== today) update({ ...current, streak: nextStreak(current, today), lastDay: today });
-        }}
-        onFinished={(score, total) => {
-          const current = getLearnStats();
-          const prev = current.best;
-          if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
-            update({ ...current, best: { score, total } });
-          }
-        }}
-        best={stats?.best ?? null}
-      />
+      {/* Wait for the saved language so a wrong-language question never flashes. */}
+      {!ready ? (
+        <div className="h-72 rounded-card bg-ink" aria-hidden="true" />
+      ) : !quizLang ? (
+        <LanguageNote pool={pool} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
+      ) : (
+        <div className="flex flex-col gap-3">
+          {quizLang !== lang && (
+            <p className="w-fit rounded-pill bg-muted-surface px-3 py-1 text-xs font-semibold text-ink-soft">
+              {copy.learn.practisingIn(copy.learn.languageName[quizLang])}
+            </p>
+          )}
+          <Quiz
+            key={quizLang}
+            items={items}
+            quizLang={quizLang}
+            copy={copy}
+            lang={lang}
+            onAnswered={(item, correct) => {
+              const { state: next, completedNow } = recordAnswer(getStreakState(today), { item, correct }, today);
+              const celebrate = completedNow && !next.today.celebrated;
+              if (celebrate) next.today = { ...next.today, celebrated: true }; // once per day, even across reloads
+              save(next);
+              if (celebrate) {
+                setCelebration({
+                  streak: next.streak,
+                  right: next.today.correct,
+                  total: next.today.answered,
+                  mistakes: next.today.mistakes,
+                });
+              }
+            }}
+            onFinished={(score, total) => {
+              const current = getStreakState(today);
+              const prev = current.best;
+              if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
+                save({ ...current, best: { score, total } });
+              }
+            }}
+            best={state?.best ?? null}
+          />
+        </div>
+      )}
+
+      {state && ready && quizLang && (
+        <p className="-mt-5 flex items-center gap-2 px-1 text-[0.8125rem] font-medium text-ink-soft" aria-live="polite">
+          {doneToday ? (
+            <>
+              <CheckIcon className="size-4 shrink-0 text-safe" strokeWidth={2.5} />
+              {copy.learn.dailyDone}
+            </>
+          ) : (
+            copy.learn.dailyProgress(Math.min(state.today.answered, DAILY_GOAL), DAILY_GOAL)
+          )}
+        </p>
+      )}
       <p className="-mt-5 px-1 text-[0.8125rem] leading-snug text-ink-muted">{copy.learn.syntheticNote}</p>
 
       <Trends trends={trends} copy={copy} />
+
+      {process.env.NODE_ENV === "development" && (
+        <DevTools
+          copy={copy}
+          onReset={() => {
+            resetStreakState();
+            setState(getStreakState());
+          }}
+          onSeed={() => {
+            seedStreakEndingYesterday(2);
+            setState(getStreakState());
+          }}
+        />
+      )}
+
+      {celebration && <Celebration {...celebration} copy={copy} onClose={() => setCelebration(null)} />}
     </div>
+  );
+}
+
+/** Too few practice messages in this language: say so, and offer another set (never swap silently). */
+function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy; onAccept: () => void }) {
+  const L = copy.learn;
+  return (
+    <section className="flex flex-col gap-4 rounded-card bg-ink p-6 text-on-ink" aria-labelledby="quiz-label">
+      <p id="quiz-label" className="text-[0.6875rem] font-semibold tracking-[0.14em] text-on-ink/60 uppercase">
+        {L.quizLabel}
+      </p>
+      <p className="font-serif text-[1.3125rem] leading-snug">{L.fewItems(L.languageName[pool.lang])}</p>
+      {pool.fallback && (
+        <>
+          <button
+            type="button"
+            onClick={onAccept}
+            className="flex min-h-14 items-center justify-center rounded-card bg-on-ink px-5 font-semibold text-ink"
+          >
+            {L.offerOther(L.languageName[pool.fallback])}
+          </button>
+          {pool.fallback === "kreol" && <p className="text-sm leading-relaxed text-on-ink/70">{L.kreolMixNote}</p>}
+        </>
+      )}
+    </section>
+  );
+}
+
+/**
+ * `next dev` only (compiled out of production builds): replay the daily
+ * celebration. "Reset streak" forgets everything, so 5 answers show the day-one
+ * tick; "Pretend 2 days done" makes today day 3, so 5 answers show the flame.
+ */
+function DevTools({ copy, onReset, onSeed }: { copy: Copy; onReset: () => void; onSeed: () => void }) {
+  return (
+    <section className="flex flex-col gap-2 rounded-card border border-dashed border-ink/25 p-4" aria-label={copy.learn.dev.title}>
+      <p className="text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase">{copy.learn.dev.title}</p>
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={onReset} className="rounded-pill border border-ink/20 bg-card px-3 py-1.5 text-sm font-semibold text-ink">
+          {copy.learn.dev.reset}
+        </button>
+        <button type="button" onClick={onSeed} className="rounded-pill border border-ink/20 bg-card px-3 py-1.5 text-sm font-semibold text-ink">
+          {copy.learn.dev.seed}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -66,6 +193,7 @@ type Answer = { choseScam: boolean; correct: boolean };
 
 function Quiz({
   items,
+  quizLang,
   copy,
   lang,
   onAnswered,
@@ -73,14 +201,16 @@ function Quiz({
   best,
 }: {
   items: QuizItem[];
+  /** Language of the messages in the round (may differ from the UI language after an accepted fallback). */
+  quizLang: QuizLanguage;
   copy: Copy;
   lang: UiLanguage;
-  onAnswered: () => void;
+  onAnswered: (item: QuizItem, correct: boolean) => void;
   onFinished: (score: number, total: number) => void;
   best: { score: number; total: number } | null;
 }) {
-  // First round is deterministic (same on server and client, rehearsable); "Play again" reshuffles.
-  const [round, setRound] = useState<QuizItem[]>(() => buildRound(items));
+  // First round is deterministic per language (rehearsable); "Play again" reshuffles within it.
+  const [round, setRound] = useState<QuizItem[]>(() => buildRound(items, quizLang));
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
   const [score, setScore] = useState(0);
@@ -123,7 +253,7 @@ function Quiz({
           ref={playAgainRef}
           type="button"
           onClick={() => {
-            setRound(buildRound(items, Math.random));
+            setRound(buildRound(items, quizLang, Math.random));
             setIndex(0);
             setScore(0);
             setAnswer(null);
@@ -144,7 +274,7 @@ function Quiz({
     const correct = choseScam === item.isScam;
     setAnswer({ choseScam, correct });
     if (correct) setScore((s) => s + 1);
-    onAnswered();
+    onAnswered(item, correct);
   };
   const next = () => {
     moved.current = true;

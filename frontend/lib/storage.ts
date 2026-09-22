@@ -10,6 +10,8 @@
  */
 
 import type { UiLanguage } from "./i18n";
+import { localDay } from "./learn-content";
+import { emptyState, normalizeState, type StreakState } from "./streak";
 import type { Redaction } from "./redact";
 import type { AnalyzeResponse, Verdict } from "./types";
 
@@ -104,31 +106,45 @@ export function saveLanguage(lang: UiLanguage): void {
   write(local, LANGUAGE_KEY, lang);
 }
 
-// ---------- Learn tab (streak + best score) ----------
+// ---------- Learn tab (daily streak + best score) ----------
 
-const LEARN_KEY = "fraudlens.learn.v1";
+const STREAK_KEY = "fraudlens.learn.v2";
+/** The v1 model counted any answer as a day. Read once for its best score, then removed. */
+const LEGACY_LEARN_KEY = "fraudlens.learn.v1";
 
-export interface LearnStats {
-  streak: number;
-  /** Local YYYY-MM-DD of the last day a question was answered. */
-  lastDay: string | null;
-  best: { score: number; total: number } | null;
+/** Current streak state, validated and rolled over to `today`. Migrates and deletes v1 data. */
+export function getStreakState(today: string = localDay()): StreakState {
+  const raw = read<unknown>(local, STREAK_KEY);
+  const legacy = raw === null ? read<unknown>(local, LEGACY_LEARN_KEY) : null;
+  const state = normalizeState(raw, today, legacy);
+  if (legacy !== null) {
+    write(local, STREAK_KEY, state);
+    try {
+      local().removeItem(LEGACY_LEARN_KEY);
+    } catch {
+      /* storage unavailable */
+    }
+  }
+  return state;
 }
 
-const EMPTY_LEARN: LearnStats = { streak: 0, lastDay: null, best: null };
-
-export function getLearnStats(): LearnStats {
-  const s = read<Partial<LearnStats>>(local, LEARN_KEY);
-  if (!s || typeof s !== "object") return EMPTY_LEARN;
-  const best =
-    s.best && typeof s.best.score === "number" && typeof s.best.total === "number" && s.best.total > 0 ? s.best : null;
-  return {
-    streak: typeof s.streak === "number" && s.streak > 0 ? Math.floor(s.streak) : 0,
-    lastDay: typeof s.lastDay === "string" ? s.lastDay : null,
-    best,
-  };
+export function saveStreakState(state: StreakState): void {
+  write(local, STREAK_KEY, state);
 }
 
-export function saveLearnStats(stats: LearnStats): void {
-  write(local, LEARN_KEY, stats);
+/** Dev tool (Learn tab, `next dev` only): forget all streak progress, including today's. */
+export function resetStreakState(): void {
+  try {
+    local().removeItem(STREAK_KEY);
+    local().removeItem(LEGACY_LEARN_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Dev tool: pretend `days` consecutive days were completed, ending yesterday, so today continues the streak. */
+export function seedStreakEndingYesterday(days: number, today: string = localDay()): void {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  write(local, STREAK_KEY, { ...emptyState(today), streak: days, lastCompletedDay: localDay(d) });
 }

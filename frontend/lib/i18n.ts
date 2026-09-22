@@ -11,7 +11,7 @@
  */
 
 import type { ValidationReason } from "./api";
-import type { TrendCategory } from "./learn-content";
+import type { QuizLanguage, TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity } from "./types";
 
@@ -145,6 +145,27 @@ export interface Copy {
     syntheticNote: string;
     trendsTitle: string;
     trends: Record<TrendCategory, { tag: string; body: string }>;
+    /** Language names as used inside a sentence in this UI language. */
+    languageName: Record<QuizLanguage, string>;
+    /** Shown instead of the quiz when the UI language has too few practice messages. */
+    fewItems: (language: string) => string;
+    offerOther: (language: string) => string;
+    /** Extra line when the offered set is Kreol, which is often code-switched. */
+    kreolMixNote: string;
+    practisingIn: (language: string) => string;
+    dailyProgress: (answered: number, goal: number) => string;
+    dailyDone: string;
+    celebrate: {
+      title: (days: number) => string;
+      dayOne: string;
+      streakLine: (days: number) => string;
+      score: (right: number, total: number) => string;
+      mistakesTitle: string;
+      allRight: string;
+      keepGoing: string;
+    };
+    /** Dev-only controls (visible in `next dev` only). */
+    dev: { title: string; reset: string; seed: string };
   };
 }
 
@@ -198,6 +219,23 @@ const LEARN_EN: Copy["learn"] = {
       body: "A stranger promises to double or triple your money in days, with no risk. Guaranteed returns don't exist: the deposit is the scam.",
     },
   },
+  languageName: { en: "English", fr: "French", kreol: "Kreol" },
+  fewItems: (l) => `More practice messages in ${l} are coming soon.`,
+  offerOther: (l) => `Practise in ${l} instead`,
+  kreolMixNote: "Kreol messages often mix in some English or French, like real texts in Mauritius.",
+  practisingIn: (l) => `Practising in ${l}`,
+  dailyProgress: (a, g) => `Today: ${a} of ${g} for your daily streak`,
+  dailyDone: "Today's practice is done.",
+  celebrate: {
+    title: (n) => `${n} day streak`,
+    dayOne: "Day one done. Come back tomorrow to start a streak.",
+    streakLine: (n) => `You've practised ${n} days in a row.`,
+    score: (r, t) => `Today: ${r} of ${t} right`,
+    mistakesTitle: "Worth another look",
+    allRight: "You got every one right today. Nothing to review.",
+    keepGoing: "Keep going",
+  },
+  dev: { title: "Dev tools", reset: "Reset streak", seed: "Pretend 2 days done" },
 };
 
 function relative(ms: number, words: { now: string; min: string; hour: string; day: string; ago: (s: string) => string }) {
@@ -553,6 +591,24 @@ export const COPY: Record<UiLanguage, Copy> = {
           body: "Un inconnu promet de doubler ou tripler votre argent en quelques jours, sans risque. Les rendements garantis n'existent pas : le dépôt, c'est l'arnaque.",
         },
       },
+      languageName: { en: "anglais", fr: "français", kreol: "kreol" },
+      fewItems: (l) => `D'autres messages d'entraînement en ${l} arrivent bientôt.`,
+      offerOther: (l) => `S'entraîner en ${l}`,
+      kreolMixNote:
+        "Les messages en kreol mélangent souvent un peu d'anglais ou de français, comme les vrais SMS à Maurice.",
+      practisingIn: (l) => `Entraînement en ${l}`,
+      dailyProgress: (a, g) => `Aujourd'hui : ${a} sur ${g} pour votre série`,
+      dailyDone: "L'entraînement du jour est fait.",
+      celebrate: {
+        title: (n) => `Série de ${n} jour${n > 1 ? "s" : ""}`,
+        dayOne: "Premier jour validé. Revenez demain pour lancer une série.",
+        streakLine: (n) => `Vous vous êtes entraîné ${n} jours d'affilée.`,
+        score: (r, t) => `Aujourd'hui : ${r} sur ${t} bonnes réponses`,
+        mistakesTitle: "À revoir",
+        allRight: "Tout juste aujourd'hui. Rien à revoir.",
+        keepGoing: "Continuer",
+      },
+      dev: { title: "Outils de dev", reset: "Réinitialiser la série", seed: "Simuler 2 jours faits" },
     },
   },
 
@@ -713,6 +769,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       syntheticNote: TODO_KREOL(LEARN_EN.syntheticNote),
       trendsTitle: TODO_KREOL(LEARN_EN.trendsTitle),
       trends: TODO_KREOL(LEARN_EN.trends),
+      languageName: TODO_KREOL(LEARN_EN.languageName),
+      fewItems: TODO_KREOL(LEARN_EN.fewItems),
+      offerOther: TODO_KREOL(LEARN_EN.offerOther),
+      kreolMixNote: TODO_KREOL(LEARN_EN.kreolMixNote),
+      practisingIn: TODO_KREOL(LEARN_EN.practisingIn),
+      dailyProgress: TODO_KREOL(LEARN_EN.dailyProgress),
+      dailyDone: TODO_KREOL(LEARN_EN.dailyDone),
+      celebrate: TODO_KREOL(LEARN_EN.celebrate),
+      dev: TODO_KREOL(LEARN_EN.dev),
     },
   },
 };
