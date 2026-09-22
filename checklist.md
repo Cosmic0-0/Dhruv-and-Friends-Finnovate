@@ -10,9 +10,10 @@ Baseline hardening — required before any real message content or reported
 sender data touches the demo, since the app ingests untrusted user input
 (pasted messages, screenshots, sender reports) by design.
 
-- [ ] **Hide API keys** — LLM provider keys, OCR service keys, and DB
-      credentials live only in environment variables (`.env.local`, platform
-      env config), never committed or hardcoded in source.
+- [ ] **Hide API keys** — the LLM runs locally so there's no cloud LLM key to
+      leak, but OCR service keys and DB credentials still live only in
+      environment variables (`.env.local`, platform env config), never
+      committed or hardcoded in source.
 - [ ] **Purge git secrets** — run a secret scan (e.g. `git log -p | grep`,
       or a scanner tool) before any push; if a secret was ever committed,
       rotate it, don't just delete the line.

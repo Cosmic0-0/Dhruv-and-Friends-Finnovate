@@ -21,8 +21,7 @@ it for scam signals → returns a verdict with a structured breakdown of flagged
 (not just a single score) → suggests a concrete next action (block sender, report to
 bank fraud line, verify via official channel).
 
-The repository is currently empty (initial commit only) — this file defines the
-target architecture and conventions for the build, to be filled in as code lands.
+See "Role gating" below for the working-directory layout each role builds in.
 
 ## Scope boundaries (72-hour build)
 
@@ -56,6 +55,10 @@ target architecture and conventions for the build, to be filled in as code lands
 - **Frontend**: Next.js.
 - **Detection logic**: LLM-based analysis with structured JSON output (flagged
   signals, verdict, suggested action) + non-LLM domain-matching logic for URLs.
+  The LLM runs **locally** (self-hosted inference, e.g. Ollama or similar) —
+  model choice is TBD. Don't hardcode a cloud provider SDK/API key assumption
+  in the analysis service; call it through a local inference endpoint
+  (base URL + model name from env) so the model can be swapped later.
 - **OCR**: for screenshot ingestion.
 - **Database**: for crowdsourced sender/message reports and batch scan history.
 
@@ -71,6 +74,34 @@ area, unless noted otherwise.
 | Oleg | UI | Main app frontend (input, verdict display, flagged-signal view, batch scan results), extension badge/warning UI once the backend endpoint is live |
 | Dhruv | OCR ingestion + batch scan | Screenshot upload, OCR extraction pipeline, batch scan feature (multi-message upload and summary view) |
 | Caellum | Test payloads and QA | Scam message test set across English, French, and Kreol (Kreol set coordinated with Joshua), sender-reputation seed data for the crowdsourced feed demo, edge-case testing, demo script for final judging |
+
+## Role gating
+
+Each top-level working directory is gated to one owner. Only touch a
+directory outside your own when you're wiring up an agreed interface (e.g.
+Oleg calling the `POST /api/analyze` contract) — don't edit someone else's
+implementation files directly; flag it to them instead.
+
+```
+backend/
+  src/
+    routes/                    Kshitij  — API route handlers
+    services/analysis/         Kshitij  — LLM prompt + structured output schema
+    services/domain-matching/  Kshitij  — lookalike-URL / domain matching logic
+    services/ocr/              Dhruv    — screenshot upload + OCR extraction
+    services/batch/            Dhruv    — batch scan aggregation/summary
+    db/                        Kshitij  — schema for reports + batch history
+frontend/                      Oleg     — Next.js UI (input, verdict, batch views)
+extension/                     Kshitij  — browser extension (stretch, after core app is stable)
+data/kreol-dataset/            Joshua   — Kreol/French/English scam samples
+data/test-payloads/            Caellum  — cross-language scam test set
+data/sender-reputation-seed/   Caellum  — seed data for the crowdsourced feed demo
+```
+
+`backend/` and `frontend/` are separate Node projects — each person runs
+`npm install` inside their own directory, not at the repo root. Every gated
+directory that isn't self-explanatory has its own `README.md` restating its
+owner and scope.
 
 ## API Contract (PLACEHOLDER — must be agreed and locked before parallel work starts)
 
