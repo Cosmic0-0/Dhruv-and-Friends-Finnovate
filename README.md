@@ -51,3 +51,11 @@ no cloud LLM API key to set up.
 | Caellum | Test payloads and QA |
 
 Full role list (including backend + extension ownership) is in `CLAUDE.md`.
+Branch workflow (checking out your branch, syncing with `main`, opening a
+PR) is in [`docs/BRANCH-SETUP.md`](./docs/BRANCH-SETUP.md).
+
+## API Contract
+
+The current, as-implemented request/response shapes for every backend route
+are documented in [`docs/API-CONTRACT.md`](./docs/API-CONTRACT.md) — build
+against that, not the placeholder in `CLAUDE.md`.

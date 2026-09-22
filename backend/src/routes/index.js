@@ -5,9 +5,21 @@ import { reportSender, saveBatchHistory } from "../db/index.js";
 
 export const router = Router();
 
+const MAX_MESSAGE_LENGTH = 5000;
+const MAX_BATCH_MESSAGES = 50;
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 router.post("/analyze", async (req, res) => {
   const { message, language } = req.body;
-  if (!message) return res.status(400).json({ error: "message is required" });
+  if (!isNonEmptyString(message)) {
+    return res.status(400).json({ error: "message is required and must be a non-empty string" });
+  }
+  if (message.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
+  }
   try {
     const result = await analyzeMessage(message, language);
     result.signals.push(...checkUrls(message));
@@ -19,7 +31,18 @@ router.post("/analyze", async (req, res) => {
 
 router.post("/batch-scan", async (req, res) => {
   const { messages } = req.body;
-  if (!Array.isArray(messages)) return res.status(400).json({ error: "messages must be an array" });
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: "messages must be a non-empty array" });
+  }
+  if (messages.length > MAX_BATCH_MESSAGES) {
+    return res.status(400).json({ error: `messages exceeds maximum batch size of ${MAX_BATCH_MESSAGES}` });
+  }
+  if (!messages.every(isNonEmptyString)) {
+    return res.status(400).json({ error: "every message in the batch must be a non-empty string" });
+  }
+  if (messages.some((m) => m.length > MAX_MESSAGE_LENGTH)) {
+    return res.status(400).json({ error: `every message must be ${MAX_MESSAGE_LENGTH} characters or fewer` });
+  }
 
   const results = [];
   for (const message of messages) {
@@ -50,7 +73,9 @@ router.post("/batch-scan", async (req, res) => {
 
 router.post("/report", (req, res) => {
   const { sender } = req.body;
-  if (!sender) return res.status(400).json({ error: "sender is required" });
+  if (!isNonEmptyString(sender)) {
+    return res.status(400).json({ error: "sender is required and must be a non-empty string" });
+  }
   const reportCount = reportSender(sender);
   res.json({ sender, reportCount, recorded: true });
 });

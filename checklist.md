@@ -10,10 +10,11 @@ Baseline hardening — required before any real message content or reported
 sender data touches the demo, since the app ingests untrusted user input
 (pasted messages, screenshots, sender reports) by design.
 
-- [ ] **Hide API keys** — the LLM runs locally so there's no cloud LLM key to
-      leak, but OCR service keys and DB credentials still live only in
-      environment variables (`.env.local`, platform env config), never
-      committed or hardcoded in source.
+- [x] **Hide API keys** — verified 2026-09-22: `FALLBACK_API_KEY`,
+      `OLLAMA_URL`, `DATABASE_URL` are all read from `process.env`
+      (`backend/src/services/analysis/llmClient.js`, `backend/src/db/index.js`),
+      `.env` is gitignored, nothing hardcoded in source. OCR service keys
+      don't exist yet — recheck when `backend/src/services/ocr/` lands.
 - [ ] **Purge git secrets** — run a secret scan (e.g. `git log -p | grep`,
       or a scanner tool) before any push; if a secret was ever committed,
       rotate it, don't just delete the line.
@@ -29,9 +30,11 @@ sender data touches the demo, since the app ingests untrusted user input
       report or batch-history data — never trust a client-supplied user ID.
 - [ ] **Lock record access** — a user (or anonymous session) can only fetch
       their own batch scan history, not enumerate others' by ID.
-- [ ] **Block field tampering** — server re-validates/re-derives fields like
-      `verdict` or `reportCount` rather than trusting values echoed back
-      from the client.
+- [x] **Block field tampering** — verified 2026-09-22: `verdict`/`signals`
+      always come from `analyzeMessage()` + `checkUrls()`, never from
+      `req.body`; `reportCount` is always re-read from SQLite in
+      `reportSender()` (`backend/src/db/index.js`), never trusted from the
+      client. Recheck if either route starts accepting these as input.
 - [ ] **Secure session cookies** — `HttpOnly`, `Secure`, `SameSite` set
       appropriately if sessions are used.
 - [ ] **Hash passwords** with a strong algorithm (bcrypt/argon2) — only
@@ -41,10 +44,15 @@ sender data touches the demo, since the app ingests untrusted user input
       path and the crowdsourced report feed.
 - [ ] **Add bot protection** on the report endpoint so the crowdsourced
       threat feed can't be trivially poisoned with fake reports.
-- [ ] **Parameterize all DB queries** — no string-concatenated SQL/NoSQL
-      queries, anywhere.
-- [ ] **Validate all input** server-side (message text, screenshot uploads,
-      sender identifiers) — never rely on frontend validation alone.
+- [x] **Parameterize all DB queries** — verified 2026-09-22: every query in
+      `backend/src/db/index.js` uses `?` placeholders via `better-sqlite3`'s
+      `.prepare().run()`, no string concatenation.
+- [ ] **Validate all input** server-side — partially done 2026-09-22:
+      `/api/analyze`, `/api/batch-scan`, `/api/report` now reject
+      missing/empty/oversized/wrong-type `message`/`messages`/`sender`
+      (`backend/src/routes/index.js`, non-empty-string + length-cap checks,
+      400 on failure). Screenshot upload validation is still open — OCR
+      ingestion isn't implemented yet, recheck when it lands.
 - [ ] **Escape user content** before rendering it back in the UI (verdict
       display, flagged-signal view, batch results) to prevent stored/reflected
       XSS from a malicious pasted message.
@@ -58,7 +66,10 @@ sender data touches the demo, since the app ingests untrusted user input
       `X-Frame-Options` / frame-ancestors, `Referrer-Policy`).
 - [ ] **Force HTTPS** in production/deployment config.
 - [ ] **Scan dependencies** for known vulnerabilities (`npm audit` or
-      equivalent) before the final demo build.
+      equivalent) before the final demo build. `backend`: 0 vulnerabilities
+      as of 2026-09-22 (`npm audit --omit=dev`). `frontend`: not yet
+      installed/scanned — Oleg's area, rerun once `npm install` has been
+      run there.
 
 ## 2. Production-Credibility Signals ("don't look vibecoded")
 
