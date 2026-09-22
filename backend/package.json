@@ -8,7 +8,7 @@
     "start": "node --env-file-if-exists=.env src/index.js",
     "test": "node --test",
     "test:fallback": "node --env-file-if-exists=.env scripts/check-llm-fallback.js",
-    "test:ocr": "node scripts/test-ocr.js"
+    "test:ocr": "node scripts/check-ocr.js"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
