@@ -6,9 +6,11 @@ export const metadata: Metadata = { title: "Trends", alternates: { canonical: "/
 
 export default function TrendsPage() {
   return (
-    <main className="flex flex-col gap-8">
+    <main>
       <AppHeader />
-      <TrendsContent />
+      <div className="gutter pt-7">
+        <TrendsContent />
+      </div>
     </main>
   );
 }

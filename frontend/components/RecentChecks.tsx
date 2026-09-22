@@ -20,31 +20,28 @@ export default function RecentChecks() {
   }, []);
 
   return (
-    <section aria-labelledby="recent-title" className="flex flex-col gap-3">
-      <h2
-        id="recent-title"
-        className="font-sans text-[0.6875rem] font-semibold tracking-[0.12em] text-ink-muted uppercase"
-      >
+    <section aria-labelledby="recent-title" className="flex flex-col gap-2.5">
+      <h2 id="recent-title" className="micro border-b border-line-strong pb-2 text-ink-muted">
         {copy.recentTitle}
       </h2>
 
       {checks !== null && checks.length === 0 && <p className="text-sm text-ink-muted">{copy.recentEmpty}</p>}
 
       {checks !== null && checks.length > 0 && (
-        <ul className="flex flex-col divide-y divide-card-border overflow-hidden rounded-card border border-card-border bg-card">
+        <ul className="flex flex-col divide-y divide-card-border">
           {checks.map((c) => {
             const display = getVerdictDisplay(c.verdict);
             return (
-              <li key={c.id} className="flex flex-col gap-1 px-4 py-3.5">
-                <p className="truncate text-[0.9375rem] text-ink">&ldquo;{c.text.replace(/\s+/g, " ").trim()}&rdquo;</p>
-                <p className="flex items-center gap-2 text-[0.8125rem]">
-                  <span aria-hidden="true" className={`size-2 shrink-0 rounded-full ${display.classes.bg}`} />
-                  <span className={`font-semibold ${display.classes.text}`}>{getVerdictCopy(c.verdict, lang).label}</span>
-                  <span aria-hidden="true" className="text-ink-muted">·</span>
-                  <time dateTime={new Date(c.at).toISOString()} className="text-ink-muted">
-                    {copy.relativeTime(Math.max(0, now - c.at))}
-                  </time>
-                </p>
+              <li key={c.id} className="flex items-baseline gap-3 py-3">
+                {/* Severity reads from the rule colour before the label does. */}
+                <span aria-hidden="true" className={`mt-1.5 h-2.5 w-0.5 shrink-0 ${display.classes.bg}`} />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <p className="truncate text-[0.9375rem] text-ink">{c.text.replace(/\s+/g, " ").trim()}</p>
+                  <p className={`micro ${display.classes.inkText}`}>{getVerdictCopy(c.verdict, lang).label}</p>
+                </div>
+                <time dateTime={new Date(c.at).toISOString()} className="data shrink-0 text-ink-muted">
+                  {copy.relativeTime(Math.max(0, now - c.at))}
+                </time>
               </li>
             );
           })}

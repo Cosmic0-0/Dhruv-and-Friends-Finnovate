@@ -1,59 +1,92 @@
 @import "tailwindcss";
 
 /*
- * FraudLens design system — tokens from the approved mockup.
+ * FraudLens design system.
  *
- * Everything lives in @theme so each token is BOTH a plain CSS custom
- * property (var(--color-ink)) and a Tailwind utility (bg-ink, text-danger,
- * rounded-card, font-serif, …). Change a colour here, never inline.
+ * Direction: forensic instrument. This is a tool someone opens while deciding
+ * whether to move money, so it reads as a report, not a consumer app — one
+ * continuous sheet with hairline rules instead of a stack of floating cards,
+ * condensed uppercase micro-labels, monospace for machine data (domains,
+ * senders), and a verdict gauge built like a measuring scale.
  *
- * Mood: calm, warm, spacious. Mobile-first at 390px; the app column is
- * capped at 430px and centred on larger screens.
+ * Palette keeps the approved mockup's three semantic hues (steel / brass /
+ * brick at the same muted chroma, so severity reads through label and position
+ * rather than saturation) and adds what the mockup's flat token list lacked:
+ * a cool-cast ink ramp, a dark instrument surface for real layering, and
+ * accessible *-ink variants for coloured text on light backgrounds.
+ *
+ * Everything lives in @theme so each token is BOTH a CSS custom property
+ * (var(--color-ink)) and a Tailwind utility (bg-ink, text-danger, font-mono).
+ * Change a colour here, never inline.
  */
 @theme {
   /* ---- Surfaces ---- */
-  --color-page: #f5f1ea;          /* warm off-white page background */
-  --color-card: #ffffff;
-  --color-card-border: #e7e0d4;   /* soft 1px card border */
-  --color-muted-surface: #ede7dc; /* inputs, chips, subtle fills */
+  --color-page: #eef0ef; /* paper: off-white with a faint cool cast */
+  --color-card: #ffffff; /* the report sheet */
+  --color-muted-surface: rgb(21 24 28 / 4%); /* inset fills, code blocks */
 
   /* ---- Ink ---- */
-  --color-ink: #16263d;           /* headings, primary buttons, bot bubble */
-  --color-ink-soft: #3d4b60;      /* body copy */
-  --color-ink-muted: #6b7584;     /* captions, meta */
-  --color-on-ink: #f5f1ea;        /* text on ink surfaces */
+  --color-ink: #15181c; /* near-black, cool — text AND a real surface */
+  --color-ink-2: #262c33; /* elevated dark surface, hover on dark */
+  --color-ink-soft: rgb(21 24 28 / 72%); /* body copy */
+  --color-ink-muted: rgb(21 24 28 / 50%); /* captions, meta */
+  --color-on-ink: #eef0ef; /* text on ink surfaces */
+
+  /* ---- Lines ---- */
+  /* Two weights: hairline separates rows inside a block, strong separates
+     blocks. One divider weight everywhere is what makes a layout read flat. */
+  --color-card-border: rgb(21 24 28 / 11%);
+  --color-line-strong: rgb(21 24 28 / 20%);
+
+  /* ---- Accent (navigation, links, "safe") ---- */
+  --color-accent: #5980a6; /* surface fill; white text sits on accent-deep */
+  --color-accent-deep: #416180;
+  --color-accent-ink: #33536f; /* accent as TEXT on light — passes AA */
+  --color-accent-soft: #e8eff6;
 
   /* ---- Verdict tones ---- */
-  --color-danger: #b3261e;        /* scam banner */
-  --color-danger-soft: #f7e3e1;
-  --color-caution: #9a5b00;       /* amber — "be careful"; dark enough for AA text on white */
-  --color-caution-bright: #e8a33d;
-  --color-caution-soft: #fbefd9;
-  --color-safe: #1b5e43;          /* genuine banner */
-  --color-safe-soft: #e0efe7;
+  --color-danger: #a14a3a;
+  --color-danger-deep: #6b2f24;
+  --color-danger-ink: #7c3628; /* danger as small text — passes AA */
+  --color-danger-soft: #f6e8e4;
+  --color-caution: #96772f;
+  --color-caution-deep: #5c4720;
+  --color-caution-ink: #6d5620; /* caution as small text — passes AA */
+  --color-caution-bright: #96772f;
+  --color-caution-soft: #f4eede;
+  --color-safe: var(--color-accent);
+  --color-safe-soft: var(--color-accent-soft);
 
   /* ---- Typography ---- */
-  --font-serif: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", Georgia, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Barlow Condensed carries headings, verdicts and numbers; Barlow carries
+     body copy and renders French/Kreol diacritics cleanly; Plex Mono carries
+     machine data (domains, sender IDs) so it is visibly not prose. */
+  --font-heading: var(--font-barlow-condensed), "Oswald", "Arial Narrow", sans-serif;
+  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  --text-display: 2.5rem;         /* 40px hero heading */
-  --text-display--line-height: 1.05;
+  /* Scale from the mockup: 44 / 28 / 22 / 16 / 14 / 12px */
+  --text-display: 2.75rem;
+  --text-display--line-height: 1;
   --text-display--letter-spacing: -0.02em;
-  --text-title: 1.75rem;          /* 28px section heading */
-  --text-title--line-height: 1.1;
-  --text-title--letter-spacing: -0.015em;
+  --text-title: 1.75rem;
+  --text-title--line-height: 1.05;
+  --text-title--letter-spacing: -0.01em;
+  --text-subtitle: 1.375rem;
+  --text-subtitle--line-height: 1.15;
+
+  --tracking-micro: 0.18em; /* uppercase micro-labels */
 
   /* ---- Shape ---- */
-  --radius-card: 16px;
-  --radius-pill: 999px;
-
-  /* ---- Depth (kept very soft) ---- */
-  --shadow-card: 0 1px 2px rgb(22 38 61 / 0.04), 0 8px 24px -12px rgb(22 38 61 / 0.12);
+  /* "Radius: 0 everywhere — no rounded corners" (mockup Developer reference). */
+  --radius-card: 0px;
+  --radius-pill: 0px;
+  --shadow-card: none;
 
   /* ---- Layout ---- */
-  --container-app: 430px;
-  --spacing-gutter: 1.5rem;       /* 24px side padding at 390px */
-  --spacing-section: 2.5rem;      /* vertical rhythm between blocks */
+  --container-app: 430px; /* widened at md+ below */
+  --spacing-gutter: 1.25rem;
+  --spacing-section: 2rem;
 }
 
 @layer base {
@@ -61,12 +94,19 @@
     --tabbar-height: 4.25rem;
   }
 
+  /* Phone-width on small screens; widens past tablet so desktop isn't a phone
+     column stranded in empty space. */
+  @media (min-width: 48rem) {
+    :root {
+      --container-app: 660px;
+    }
+  }
+
   html {
     background-color: var(--color-page);
     color: var(--color-ink-soft);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
-    /* Keep focused / scrolled-to elements clear of the fixed tab bar. */
     scroll-padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
   }
 
@@ -83,9 +123,9 @@
   h1,
   h2,
   h3 {
-    font-family: var(--font-serif);
+    font-family: var(--font-heading);
     color: var(--color-ink);
-    font-weight: 500;
+    font-weight: 600;
     text-wrap: balance;
   }
 
@@ -101,33 +141,94 @@
     letter-spacing: var(--text-title--letter-spacing);
   }
 
+  h3 {
+    font-size: var(--text-subtitle);
+    line-height: var(--text-subtitle--line-height);
+  }
+
+  /* Short descriptive text avoids orphans; long prose is left alone. */
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+
   :focus-visible {
-    outline: 2px solid var(--color-ink);
-    outline-offset: 3px;
+    outline: 2px solid var(--color-accent-deep);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Centred mobile column, respecting notches / home indicator
-     (viewport-fit=cover is set in layout.tsx). */
+  /* Centred column, respecting notches / home indicator (viewport-fit=cover
+     is set in layout.tsx). */
   .app-shell {
     margin-inline: auto;
     width: 100%;
     max-width: var(--container-app);
     min-height: 100dvh;
-    padding-top: max(var(--spacing-gutter), env(safe-area-inset-top));
-    /* Clear the fixed bottom tab bar (components/TabBar.tsx). */
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--spacing-section));
+  }
+
+  /* Horizontal rhythm for everything that isn't deliberately full-bleed. */
+  .gutter {
     padding-left: max(var(--spacing-gutter), env(safe-area-inset-left));
     padding-right: max(var(--spacing-gutter), env(safe-area-inset-right));
   }
 
+  /*
+   * The report sheet. Sections inside it are separated by hairline rules
+   * (`.sheet > * + *`), not by gaps between floating boxes — that stack of
+   * identical cards is what makes a layout read as assembled rather than
+   * designed.
+   */
+  .sheet {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-card-border);
+  }
+
+  .sheet > * + * {
+    border-top: 1px solid var(--color-card-border);
+  }
+
+  /* Uppercase micro-label used for every section and field name. */
+  .micro {
+    font-family: var(--font-heading);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: var(--tracking-micro);
+    line-height: 1;
+    text-transform: uppercase;
+  }
+
+  /* Machine data: domains, sender IDs, counts. Visibly not prose. */
+  .data {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.8125rem;
+    letter-spacing: -0.01em;
+  }
+
+  /* Kept for compatibility with surfaces that genuinely are standalone. */
   .card {
     background-color: var(--color-card);
     border: 1px solid var(--color-card-border);
-    border-radius: var(--radius-card);
-    box-shadow: var(--shadow-card);
-    padding: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  /*
+   * Interactive surfaces. Explicit transition properties (never `all`) so a
+   * retargeted interaction doesn't animate layout, and a small press scale so
+   * buttons feel tactile without theatrics.
+   */
+  .pressable {
+    transition-property: background-color, color, border-color, opacity, transform;
+    transition-duration: 140ms;
+    transition-timing-function: ease-out;
+  }
+
+  .pressable:active:not(:disabled) {
+    transform: scale(0.99);
   }
 }
 
@@ -137,5 +238,9 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .pressable:active:not(:disabled) {
+    transform: none;
   }
 }

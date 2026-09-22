@@ -20,8 +20,14 @@ export interface VerdictDisplay {
   color: string;
   /** Soft tint for backgrounds. */
   softColor: string;
-  /** Tailwind classes for the same tokens, for className use. */
-  classes: { text: string; bg: string; softBg: string; border: string };
+  /**
+   * Tailwind classes for the same tokens, for className use.
+   *
+   * `text` is the full-chroma tone — fine for large type and icons. `inkText`
+   * is the darkened variant that passes AA as small text on a light surface;
+   * use it for anything at label/caption size.
+   */
+  classes: { text: string; inkText: string; bg: string; softBg: string; border: string };
   /** Icon name plus inline SVG path data (24x24 viewBox, stroke-based), so there's no icon-library dependency. */
   icon: { name: "alert-triangle" | "alert-circle" | "check-circle"; paths: readonly string[] };
 }
@@ -34,7 +40,13 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     tone: "danger",
     color: "var(--color-danger)",
     softColor: "var(--color-danger-soft)",
-    classes: { text: "text-danger", bg: "bg-danger", softBg: "bg-danger-soft", border: "border-danger" },
+    classes: {
+      text: "text-danger",
+      inkText: "text-danger-ink",
+      bg: "bg-danger",
+      softBg: "bg-danger-soft",
+      border: "border-danger",
+    },
     icon: {
       name: "alert-triangle",
       paths: [
@@ -51,7 +63,13 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     tone: "caution",
     color: "var(--color-caution)",
     softColor: "var(--color-caution-soft)",
-    classes: { text: "text-caution", bg: "bg-caution", softBg: "bg-caution-soft", border: "border-caution" },
+    classes: {
+      text: "text-caution",
+      inkText: "text-caution-ink",
+      bg: "bg-caution",
+      softBg: "bg-caution-soft",
+      border: "border-caution",
+    },
     icon: {
       name: "alert-circle",
       paths: ["M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z", "M12 8v4.5", "M12 16h.01"],
@@ -64,7 +82,13 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
     tone: "safe",
     color: "var(--color-safe)",
     softColor: "var(--color-safe-soft)",
-    classes: { text: "text-safe", bg: "bg-safe", softBg: "bg-safe-soft", border: "border-safe" },
+    classes: {
+      text: "text-safe",
+      inkText: "text-accent-ink",
+      bg: "bg-safe",
+      softBg: "bg-safe-soft",
+      border: "border-safe",
+    },
     icon: {
       name: "check-circle",
       paths: ["M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z", "m8.5 12.5 2.5 2.5 4.5-5"],
@@ -74,6 +98,17 @@ export const VERDICT_DISPLAY: Record<Verdict, VerdictDisplay> = {
 
 export function getVerdictDisplay(verdict: Verdict): VerdictDisplay {
   return VERDICT_DISPLAY[verdict];
+}
+
+/**
+ * Band order for the three-band severity gauge (mockup "Risk system"):
+ * safe / suspicious / scam, left to right, instead of a stoplight or a bare
+ * percentage — severity reads from shape and position before the label does.
+ */
+export const VERDICT_BANDS: readonly Verdict[] = ["safe", "suspicious", "scam"];
+
+export function getVerdictBandIndex(verdict: Verdict): number {
+  return VERDICT_BANDS.indexOf(verdict);
 }
 
 export type RiskDisplay = { showScore: false } | { showScore: true; score: number };

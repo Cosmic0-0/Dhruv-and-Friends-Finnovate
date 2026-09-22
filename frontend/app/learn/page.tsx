@@ -6,9 +6,11 @@ export const metadata: Metadata = { title: "Learn", alternates: { canonical: "/l
 
 export default function LearnPage() {
   return (
-    <main className="flex flex-col gap-8">
+    <main>
       <AppHeader />
-      <LearnContent />
+      <div className="gutter pt-7">
+        <LearnContent />
+      </div>
     </main>
   );
 }

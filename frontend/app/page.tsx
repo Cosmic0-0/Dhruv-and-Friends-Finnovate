@@ -22,29 +22,31 @@ const JSON_LD = {
 // recent checks) are client components.
 export default function CheckPage() {
   return (
-    <main className="flex flex-col gap-8">
+    <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
       <AppHeader />
 
-      <section className="flex flex-col gap-3 pt-2">
-        <h1>
-          <T k="headline" />
-        </h1>
-        <p className="text-[1.0625rem] leading-relaxed text-ink-soft">
-          <T k="subline" />
+      <div className="gutter flex flex-col gap-7 pt-7">
+        <section className="flex flex-col gap-3">
+          <h1>
+            <T k="headline" />
+          </h1>
+          <p className="max-w-[46ch] text-[1.0625rem] leading-relaxed text-ink-soft">
+            <T k="subline" />
+          </p>
+        </section>
+
+        <CheckForm />
+
+        <p className="flex items-center gap-2.5 border-t border-card-border pt-4 text-[0.8125rem] text-ink-muted">
+          <SendIcon className="size-4 shrink-0" />
+          <span>
+            <T k="telegram" />
+          </span>
         </p>
-      </section>
 
-      <CheckForm />
-
-      <p className="flex items-center gap-3 rounded-card bg-muted-surface px-4 py-3 text-sm text-ink-soft">
-        <SendIcon className="size-4 shrink-0 text-ink-muted" />
-        <span>
-          <T k="telegram" />
-        </span>
-      </p>
-
-      <RecentChecks />
+        <RecentChecks />
+      </div>
     </main>
   );
 }

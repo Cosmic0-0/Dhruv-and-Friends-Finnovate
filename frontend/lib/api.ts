@@ -28,8 +28,10 @@ import type {
  * Requests go to same-origin `/api/*`; next.config.ts rewrites them to the
  * backend (BACKEND_URL). The browser never makes a cross-origin call, so the
  * backend needs no CORS and the app works from a phone on the LAN.
+ *
+ * Call sites already pass the full "/api/..." path, so no prefix is added
+ * here — doing so previously produced "/api/api/..." and 404'd every call.
  */
-const API_PREFIX = "/api";
 
 export type ApiErrorKind =
   | "validation" // 400: request rejected by backend validation
@@ -139,7 +141,7 @@ async function postJson<T>(
   isValid: (data: unknown) => data is T,
   callerSignal?: AbortSignal,
 ): Promise<ApiResult<T>> {
-  const url = `${API_PREFIX}${path}`;
+  const url = path;
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
