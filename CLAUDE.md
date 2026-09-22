@@ -140,11 +140,31 @@ merges. This is a convention, not an enforced GitHub rule — no branch
 protection is configured, so it relies on everyone actually using their
 branch instead of pushing straight to `main`.
 
-## API Contract (PLACEHOLDER — must be agreed and locked before parallel work starts)
+## API Contract
 
-This is the first thing to fill in. Oleg (UI), Dhruv (OCR/batch), and the extension
-work all build against this contract before backend logic is finished, so changes
-here should be flagged to all owners.
+**Status: LOCKED.** The authoritative contract is `docs/API-CONTRACT.md` —
+documented from the actual backend implementation
+(`backend/src/routes/index.js` + services), not the sketch below. Oleg (UI),
+Dhruv (OCR/batch), and the extension owner build against `docs/API-CONTRACT.md`.
+Any change to a route's request/response shape must be flagged to all three
+before merging.
+
+Routes covered there: `POST /api/analyze`, `POST /api/analyze/screenshot`
+(added post-placeholder, for OCR ingestion), `POST /api/batch-scan`,
+`POST /api/report`, and `GET /health/llm` (pre-demo LLM-reachability check,
+not part of the live demo flow). It also lists known gaps/non-guarantees
+(e.g. `suggestedAction` is free-form, not an enforced enum; no rate
+limiting/auth yet) — read those before assuming a shape that isn't actually
+guaranteed.
+
+The block below is the original pre-implementation sketch, kept only for
+history — it differs from what's actually implemented (no
+`/api/analyze/screenshot` or `/health/llm`, `batch-scan` never returns a
+non-2xx and now includes `analysisFailed`/`unanalyzedCount`, etc.). Do not
+build against it.
+
+<details>
+<summary>Original placeholder (superseded)</summary>
 
 ### `POST /api/analyze` — message analysis
 
@@ -210,8 +230,7 @@ Response:
 }
 ```
 
-**Status: UNLOCKED.** Fill in exact field names/types once backend work starts, then
-treat this section as frozen for the remainder of the hackathon.
+</details>
 
 ## Compliance checklist
 
@@ -229,7 +248,7 @@ with the code.
 
 - Backend: standard Node.js REST conventions (Express or equivalent) — route
   handlers thin, detection/matching logic in separate modules, structured JSON
-  responses matching the API Contract above exactly.
+  responses matching `docs/API-CONTRACT.md` exactly.
 - Frontend: Next.js App Router idioms — server components for data fetching where
   possible, client components only where interactivity is required (input forms,
   verdict display).

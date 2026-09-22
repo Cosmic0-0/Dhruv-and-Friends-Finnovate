@@ -1,10 +1,12 @@
 # API Contract (as implemented)
 
-This documents the backend routes exactly as implemented in
-`backend/src/routes/index.js`, `backend/src/services/analysis/index.js`, and
-`backend/src/index.js` — not the original placeholder contract in
-`CLAUDE.md`. Build against this. If it changes, it'll be flagged to Oleg
-(frontend), Dhruv (OCR/batch), and the extension owner before merging.
+**Status: LOCKED.** This documents the backend routes exactly as implemented
+in `backend/src/routes/index.js`, `backend/src/services/analysis/index.js`,
+and `backend/src/index.js` — not the original placeholder contract in
+`CLAUDE.md` (kept there only as a superseded historical sketch). Build
+against this. Any shape change here must be flagged to Oleg (frontend),
+Dhruv (OCR/batch), and the extension owner *before* merging — treat it as
+frozen for the rest of the hackathon otherwise.
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
@@ -208,6 +210,42 @@ the same underlying count instead of three independent rows. The `sender`
 field in the response is unaffected — it still echoes back the raw string
 exactly as submitted; only the counting behavior changed.
 
+## `POST /api/check-url`
+
+Not in the original placeholder contract — added for the browser extension
+(`extension/`, stretch goal). A bare hostname/URL isn't a scam "message" to
+run through the LLM, and the extension needs a fast, synchronous
+per-navigation check, so this route calls only the non-LLM domain-matching
+check (`checkUrls()`, `backend/src/services/domain-matching/index.js`) — the
+exact same function `/api/analyze` uses for its `lookalike_url` signals.
+This is an **additive** change to the locked contract (new route, no
+existing route's shape changed) — flagged to Oleg/Dhruv per the lock policy
+above, not a silent break.
+
+### Request
+
+```json
+{
+  "url": "string, required, non-empty — a bare hostname or full URL, e.g. \"mcb-secure.top\" or \"https://mcb-secure.top/login\""
+}
+```
+
+### Response — `200 OK`
+
+```json
+{
+  "url": "string — echoed back from the request",
+  "flagged": "boolean — true if checkUrls() produced any signal",
+  "signals": [ { "type": "lookalike_url", "description": "string", "severity": "low" | "medium" | "high" } ]
+}
+```
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
+
 ## `GET /health/llm`
 
 Not in the original placeholder contract, but load-bearing for the demo —
@@ -253,13 +291,28 @@ versus what's likely to change before the demo:
   `verify_official_channel`) but nothing validates the value it returns
   against that set. The frontend should not assume it's one of a fixed list
   yet.
-- **No rate limiting, auth, or bot protection on any route** — ties to the
-  open items in `checklist.md` § Security. Every route is currently
-  unauthenticated and uncapped by request rate.
-- **`/api/analyze` and `/api/batch-scan` error bodies pass through the raw
-  LLM/HTTP error message** (`err.message`) — fine for hackathon debugging,
-  but not scrubbed of internal detail; don't render it directly to end
-  users without review.
+- **No auth on any route** — ties to the open items in `checklist.md` §
+  Security. Every route is currently unauthenticated; there's no user/session
+  concept in the app at all yet, so this only matters once one is added.
+- **Rate limiting and bot protection are now in place** (`express-rate-limit`,
+  applied per-route in `backend/src/routes/index.js`): 20 req/15min for
+  `/api/analyze` and `/api/analyze/screenshot`, 10 req/15min for
+  `/api/batch-scan`, 120 req/15min for `/api/check-url`, and a much tighter
+  5 req/hour for `/api/report` specifically as bot protection for the
+  crowdsourced feed. All limits are per-IP and return `429` with
+  `{ "error": "..." }` plus standard `RateLimit-*` headers when exceeded —
+  callers should treat 429 as a distinct, retryable case.
+- **Security headers are now set** via `helmet()` in `backend/src/index.js`
+  (CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS,
+  etc.) on every response, including `/api/*`.
+- **`/api/analyze`, `/api/analyze/screenshot`'s top-level failure, and the
+  final error-handling middleware no longer pass through raw `err.message`**
+  — they return a generic `{ "error": "..." }` string and log the real error
+  server-side with `console.error`. `/api/batch-scan`'s **per-message**
+  `explanation` field still includes `err.message` on an individual
+  analysis failure (by design — it's user-facing "why this one couldn't be
+  analyzed" copy, and the underlying messages are already short, sanitized
+  strings like `"Ollama request failed: 500"`, never a stack trace).
 - **`/api/analyze/screenshot` has no automated tests yet** — verified
   manually (real PNG generated with ImageMagick, plus missing/non-image/
   blank-image/oversized/data-URI-prefix cases) against the dev server, but
