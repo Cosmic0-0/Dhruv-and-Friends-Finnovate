@@ -7,8 +7,8 @@ of truth the project owner (a Kreol Morisien speaker) edits by hand. This
 script only converts and validates -- it never rewrites the owner's
 approved kreol_morisien text.
 
-Ported from Gemma-Blue-Mauritius-Beyond/training/kreol/scripts/tm_tool.py
-(BlueNet Ocean Watch), adapted for this repo's layout and domain set.
+Ported from a prior Kreol project's tm_tool.py, adapted for this repo's
+layout and domain set.
 
 Usage:
     python tm_tool.py to-jsonl     # CSV -> canonical JSONL
@@ -33,7 +33,7 @@ VALID_STATUSES = {"owner_reviewed", "ported_reviewed", "draft_generated", "rejec
 VALID_DOMAINS = {"banking", "scam", "mobile-money", "ui", "general"}
 
 # Grammatical markers and vocabulary that are Haitian Creole, not Kreol
-# Morisien -- same list as the BlueNet source.
+# Morisien.
 HAITIAN_MARKERS = ["mwen", "yon", "gen", "nan", "ap", "bezwen", "kounye a", "nou pral", "jwenn", "kle"]
 
 # Common French-only words/spellings that indicate drift rather than real

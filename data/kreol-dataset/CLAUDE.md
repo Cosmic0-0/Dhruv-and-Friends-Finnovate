@@ -269,8 +269,8 @@ Joshua has explicitly reviewed and approved the Kreol translation.
 This is the highest-trust tier.
 
 `ported_reviewed`
-The entry was ported from the previous BlueNet Kreol project and had already
-been reviewed there.
+The entry was ported from a previous Kreol project and had already been
+reviewed there.
 Keep provenance in `notes`.
 
 `draft_generated`
@@ -304,12 +304,7 @@ Human review is a data property, not an AI confidence score.
 
 # 8. Previous Project
 
-The initial Kreol resources were ported from Joshua's previous project:
-
-```text
-C:\Users\joshw\OneDrive\Desktop\Hackathon\Gemma-Blue-Mauritius-Beyond
-```
-
+The initial Kreol resources were ported from Joshua's previous Kreol project.
 That project may be used as a source of:
 
 - reviewed translations
@@ -319,7 +314,7 @@ That project may be used as a source of:
 - general/UI terminology
 
 Do NOT blindly import domain-specific material.
-In particular, maritime vocabulary from BlueNet is not relevant to FraudLens
+Vocabulary from that project's original domain is not relevant to FraudLens
 unless a particular phrase is genuinely domain-independent.
 When porting content:
 
@@ -539,7 +534,7 @@ Do NOT introduce:
 - GPU training pipelines
 - fine-tuning datasets
 - model-weight management
-- training/evaluation infrastructure copied from BlueNet
+- training/evaluation infrastructure copied from a previous project
 
 unless the user explicitly changes the scope.
 This is a 72-hour hackathon.
@@ -930,7 +925,7 @@ P0 — Protect and clean the existing translation memory
 - preserve provenance
 - establish trustworthy review statuses
 - validate data
-- remove accidental domain leakage from BlueNet
+- remove accidental domain leakage from the previous project
 
 P1 — Build financial/scam terminology
 Focus on terms actually required by FraudLens.
