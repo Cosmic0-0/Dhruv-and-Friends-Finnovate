@@ -23,6 +23,29 @@ test("summarizeBatch aggregates verdict counts correctly", async () => {
   assert.deepEqual(summary, { total: 4, scamCount: 2, suspiciousCount: 1, safeCount: 1 });
 });
 
+test("summarizeBatch passes explanation through unchanged for every item", async () => {
+  const messages = ["scam one", "safe one", "suspicious one"];
+  const explanationByMessage = {
+    "scam one": "Urgent bank impersonation with a lookalike link.",
+    "safe one": "No scam signals detected.",
+    "suspicious one": "Unusual urgency language, no confirmed sender mismatch.",
+  };
+  const verdictByMessage = { "scam one": "scam", "safe one": "safe", "suspicious one": "suspicious" };
+  const analyze = async (message) => ({
+    verdict: verdictByMessage[message],
+    signals: [],
+    suggestedAction: "verify_official_channel",
+    explanation: explanationByMessage[message],
+  });
+
+  const { results } = await summarizeBatch(messages, { analyze });
+
+  assert.equal(results.length, 3);
+  for (const result of results) {
+    assert.equal(result.explanation, explanationByMessage[result.message]);
+  }
+});
+
 test("summarizeBatch rejects an empty batch", async () => {
   await assert.rejects(() => summarizeBatch([], { analyze: async () => ({}) }), /non-empty array/);
 });

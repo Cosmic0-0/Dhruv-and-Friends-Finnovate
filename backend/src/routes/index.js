@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
+import { summarizeBatch } from "../services/batch/index.js";
 import { reportSender, saveBatchHistory } from "../db/index.js";
 
 export const router = Router();
@@ -44,29 +45,24 @@ router.post("/batch-scan", async (req, res) => {
     return res.status(400).json({ error: `every message must be ${MAX_MESSAGE_LENGTH} characters or fewer` });
   }
 
-  const results = [];
-  for (const message of messages) {
+  // Never throws: a single message's analysis failure must not fail the
+  // whole batch (see docs/API-CONTRACT.md — no top-level 5xx for this route).
+  const analyze = async (message) => {
     try {
-      const r = await analyzeMessage(message);
-      r.signals.push(...checkUrls(message));
-      results.push({ message, ...r });
+      const result = await analyzeMessage(message);
+      result.signals.push(...checkUrls(message));
+      return result;
     } catch (err) {
-      results.push({
-        message,
+      return {
         verdict: "suspicious",
         signals: [],
         suggestedAction: "verify_official_channel",
         explanation: `Analysis failed: ${err.message}`,
-      });
+      };
     }
-  }
-
-  const summary = {
-    total: results.length,
-    scamCount: results.filter((r) => r.verdict === "scam").length,
-    suspiciousCount: results.filter((r) => r.verdict === "suspicious").length,
-    safeCount: results.filter((r) => r.verdict === "safe").length,
   };
+
+  const { results, summary } = await summarizeBatch(messages, { analyze });
   saveBatchHistory(summary);
   res.json({ results, summary });
 });

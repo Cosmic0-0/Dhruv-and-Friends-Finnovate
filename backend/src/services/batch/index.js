@@ -5,8 +5,8 @@ const MAX_BATCH_SIZE = 100;
  * `analyze` is injected (rather than imported from ../analysis directly)
  * so this stays testable and decoupled while that service is still in progress.
  * @param {string[]} messages
- * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam", signals: unknown[], suggestedAction: string }> }} deps
- * @returns {Promise<{ results: Array<{ message: string, verdict: string, signals: unknown[], suggestedAction: string }>, summary: { total: number, scamCount: number, suspiciousCount: number, safeCount: number } }>}
+ * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam", signals: unknown[], suggestedAction: string, explanation: string }> }} deps
+ * @returns {Promise<{ results: Array<{ message: string, verdict: string, signals: unknown[], suggestedAction: string, explanation: string }>, summary: { total: number, scamCount: number, suspiciousCount: number, safeCount: number } }>}
  */
 export async function summarizeBatch(messages, { analyze }) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -24,8 +24,8 @@ export async function summarizeBatch(messages, { analyze }) {
       if (typeof message !== "string" || message.trim().length === 0) {
         throw new Error("summarizeBatch: each message must be a non-empty string");
       }
-      const { verdict, signals, suggestedAction } = await analyze(message);
-      return { message, verdict, signals, suggestedAction };
+      const { verdict, signals, suggestedAction, explanation } = await analyze(message);
+      return { message, verdict, signals, suggestedAction, explanation };
     })
   );
 
