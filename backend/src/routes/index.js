@@ -41,6 +41,11 @@ const checkUrlLimiter = rateLimited("too many check-url requests, try again shor
   windowMs: 15 * 60 * 1000,
   limit: 120,
 });
+// getReportCount() is a single indexed SELECT, same cost class as check-url.
+const checkSenderLimiter = rateLimited("too many check-sender requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+});
 // Bot protection for the crowdsourced report feed (see checklist.md
 // "Add bot protection"): the feed's value depends on report counts meaning
 // something, so a tight per-IP cap - much tighter than the read/analyze
@@ -247,6 +252,20 @@ router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) =
   }
   const signals = checkUrls(url);
   res.json({ url, flagged: signals.length > 0, signals });
+});
+
+// Read-only counterpart to /api/report: looks up a sender's existing report
+// count WITHOUT incrementing it. Added for the "Before You Pay" flow, which
+// needs to show "this recipient has been reported N times" for an
+// identifier the user is about to pay, without that lookup itself counting
+// as a report (see extension/README.md's "reuse the API" rule — same
+// principle applies to any new frontend surface, not just the extension).
+router.post("/check-sender", checkSenderLimiter, json({ limit: "10kb" }), (req, res) => {
+  const { sender } = req.body;
+  if (!isNonEmptyString(sender)) {
+    return res.status(400).json({ error: "sender is required and must be a non-empty string" });
+  }
+  res.json({ sender, reportCount: getReportCount(sender) });
 });
 
 router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {

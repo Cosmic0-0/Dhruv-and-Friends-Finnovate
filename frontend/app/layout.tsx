@@ -1,23 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Barlow, Barlow_Condensed, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Sans_Condensed, IBM_Plex_Mono } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
+import ParticleField from "@/components/ParticleField";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
-// Condensed caps keep verdicts and numbers legible at a glance (headings).
-const barlowCondensed = Barlow_Condensed({
+// One designed superfamily doing three jobs (condensed for headings/verdicts,
+// regular for body, mono for machine data below) reads as a considered
+// document system, not three fonts picked separately off a Google Fonts list.
+const plexSansCondensed = IBM_Plex_Sans_Condensed({
   subsets: ["latin", "latin-ext"],
   weight: ["500", "600", "700"],
-  variable: "--font-barlow-condensed",
+  variable: "--font-plex-sans-condensed",
   display: "swap",
 });
 
 // Plain grotesque body carries French and Kreol diacritics cleanly at any size.
-const barlow = Barlow({
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin", "latin-ext"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-barlow",
+  variable: "--font-plex-sans",
   display: "swap",
 });
 
@@ -80,8 +83,9 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${barlowCondensed.variable} ${barlow.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${plexSansCondensed.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body>
+        <ParticleField />
         <LanguageProvider>
           <div className="app-shell">{children}</div>
           <TabBar />

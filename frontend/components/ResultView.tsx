@@ -9,7 +9,7 @@ import { getVerdictCopy } from "@/lib/verdict";
 import { useLanguage } from "./LanguageProvider";
 import ReportButton from "./result/ReportButton";
 import { CheckAnotherButton, MessageCard, ResultHeader, SentPanel, VerdictBanner } from "./result/parts";
-import { LinkCheckPanel, SafeChecklist, WhatToDo, WhySection } from "./result/sections";
+import { IdentityCompare, LinkCheckPanel, SafeChecklist, signalTitle, WhatToDo, WhySection } from "./result/sections";
 
 /**
  * Result screen. The user's ORIGINAL text is rebuilt locally from the
@@ -56,9 +56,19 @@ export default function ResultView() {
   const original = show(redacted);
   const sender = response.sender ? show(response.sender) : undefined;
   const label = getVerdictCopy(response.verdict, lang).label;
+  // `id`/`label` key each highlighted mark to its evidence row below ("Scam
+  // X-Ray" click-to-jump, components/result/parts.tsx's MessageCard) -
+  // `_idx` is the signal's position in the ORIGINAL response.signals array,
+  // stable regardless of the severity-sorted display order WhySection uses.
   const marks = response.signals
-    .filter((s) => typeof s.evidence === "string" && s.evidence.trim() !== "")
-    .map((s) => ({ evidence: show(s.evidence as string), severity: s.severity }));
+    .map((s, i) => ({ s, i }))
+    .filter(({ s }) => typeof s.evidence === "string" && s.evidence.trim() !== "")
+    .map(({ s, i }) => ({
+      evidence: show(s.evidence as string),
+      severity: s.severity,
+      id: `sig-${i}`,
+      label: signalTitle(s.type, copy, lang),
+    }));
 
   const onReported = (reported: { sender: string; reportCount: number }) => {
     const next = { ...result, reported };
@@ -93,10 +103,12 @@ export default function ResultView() {
               <WhySection
                 signals={response.signals}
                 explanation={response.explanation}
+                senderReports={response.senderReports}
                 copy={copy}
                 lang={lang}
                 show={show}
               />
+              <IdentityCompare response={response} copy={copy} />
               <LinkCheckPanel response={response} copy={copy} />
               <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
             </>

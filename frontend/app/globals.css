@@ -58,11 +58,12 @@
   --color-safe-soft: var(--color-accent-soft);
 
   /* ---- Typography ---- */
-  /* Barlow Condensed carries headings, verdicts and numbers; Barlow carries
-     body copy and renders French/Kreol diacritics cleanly; Plex Mono carries
-     machine data (domains, sender IDs) so it is visibly not prose. */
-  --font-heading: var(--font-barlow-condensed), "Oswald", "Arial Narrow", sans-serif;
-  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* One IBM Plex superfamily, three cuts, three jobs: Plex Sans Condensed
+     carries headings, verdicts and numbers; Plex Sans carries body copy and
+     renders French/Kreol diacritics cleanly; Plex Mono carries machine data
+     (domains, sender IDs) so it is visibly not prose. */
+  --font-heading: var(--font-plex-sans-condensed), "Arial Narrow", sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   /* Scale from the mockup: 44 / 28 / 22 / 16 / 14 / 12px */
@@ -161,8 +162,13 @@
 
 @layer components {
   /* Centred column, respecting notches / home indicator (viewport-fit=cover
-     is set in layout.tsx). */
+     is set in layout.tsx). Positioned + z-index:1 so it (and every opaque
+     surface inside it — header, sheets) paints above the fixed particle
+     canvas (z-index:0, ParticleField.tsx); the canvas only shows through
+     the gutters and gaps between sections, never under text. */
   .app-shell {
+    position: relative;
+    z-index: 1;
     margin-inline: auto;
     width: 100%;
     max-width: var(--container-app);
@@ -242,6 +248,13 @@
 
   .pressable:active:not(:disabled) {
     transform: none;
+  }
+
+  /* Belt-and-suspenders alongside ParticleField.tsx's own matchMedia check
+     (which skips creating the canvas at all): if a canvas element somehow
+     exists anyway, it never paints or costs a frame under reduced motion. */
+  canvas {
+    display: none !important;
   }
 }
 

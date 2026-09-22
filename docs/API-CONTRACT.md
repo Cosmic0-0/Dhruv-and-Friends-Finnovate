@@ -57,7 +57,12 @@ LLM prompt as a hint string.
       "severity": "low" | "medium" | "high",
       "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()/checkIdentityConsistency()-appended signals never set it.",
       "source": "\"message_text\" | \"url_parser\" | \"community_reports\" | \"llm_analysis\" | \"identity_check\" — NEW field, where in the pipeline this signal came from. See below.",
-      "domainAgeDays": "number, optional — registered-domain age in days for a lookalike_url signal's host, from a live RDAP lookup (backend/src/services/domain-age/index.js). Best-effort and non-blocking: capped at a 1.5s timeout, wrapped in try/catch, and cached 24h per domain (backend/src/db/index.js) — omitted entirely (not null/0) on any failure, timeout, or if it simply didn't resolve before the response was ready. Never a dependency of the core verdict; only ever set on lookalike_url signals."
+      "domainAgeDays": "number, optional — registered-domain age in days for a lookalike_url signal's host, from a live RDAP lookup (backend/src/services/domain-age/index.js). Best-effort and non-blocking: capped at a 1.5s timeout, wrapped in try/catch, and cached 24h per domain (backend/src/db/index.js) — omitted entirely (not null/0) on any failure, timeout, or if it simply didn't resolve before the response was ready. Never a dependency of the core verdict; only ever set on lookalike_url signals.",
+      "domain": "string, optional, NEW — the actual host detected in the message. Only on `lookalike_url` signals (backend/src/services/domain-matching/index.js).",
+      "officialDomain": "string, optional, NEW — the legitimate domain `domain` was compared against (a `BRAND_DOMAIN_MAP` value). On `lookalike_url` signals, and on `IDENTITY_MISMATCH` signals (the domain the claimed institution should have linked to).",
+      "claimedIdentity": "string, optional, NEW — display name of the institution the message claims to be from (e.g. \"MCB\"). Only on `IDENTITY_MISMATCH` signals (backend/src/services/identity-consistency/index.js).",
+      "actualDomain": "string, optional, NEW — the mismatched host the message actually links to, when the mismatch is domain-based. Only on `IDENTITY_MISMATCH` signals, and only when that mismatch reason applies (a beneficiary-only mismatch omits this).",
+      "beneficiary": "string, optional, NEW — the stated payment recipient name, when the mismatch is beneficiary-based. Only on `IDENTITY_MISMATCH` signals, and only when that mismatch reason applies (a domain-only mismatch omits this)."
     }
   ],
   "suggestedAction": "string, free-form (not an enforced enum)",
@@ -277,6 +282,41 @@ second source of truth.
 
 There is no top-level 5xx for this route — LLM failures are absorbed
 per-message as described above.
+
+## `POST /api/check-sender`
+
+Not in the original placeholder contract — added as the read-only
+counterpart to `/api/report` (which increments the count as a side effect).
+Built for the "Before You Pay" flow: it needs to show "this recipient has
+been reported N times" for a payment recipient identifier the user typed in,
+without that lookup itself inflating the count. Reuses `getReportCount()`
+(`backend/src/db/index.js`) — the exact same lookup and normalization
+`/api/analyze`'s `senderReports` field uses, just callable directly for an
+arbitrary identifier instead of only one the LLM extracted.
+
+### Request
+
+```json
+{
+  "sender": "string, required, non-empty — phone number, short code, or identifier, same normalization as /api/report"
+}
+```
+
+### Response — `200 OK`
+
+```json
+{
+  "sender": "string — echoed back from the request",
+  "reportCount": "number — 0 if never reported"
+}
+```
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "sender is required and must be a non-empty string" }` | `sender` missing, not a string, or empty/whitespace-only |
+| `429` | `{ "error": "too many check-sender requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min, same bucket size as `/api/check-url`) |
 
 ## `POST /api/report`
 

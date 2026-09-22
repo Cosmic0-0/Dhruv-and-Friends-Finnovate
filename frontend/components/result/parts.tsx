@@ -147,8 +147,13 @@ const MARK_TONE: Record<Exclude<Verdict, "safe">, string> = {
 };
 
 /**
- * The user's ORIGINAL text, with signal evidence highlighted. highlightSegments
- * only splits the text (never alters it), and unmatched evidence is ignored.
+ * The user's ORIGINAL text, with signal evidence highlighted ("Scam X-Ray").
+ * highlightSegments only splits the text (never alters it), and unmatched
+ * evidence is ignored. A highlighted span that carries an evidence-row id
+ * (every mark built from response.signals does) is a link to that row in
+ * the "Why FraudLens flagged this" section below, with its signal title as
+ * the hover/tap hint — so a judge can tap a highlighted phrase and see
+ * exactly which finding it triggered, without a separate popover system.
  */
 export function MessageCard({
   text,
@@ -163,24 +168,30 @@ export function MessageCard({
 }) {
   const segments = verdict === "safe" ? [{ text }] : highlightSegments(text, marks);
   const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
+  const markClasses = `rounded-[3px] px-0.5 text-ink underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] ${tone}`;
+  const hasHighlights = segments.some((s) => s.severity);
   return (
     <section className="flex flex-col gap-2.5 px-5 py-5" aria-labelledby="message-label">
       <SectionLabel id="message-label">{copy.result.messageYouSent}</SectionLabel>
+      {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
       <p className="text-[1rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
-        {segments.map((s, i) =>
-          s.severity ? (
-            // 3px is an inline text-highlight radius, not a surface — intentionally
-            // outside the sharp-corner rule that applies to every real surface.
-            <mark
-              key={i}
-              className={`rounded-[3px] px-0.5 text-ink underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] ${tone}`}
-            >
+        {segments.map((s, i) => {
+          if (!s.severity) return <Fragment key={i}>{s.text}</Fragment>;
+          // 3px is an inline text-highlight radius, not a surface — intentionally
+          // outside the sharp-corner rule that applies to every real surface.
+          if (s.id) {
+            return (
+              <a key={i} href={`#${s.id}`} title={s.label} className={`${markClasses} hover:brightness-95`}>
+                {s.text}
+              </a>
+            );
+          }
+          return (
+            <mark key={i} className={markClasses}>
               {s.text}
             </mark>
-          ) : (
-            <Fragment key={i}>{s.text}</Fragment>
-          ),
-        )}
+          );
+        })}
       </p>
     </section>
   );

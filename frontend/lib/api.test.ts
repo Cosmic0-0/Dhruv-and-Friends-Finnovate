@@ -3,7 +3,7 @@
 // error classification, including never surfacing raw backend text.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeMessage, analyzeScreenshot, batchScan, reportSender } from "./api.ts";
+import { analyzeMessage, analyzeScreenshot, batchScan, checkSender, reportSender } from "./api.ts";
 
 type Call = { url: string; body: unknown };
 let calls: Call[] = [];
@@ -38,9 +38,11 @@ test("every endpoint is called at its exact same-origin path", async () => {
   await reportSender({ sender: "+230" });
   stub(200, { extractedText: "text", ...verdict });
   await analyzeScreenshot({ image: "data:image/jpeg;base64,AAAA", language: "en" });
+  stub(200, { sender: "+230", reportCount: 1 });
+  await checkSender({ sender: "+230" });
   assert.deepEqual(
     calls.map((c) => c.url),
-    ["/api/analyze", "/api/batch-scan", "/api/report", "/api/analyze/screenshot"],
+    ["/api/analyze", "/api/batch-scan", "/api/report", "/api/analyze/screenshot", "/api/check-sender"],
   );
 });
 

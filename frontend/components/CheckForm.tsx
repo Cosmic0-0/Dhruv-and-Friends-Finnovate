@@ -252,7 +252,7 @@ export default function CheckForm() {
             >
               {/* No spinner here: the screenshot row shows the wait. */}
               <ImageIcon className="size-[18px]" />
-              <span className="micro text-[0.5625rem]">{copy.screenshotLabel}</span>
+              <span className="micro">{copy.screenshotLabel}</span>
             </button>
           </div>
         </div>

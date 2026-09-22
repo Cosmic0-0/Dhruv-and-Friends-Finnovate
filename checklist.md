@@ -217,13 +217,14 @@ product. Judges and casual visitors notice these fast.
       on every language change — the SSR default is a fine first-paint
       fallback since it's corrected immediately on hydration.
 - [x] **Alt text** on all images (screenshot previews, icons, verdict
-      badges) — also an accessibility requirement, not just SEO. N/A as of
-      2026-09-22: no raw `<img>` elements exist anywhere in `frontend/app`
-      or `frontend/components` (checked, none found); all icons including
-      the screenshot-upload icon (`components/icons.tsx`'s `ImageIcon`) are
-      inline SVG components, and there's no image preview rendered for an
-      uploaded screenshot today. Recheck the moment a screenshot preview
-      `<img>` is added.
+      badges) — also an accessibility requirement, not just SEO. Icons
+      (including the screenshot-upload icon, `components/icons.tsx`'s
+      `ImageIcon`) are inline SVG, no alt needed. The one raw `<img>` in the
+      app — the attached-screenshot thumbnail preview
+      (`frontend/components/ScreenshotUpload.tsx`, added with the
+      screenshot-upload wiring in `f2b375a`) — sets `alt={copy.shot.alt}`,
+      a real localized string, not empty/decorative. Recheck if another
+      `<img>` is added elsewhere.
 - [x] **No exposed source maps** in the production build. Verified
       2026-09-22: `frontend/next.config.ts:22` sets
       `productionBrowserSourceMaps: false`.
@@ -233,13 +234,13 @@ product. Judges and casual visitors notice these fast.
       → `/result`, through the real fallback LLM path), the Learn quiz
       flow, and `/trends`, all with DevTools console tracking on — zero
       errors on any of them, only harmless Next.js dev Fast Refresh logs.
-      Screenshot → verdict and batch scan → summary are NOT verified and
-      currently can't be: the screenshot upload button in
-      `frontend/components/CheckForm.tsx` is still disabled ("coming
-      soon"), and there is no batch-scan UI page at all
+      Screenshot upload is now wired up in the UI (`f2b375a`,
+      `frontend/components/ScreenshotUpload.tsx`) but not yet live-verified
+      console-clean end to end. Batch scan → summary is still NOT verified
+      and currently can't be: there is no batch-scan UI page at all
       (`frontend/app/` has no batch route — only `lib/api.ts` calls the
-      backend route). Both flows are backend-complete and unit-tested but
-      have no live UI path to exercise yet.
+      backend route). Batch is backend-complete and unit-tested but has no
+      live UI path to exercise yet.
 - [x] **JS bundle isn't massive** — check bundle size before the demo;
       trim unused dependencies (especially anything pulled in for the LLM
       or OCR call that isn't needed client-side). Verified 2026-09-22:

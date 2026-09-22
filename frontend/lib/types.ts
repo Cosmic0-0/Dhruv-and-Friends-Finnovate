@@ -29,6 +29,16 @@ export interface Signal {
   domainAgeDays?: number;
   /** OPTIONAL: where in the pipeline this signal came from. */
   source?: SignalSource;
+  /** OPTIONAL: the actual host detected in the message (lookalike_url only). */
+  domain?: string;
+  /** OPTIONAL: the legitimate domain `domain` was compared against (lookalike_url and IDENTITY_MISMATCH). */
+  officialDomain?: string;
+  /** OPTIONAL: display name of the claimed institution (IDENTITY_MISMATCH only). */
+  claimedIdentity?: string;
+  /** OPTIONAL: the mismatched host actually linked to, when the mismatch is domain-based (IDENTITY_MISMATCH only). */
+  actualDomain?: string;
+  /** OPTIONAL: the stated payment recipient, when the mismatch is beneficiary-based (IDENTITY_MISMATCH only). */
+  beneficiary?: string;
 }
 
 // ---- POST /api/analyze ----
@@ -117,6 +127,18 @@ export interface BatchScanSummary {
 export interface BatchScanResponse {
   results: BatchScanResult[];
   summary: BatchScanSummary;
+}
+
+// ---- POST /api/check-sender ----
+
+export interface CheckSenderRequest {
+  sender: string;
+}
+
+export interface CheckSenderResponse {
+  sender: string;
+  /** 0 if never reported. */
+  reportCount: number;
 }
 
 // ---- POST /api/report ----

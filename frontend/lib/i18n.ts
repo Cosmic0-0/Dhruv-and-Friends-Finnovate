@@ -30,6 +30,14 @@ export interface Copy {
   languageSwitcher: string;
   headline: string;
   subline: string;
+  /** Landing page positioning, above the existing headline/subline check form. */
+  home: {
+    tagline: string;
+    pitch: string;
+    bullets: readonly string[];
+    payCta: string;
+    payCtaSub: string;
+  };
   messageLabel: string;
   placeholder: string;
   submit: string;
@@ -99,10 +107,32 @@ export interface Copy {
     risk: (score: number) => string;
     scamAdvice: string;
     messageYouSent: string;
+    /** Shown once, above the highlighted message, when at least one signal has evidence to highlight ("Scam X-Ray"). */
+    xrayHint: string;
     whyTitle: string;
     signalTitles: Record<SignalKind, string>;
     genericSignal: string;
     severity: Record<Severity, string>;
+    /** "Claimed vs. actual" identity comparison, from an IDENTITY_MISMATCH signal's structured fields. */
+    identity: {
+      title: string;
+      claimsToBe: string;
+      recognized: string;
+      linksTo: string;
+      paysTo: string;
+      officialSite: string;
+      unverified: string;
+      caveat: string;
+    };
+    /** "Why FraudLens flagged this" — signals grouped by their `source`, plus community intelligence. */
+    evidence: {
+      title: string;
+      aiTitle: string;
+      deterministicTitle: string;
+      communityTitle: string;
+      communityLine: (n: number) => string;
+      sourcesAgree: (n: number) => string;
+    };
     /** Localized lookalike_url description, used when the backend's description parses. */
     lookalikeDomain: (host: string, domain: string) => string;
     lookalikeBrand: (host: string, brand: string) => string;
@@ -184,6 +214,32 @@ export interface Copy {
     };
     /** Dev-only controls (visible in `next dev` only). */
     dev: { title: string; reset: string; seed: string };
+  };
+  /** "Before you pay" — a separate entry point from the Check screen, for a payment request rather than a message to analyse. */
+  safepay: {
+    title: string;
+    intro: string;
+    requesterLabel: string;
+    requesterPlaceholder: string;
+    channelLabel: string;
+    channelPlaceholder: string;
+    recipientLabel: string;
+    recipientPlaceholder: string;
+    amountLabel: string;
+    amountPlaceholder: string;
+    /** Heading over the amount once shown in the result (no "(optional)" suffix). */
+    amountHeading: string;
+    messageLabel: string;
+    messagePlaceholder: string;
+    submit: string;
+    missingInput: string;
+    pauseTitle: string;
+    okTitle: string;
+    okBody: string;
+    recipientReportedLine: (n: number) => string;
+    verifyCta: string;
+    reportCta: string;
+    back: string;
   };
 }
 
@@ -288,6 +344,25 @@ const RESULT_EN: Copy["result"] = {
   },
   genericSignal: "Something doesn't look right",
   severity: { low: "Low", medium: "Medium", high: "High" },
+  xrayHint: "Tap a highlighted phrase to see why it was flagged.",
+  identity: {
+    title: "Claimed vs. actual",
+    claimsToBe: "Claims to be",
+    recognized: "Recognised institution",
+    linksTo: "But the link goes to",
+    paysTo: "But the payment goes to",
+    officialSite: "Official site",
+    unverified: "Unverified",
+    caveat: "Looking similar doesn't prove a link or account is genuine.",
+  },
+  evidence: {
+    title: "Why FraudLens flagged this",
+    aiTitle: "AI analysis",
+    deterministicTitle: "Deterministic checks",
+    communityTitle: "Community intelligence",
+    communityLine: (n) => (n === 1 ? "Reported by others 1 time" : `Reported by others ${n} times`),
+    sourcesAgree: (n) => `${n} independent evidence sources agree`,
+  },
   lookalikeDomain: (h, d) => `${h} looks like ${d}, but it isn't.`,
   lookalikeBrand: (h, b) => `${h} uses the ${b} name, but it isn't a real ${b} website.`,
   linkCheck: {
@@ -380,11 +455,53 @@ const OCR_ERROR_EN = {
   ocr: "Something went wrong while reading the text. Try again, or type the message instead.",
 };
 
+const HOME_EN: Copy["home"] = {
+  tagline: "See the scam before it happens.",
+  pitch:
+    "FraudLens doesn't just say a message looks suspicious. It shows you exactly why, in plain language, before you pay, click or share a code.",
+  bullets: [
+    "See exactly which words and links triggered a warning.",
+    "Works in English, French and Kreol — even mixed together.",
+    "Checks any link against real Mauritius bank and telecom domains.",
+    "Check a message, a screenshot, or a payment you're about to make.",
+  ],
+  payCta: "I'm about to pay",
+  payCtaSub: "Get a check before you send money, not after.",
+};
+
+const SAFEPAY_EN: Copy["safepay"] = {
+  title: "Before you pay",
+  intro: "A few quick questions before you send money. We'll check what we can and tell you what to do next.",
+  requesterLabel: "Who's asking you to pay?",
+  requesterPlaceholder: "e.g. MCB, a courier company, someone you know",
+  channelLabel: "How did they contact you?",
+  channelPlaceholder: "e.g. SMS, WhatsApp, phone call",
+  recipientLabel: "Who are you paying?",
+  recipientPlaceholder: "Phone number, account number or name",
+  amountLabel: "Amount (optional)",
+  amountPlaceholder: "e.g. Rs 12,500",
+  amountHeading: "Amount",
+  messageLabel: "Message you received (optional, but helps a lot)",
+  messagePlaceholder: "Paste the message that asked you to pay, if you have one",
+  submit: "Check before I pay",
+  missingInput: "Tell us who's asking, or paste the message, so we have something to check.",
+  pauseTitle: "Pause before paying",
+  okTitle: "No warning signs found",
+  okBody:
+    "We didn't find a specific reason to worry, but we can't confirm this request is genuine. If you have any doubt, verify directly with the organisation using a number or app you already trust.",
+  recipientReportedLine: (n) =>
+    n === 1 ? "This recipient has been reported 1 time" : `This recipient has been reported ${n} times`,
+  verifyCta: "Verify through official channel",
+  reportCta: "Report this",
+  back: "Check a message instead",
+};
+
 export const COPY: Record<UiLanguage, Copy> = {
   en: {
     languageSwitcher: "Language",
     headline: "Got a message about money?",
     subline: "Paste it here before you pay, click or share a code. We will show you what looks wrong and why.",
+    home: HOME_EN,
     messageLabel: "The message",
     placeholder: "Paste the SMS, WhatsApp or email text here...",
     submit: "Check this message",
@@ -452,6 +569,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     result: RESULT_EN,
     learn: LEARN_EN,
+    safepay: SAFEPAY_EN,
   },
 
   fr: {
@@ -459,6 +577,19 @@ export const COPY: Record<UiLanguage, Copy> = {
     headline: "Un message qui parle d'argent ?",
     subline:
       "Collez-le ici avant de payer, de cliquer ou de partager un code. Nous vous montrerons ce qui cloche et pourquoi.",
+    home: {
+      tagline: "Voyez l'arnaque avant qu'elle n'arrive.",
+      pitch:
+        "FraudLens ne se contente pas de dire qu'un message semble suspect. Il vous montre exactement pourquoi, en langage clair, avant que vous ne payiez, cliquiez ou partagiez un code.",
+      bullets: [
+        "Voyez exactement quels mots et liens ont déclenché une alerte.",
+        "Fonctionne en anglais, français et kreol — même mélangés.",
+        "Vérifie tout lien face aux vrais domaines des banques et opérateurs mauriciens.",
+        "Vérifiez un message, une capture d'écran, ou un paiement que vous vous apprêtez à faire.",
+      ],
+      payCta: "Je m'apprête à payer",
+      payCtaSub: "Une vérification avant d'envoyer de l'argent, pas après.",
+    },
     messageLabel: "Le message",
     placeholder: "Collez ici le texte du SMS, WhatsApp ou e-mail...",
     submit: "Vérifier ce message",
@@ -576,6 +707,25 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       genericSignal: "Quelque chose cloche",
       severity: { low: "Faible", medium: "Moyen", high: "Élevé" },
+      xrayHint: "Touchez une phrase surlignée pour voir pourquoi elle a été signalée.",
+      identity: {
+        title: "Revendiqué vs. réel",
+        claimsToBe: "Prétend être",
+        recognized: "Institution reconnue",
+        linksTo: "Mais le lien mène à",
+        paysTo: "Mais le paiement va à",
+        officialSite: "Site officiel",
+        unverified: "Non vérifié",
+        caveat: "Une ressemblance ne prouve pas qu'un lien ou un compte est authentique.",
+      },
+      evidence: {
+        title: "Pourquoi FraudLens a signalé ceci",
+        aiTitle: "Analyse par l'IA",
+        deterministicTitle: "Vérifications déterministes",
+        communityTitle: "Intelligence communautaire",
+        communityLine: (n) => (n === 1 ? "Signalé par d'autres 1 fois" : `Signalé par d'autres ${n} fois`),
+        sourcesAgree: (n) => `${n} sources de preuves indépendantes concordent`,
+      },
       lookalikeDomain: (h, d) => `${h} ressemble à ${d}, mais ce n'est pas le vrai site.`,
       lookalikeBrand: (h, b) => `${h} utilise le nom ${b}, mais ce n'est pas un vrai site ${b}.`,
       linkCheck: {
@@ -689,6 +839,33 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       dev: { title: "Outils de dev", reset: "Réinitialiser la série", seed: "Simuler 2 jours faits" },
     },
+    safepay: {
+      title: "Avant de payer",
+      intro:
+        "Quelques questions rapides avant d'envoyer de l'argent. Nous vérifions ce que nous pouvons et vous disons quoi faire ensuite.",
+      requesterLabel: "Qui vous demande de payer ?",
+      requesterPlaceholder: "ex. MCB, un transporteur, une connaissance",
+      channelLabel: "Comment vous ont-ils contacté ?",
+      channelPlaceholder: "ex. SMS, WhatsApp, appel téléphonique",
+      recipientLabel: "Qui payez-vous ?",
+      recipientPlaceholder: "Numéro de téléphone, numéro de compte ou nom",
+      amountLabel: "Montant (optionnel)",
+      amountPlaceholder: "ex. Rs 12 500",
+      amountHeading: "Montant",
+      messageLabel: "Message reçu (optionnel, mais très utile)",
+      messagePlaceholder: "Collez le message qui vous a demandé de payer, si vous en avez un",
+      submit: "Vérifier avant de payer",
+      missingInput: "Indiquez qui vous le demande, ou collez le message, pour que nous ayons quelque chose à vérifier.",
+      pauseTitle: "Faites une pause avant de payer",
+      okTitle: "Aucun signal d'alerte trouvé",
+      okBody:
+        "Nous n'avons trouvé aucune raison précise de vous inquiéter, mais nous ne pouvons pas confirmer que cette demande est authentique. En cas de doute, vérifiez directement auprès de l'organisation via un numéro ou une application que vous connaissez déjà.",
+      recipientReportedLine: (n) =>
+        n === 1 ? "Ce destinataire a été signalé 1 fois" : `Ce destinataire a été signalé ${n} fois`,
+      verifyCta: "Vérifier via un canal officiel",
+      reportCta: "Signaler ceci",
+      back: "Vérifier un message à la place",
+    },
   },
 
   kreol: {
@@ -696,6 +873,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     headline: "Ou finn gagn enn mesaz lor larzan?",
     subline:
       "Kol li isi avan ou pey, klik ouswa partaz enn kod. Nou pou montre ou seki paret pa bon ek kifer.",
+    home: TODO_KREOL(HOME_EN),
     messageLabel: "Mesaz la",
     placeholder: "Kol text SMS, WhatsApp ouswa email la isi...",
     submit: "Verifie sa mesaz la",
@@ -814,6 +992,9 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       genericSignal: "Ena kiksoz ki pa bon",
       severity: { low: "Ba", medium: "Mwayen", high: "O" },
+      xrayHint: TODO_KREOL(RESULT_EN.xrayHint),
+      identity: TODO_KREOL(RESULT_EN.identity),
+      evidence: TODO_KREOL(RESULT_EN.evidence),
       lookalikeDomain: (h, d) => `${h} resanble ${d}, me se pa vre sit la.`,
       lookalikeBrand: (h, b) => `${h} servi nom ${b}, me se pa enn vre sit ${b}.`,
       linkCheck: {
@@ -927,6 +1108,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
+    safepay: TODO_KREOL(SAFEPAY_EN),
   },
 };
 

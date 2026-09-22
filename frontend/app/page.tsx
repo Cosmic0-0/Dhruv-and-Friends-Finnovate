@@ -1,5 +1,6 @@
 import AppHeader from "@/components/AppHeader";
 import CheckForm from "@/components/CheckForm";
+import Hero from "@/components/Hero";
 import RecentChecks from "@/components/RecentChecks";
 import { T } from "@/components/LanguageProvider";
 import { SendIcon } from "@/components/icons";
@@ -27,6 +28,8 @@ export default function CheckPage() {
       <AppHeader />
 
       <div className="gutter flex flex-col gap-7 pt-7">
+        <Hero />
+
         <section className="flex flex-col gap-3">
           <h1>
             <T k="headline" />

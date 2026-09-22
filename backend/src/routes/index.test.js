@@ -74,3 +74,54 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   assert.ok(lookalike, "expected a lookalike_url signal for mcb-secure.top");
   assert.equal("domainAgeDays" in lookalike, false);
 });
+
+test("POST /api/check-sender looks up an existing report count without incrementing it", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  await originalFetch(`${base}/report`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sender: "+230 5789 1234" }),
+  });
+
+  const first = await (
+    await originalFetch(`${base}/check-sender`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sender: "57891234" }),
+    })
+  ).json();
+  assert.equal(first.reportCount, 1);
+
+  // A second lookup must not change the count - this route is read-only.
+  const second = await (
+    await originalFetch(`${base}/check-sender`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ sender: "57891234" }),
+    })
+  ).json();
+  assert.equal(second.reportCount, 1);
+});
+
+test("POST /api/check-sender returns 0 for a sender with no reports", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const res = await originalFetch(`http://127.0.0.1:${port}/api/check-sender`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sender: "never reported" }),
+  });
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.equal(body.reportCount, 0);
+});

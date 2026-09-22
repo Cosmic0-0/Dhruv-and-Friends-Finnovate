@@ -12,12 +12,19 @@ import type { Severity } from "./types";
 export interface EvidenceMark {
   evidence: string;
   severity: Severity;
+  /** Stable id of the signal this evidence came from (its index in the original signals[] array), for linking a highlight back to its evidence row ("Scam X-Ray"). */
+  id?: string;
+  /** Short human label for this signal (e.g. "The link is not the bank"), shown as a hover/tap hint. */
+  label?: string;
 }
 
 export interface Segment {
   text: string;
   /** Present when this segment is highlighted. */
   severity?: Severity;
+  /** Carried over from the winning EvidenceMark, for anchor-linking and the hover label. */
+  id?: string;
+  label?: string;
 }
 
 const RANK: Record<Severity, number> = { high: 3, medium: 2, low: 1 };
@@ -37,16 +44,18 @@ interface Range {
   start: number;
   end: number;
   severity: Severity;
+  id?: string;
+  label?: string;
 }
 
 export function highlightSegments(text: string, marks: readonly EvidenceMark[]): Segment[] {
   const candidates: Range[] = [];
-  for (const { evidence, severity } of marks) {
+  for (const { evidence, severity, id, label } of marks) {
     if (typeof evidence !== "string") continue;
     const re = evidencePattern(evidence);
     if (!re) continue;
     for (const m of text.matchAll(re)) {
-      if (m[0].length > 0) candidates.push({ start: m.index, end: m.index + m[0].length, severity });
+      if (m[0].length > 0) candidates.push({ start: m.index, end: m.index + m[0].length, severity, id, label });
     }
   }
 
@@ -64,7 +73,14 @@ export function highlightSegments(text: string, marks: readonly EvidenceMark[]):
   let cursor = 0;
   for (const r of accepted) {
     if (r.start > cursor) segments.push({ text: text.slice(cursor, r.start) });
-    segments.push({ text: text.slice(r.start, r.end), severity: r.severity });
+    // Only set id/label when present - keeps the no-metadata shape identical
+    // to before this field was added (deepEqual-safe in lib/highlight.test.ts).
+    segments.push({
+      text: text.slice(r.start, r.end),
+      severity: r.severity,
+      ...(r.id !== undefined ? { id: r.id } : {}),
+      ...(r.label !== undefined ? { label: r.label } : {}),
+    });
     cursor = r.end;
   }
   if (cursor < text.length || segments.length === 0) segments.push({ text: text.slice(cursor) });

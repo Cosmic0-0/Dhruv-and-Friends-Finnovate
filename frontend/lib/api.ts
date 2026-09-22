@@ -20,6 +20,8 @@ import type {
   BatchScanRequest,
   BatchScanResponse,
   BatchScanResult,
+  CheckSenderRequest,
+  CheckSenderResponse,
   ReportRequest,
   ReportResponse,
   Signal,
@@ -95,6 +97,8 @@ const DEFAULT_TIMEOUTS = {
   screenshot: 135_000,
   batch: 180_000,
   report: 15_000,
+  // Single indexed SELECT, same cost class as report - no LLM/OCR involved.
+  checkSender: 15_000,
 } as const;
 
 const FRIENDLY = {
@@ -329,6 +333,10 @@ function isReportResponse(v: unknown): v is ReportResponse {
   return isObj(v) && isStr(v.sender) && isNum(v.reportCount) && typeof v.recorded === "boolean";
 }
 
+function isCheckSenderResponse(v: unknown): v is CheckSenderResponse {
+  return isObj(v) && isStr(v.sender) && isNum(v.reportCount);
+}
+
 // ---- Batch failure normalisation ----
 
 /**
@@ -403,4 +411,18 @@ export async function batchScan(
 
 export function reportSender(req: ReportRequest, opts: RequestOptions = {}): Promise<ApiResult<ReportResponse>> {
   return postJson("/api/report", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.report, isReportResponse, opts.signal);
+}
+
+/** Read-only: looks up a report count without incrementing it (unlike reportSender above). */
+export function checkSender(
+  req: CheckSenderRequest,
+  opts: RequestOptions = {},
+): Promise<ApiResult<CheckSenderResponse>> {
+  return postJson(
+    "/api/check-sender",
+    req,
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.checkSender,
+    isCheckSenderResponse,
+    opts.signal,
+  );
 }

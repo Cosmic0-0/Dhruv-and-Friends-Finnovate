@@ -44,13 +44,15 @@ are weighted against.
       unrelated to today's other changes) — see `docs/API-CONTRACT.md`
       Known Gaps. Batch results now carry full parity with `/api/analyze`
       (`riskCategories`, `IDENTITY_MISMATCH`, everything).
-- [ ] OCR ingestion functional (screenshot upload → extracted text →
+- [x] OCR ingestion functional (screenshot upload → extracted text →
       analysis) — backend verified live 2026-09-22 (real ImageMagick PNG
       → `/api/analyze/screenshot` → correct OCR text → correct verdict,
-      through the real local model, ~9s). Still unchecked: the frontend
-      upload button is disabled ("coming soon" —
-      `frontend/components/CheckForm.tsx`), so there is still no way for a
-      user to exercise this through the actual app UI.
+      through the real local model, ~9s). Frontend upload button is now
+      wired up (`f2b375a`, `frontend/components/ScreenshotUpload.tsx` +
+      `CheckForm.tsx`): picks a file, compresses it client-side, posts to
+      `/api/analyze/screenshot`, and drops the extracted text into the
+      editable textarea for the user to review before `/api/analyze` runs
+      on it — a user can exercise the full flow through the actual app UI.
 - [x] No crashes on malformed input (empty message, non-text upload,
       oversized batch) — verified 2026-09-22: empty/missing `message`,
       6000-char oversized `message`, malformed JSON body, 60-item

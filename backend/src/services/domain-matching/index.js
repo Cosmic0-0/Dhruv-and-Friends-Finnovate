@@ -86,6 +86,10 @@ function findLookalikes(message) {
         description: `${host} closely resembles legitimate domain ${closest}`,
         severity: "high",
         source: "url_parser",
+        // officialDomain: the specific legit domain this host was matched
+        // against, so the frontend can render a direct "claims X / actually
+        // points to Y" comparison instead of re-parsing `description`.
+        officialDomain: closest,
       });
     } else if (brandToken) {
       found.push({
@@ -94,6 +98,7 @@ function findLookalikes(message) {
         description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
         severity: "high",
         source: "url_parser",
+        officialDomain: BRAND_DOMAIN_MAP[brandToken],
       });
     }
   }
@@ -101,7 +106,11 @@ function findLookalikes(message) {
 }
 
 export function checkUrls(message) {
-  return findLookalikes(message).map(({ host, ...signal }) => signal);
+  // `domain` (the actual, potentially malicious host) is kept on the
+  // signal — additive alongside `officialDomain` above — for the same
+  // "claimed vs actual" comparison; only the internal `host` key itself is
+  // renamed away, nothing is dropped.
+  return findLookalikes(message).map(({ host, ...signal }) => ({ domain: host, ...signal }));
 }
 
 // Same hosts, same order, as the signals checkUrls() returns for this

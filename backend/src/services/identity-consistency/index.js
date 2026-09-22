@@ -83,12 +83,19 @@ export function checkIdentityConsistency(message) {
     reasons.push(`the payment is directed to "${beneficiary}", not ${claimedName}`);
   }
 
-  return [
-    {
-      type: "IDENTITY_MISMATCH",
-      description: `The message claims to be from ${claimedName} but ${reasons.join(" and ")}.`,
-      severity: "high",
-      source: "identity_check",
-    },
-  ];
+  // Structured fields alongside the prose `description` — additive, so a
+  // "claims to be X / actually points to Y" comparison can be rendered
+  // directly instead of re-parsing the sentence above.
+  const signal = {
+    type: "IDENTITY_MISMATCH",
+    description: `The message claims to be from ${claimedName} but ${reasons.join(" and ")}.`,
+    severity: "high",
+    source: "identity_check",
+    claimedIdentity: claimedName,
+    officialDomain: expectedDomain,
+  };
+  if (domainMismatch) signal.actualDomain = mismatchedHost;
+  if (beneficiaryMismatch) signal.beneficiary = beneficiary;
+
+  return [signal];
 }
