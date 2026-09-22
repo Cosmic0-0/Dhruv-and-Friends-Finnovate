@@ -45,10 +45,12 @@ are weighted against.
       Known Gaps. Batch results now carry full parity with `/api/analyze`
       (`riskCategories`, `IDENTITY_MISMATCH`, everything).
 - [ ] OCR ingestion functional (screenshot upload → extracted text →
-      analysis) — backend route exists and is unit-tested, but the
-      frontend upload button is still disabled ("coming soon" —
-      `frontend/components/CheckForm.tsx`), so there's no live UI path to
-      exercise end-to-end yet.
+      analysis) — backend verified live 2026-09-22 (real ImageMagick PNG
+      → `/api/analyze/screenshot` → correct OCR text → correct verdict,
+      through the real local model, ~9s). Still unchecked: the frontend
+      upload button is disabled ("coming soon" —
+      `frontend/components/CheckForm.tsx`), so there is still no way for a
+      user to exercise this through the actual app UI.
 - [x] No crashes on malformed input (empty message, non-text upload,
       oversized batch) — verified 2026-09-22: empty/missing `message`,
       6000-char oversized `message`, malformed JSON body, 60-item
