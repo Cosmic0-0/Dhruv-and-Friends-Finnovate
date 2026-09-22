@@ -1,0 +1,222 @@
+[
+  {
+    "id": "EN-01",
+    "language": "en",
+    "scamType": "bank_impersonation",
+    "message": "URGENT: Your MCB account will be suspended within 2 hours due to unusual activity. Verify immediately at mcb-secure-verify.top to avoid permanent lock.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["lookalike_url", "urgency_language", "spoofed_identity"]
+    },
+    "notes": "mcb-secure-verify.top contains the mcb brand token as its own hostname label -> deterministic lookalike_url from checkUrls()."
+  },
+  {
+    "id": "EN-02",
+    "language": "en",
+    "scamType": "otp_theft",
+    "message": "This is SBM Fraud Prevention. We have blocked a suspicious transfer from your account. Reply with the OTP we just sent to cancel it immediately, or the transfer will complete automatically.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "No URL - phone/SMS-style OTP theft impersonating SBM's fraud team."
+  },
+  {
+    "id": "EN-03",
+    "language": "en",
+    "scamType": "bank_impersonation",
+    "message": "Absa Mauritius: Your card has been temporarily restricted for your security. Confirm your PIN at absa-online-banking.top within 24 hours to restore access.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["lookalike_url", "urgency_language", "spoofed_identity"]
+    },
+    "notes": "absa-online-banking.top -> label 'absa' matches BRAND_TOKENS."
+  },
+  {
+    "id": "EN-04",
+    "language": "en",
+    "scamType": "bank_impersonation",
+    "message": "Bank One Alert: Unrecognised login detected on your account. If this wasn't you, secure your account now at bankone-verify-secure.info before it is locked.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["lookalike_url", "urgency_language", "spoofed_identity"]
+    },
+    "notes": "bankone-verify-secure.info -> label 'bankone' matches BRAND_TOKENS."
+  },
+  {
+    "id": "EN-05",
+    "language": "en",
+    "scamType": "prize_lottery",
+    "message": "Congratulations! Your Emtel number has won Rs 75,000 in our anniversary draw. Claim your prize before midnight at emtel-rewards-claim.top by entering your mobile money PIN.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["lookalike_url", "urgency_language"]
+    },
+    "notes": "Telecom prize scam (CLAUDE.md scope item 2). emtel-rewards-claim.top -> label 'emtel' matches BRAND_TOKENS."
+  },
+  {
+    "id": "EN-06",
+    "language": "en",
+    "scamType": "payment_request",
+    "message": "Hi, I just sent Rs 3,500 to your mobile money account by mistake. Please send it back urgently to 5xxx-xxxx, that's my correct number, I need it before the bank closes today.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Classic mobile-money 'wrong transfer, refund me' pattern (CLAUDE.md scope item 2) - no URL involved. Callback number normalized to the 5xxx-xxxx placeholder style already used in EN-07, after the Opus+Sonnet review (2026-09-22) flagged the original fully-specified number as an inconsistent, realistic-looking live Mauritius mobile number."
+  },
+  {
+    "id": "EN-07",
+    "language": "en",
+    "scamType": "government_impersonation",
+    "message": "MRA NOTICE: You have an unpaid tax balance of Rs 14,200. Failure to settle within 48 hours will result in legal action and account freeze. Call 5xxx-xxxx immediately to arrange payment.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "No URL - phone-callback style, so no lookalike_url expected."
+  },
+  {
+    "id": "EN-08",
+    "language": "en",
+    "scamType": "parcel_customs",
+    "message": "Your parcel is held at customs pending a Rs 450 clearance fee. Pay now at track-parcel-mu.top within 24 hours or it will be returned to sender.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "track-parcel-mu.top deliberately does NOT contain a brand token and isn't Levenshtein-close to any LEGIT_DOMAINS entry, so lookalike_url is NOT asserted here - this is the boundary case where domain-matching can't help and the LLM signal carries the weight alone."
+  },
+  {
+    "id": "EN-09",
+    "language": "en",
+    "scamType": "family_impersonation",
+    "message": "Mum it's me, I lost my phone so this is my new number. I'm in a bit of trouble and need Rs 5,000 urgently, please don't tell dad, just send it to this number now.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "New-number + secrecy + urgency family impersonation pattern."
+  },
+  {
+    "id": "EN-10",
+    "language": "en",
+    "scamType": "investment",
+    "message": "Join our exclusive FX trading group - guaranteed 25% weekly returns, zero risk. Minimum deposit Rs 8,000 via crypto wallet. Limited spots, message now to secure yours.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Guaranteed-return investment/crypto scam."
+  },
+  {
+    "id": "EN-11",
+    "language": "en",
+    "scamType": "job_scam",
+    "message": "Work from home, earn Rs 6,000/week, no experience needed. Pay a refundable Rs 500 registration fee today to secure your position and receive your starter kit.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "No hard deadline/impersonation wording strong enough to require a specific signal type - verdict is the load-bearing assertion here."
+  },
+  {
+    "id": "EN-12",
+    "language": "en",
+    "scamType": "merchant_payment_change",
+    "message": "Please note: our company bank account details have changed for all upcoming payments. Kindly use the new beneficiary details attached before making your next transfer.",
+    "expected": {
+      "verdict": "suspicious",
+      "signals": []
+    },
+    "notes": "Business-email-compromise-style beneficiary change; understated tone on purpose, no urgency/threat wording. Relabeled scam -> suspicious after independent Opus and Sonnet reviews (2026-09-22) both flagged the original 'scam' assertion as unsupported: the text has zero textual red flags by design (BEC fraud is inherently indistinguishable from a legitimate vendor notice without out-of-band verification), so 'suspicious' is the honest label rather than one a text-only classifier could be expected to get right as a confident 'scam'."
+  },
+  {
+    "id": "EN-13",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "Your MCB one-time password is 482913. This code is valid for 5 minutes. Never share this code with anyone, including MCB staff.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Genuine OTP delivery: the bank is SENDING a code, not requesting one, and explicitly warns not to share it."
+  },
+  {
+    "id": "EN-14",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "Alert: A debit of Rs 12,000 was made on your MCB account ending 4521 on 20 Sep at 14:32. If you did not authorise this, contact MCB on 202 5000 immediately.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Genuine transaction alert - informational, no link, no payment/info request; directs to a real official contact channel, not a reply."
+  },
+  {
+    "id": "EN-15",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "Your SBM Internet Banking password was changed on 21 Sep at 09:14. If this wasn't you, contact SBM through the official app or branch, not by replying to this message.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Genuine security notification pattern."
+  },
+  {
+    "id": "EN-16",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "Reminder: your appointment with your Absa Mauritius relationship manager is confirmed for Thursday 24 Sep at 10:00. Call the branch if you need to reschedule.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Routine appointment reminder, no request of any kind."
+  },
+  {
+    "id": "EN-17",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "MRA Reminder: your annual income tax return is due by 30 September. File online through the MRA e-Filing portal or visit your nearest MRA office. No payment is required to file.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Deliberately has no bare domain string. See FINDINGS.md #11: a literal 'mra.mu' here would trip a Levenshtein-2 false positive against mcb.mu in the current domain-matching logic, so it's worded around that known bug rather than baked into this payload's expectation."
+  },
+  {
+    "id": "EN-18",
+    "language": "en",
+    "scamType": "legitimate",
+    "message": "Your parcel has arrived at the Quatre Bornes post office. Please collect it within 5 working days with your ID and tracking number. No fee is required for standard delivery.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Genuine delivery notice - no link, no fee requested, contrasts directly with EN-08's parcel_customs scam."
+  },
+  {
+    "id": "EN-19",
+    "language": "en",
+    "scamType": "job_scam",
+    "message": "Hi, I'm hiring for a part-time online moderator role - Rs 15,000/month, no experience or interview needed, immediate start. Reply here with your name and ID number if you're interested and I'll get you set up today.",
+    "expected": {
+      "verdict": "suspicious",
+      "signals": []
+    },
+    "notes": "Added after the Opus+Sonnet review (2026-09-22) found 0/18 payloads used the 'suspicious' verdict. Revised (2026-09-22, owner feedback) after the first draft read as plainly safe rather than ambiguous -- added the 'no experience or interview needed' too-easy framing and an ID-number request via reply, both real caution flags, while still stopping short of the Rs 500 fee ask that makes EN-11 the confirmed-scam version of this same pattern."
+  },
+  {
+    "id": "EN-20",
+    "language": "en",
+    "scamType": "investment",
+    "message": "Hey, remember me from the community WhatsApp group? I've been doing really well with an FX trading tip service the past few weeks. Want me to share the details?",
+    "expected": {
+      "verdict": "suspicious",
+      "signals": []
+    },
+    "notes": "Added for 'suspicious' verdict coverage (see EN-19). Ambiguous opening move of the same investment pattern as EN-10 (guaranteed 25% weekly return) but without any guarantee/return claim or payment ask yet -- plausible as a genuine acquaintance message, and also a common lead-in to affinity investment fraud."
+  }
+]

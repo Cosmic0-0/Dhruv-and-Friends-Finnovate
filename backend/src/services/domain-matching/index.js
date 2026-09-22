@@ -2,10 +2,14 @@
 
 export const LEGIT_DOMAINS = ["mcb.mu", "sbmgroup.mu", "absa.mu", "bankone.mu", "myt.mu", "emtel.com"];
 
-// Brand tokens checked as hostname substrings, independent of the
-// Levenshtein distance check below — catches prefix/suffix phishing
-// patterns like mcb-secure.top that a distance-2 threshold misses
-// (see data/test-payloads/FINDINGS.md #3).
+// Brand tokens checked against whole hostname labels (split on "." and
+// "-"), independent of the Levenshtein distance check below — catches
+// prefix/suffix phishing patterns like mcb-secure.top that a distance-2
+// threshold misses (see data/test-payloads/FINDINGS.md #3). Matching must
+// be label-exact, not `host.includes(token)`: a raw substring check flags
+// unrelated domains that merely contain a token's letters in sequence,
+// e.g. mythology-store.com ("myt"), absalom-books.com ("absa"), and
+// sbmarketing.co.uk ("sbm") (see FINDINGS.md #10).
 const BRAND_TOKENS = ["mcb", "sbm", "absa", "bankone", "myt", "emtel"];
 
 // Requires a final all-alpha "TLD-like" label of 2-10 chars so scheme-less
@@ -41,7 +45,8 @@ export function checkUrls(message) {
     if (LEGIT_DOMAINS.includes(host)) continue;
 
     const closest = LEGIT_DOMAINS.find((d) => levenshtein(host, d) <= 2);
-    const brandToken = BRAND_TOKENS.find((token) => host.includes(token));
+    const labels = host.split(/[.-]/);
+    const brandToken = BRAND_TOKENS.find((token) => labels.includes(token));
 
     // Either check firing should produce exactly one signal per URL.
     if (closest) {

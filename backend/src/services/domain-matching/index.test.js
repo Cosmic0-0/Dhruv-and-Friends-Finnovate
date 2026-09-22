@@ -26,3 +26,18 @@ test("checkUrls never flags a legit domain", () => {
 test("checkUrls returns an empty array when the message has no URL", () => {
   assert.deepEqual(checkUrls("Your OTP is 4821, do not share it with anyone."), []);
 });
+
+test("checkUrls does not flag unrelated domains that merely contain brand-token letters", () => {
+  // Substring matching used to flag these (FINDINGS.md #10): myt/absa/sbm
+  // appear as letter runs inside real, unrelated hostname labels.
+  assert.deepEqual(checkUrls("See https://mythology-store.com/catalog for details"), []);
+  assert.deepEqual(checkUrls("Order confirmed at https://absalom-books.com/order/1"), []);
+  assert.deepEqual(checkUrls("Quote from https://sbmarketing.co.uk/quote"), []);
+});
+
+test("checkUrls still flags a brand token that is its own hostname label", () => {
+  const signals = checkUrls("https://secure-absa.mu/verify");
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0].type, "lookalike_url");
+  assert.match(signals[0].description, /absa/);
+});
