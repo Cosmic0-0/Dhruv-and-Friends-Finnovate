@@ -1,1 +1,4 @@
 id,reviewer,decision,corrected_original_message,corrected_english_meaning,signals_to_add,signals_to_remove,review_notes,reviewed_at
+FL-KM-0001,Caellum,EDIT,Ou kont OceanBank pou bloke zordi si ou pa verifye. Klik lor oceanbank-verify-secure.test deswit.,,,SENSITIVE_INFO_REQUEST,,2026-09-22T11:11:13+00:00
+FL-KM-0002,Caellum,EDIT,"Dear customer, IslandTrust Bank security equip pe demande ou konfirm OTP 583291 lor sa nimero-la pou anile enn transaksion sispek.",,,,,2026-09-22T11:12:52+00:00
+FL-KM-0003,Caellum,APPROVE,,,,,,2026-09-22T11:14:34+00:00
