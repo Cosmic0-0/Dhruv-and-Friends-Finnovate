@@ -64,7 +64,15 @@ sender data touches the demo, since the app ingests untrusted user input
       no stored-file execution surface to strip.
 - [ ] **Trim API responses** — don't leak internal fields (raw LLM prompt,
       stack traces, DB row internals) in `/api/analyze`, `/api/batch-scan`,
-      or `/api/report` responses.
+      or `/api/report` responses. Note 2026-09-22: the malformed-JSON
+      HTML-stack-trace leak specifically (`data/test-payloads/FINDINGS.md`
+      #5) is closed — a final error-handling middleware in
+      `backend/src/index.js` now catches `express.json()` parse failures and
+      returns `{ "error": "invalid JSON body" }` with 400 instead of falling
+      through to Express's default HTML handler. Not fully checked off:
+      `/api/analyze` and `/api/batch-scan` still pass through raw
+      `err.message` from LLM/HTTP failures on the success path, which is
+      still unscrubbed internal detail (see API-CONTRACT.md Known Gaps).
 - [ ] **Add security headers** (CSP, `X-Content-Type-Options`,
       `X-Frame-Options` / frame-ancestors, `Referrer-Policy`).
 - [ ] **Force HTTPS** in production/deployment config.
