@@ -1,4 +1,5 @@
 import { Router, json } from "express";
+import rateLimit from "express-rate-limit";
 import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
@@ -9,6 +10,42 @@ export const router = Router();
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB, before base64 overhead
+
+function rateLimited(message, options) {
+  return rateLimit({
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => res.status(429).json({ error: message }),
+    ...options,
+  });
+}
+
+// LLM/OCR calls are the expensive path (self-hosted inference over
+// Tailscale, or a paid fallback API) - cap per-IP volume so one client can't
+// run up inference cost or starve the demo's shared LLM endpoint.
+const analyzeLimiter = rateLimited("too many analyze requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+});
+const batchLimiter = rateLimited("too many batch-scan requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+});
+// checkUrls() is pure/non-LLM and cheap, so this only needs to stop naive
+// hammering, not protect an expensive resource.
+const checkUrlLimiter = rateLimited("too many check-url requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 120,
+});
+// Bot protection for the crowdsourced report feed (see checklist.md
+// "Add bot protection"): the feed's value depends on report counts meaning
+// something, so a tight per-IP cap - much tighter than the read/analyze
+// routes - is the deterrent against a script trivially inflating a sender's
+// reportCount or poisoning an innocent sender's reputation.
+const reportLimiter = rateLimited("too many report submissions from this address, try again later", {
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+});
 
 // Magic-byte signatures - the screenshot route never trusts a
 // client-reported MIME type (see checklist.md § Security), it sniffs the
@@ -32,7 +69,7 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-router.post("/analyze", json({ limit: "300kb" }), async (req, res) => {
+router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
   const { message, language } = req.body;
   if (!isNonEmptyString(message)) {
     return res.status(400).json({ error: "message is required and must be a non-empty string" });
@@ -45,11 +82,12 @@ router.post("/analyze", json({ limit: "300kb" }), async (req, res) => {
     result.signals.push(...checkUrls(message));
     res.json(result);
   } catch (err) {
-    res.status(502).json({ error: err.message });
+    console.error(err);
+    res.status(502).json({ error: "analysis failed, try again shortly" });
   }
 });
 
-router.post("/analyze/screenshot", json({ limit: "8mb" }), async (req, res) => {
+router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async (req, res) => {
   const { image, language } = req.body;
   if (!isNonEmptyString(image)) {
     return res.status(400).json({ error: "image is required and must be a base64-encoded string" });
@@ -73,7 +111,8 @@ router.post("/analyze/screenshot", json({ limit: "8mb" }), async (req, res) => {
   try {
     extractedText = await extractTextFromImage(buffer);
   } catch (err) {
-    return res.status(502).json({ error: `OCR failed: ${err.message}` });
+    console.error(err);
+    return res.status(502).json({ error: "OCR failed, try again shortly" });
   }
   if (!isNonEmptyString(extractedText)) {
     return res.status(400).json({ error: "no readable text was found in the image" });
@@ -87,11 +126,12 @@ router.post("/analyze/screenshot", json({ limit: "8mb" }), async (req, res) => {
     result.signals.push(...checkUrls(extractedText));
     res.json({ extractedText, ...result });
   } catch (err) {
-    res.status(502).json({ error: err.message });
+    console.error(err);
+    res.status(502).json({ error: "analysis failed, try again shortly" });
   }
 });
 
-router.post("/batch-scan", json({ limit: "300kb" }), async (req, res) => {
+router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, res) => {
   const { messages } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "messages must be a non-empty array" });
@@ -138,7 +178,21 @@ router.post("/batch-scan", json({ limit: "300kb" }), async (req, res) => {
   res.json({ results, summary });
 });
 
-router.post("/report", json({ limit: "300kb" }), (req, res) => {
+// Non-LLM, synchronous domain check for the browser extension (see
+// extension/README.md) — the extension must reuse this logic via the API,
+// never reimplement it locally. Deliberately skips analyzeMessage(): a bare
+// URL isn't a scam "message" to classify, and the extension needs a fast,
+// deterministic per-navigation check, not an LLM round trip.
+router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) => {
+  const { url } = req.body;
+  if (!isNonEmptyString(url)) {
+    return res.status(400).json({ error: "url is required and must be a non-empty string" });
+  }
+  const signals = checkUrls(url);
+  res.json({ url, flagged: signals.length > 0, signals });
+});
+
+router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {
   const { sender } = req.body;
   if (!isNonEmptyString(sender)) {
     return res.status(400).json({ error: "sender is required and must be a non-empty string" });
