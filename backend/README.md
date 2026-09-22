@@ -91,16 +91,29 @@ wherever the backend runs (the VPS, or your own machine for local dev).
    For local dev where Ollama runs on the same machine as the backend, leave
    it as `http://localhost:11434` instead — no Tailscale needed in that case.
 
-7. **Fallback (optional):** set `FALLBACK_PROVIDER` (`anthropic` or `openai`)
-   and `FALLBACK_API_KEY` in `.env`, with `LLM_MODE=auto`, so the backend
-   fails over to a hosted API if Ollama is unreachable or times out
-   (`LLM_TIMEOUT_MS`, default 15s). Fallback stays inactive until a key is
-   set — never commit a real key, `.env` is gitignored.
+7. **Fallback (required before the demo, not optional polish):** set
+   `FALLBACK_PROVIDER` (`anthropic`, `openai`, or `openrouter`) and
+   `FALLBACK_API_KEY` in `.env`, with `LLM_MODE=auto`, so the backend fails
+   over to a hosted API if Ollama is unreachable or times out
+   (`LLM_TIMEOUT_MS`, default 15s). `openrouter` is a single key that can
+   route to many underlying models (set `OPENROUTER_MODEL`, default
+   `openai/gpt-4o-mini`) — a reasonable choice if a direct Anthropic/OpenAI
+   key isn't on hand. Fallback stays inactive until a key is set — never
+   commit a real key, `.env` is gitignored. After setting it, run
+   `npm run test:fallback` (see below) to confirm it actually works, on
+   whichever machine will run the backend during the demo.
 
 8. **Sanity-check before a demo:** `GET /health/llm` reports whether Ollama
    is reachable, the current `LLM_MODE`, and which provider would actually
    serve a request right now. Use it pre-demo only, not during the live demo
    flow.
+
+9. **Confirm the fallback actually fires:** `npm run test:fallback` forces
+   Ollama unreachable in-process (without touching `.env`) and fires a real
+   request through the fallback provider, printing PASS/FAIL and exit code
+   0/1. Run this on whichever machine is actually running the backend
+   during the demo — a passing run on a laptop doesn't confirm the VPS has
+   a working key.
 
 **The model-serving laptop must stay powered on, unlocked, and connected to
 Tailscale** for local inference to work — there's no automatic wake-up.

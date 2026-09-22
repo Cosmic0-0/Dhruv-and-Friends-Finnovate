@@ -5,6 +5,7 @@ const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const FALLBACK_PROVIDER = process.env.FALLBACK_PROVIDER || "anthropic";
 const FALLBACK_API_KEY = process.env.FALLBACK_API_KEY || "";
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 15000;
 const LLM_MODE = process.env.LLM_MODE || "auto"; // local | fallback | auto
 
@@ -68,7 +69,23 @@ async function callOpenAI(prompt, signal) {
   return data.choices?.[0]?.message?.content ?? "";
 }
 
-const FALLBACK_CALLERS = { anthropic: callAnthropic, openai: callOpenAI };
+async function callOpenRouter(prompt, signal) {
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${FALLBACK_API_KEY}` },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+    }),
+    signal,
+  });
+  if (!res.ok) throw new Error(`OpenRouter request failed: ${res.status}`);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+const FALLBACK_CALLERS = { anthropic: callAnthropic, openai: callOpenAI, openrouter: callOpenRouter };
 
 export async function callLLM(prompt) {
   if (LLM_MODE !== "fallback") {
