@@ -16,7 +16,13 @@ never reimplements `checkUrls()` locally, per the project rule.
 
 - `manifest.json` — MV3 manifest. `host_permissions` is pinned to
   `http://localhost:4000` (dev backend); update it alongside
-  `config.js#API_BASE_URL` for a deployed backend.
+  `config.js#API_BASE_URL` for a deployed backend. Only requests the `tabs`
+  permission (needed for the background worker to read `tab.url` on every
+  tab's navigate/activate, not just a user-invoked one) — a separate
+  `activeTab` grant was redundant since the popup only ever reads `tab.id`.
+- `icons/` — toolbar/popup icons, reused from `frontend/public/icons` (same
+  brand mark as the PWA) so the extension doesn't ship a generic
+  puzzle-piece icon during the demo.
 - `background.js` — service worker. On tab activate/navigate, reads the
   tab's URL and calls `/api/check-url`; sets a red badge (`!`) on the
   extension icon if the domain is flagged. Fails open (no badge, no verdict
