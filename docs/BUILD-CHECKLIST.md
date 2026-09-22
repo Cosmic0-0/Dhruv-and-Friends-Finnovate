@@ -4,23 +4,37 @@
 > 72-hour window. If Tailscale/laptop inference proves flaky under demo-like
 > conditions, switch to fallback-only for the submission and keep local inference
 > as an architecture talking point rather than a live dependency.
+>
+> **2026-09-22 update: this turned out backwards.** Local (Ollama) is the
+> RELIABLE path once `think:false` is set (see below) - the free-tier
+> OpenRouter fallback is the flaky one, because its reasoning mode is
+> mandatory and can't be disabled. If Tailscale/laptop inference is
+> reachable on demo day, prefer it; treat the fallback as the thing that
+> needs a backup plan, not the other way around.
 
 See [`JURY-EVALUATION.md`](./JURY-EVALUATION.md) for the full rubric these groups
 are weighted against.
 
 ## Implementation & Functionality — 35 marks
 - [x] Core message analysis working end-to-end (`POST /api/analyze`) —
-      verified 2026-09-22 live in a real browser: paste → verdict → full
-      structured result screen, through the actual (fallback) LLM path.
+      verified 2026-09-22 live in a real browser through BOTH LLM paths:
+      the fallback (see below) and, after fixing `think:true` in
+      `callOllama()` (`backend/src/services/analysis/llmClient.js`), the
+      real local Ollama model on actual GPU hardware — 12.2s end-to-end
+      for the full pipeline (was 48.6s with thinking mode on), correct
+      verdict, all structured signals present.
 - [ ] Fallback provider tested under simulated Tailscale/laptop failure —
       tested 2026-09-22, and it's WORKING but NOT reliable: `npm run
       test:fallback` against the real analyze prompt took 19.5s/27.4s/
       38.8s/43.8s across runs, and one run didn't finish inside 35s.
       `LLM_TIMEOUT_MS` raised 15000→60000 (see `backend/.env.example`) to
       stop it failing outright, but the free-tier model's reasoning
-      overhead is inherently unbounded — do not check this box until
-      either a faster/non-reasoning fallback model is found or the demo
-      plan explicitly accepts "up to ~60s per check if Ollama is down."
+      overhead is inherently unbounded and can't be disabled the way
+      Ollama's could — do not check this box until either a faster/
+      non-reasoning fallback model is found or the demo plan explicitly
+      accepts "up to ~60s per check if Ollama is down." The local path is
+      now the fast, reliable one (see above) — treat this as the backup
+      plan's own backup plan, not the primary safety net.
 - [ ] Batch scan functional (`POST /api/batch-scan`) — not exercised this
       session (would need several sequential LLM calls through the same
       unreliable free fallback tested above; not attempted to avoid
@@ -38,13 +52,16 @@ are weighted against.
       `/health` stayed green throughout.
 
 ## Innovation & Technical Excellence — 25 marks
-- [ ] Kreol dataset integrated and demonstrably working — the corpus is
-      now wired into the LLM prompt as grounding (2026-09-22,
-      `backend/src/services/analysis/kreolGrounding.js`) and unit-tested
-      with a mocked LLM, but "demonstrably working" against the REAL
-      model hasn't been checked — nobody has yet reviewed what an actual
-      Ollama/fallback response looks like for a Kreol message with
-      grounding applied, in either language quality or signal accuracy.
+- [x] Kreol dataset integrated and demonstrably working — the corpus is
+      wired into the LLM prompt as grounding (`backend/src/services/
+      analysis/kreolGrounding.js`), unit-tested with a mocked LLM, AND
+      verified 2026-09-22 against the real local model: a mfe+en
+      code-switched message ("Ou kont pou bloke azordi. Klik lor
+      mcb-secure.top...") through the real pipeline correctly returned
+      verdict scam, riskScore 95, all six signals including the new
+      IDENTITY_MISMATCH check. Not yet spot-checked: whether the
+      grounding block measurably changes output quality vs. without it
+      (no A/B run) — only that the grounded path itself works.
 - [x] Structured signal breakdown visible in UI output (not a single
       score) — verified 2026-09-22 live: a real scam check rendered 5
       distinct, titled, severity-tagged signal cards plus a separate Link
