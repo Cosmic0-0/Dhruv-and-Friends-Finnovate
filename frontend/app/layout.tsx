@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter } from "next/font/google";
+import { LanguageProvider } from "@/components/LanguageProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import TabBar from "@/components/TabBar";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -64,7 +66,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${fraunces.variable} ${inter.variable}`}>
       <body>
-        <div className="app-shell">{children}</div>
+        <LanguageProvider>
+          <div className="app-shell">{children}</div>
+          <TabBar />
+        </LanguageProvider>
         <ServiceWorkerRegister />
       </body>
     </html>

@@ -6,6 +6,10 @@
  * every user-facing message is authored here. Raw server error text (which
  * can contain internal LLM/provider details) is logged to the console only,
  * never returned for display.
+ *
+ * Failures are logged with console.warn, not console.error: they're handled
+ * and shown to the user, and Next's dev overlay flags every console.error as
+ * an "Issue" badge, which would appear mid-demo.
  */
 
 import type {
@@ -20,12 +24,17 @@ import type {
   Verdict,
 } from "./types";
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000").replace(/\/+$/, "");
+/**
+ * Requests go to same-origin `/api/*`; next.config.ts rewrites them to the
+ * backend (BACKEND_URL). The browser never makes a cross-origin call, so the
+ * backend needs no CORS and the app works from a phone on the LAN.
+ */
+const API_PREFIX = "/api";
 
 export type ApiErrorKind =
   | "validation" // 400: request rejected by backend validation
   | "llm_unavailable" // 502 (or other 5xx): analysis service failed
-  | "network" // backend unreachable / not running / CORS
+  | "network" // frontend server unreachable, or the /api proxy can't reach the backend
   | "timeout" // no response within the timeout
   | "aborted" // cancelled by the caller (e.g. user navigated away)
   | "unexpected"; // 2xx body that doesn't match the contract, or an unknown status
@@ -36,7 +45,19 @@ export interface ApiError {
   message: string;
   /** HTTP status when a response was received. */
   status?: number;
+  /** For kind "validation": which rule was broken, so the UI can show localized copy. */
+  reason?: ValidationReason;
 }
+
+export type ValidationReason =
+  | "message_empty"
+  | "message_too_long"
+  | "batch_empty"
+  | "batch_too_many"
+  | "batch_item_empty"
+  | "batch_item_too_long"
+  | "sender_empty"
+  | "invalid";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
@@ -75,21 +96,21 @@ const FRIENDLY = {
  * Backend 400 bodies are developer-worded; map the known ones to friendly
  * copy. Unknown strings fall back to a generic message.
  */
-const VALIDATION_MAP: Array<[RegExp, string]> = [
-  [/^message is required/i, FRIENDLY.messageEmpty],
-  [/^message exceeds maximum length/i, FRIENDLY.messageTooLong],
-  [/^messages must be a non-empty array/i, FRIENDLY.batchEmpty],
-  [/^messages exceeds maximum batch size/i, FRIENDLY.batchTooMany],
-  [/^every message in the batch must be a non-empty string/i, FRIENDLY.batchItemEmpty],
-  [/^every message must be 5000 characters or fewer/i, FRIENDLY.batchItemTooLong],
-  [/^sender is required/i, FRIENDLY.senderEmpty],
+const VALIDATION_MAP: Array<[RegExp, ValidationReason, string]> = [
+  [/^message is required/i, "message_empty", FRIENDLY.messageEmpty],
+  [/^message exceeds maximum length/i, "message_too_long", FRIENDLY.messageTooLong],
+  [/^messages must be a non-empty array/i, "batch_empty", FRIENDLY.batchEmpty],
+  [/^messages exceeds maximum batch size/i, "batch_too_many", FRIENDLY.batchTooMany],
+  [/^every message in the batch must be a non-empty string/i, "batch_item_empty", FRIENDLY.batchItemEmpty],
+  [/^every message must be 5000 characters or fewer/i, "batch_item_too_long", FRIENDLY.batchItemTooLong],
+  [/^sender is required/i, "sender_empty", FRIENDLY.senderEmpty],
 ];
 
-function friendlyValidation(raw: string | undefined): string {
+function friendlyValidation(raw: string | undefined): { reason: ValidationReason; message: string } {
   if (raw) {
-    for (const [pattern, copy] of VALIDATION_MAP) if (pattern.test(raw)) return copy;
+    for (const [pattern, reason, message] of VALIDATION_MAP) if (pattern.test(raw)) return { reason, message };
   }
-  return FRIENDLY.validationGeneric;
+  return { reason: "invalid", message: FRIENDLY.validationGeneric };
 }
 
 async function readErrorText(res: Response): Promise<string | undefined> {
@@ -102,8 +123,13 @@ async function readErrorText(res: Response): Promise<string | undefined> {
   return undefined;
 }
 
-function fail(kind: ApiErrorKind, message: string, status?: number): { ok: false; error: ApiError } {
-  return { ok: false, error: { kind, message, status } };
+function fail(
+  kind: ApiErrorKind,
+  message: string,
+  status?: number,
+  reason?: ValidationReason,
+): { ok: false; error: ApiError } {
+  return { ok: false, error: { kind, message, status, ...(reason ? { reason } : {}) } };
 }
 
 async function postJson<T>(
@@ -113,7 +139,7 @@ async function postJson<T>(
   isValid: (data: unknown) => data is T,
   callerSignal?: AbortSignal,
 ): Promise<ApiResult<T>> {
-  const url = `${API_BASE_URL}${path}`;
+  const url = `${API_PREFIX}${path}`;
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -149,7 +175,7 @@ async function postJson<T>(
     } catch (err) {
       const aborted = abortFailure();
       if (aborted) return aborted;
-      console.error(`[api] ${path} network error (is the backend running at ${API_BASE_URL}?)`, err);
+      console.warn(`[api] ${path} network error (is the frontend server reachable?)`, err);
       return fail("network", FRIENDLY.network);
     }
 
@@ -157,14 +183,23 @@ async function postJson<T>(
       const raw = await readErrorText(res);
       if (res.status === 400) {
         console.warn(`[api] ${path} 400:`, raw);
-        return fail("validation", friendlyValidation(raw), 400);
+        const { reason, message } = friendlyValidation(raw);
+        return fail("validation", message, 400, reason);
       }
       if (res.status >= 500) {
+        if (raw === undefined) {
+          // No JSON `{ error }` body means the backend never answered: the
+          // Next rewrite proxy couldn't reach it (backend down) or gave up.
+          console.warn(`[api] ${path} ${res.status} from the proxy: backend unreachable (check BACKEND_URL)`);
+          return res.status === 504
+            ? fail("timeout", FRIENDLY.timeout, 504)
+            : fail("network", FRIENDLY.network, res.status);
+        }
         // 502 carries raw LLM/provider error text: log only, never display.
-        console.error(`[api] ${path} ${res.status}:`, raw);
+        console.warn(`[api] ${path} ${res.status}:`, raw);
         return fail("llm_unavailable", FRIENDLY.llm, res.status);
       }
-      console.error(`[api] ${path} unexpected status ${res.status}:`, raw);
+      console.warn(`[api] ${path} unexpected status ${res.status}:`, raw);
       return fail("unexpected", FRIENDLY.unexpected, res.status);
     }
 
@@ -174,11 +209,11 @@ async function postJson<T>(
     } catch (err) {
       const aborted = abortFailure();
       if (aborted) return aborted;
-      console.error(`[api] ${path} returned a non-JSON body`, err);
+      console.warn(`[api] ${path} returned a non-JSON body`, err);
       return fail("unexpected", FRIENDLY.unexpected, res.status);
     }
     if (!isValid(data)) {
-      console.error(`[api] ${path} response did not match the contract`, data);
+      console.warn(`[api] ${path} response did not match the contract`, data);
       return fail("unexpected", FRIENDLY.unexpected, res.status);
     }
     return { ok: true, data };
@@ -266,7 +301,7 @@ function normaliseBatch(data: BatchScanResponse): ClientBatchScanResponse {
     const failed = r.explanation.startsWith(BATCH_FAILURE_PREFIX) && r.signals.length === 0;
     if (!failed) return { ...r, analysisFailed: false };
     failedCount++;
-    console.error("[api] /api/batch-scan item failed:", r.explanation);
+    console.warn("[api] /api/batch-scan item failed:", r.explanation);
     return { ...r, explanation: FRIENDLY.batchItemFailed, analysisFailed: true };
   });
   return { ...data, results, failedCount };

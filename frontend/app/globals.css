@@ -57,11 +57,17 @@
 }
 
 @layer base {
+  :root {
+    --tabbar-height: 4.25rem;
+  }
+
   html {
     background-color: var(--color-page);
     color: var(--color-ink-soft);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    /* Keep focused / scrolled-to elements clear of the fixed tab bar. */
+    scroll-padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
   }
 
   body {
@@ -110,7 +116,8 @@
     max-width: var(--container-app);
     min-height: 100dvh;
     padding-top: max(var(--spacing-gutter), env(safe-area-inset-top));
-    padding-bottom: max(var(--spacing-gutter), env(safe-area-inset-bottom));
+    /* Clear the fixed bottom tab bar (components/TabBar.tsx). */
+    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--spacing-section));
     padding-left: max(var(--spacing-gutter), env(safe-area-inset-left));
     padding-right: max(var(--spacing-gutter), env(safe-area-inset-right));
   }

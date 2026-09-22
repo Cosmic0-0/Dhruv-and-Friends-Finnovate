@@ -4,6 +4,7 @@
  * hardcoding verdict strings or colours.
  */
 
+import type { UiLanguage } from "./i18n";
 import type { AnalyzeResponse, Verdict } from "./types";
 
 export type VerdictTone = "danger" | "caution" | "safe";
@@ -95,4 +96,36 @@ export function getRiskDisplay(res: Pick<AnalyzeResponse, "riskScore">): RiskDis
     return { showScore: false };
   }
   return { showScore: true, score: Math.round(riskScore) };
+}
+
+/**
+ * Localized label + headline. English matches VERDICT_DISPLAY exactly; the
+ * Kreol strings need a review by the Kreol language owner before the demo.
+ */
+const VERDICT_COPY: Record<Verdict, Record<UiLanguage, { label: string; headline: string }>> = {
+  scam: {
+    en: { label: VERDICT_DISPLAY.scam.label, headline: VERDICT_DISPLAY.scam.headline },
+    fr: { label: "Probablement une arnaque", headline: "Ne payez pas, ne répondez pas et n'ouvrez aucun lien de ce message." },
+    kreol: { label: "Paret enn eskrokri", headline: "Pa pey, pa reponn ek pa klik okenn lien dan sa mesaz la." },
+  },
+  suspicious: {
+    en: { label: VERDICT_DISPLAY.suspicious.label, headline: VERDICT_DISPLAY.suspicious.headline },
+    fr: { label: "Soyez prudent", headline: "Certains éléments ne collent pas. Vérifiez avant d'agir." },
+    kreol: { label: "Fer atansion", headline: "Ena kiksoz ki pa kole. Verifie avan ou fer nanye." },
+  },
+  safe: {
+    en: { label: VERDICT_DISPLAY.safe.label, headline: VERDICT_DISPLAY.safe.headline },
+    fr: {
+      label: "Semble authentique",
+      headline: "Aucun signal d'alerte trouvé. S'il y a de l'argent en jeu, confirmez quand même par un canal officiel.",
+    },
+    kreol: {
+      label: "Paret bon",
+      headline: "Nou pa finn trouv okenn siny danze. Si ena larzan ladan, konfirm kan mem par enn kanal ofisiel.",
+    },
+  },
+};
+
+export function getVerdictCopy(verdict: Verdict, lang: UiLanguage): { label: string; headline: string } {
+  return VERDICT_COPY[verdict][lang];
 }
