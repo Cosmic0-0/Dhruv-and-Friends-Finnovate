@@ -19,6 +19,19 @@ app.get("/health/llm", async (_req, res) => {
   res.json({ reachable, activeProvider, ...status });
 });
 
+// Final error-handling middleware (must be 4-arg, and registered after every
+// route it's meant to catch, per Express's error-middleware rules). Without
+// this, a body that fails express.json() parsing (e.g. malformed JSON) falls
+// through to Express's default handler, which returns an HTML stack trace
+// with absolute filesystem paths — see data/test-payloads/FINDINGS.md #5.
+app.use((err, req, res, next) => {
+  if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
+    return res.status(400).json({ error: "invalid JSON body" });
+  }
+  console.error(err);
+  res.status(500).json({ error: "internal server error" });
+});
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`fraudlens-backend listening on :${port}`);
