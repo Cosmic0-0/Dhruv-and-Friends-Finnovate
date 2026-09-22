@@ -185,17 +185,30 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   // #6).
   const analyze = async (message) => {
     const urlSignals = checkUrls(message);
+    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(message));
     try {
       const result = await analyzeMessage(message);
+      attachAges();
+      // Same three additive, non-LLM checks as /api/analyze - see the
+      // comment there. Previously batch-scan skipped these; now matches.
       result.signals.push(...urlSignals);
+      result.signals.push(...checkIdentityConsistency(message));
+      result.riskCategories = computeRiskCategories(result.signals);
       return withSenderReports(result);
     } catch (err) {
+      // Same rationale as urlSignals above: identity-consistency and the
+      // risk-category rollup are both deterministic and don't depend on
+      // the LLM call that just failed, so they still run on the failure
+      // path rather than being silently dropped.
+      attachAges();
+      const signals = [...urlSignals, ...checkIdentityConsistency(message)];
       return {
         verdict: "unknown",
-        signals: urlSignals,
+        signals,
         suggestedAction: "verify_official_channel",
         explanation: `Analysis failed: ${err.message}`,
         analysisFailed: true,
+        riskCategories: computeRiskCategories(signals),
       };
     }
   };

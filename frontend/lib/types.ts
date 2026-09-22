@@ -13,8 +13,12 @@ export type Severity = "low" | "medium" | "high";
 /** Free-form hint passed straight into the LLM prompt; not validated server-side. */
 export type LanguageHint = "en" | "fr" | "kreol" | "mixed";
 
+export type SignalSource = "message_text" | "url_parser" | "community_reports" | "llm_analysis" | "identity_check";
+
+export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
+
 export interface Signal {
-  /** e.g. "sender_mismatch" | "urgency_language" | "lookalike_url" | "spoofed_identity" — free-form string */
+  /** e.g. "sender_mismatch" | "urgency_language" | "lookalike_url" | "spoofed_identity" | "IDENTITY_MISMATCH" — free-form string */
   type: string;
   description: string;
   severity: Severity;
@@ -22,6 +26,8 @@ export interface Signal {
   evidence?: string;
   /** OPTIONAL-FUTURE: age of a linked domain in days (lookalike_url signals). */
   domainAgeDays?: number;
+  /** OPTIONAL-FUTURE: where in the pipeline this signal came from. */
+  source?: SignalSource;
 }
 
 // ---- POST /api/analyze ----
@@ -45,6 +51,14 @@ export interface AnalyzeResponse {
   sender?: string;
   /** OPTIONAL-FUTURE: crowdsourced report count for `sender`. */
   senderReports?: number;
+  /** OPTIONAL-FUTURE: risk broken into categories, derived from `signals`. */
+  riskCategories?: {
+    identity_risk: RiskLevel;
+    behavioral_risk: RiskLevel;
+    payment_risk: RiskLevel;
+    technical_risk: RiskLevel;
+    verification_risk: RiskLevel;
+  };
 }
 
 // ---- POST /api/batch-scan ----

@@ -34,10 +34,17 @@ async function mapWithConcurrency(items, limit, fn) {
  * Runs analysis over a batch of messages and aggregates a summary.
  * `analyze` is injected (rather than imported from ../analysis directly)
  * so this stays testable and decoupled while that service is still in progress.
+ *
+ * Passes through EVERY field analyze() returns (not just verdict/signals/
+ * suggestedAction/explanation) - riskScore, sender, senderReports, and
+ * riskCategories were previously being silently dropped here even though
+ * the analyze() callback in routes/index.js already computed them, because
+ * this used to destructure only five known fields instead of spreading the
+ * whole result.
  * @param {string[]} messages
- * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam"|"unknown", signals: unknown[], suggestedAction: string, explanation: string, analysisFailed?: boolean }> }} deps
+ * @param {{ analyze: (message: string) => Promise<{ verdict: "safe"|"suspicious"|"scam"|"unknown", signals: unknown[], suggestedAction: string, explanation: string, analysisFailed?: boolean, [extra: string]: unknown }> }} deps
  * @param {number} [concurrency] max number of analyze() calls in flight at once (default 4)
- * @returns {Promise<{ results: Array<{ message: string, verdict: string, signals: unknown[], suggestedAction: string, explanation: string, analysisFailed: boolean }>, summary: { total: number, scamCount: number, suspiciousCount: number, safeCount: number, unanalyzedCount: number } }>}
+ * @returns {Promise<{ results: Array<{ message: string, verdict: string, signals: unknown[], suggestedAction: string, explanation: string, analysisFailed: boolean, [extra: string]: unknown }>, summary: { total: number, scamCount: number, suspiciousCount: number, safeCount: number, unanalyzedCount: number } }>}
  */
 export async function summarizeBatch(messages, { analyze }, concurrency = 4) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -54,8 +61,8 @@ export async function summarizeBatch(messages, { analyze }, concurrency = 4) {
     if (typeof message !== "string" || message.trim().length === 0) {
       throw new Error("summarizeBatch: each message must be a non-empty string");
     }
-    const { verdict, signals, suggestedAction, explanation, analysisFailed } = await analyze(message);
-    return { message, verdict, signals, suggestedAction, explanation, analysisFailed: Boolean(analysisFailed) };
+    const analyzed = await analyze(message);
+    return { message, ...analyzed, analysisFailed: Boolean(analyzed.analysisFailed) };
   });
 
   return {

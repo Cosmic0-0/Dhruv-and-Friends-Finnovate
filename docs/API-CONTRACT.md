@@ -27,10 +27,12 @@ Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 > `source` on `signals[]` comes from the shared `services/analysis` and
 > `services/domain-matching` modules, so it also appears on
 > `/api/analyze/screenshot` and `/api/batch-scan` results. `riskCategories`
-> and the new `IDENTITY_MISMATCH` evidence item (see below), however, are
-> currently wired into **`/api/analyze` only** — `/api/analyze/screenshot`
-> and `/api/batch-scan` do not yet compute either. That's a known gap, not
-> an oversight — see "Known Gaps" at the bottom of this document.
+> and the new `IDENTITY_MISMATCH` evidence item (see below) are now also
+> computed on **`/api/batch-scan`** (2026-09-22 — see Known Gaps for the
+> `summarizeBatch()` field-passthrough bug this required fixing alongside
+> it), but are still **not** computed on `/api/analyze/screenshot`. That's
+> a known gap, not an oversight — see "Known Gaps" at the bottom of this
+> document.
 
 ### Request
 
@@ -378,19 +380,30 @@ Flagging these so Oleg/Dhruv/extension know what's stable to build against
 versus what's likely to change before the demo:
 
 - **`riskCategories` and `IDENTITY_MISMATCH`/`identity_check` evidence are
-  only computed on `/api/analyze`** — `/api/analyze/screenshot` and
-  `/api/batch-scan` still run OCR/batch-summary logic that was explicitly
-  out of scope for this change, so their results have no `riskCategories`
-  field and never include an `IDENTITY_MISMATCH` signal, even though
-  `signals[].source` (the other part of this same change) does appear on
-  all three routes since it comes from the shared `services/analysis` /
-  `services/domain-matching` modules. If OCR/batch scan need the same
-  categories and identity check, that's follow-up work for whoever owns
-  those routes, wiring in `computeRiskCategories()`
+  computed on `/api/analyze` and `/api/batch-scan`, but still NOT on
+  `/api/analyze/screenshot`** (2026-09-22) — the screenshot route still
+  runs OCR + the original analyze path only, out of scope for this
+  change. `signals[].source` (the other part of this same change) does
+  appear on all three routes since it comes from the shared
+  `services/analysis` / `services/domain-matching` modules. If OCR needs
+  the same categories and identity check, wire in `computeRiskCategories()`
   (`backend/src/services/risk-categories/index.js`) and
   `checkIdentityConsistency()`
-  (`backend/src/services/identity-consistency/index.js`) the same way
-  `/api/analyze` does in `backend/src/routes/index.js`.
+  (`backend/src/services/identity-consistency/index.js`) into
+  `/api/analyze/screenshot`'s handler the same way `/api/analyze` and
+  `/api/batch-scan` now do in `backend/src/routes/index.js`.
+- **Extending `/api/batch-scan` to compute these (2026-09-22) surfaced a
+  real, pre-existing bug**: `summarizeBatch()`
+  (`backend/src/services/batch/index.js`) was destructuring only five
+  known fields (`verdict`/`signals`/`suggestedAction`/`explanation`/
+  `analysisFailed`) off whatever the `analyze()` callback returned and
+  rebuilding a new object from just those — silently dropping `riskScore`,
+  `sender`, and `senderReports` from every batch result even before this
+  session's changes existed, and would have dropped the new
+  `riskCategories` too. Fixed to spread the full result through instead.
+  Batch results now carry the same fields single-message `/api/analyze`
+  does (verified live: `riskScore`, `sender`, `senderReports`,
+  `riskCategories`, and `IDENTITY_MISMATCH` all present per-result).
 - **`/api/report`'s `message` and `reportedBy` fields are accepted in the
   request shape but silently ignored** — nothing is persisted beyond the
   `sender` string and its report count (`backend/src/db/index.js` only has a
