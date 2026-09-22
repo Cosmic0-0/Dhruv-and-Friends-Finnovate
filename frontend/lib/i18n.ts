@@ -57,12 +57,6 @@ export interface Copy {
   };
   relativeTime: (ms: number) => string;
   tabs: { check: string; learn: string; trends: string };
-  learn: {
-    title: string;
-    intro: string;
-    /** One concrete local example per signal kind, shown under its (already localized) result.signalTitles heading. */
-    examples: Record<SignalKind, string>;
-  };
   trends: {
     title: string;
     intro: string;
@@ -320,25 +314,6 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
     tabs: { check: "Check", learn: "Learn", trends: "Trends" },
-    learn: {
-      title: "Learn the warning signs",
-      intro: "FraudLens checks every message for eight kinds of warning signs. Here's what each one looks like.",
-      examples: {
-        spoofed_identity:
-          "A text claiming to be from MCB, SBM, Absa, Bank One, My.t or Emtel, sent from an ordinary mobile number instead of the bank or operator's real short code.",
-        sender_mismatch: "The number or name sending the message doesn't match who it says it is.",
-        urgency_language:
-          '"Act within 30 minutes or your account will be blocked" — real banks don\'t threaten to close your account by SMS.',
-        credential_request:
-          '"Reply with the OTP we just sent you" — your bank or telecom operator will never ask you to send a one-time code back.',
-        payment_request:
-          '"Pay a small fee to release your prize or unlock your account" — a real prize or refund never asks you to pay first.',
-        prize_offer: '"Congratulations! You\'ve won Rs 50,000" from a competition or promotion you never entered.',
-        secrecy: '"Don\'t tell anyone, including bank staff, about this" — a genuine institution never asks you to hide a transaction.',
-        lookalike_url:
-          "A link like mcb-secure.top or sbm.mu-login.com — close enough to fool a glance, but not the bank's real domain.",
-      },
-    },
     trends: {
       title: "Known scam patterns in Mauritius",
       intro:
@@ -411,25 +386,6 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
     tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances" },
-    learn: {
-      title: "Reconnaître les signaux d'alerte",
-      intro: "FraudLens vérifie chaque message selon huit types de signaux d'alerte. Voici à quoi ressemble chacun d'eux.",
-      examples: {
-        spoofed_identity:
-          "Un SMS qui prétend venir de MCB, SBM, Absa, Bank One, My.t ou Emtel, mais envoyé depuis un numéro de mobile ordinaire au lieu du vrai numéro court de la banque ou de l'opérateur.",
-        sender_mismatch: "Le numéro ou le nom qui envoie le message ne correspond pas à celui qu'il prétend être.",
-        urgency_language:
-          "« Agissez dans les 30 minutes ou votre compte sera bloqué » — une vraie banque ne menace jamais de fermer votre compte par SMS.",
-        credential_request:
-          "« Répondez avec le code reçu à l'instant » — votre banque ou votre opérateur ne vous demandera jamais de renvoyer un code à usage unique.",
-        payment_request:
-          "« Payez de petits frais pour débloquer votre prix ou votre compte » — un vrai prix ou remboursement ne demande jamais de payer d'abord.",
-        prize_offer: "« Félicitations ! Vous avez gagné Rs 50 000 » pour un concours ou une promotion à laquelle vous n'avez jamais participé.",
-        secrecy: "« N'en parlez à personne, même pas au personnel de la banque » — une vraie institution ne vous demande jamais de cacher une opération.",
-        lookalike_url:
-          "Un lien comme mcb-secure.top ou sbm.mu-login.com — assez proche pour tromper au premier coup d'œil, mais ce n'est pas le vrai domaine de la banque.",
-      },
-    },
     trends: {
       title: "Arnaques connues à Maurice",
       intro:
@@ -615,25 +571,6 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
     tabs: { check: "Verifie", learn: "Aprann", trends: "Tandans" },
-    learn: {
-      title: "Aprann rekonet bann siny",
-      intro: "FraudLens verifie sak mesaz pou uit kalite siny danze. Isi seki sakenn ete.",
-      examples: {
-        spoofed_identity:
-          "Enn mesaz ki dir li sorti kot MCB, SBM, Absa, Bank One, My.t ouswa Emtel, me li sorti dan enn nimero mobil ordiner, pa lor vre nimero kourt labank ouswa operater la.",
-        sender_mismatch: "Nimero ouswa nom ki avoy mesaz la pa korespond ar seki li dir li ete.",
-        urgency_language:
-          "\"Fer li dan 30 minit sinon nou blok ou kont\" — enn vre labank pa menas ferm ou kont par SMS.",
-        credential_request:
-          "\"Reponn ar kod ki nou fek avoy ou\" — ou labank ouswa operater pa pou zame dimann ou avoy enn kod itilizasion inik.",
-        payment_request:
-          "\"Pey enn ti fre pou debloke ou pri ouswa ou kont\" — enn vre pri ouswa ranboursman pa zame dimann ou pey avan.",
-        prize_offer: "\"Felisitasion! Ou finn gagn Rs 50 000\" pou enn konkour ouswa promosion ki ou pa finn zame partisipe.",
-        secrecy: "\"Pa dir personn, mem staf labank\" — enn vre lorganizasion pa zame dimann ou kasiet enn transaksion.",
-        lookalike_url:
-          "Enn lien parey kouma mcb-secure.top ouswa sbm.mu-login.com — asez pros pou tronp enn regar rapid, me se pa vre domenn labank la.",
-      },
-    },
     trends: {
       title: "Bann eskrokri konplet dan Moris",
       intro:
