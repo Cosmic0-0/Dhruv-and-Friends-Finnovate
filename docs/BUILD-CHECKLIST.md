@@ -35,10 +35,15 @@ are weighted against.
       accepts "up to ~60s per check if Ollama is down." The local path is
       now the fast, reliable one (see above) — treat this as the backup
       plan's own backup plan, not the primary safety net.
-- [ ] Batch scan functional (`POST /api/batch-scan`) — not exercised this
-      session (would need several sequential LLM calls through the same
-      unreliable free fallback tested above; not attempted to avoid
-      burning more rate-limited free-tier budget).
+- [x] Batch scan functional (`POST /api/batch-scan`) — verified 2026-09-22
+      live through the real local model (4-message batch: 2 scam/1
+      suspicious/1 safe, correct verdicts and summary counts, 0
+      unanalyzed, ~30s total at concurrency 4). Also surfaced and fixed a
+      real bug in the process: `summarizeBatch()` was silently dropping
+      `riskScore`/`sender`/`senderReports` from every result (pre-existing,
+      unrelated to today's other changes) — see `docs/API-CONTRACT.md`
+      Known Gaps. Batch results now carry full parity with `/api/analyze`
+      (`riskCategories`, `IDENTITY_MISMATCH`, everything).
 - [ ] OCR ingestion functional (screenshot upload → extracted text →
       analysis) — backend route exists and is unit-tested, but the
       frontend upload button is still disabled ("coming soon" —
