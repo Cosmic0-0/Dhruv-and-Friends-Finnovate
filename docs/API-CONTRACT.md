@@ -55,7 +55,8 @@ LLM prompt as a hint string.
       "description": "string",
       "severity": "low" | "medium" | "high",
       "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()/checkIdentityConsistency()-appended signals never set it.",
-      "source": "\"message_text\" | \"url_parser\" | \"community_reports\" | \"llm_analysis\" | \"identity_check\" — NEW field, where in the pipeline this signal came from. See below."
+      "source": "\"message_text\" | \"url_parser\" | \"community_reports\" | \"llm_analysis\" | \"identity_check\" — NEW field, where in the pipeline this signal came from. See below.",
+      "domainAgeDays": "number, optional — registered-domain age in days for a lookalike_url signal's host, from a live RDAP lookup (backend/src/services/domain-age/index.js). Best-effort and non-blocking: capped at a 1.5s timeout, wrapped in try/catch, and cached 24h per domain (backend/src/db/index.js) — omitted entirely (not null/0) on any failure, timeout, or if it simply didn't resolve before the response was ready. Never a dependency of the core verdict; only ever set on lookalike_url signals."
     }
   ],
   "suggestedAction": "string, free-form (not an enforced enum)",
@@ -75,7 +76,10 @@ claimed-identity/domain/beneficiary mismatch is appended as a
 `type: "IDENTITY_MISMATCH"` signal, independent of what the LLM returned.
 `riskScore`/`sender`/`evidence` are LLM-supplied and best-effort: a malformed
 or missing value is silently omitted, it never fails the request
-(`backend/src/services/analysis/index.js`).
+(`backend/src/services/analysis/index.js`). `domainAgeDays` is best-effort
+for a different reason — it's an external network dependency (RDAP), not an
+LLM field — but the guarantee is the same: its absence never means anything
+went wrong with the rest of the response.
 
 #### `signals[].source` (NEW)
 

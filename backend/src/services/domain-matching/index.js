@@ -18,10 +18,14 @@ export const BRAND_DOMAIN_MAP = {
 
 export const LEGIT_DOMAINS = Object.values(BRAND_DOMAIN_MAP);
 
-// Brand tokens checked as hostname substrings, independent of the
-// Levenshtein distance check below — catches prefix/suffix phishing
-// patterns like mcb-secure.top that a distance-2 threshold misses
-// (see data/test-payloads/FINDINGS.md #3).
+// Brand tokens checked against whole hostname labels (split on "." and
+// "-"), independent of the Levenshtein distance check below — catches
+// prefix/suffix phishing patterns like mcb-secure.top that a distance-2
+// threshold misses (see data/test-payloads/FINDINGS.md #3). Matching must
+// be label-exact, not `host.includes(token)`: a raw substring check flags
+// unrelated domains that merely contain a token's letters in sequence,
+// e.g. mythology-store.com ("myt"), absalom-books.com ("absa"), and
+// sbmarketing.co.uk ("sbm") (see FINDINGS.md #10).
 export const BRAND_TOKENS = Object.keys(BRAND_DOMAIN_MAP);
 
 // Requires a final all-alpha "TLD-like" label of 2-10 chars so scheme-less
@@ -43,10 +47,11 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
-// Extracts hostnames from any URL-shaped substrings in the message.
-// Exported so other deterministic (non-LLM) checks — e.g.
-// services/identity-consistency — can reuse this exact extraction instead
-// of reimplementing URL/domain parsing.
+// Extracts hostnames from any URL-shaped substrings in the message — legit
+// or not, unfiltered. Exported so other deterministic (non-LLM) checks —
+// e.g. services/identity-consistency, which needs to compare a claimed
+// identity's expected domain against ANY linked host, not just lookalikes —
+// can reuse this exact extraction instead of reimplementing URL parsing.
 export function extractHostnames(message) {
   const urls = message.match(URL_PATTERN) || [];
   const hostnames = [];
@@ -61,25 +66,30 @@ export function extractHostnames(message) {
   return hostnames;
 }
 
-export function checkUrls(message) {
-  const hostnames = extractHostnames(message);
-  const signals = [];
-  for (const host of hostnames) {
+// Shared by checkUrls() and extractLookalikeHosts() so the host used for the
+// (optional, separately-enriched) domainAgeDays lookup can never drift out
+// of sync with which URLs actually got flagged.
+function findLookalikes(message) {
+  const found = [];
+  for (const host of extractHostnames(message)) {
     if (LEGIT_DOMAINS.includes(host)) continue;
 
     const closest = LEGIT_DOMAINS.find((d) => levenshtein(host, d) <= 2);
-    const brandToken = BRAND_TOKENS.find((token) => host.includes(token));
+    const labels = host.split(/[.-]/);
+    const brandToken = BRAND_TOKENS.find((token) => labels.includes(token));
 
     // Either check firing should produce exactly one signal per URL.
     if (closest) {
-      signals.push({
+      found.push({
+        host,
         type: "lookalike_url",
         description: `${host} closely resembles legitimate domain ${closest}`,
         severity: "high",
         source: "url_parser",
       });
     } else if (brandToken) {
-      signals.push({
+      found.push({
+        host,
         type: "lookalike_url",
         description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
         severity: "high",
@@ -87,5 +97,16 @@ export function checkUrls(message) {
       });
     }
   }
-  return signals;
+  return found;
+}
+
+export function checkUrls(message) {
+  return findLookalikes(message).map(({ host, ...signal }) => signal);
+}
+
+// Same hosts, same order, as the signals checkUrls() returns for this
+// message - used to zip a best-effort domainAgeDays onto each signal
+// without checkUrls() itself gaining an LLM-adjacent async dependency.
+export function extractLookalikeHosts(message) {
+  return findLookalikes(message).map((f) => f.host);
 }
