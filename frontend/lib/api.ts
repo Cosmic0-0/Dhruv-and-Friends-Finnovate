@@ -226,6 +226,10 @@ async function postJson<T>(
 // ---- Runtime shape guards (keep the UI from rendering a malformed verdict) ----
 
 const VERDICTS: readonly unknown[] = ["safe", "suspicious", "scam"] satisfies Verdict[];
+// Batch results can also carry "unknown" for a per-message analysis
+// failure - a value /api/analyze itself never returns (see
+// BatchScanResult.verdict in ./types).
+const BATCH_VERDICTS: readonly unknown[] = [...VERDICTS, "unknown"];
 const SEVERITIES: readonly unknown[] = ["low", "medium", "high"];
 
 function isObj(v: unknown): v is Record<string, unknown> {
@@ -242,19 +246,16 @@ function isSignal(v: unknown): v is Signal {
   return isObj(v) && isStr(v.type) && isStr(v.description) && SEVERITIES.includes(v.severity);
 }
 
+function hasAnalysisShape(v: Record<string, unknown>): boolean {
+  return Array.isArray(v.signals) && v.signals.every(isSignal) && isStr(v.suggestedAction) && isStr(v.explanation);
+}
+
 function isAnalyzeResponse(v: unknown): v is AnalyzeResponse {
-  return (
-    isObj(v) &&
-    VERDICTS.includes(v.verdict) &&
-    Array.isArray(v.signals) &&
-    v.signals.every(isSignal) &&
-    isStr(v.suggestedAction) &&
-    isStr(v.explanation)
-  );
+  return isObj(v) && VERDICTS.includes(v.verdict) && hasAnalysisShape(v);
 }
 
 function isBatchScanResult(v: unknown): v is BatchScanResult {
-  return isAnalyzeResponse(v) && isStr((v as unknown as Record<string, unknown>).message);
+  return isObj(v) && BATCH_VERDICTS.includes(v.verdict) && hasAnalysisShape(v) && isStr(v.message);
 }
 
 function isBatchScanResponse(v: unknown): v is BatchScanResponse {

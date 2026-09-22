@@ -54,7 +54,14 @@ export interface BatchScanRequest {
   messages: string[];
 }
 
-export interface BatchScanResult extends AnalyzeResponse {
+export interface BatchScanResult extends Omit<AnalyzeResponse, "verdict"> {
+  /**
+   * "unknown" only appears here, never from /api/analyze directly - it's a
+   * batch-only synthesized value for a per-message analysis failure (paired
+   * with analysisFailed: true), so it never appears in scamCount/
+   * suspiciousCount/safeCount (see BatchScanSummary.unanalyzedCount).
+   */
+  verdict: Verdict | "unknown";
   /** Echoed back from the request. */
   message: string;
   /** True when analysis failed and the result was synthesized (contract on main; optional until merged). */

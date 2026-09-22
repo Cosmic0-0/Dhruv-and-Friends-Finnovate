@@ -33,18 +33,24 @@ LLM prompt as a hint string.
     {
       "type": "string, e.g. \"sender_mismatch\" | \"urgency_language\" | \"lookalike_url\" | \"spoofed_identity\"",
       "description": "string",
-      "severity": "low" | "medium" | "high"
+      "severity": "low" | "medium" | "high",
+      "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()-appended lookalike_url signals never set it."
     }
   ],
   "suggestedAction": "string, free-form (not an enforced enum)",
-  "explanation": "string, localized to the input language"
+  "explanation": "string, localized to the input language",
+  "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range.",
+  "sender": "string, optional — identity the message claims to be from (phone number, short code, or name), as extracted by the LLM. Omitted if none was apparent.",
+  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present."
 }
 ```
 
 `signals` is the union of the LLM's structured output and the non-LLM
 domain-matching check (`checkUrls`) — any lookalike URL found in the message
 is appended as an additional `type: "lookalike_url"` signal, independent of
-what the LLM returned.
+what the LLM returned. `riskScore`/`sender`/`evidence` are LLM-supplied and
+best-effort: a malformed or missing value is silently omitted, it never
+fails the request (`backend/src/services/analysis/index.js`).
 
 ### Errors
 
@@ -52,7 +58,8 @@ what the LLM returned.
 |---|---|---|
 | `400` | `{ "error": "message is required and must be a non-empty string" }` | `message` missing, not a string, or empty/whitespace-only |
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
-| `502` | `{ "error": "<message>" }` | LLM call failed (Ollama and fallback both unreachable/erroring), LLM returned invalid JSON, or LLM output failed schema validation. `<message>` is the raw error string, e.g. `"LLM returned invalid JSON"`, `"LLM output failed schema validation"`, `"LLM unreachable and no fallback provider configured"`. |
+| `502` | `{ "error": "analysis failed, try again shortly" }` | LLM call failed (Ollama and fallback both unreachable/erroring), LLM returned invalid JSON, or LLM output failed schema validation. The real error is logged server-side (`console.error`), never returned to the client (`backend/src/routes/index.js`). |
+| `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
 
 ## `POST /api/analyze/screenshot`
 
@@ -80,15 +87,19 @@ WEBP, regardless of anything the client claims.
 {
   "extractedText": "string — cleaned OCR output that was actually analyzed",
   "verdict": "safe" | "suspicious" | "scam",
-  "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high" } ],
+  "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high", "evidence": "string, optional" } ],
   "suggestedAction": "string, free-form (not an enforced enum)",
-  "explanation": "string, localized to the input language"
+  "explanation": "string, localized to the input language",
+  "riskScore": "number, optional — see /api/analyze",
+  "sender": "string, optional — see /api/analyze",
+  "senderReports": "number, optional — see /api/analyze"
 }
 ```
 
-Same `verdict`/`signals`/`suggestedAction`/`explanation` shape as
-`/api/analyze`, with `extractedText` added so the UI can show what OCR read
-before/alongside the verdict — useful if OCR misreads part of the image.
+Same `verdict`/`signals`/`suggestedAction`/`explanation`/`riskScore`/`sender`/
+`senderReports` shape as `/api/analyze`, with `extractedText` added so the UI
+can show what OCR read before/alongside the verdict — useful if OCR misreads
+part of the image.
 
 ### Errors
 
@@ -100,8 +111,9 @@ before/alongside the verdict — useful if OCR misreads part of the image.
 | `400` | `{ "error": "image must be a valid PNG, JPEG, or WEBP file (checked by content, not the declared type)" }` | magic-byte sniff doesn't match PNG/JPEG/WEBP |
 | `400` | `{ "error": "no readable text was found in the image" }` | OCR ran but returned empty/whitespace-only text |
 | `400` | `{ "error": "extracted text exceeds maximum length of 5000 characters" }` | OCR text is longer than `/api/analyze`'s message cap — request is rejected, not truncated, since silently truncating could change the analysis without the caller knowing |
-| `502` | `{ "error": "OCR failed: <message>" }` | the tesseract.js worker itself threw |
-| `502` | `{ "error": "<message>" }` | same LLM-failure cases as `/api/analyze`, once OCR has already succeeded |
+| `502` | `{ "error": "OCR failed, try again shortly" }` | the tesseract.js worker itself threw. The real error is logged server-side, never returned to the client. |
+| `502` | `{ "error": "analysis failed, try again shortly" }` | same LLM-failure cases as `/api/analyze`, once OCR has already succeeded |
+| `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (shares the 20 req/15min bucket with `/api/analyze`) |
 
 ## `POST /api/batch-scan`
 
@@ -120,11 +132,14 @@ before/alongside the verdict — useful if OCR misreads part of the image.
   "results": [
     {
       "message": "string — echoed back from the request",
-      "verdict": "safe" | "suspicious" | "scam",
-      "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high" } ],
+      "verdict": "safe" | "suspicious" | "scam" | "unknown",
+      "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high", "evidence": "string, optional" } ],
       "suggestedAction": "string",
       "explanation": "string",
-      "analysisFailed": "boolean — true if this message's LLM analysis failed and the result below was synthesized as a fallback; always present, never omitted"
+      "analysisFailed": "boolean — true if this message's LLM analysis failed and the result below was synthesized as a fallback; always present, never omitted",
+      "riskScore": "number, optional — see /api/analyze; never present when analysisFailed is true",
+      "sender": "string, optional — see /api/analyze; never present when analysisFailed is true",
+      "senderReports": "number, optional — see /api/analyze; never present when analysisFailed is true"
     }
   ],
   "summary": {
@@ -132,7 +147,7 @@ before/alongside the verdict — useful if OCR misreads part of the image.
     "scamCount": "number",
     "suspiciousCount": "number",
     "safeCount": "number",
-    "unanalyzedCount": "number — count of results where analysisFailed is true; purely additive, does not change scamCount/suspiciousCount/safeCount semantics"
+    "unanalyzedCount": "number — count of results where analysisFailed is true (verdict: \"unknown\"); purely additive, does not overlap scamCount/suspiciousCount/safeCount"
   }
 }
 ```
@@ -144,7 +159,7 @@ message's result is instead synthesized as:
 ```json
 {
   "message": "<original message>",
-  "verdict": "suspicious",
+  "verdict": "unknown",
   "signals": [ /* still includes any lookalike_url signals from checkUrls() */ ],
   "suggestedAction": "verify_official_channel",
   "explanation": "Analysis failed: <error message>",
@@ -155,12 +170,14 @@ message's result is instead synthesized as:
 `checkUrls()` (the deterministic, non-LLM domain-matching check) now runs
 **before** the LLM call for each message, so it's included in the result
 whether or not the LLM call succeeds — a lookalike URL is still surfaced
-even during a total LLM outage. `verdict` stays `"suspicious"` in the
-failure case for backward compatibility (existing `scamCount`/
-`suspiciousCount`/`safeCount` semantics are unchanged), but `analysisFailed`
-and the summary's `unanalyzedCount` now give the frontend an explicit,
-non-inferred way to distinguish "we analyzed this and it looked suspicious"
-from "we couldn't analyze this at all."
+even during a total LLM outage. `verdict` is `"unknown"` in the failure
+case — a dedicated fourth value, distinct from the three real outcomes, so
+a failed analysis can never inflate `scamCount`/`suspiciousCount`/
+`safeCount` (`buildSummary` in `backend/src/services/batch/index.js` only
+tallies `"safe"|"suspicious"|"scam"`). `analysisFailed` and the summary's
+`unanalyzedCount` remain the explicit, non-inferred signal for "we couldn't
+analyze this at all" — `verdict: "unknown"` is consistent with that, not a
+second source of truth.
 
 ### Errors
 
@@ -170,6 +187,7 @@ from "we couldn't analyze this at all."
 | `400` | `{ "error": "messages exceeds maximum batch size of 50" }` | `messages.length > 50` |
 | `400` | `{ "error": "every message in the batch must be a non-empty string" }` | any item is not a string, or empty/whitespace-only |
 | `400` | `{ "error": "every message must be 5000 characters or fewer" }` | any item exceeds 5000 characters |
+| `429` | `{ "error": "too many batch-scan requests, try again shortly" }` | per-IP rate limit exceeded (10 req/15min) |
 
 There is no top-level 5xx for this route — LLM failures are absorbed
 per-message as described above.
@@ -201,6 +219,7 @@ per-message as described above.
 | Status | Body | When |
 |---|---|---|
 | `400` | `{ "error": "sender is required and must be a non-empty string" }` | `sender` missing, not a string, or empty/whitespace-only |
+| `429` | `{ "error": "too many report submissions from this address, try again later" }` | per-IP rate limit exceeded (5 req/hour — deliberately tighter than the other routes, see checklist.md "Add bot protection") |
 
 **Normalization note (no shape change):** `reportCount` now deduplicates
 internally via a normalized, digits-only canonical key (`backend/src/db/index.js`),
@@ -245,6 +264,7 @@ above, not a silent break.
 | Status | Body | When |
 |---|---|---|
 | `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
+| `429` | `{ "error": "too many check-url requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min) |
 
 ## `GET /health/llm`
 
@@ -277,15 +297,18 @@ versus what's likely to change before the demo:
   `sender` string and its report count (`backend/src/db/index.js` only has a
   `reports(sender, report_count)` table). If the crowdsourced feed needs to
   show reported message content later, this will change.
-- **`/api/batch-scan` still reports `verdict: "suspicious"` for a per-message
-  analysis failure**, for backward compatibility with existing
-  `scamCount`/`suspiciousCount`/`safeCount` consumers — the `VERDICTS` enum
-  (`backend/src/services/analysis/index.js`) still only has
-  `safe | suspicious | scam`, no dedicated `unknown`/`error` state. However,
-  each result now also carries `analysisFailed: boolean`, and the summary
-  carries `unanalyzedCount`, so the frontend has an explicit, supported way
-  to distinguish "we think this is suspicious" from "we couldn't analyze
-  this" without a `verdict` schema change.
+- **`/api/batch-scan` now reports a dedicated `verdict: "unknown"` for a
+  per-message analysis failure** (was `"suspicious"`) — `signals[].verdict`
+  can be `safe | suspicious | scam | unknown` for this route specifically;
+  `/api/analyze`'s `VERDICTS` (`backend/src/services/analysis/index.js`) is
+  unchanged at `safe | suspicious | scam`, since the LLM itself never
+  produces `"unknown"` — only the batch failure-synthesis path in
+  `backend/src/routes/index.js` does. `analysisFailed: boolean` and the
+  summary's `unanalyzedCount` are unchanged and remain the authoritative
+  signal; `verdict: "unknown"` is consistent with them, not a second source
+  of truth. Frontend types/`api.ts` runtime validation
+  (`frontend/lib/types.ts`, `frontend/lib/api.ts`) were updated to accept
+  `"unknown"` on `BatchScanResult.verdict` only.
 - **`suggestedAction` is a free-form string, not an enforced enum** — the
   LLM is prompted with examples (`block_sender`, `report_to_bank`,
   `verify_official_channel`) but nothing validates the value it returns

@@ -4,7 +4,7 @@ import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
-import { reportSender, saveBatchHistory } from "../db/index.js";
+import { reportSender, saveBatchHistory, getReportCount } from "../db/index.js";
 
 export const router = Router();
 
@@ -69,6 +69,16 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+// Looks up the crowdsourced report count for the LLM-extracted `sender`
+// (see services/analysis/index.js). Only attached when a sender was
+// identified - senderReports is meaningless without a sender to key on.
+function withSenderReports(result) {
+  if (typeof result.sender === "string") {
+    result.senderReports = getReportCount(result.sender);
+  }
+  return result;
+}
+
 router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
   const { message, language } = req.body;
   if (!isNonEmptyString(message)) {
@@ -80,7 +90,7 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   try {
     const result = await analyzeMessage(message, language);
     result.signals.push(...checkUrls(message));
-    res.json(result);
+    res.json(withSenderReports(result));
   } catch (err) {
     console.error(err);
     res.status(502).json({ error: "analysis failed, try again shortly" });
@@ -124,7 +134,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   try {
     const result = await analyzeMessage(extractedText, language);
     result.signals.push(...checkUrls(extractedText));
-    res.json({ extractedText, ...result });
+    res.json({ extractedText, ...withSenderReports(result) });
   } catch (err) {
     console.error(err);
     res.status(502).json({ error: "analysis failed, try again shortly" });
@@ -152,19 +162,22 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   // checkUrls() is computed BEFORE the try so it's still included on the
   // failure path — it's pure, deterministic, and needs no LLM, so an LLM
   // outage shouldn't discard a confirmed lookalike-URL signal (see
-  // data/test-payloads/FINDINGS.md #7). The failure branch also sets
-  // analysisFailed: true so the summary can report an explicit
-  // unanalyzedCount instead of the outage being indistinguishable from a
-  // real "suspicious" verdict (see FINDINGS.md #6).
+  // data/test-payloads/FINDINGS.md #7). The failure branch uses a dedicated
+  // "unknown" verdict (not one of the three real safe/suspicious/scam
+  // outcomes) so a failed analysis can't inflate suspiciousCount in the
+  // summary — buildSummary() (services/batch/index.js) only tallies the
+  // three real verdicts, so "unknown" results are automatically excluded
+  // and counted solely via analysisFailed/unanalyzedCount (see FINDINGS.md
+  // #6).
   const analyze = async (message) => {
     const urlSignals = checkUrls(message);
     try {
       const result = await analyzeMessage(message);
       result.signals.push(...urlSignals);
-      return result;
+      return withSenderReports(result);
     } catch (err) {
       return {
-        verdict: "suspicious",
+        verdict: "unknown",
         signals: urlSignals,
         suggestedAction: "verify_official_channel",
         explanation: `Analysis failed: ${err.message}`,
