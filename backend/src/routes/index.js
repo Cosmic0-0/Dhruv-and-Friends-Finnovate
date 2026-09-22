@@ -1,14 +1,13 @@
 import { Router, json } from "express";
 import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
-import { summarizeBatch } from "../services/batch/index.js";
+import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { reportSender, saveBatchHistory } from "../db/index.js";
 
 export const router = Router();
 
 const MAX_MESSAGE_LENGTH = 5000;
-const MAX_BATCH_MESSAGES = 50;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB, before base64 overhead
 
 // Magic-byte signatures - the screenshot route never trusts a
@@ -97,8 +96,8 @@ router.post("/batch-scan", json({ limit: "300kb" }), async (req, res) => {
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "messages must be a non-empty array" });
   }
-  if (messages.length > MAX_BATCH_MESSAGES) {
-    return res.status(400).json({ error: `messages exceeds maximum batch size of ${MAX_BATCH_MESSAGES}` });
+  if (messages.length > MAX_BATCH_SIZE) {
+    return res.status(400).json({ error: `messages exceeds maximum batch size of ${MAX_BATCH_SIZE}` });
   }
   if (!messages.every(isNonEmptyString)) {
     return res.status(400).json({ error: "every message in the batch must be a non-empty string" });
@@ -109,17 +108,27 @@ router.post("/batch-scan", json({ limit: "300kb" }), async (req, res) => {
 
   // Never throws: a single message's analysis failure must not fail the
   // whole batch (see docs/API-CONTRACT.md — no top-level 5xx for this route).
+  //
+  // checkUrls() is computed BEFORE the try so it's still included on the
+  // failure path — it's pure, deterministic, and needs no LLM, so an LLM
+  // outage shouldn't discard a confirmed lookalike-URL signal (see
+  // data/test-payloads/FINDINGS.md #7). The failure branch also sets
+  // analysisFailed: true so the summary can report an explicit
+  // unanalyzedCount instead of the outage being indistinguishable from a
+  // real "suspicious" verdict (see FINDINGS.md #6).
   const analyze = async (message) => {
+    const urlSignals = checkUrls(message);
     try {
       const result = await analyzeMessage(message);
-      result.signals.push(...checkUrls(message));
+      result.signals.push(...urlSignals);
       return result;
     } catch (err) {
       return {
         verdict: "suspicious",
-        signals: [],
+        signals: urlSignals,
         suggestedAction: "verify_official_channel",
         explanation: `Analysis failed: ${err.message}`,
+        analysisFailed: true,
       };
     }
   };
