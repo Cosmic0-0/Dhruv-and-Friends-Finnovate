@@ -56,7 +56,18 @@ export interface Copy {
   };
   relativeTime: (ms: number) => string;
   tabs: { check: string; learn: string; trends: string };
-  placeholderPage: { learnTitle: string; trendsTitle: string; body: string };
+  learn: {
+    title: string;
+    intro: string;
+    /** One concrete local example per signal kind, shown under its (already localized) result.signalTitles heading. */
+    examples: Record<SignalKind, string>;
+  };
+  trends: {
+    title: string;
+    intro: string;
+    categories: { title: string; body: string; example: string }[];
+    footerNote: string;
+  };
   result: {
     title: string;
     fromSender: (sender: string) => string;
@@ -160,10 +171,48 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
     tabs: { check: "Check", learn: "Learn", trends: "Trends" },
-    placeholderPage: {
-      learnTitle: "Learn the warning signs",
-      trendsTitle: "Scam trends in Mauritius",
-      body: "This section is on its way.",
+    learn: {
+      title: "Learn the warning signs",
+      intro: "FraudLens checks every message for eight kinds of warning signs. Here's what each one looks like.",
+      examples: {
+        spoofed_identity:
+          "A text claiming to be from MCB, SBM, Absa, Bank One, My.t or Emtel, sent from an ordinary mobile number instead of the bank or operator's real short code.",
+        sender_mismatch: "The number or name sending the message doesn't match who it says it is.",
+        urgency_language:
+          '"Act within 30 minutes or your account will be blocked" — real banks don\'t threaten to close your account by SMS.',
+        credential_request:
+          '"Reply with the OTP we just sent you" — your bank or telecom operator will never ask you to send a one-time code back.',
+        payment_request:
+          '"Pay a small fee to release your prize or unlock your account" — a real prize or refund never asks you to pay first.',
+        prize_offer: '"Congratulations! You\'ve won Rs 50,000" from a competition or promotion you never entered.',
+        secrecy: '"Don\'t tell anyone, including bank staff, about this" — a genuine institution never asks you to hide a transaction.',
+        lookalike_url:
+          "A link like mcb-secure.top or sbm.mu-login.com — close enough to fool a glance, but not the bank's real domain.",
+      },
+    },
+    trends: {
+      title: "Known scam patterns in Mauritius",
+      intro:
+        "FraudLens doesn't have a live report feed yet, so this isn't a ranked trend chart — it's the scam formats reported often enough in Mauritius to be worth knowing by sight.",
+      categories: [
+        {
+          title: "Bank impersonation SMS",
+          body: "Messages posing as MCB, SBM, Absa Mauritius or Bank One, warning that your account is suspended or a transfer needs urgent confirmation.",
+          example: '"MCB Alert: Your account has been suspended. Verify now at mcb-secure.top"',
+        },
+        {
+          title: "Telecom prize scams",
+          body: "Fake My.t or Emtel messages claiming you've won data, airtime or cash, pushing you to click a link or call a premium number.",
+          example: '"Congratulations! Your number won Rs 25,000 from My.t. Claim now: myt-prize.win"',
+        },
+        {
+          title: "Mobile money fraud",
+          body: 'A caller posing as a mobile money agent asks for your PIN or OTP to "reverse" a wrong payment or "upgrade" your account.',
+          example: '"This is MCB Juice support. Share the OTP so we can cancel the wrong transfer."',
+        },
+      ],
+      footerNote:
+        'The closest thing to real trend data today: when you check a message, the result screen shows "reported by others" if that sender has been flagged before.',
     },
     result: {
       title: "Result",
@@ -281,10 +330,48 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
     tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances" },
-    placeholderPage: {
-      learnTitle: "Reconnaître les signaux d'alerte",
-      trendsTitle: "Tendances des arnaques à Maurice",
-      body: "Cette section arrive bientôt.",
+    learn: {
+      title: "Reconnaître les signaux d'alerte",
+      intro: "FraudLens vérifie chaque message selon huit types de signaux d'alerte. Voici à quoi ressemble chacun d'eux.",
+      examples: {
+        spoofed_identity:
+          "Un SMS qui prétend venir de MCB, SBM, Absa, Bank One, My.t ou Emtel, mais envoyé depuis un numéro de mobile ordinaire au lieu du vrai numéro court de la banque ou de l'opérateur.",
+        sender_mismatch: "Le numéro ou le nom qui envoie le message ne correspond pas à celui qu'il prétend être.",
+        urgency_language:
+          "« Agissez dans les 30 minutes ou votre compte sera bloqué » — une vraie banque ne menace jamais de fermer votre compte par SMS.",
+        credential_request:
+          "« Répondez avec le code reçu à l'instant » — votre banque ou votre opérateur ne vous demandera jamais de renvoyer un code à usage unique.",
+        payment_request:
+          "« Payez de petits frais pour débloquer votre prix ou votre compte » — un vrai prix ou remboursement ne demande jamais de payer d'abord.",
+        prize_offer: "« Félicitations ! Vous avez gagné Rs 50 000 » pour un concours ou une promotion à laquelle vous n'avez jamais participé.",
+        secrecy: "« N'en parlez à personne, même pas au personnel de la banque » — une vraie institution ne vous demande jamais de cacher une opération.",
+        lookalike_url:
+          "Un lien comme mcb-secure.top ou sbm.mu-login.com — assez proche pour tromper au premier coup d'œil, mais ce n'est pas le vrai domaine de la banque.",
+      },
+    },
+    trends: {
+      title: "Arnaques connues à Maurice",
+      intro:
+        "FraudLens n'a pas encore de flux de signalements en direct, ce n'est donc pas un classement en temps réel — ce sont les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil.",
+      categories: [
+        {
+          title: "SMS usurpant une banque",
+          body: "Des messages se faisant passer pour MCB, SBM, Absa Mauritius ou Bank One, annonçant que votre compte est suspendu ou qu'un virement doit être confirmé d'urgence.",
+          example: "« Alerte MCB : votre compte a été suspendu. Vérifiez maintenant sur mcb-secure.top »",
+        },
+        {
+          title: "Arnaques aux prix télécom",
+          body: "De faux messages My.t ou Emtel prétendant que vous avez gagné des données, du crédit ou de l'argent, vous poussant à cliquer sur un lien ou appeler un numéro surtaxé.",
+          example: "« Félicitations ! Votre numéro a gagné Rs 25 000 chez My.t. Réclamez maintenant : myt-prize.win »",
+        },
+        {
+          title: "Fraude au mobile money",
+          body: "Un appelant se faisant passer pour un agent mobile money demande votre code PIN ou OTP pour « annuler » un mauvais paiement ou « mettre à niveau » votre compte.",
+          example: "« Ici le support MCB Juice. Partagez le code reçu pour annuler le mauvais virement. »",
+        },
+      ],
+      footerNote:
+        "Ce qui se rapproche le plus d'une donnée de tendance aujourd'hui : quand vous vérifiez un message, l'écran de résultat indique si cet expéditeur a déjà été signalé par d'autres.",
     },
     result: {
       title: "Résultat",
@@ -404,10 +491,48 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
     tabs: { check: "Verifie", learn: "Aprann", trends: "Tandans" },
-    placeholderPage: {
-      learnTitle: "Aprann rekonet bann siny",
-      trendsTitle: "Tandans eskrokri Moris",
-      body: "Sa seksion la pe vini byento.",
+    learn: {
+      title: "Aprann rekonet bann siny",
+      intro: "FraudLens verifie sak mesaz pou uit kalite siny danze. Isi seki sakenn ete.",
+      examples: {
+        spoofed_identity:
+          "Enn mesaz ki dir li sorti kot MCB, SBM, Absa, Bank One, My.t ouswa Emtel, me li sorti dan enn nimero mobil ordiner, pa lor vre nimero kourt labank ouswa operater la.",
+        sender_mismatch: "Nimero ouswa nom ki avoy mesaz la pa korespond ar seki li dir li ete.",
+        urgency_language:
+          "\"Fer li dan 30 minit sinon nou blok ou kont\" — enn vre labank pa menas ferm ou kont par SMS.",
+        credential_request:
+          "\"Reponn ar kod ki nou fek avoy ou\" — ou labank ouswa operater pa pou zame dimann ou avoy enn kod itilizasion inik.",
+        payment_request:
+          "\"Pey enn ti fre pou debloke ou pri ouswa ou kont\" — enn vre pri ouswa ranboursman pa zame dimann ou pey avan.",
+        prize_offer: "\"Felisitasion! Ou finn gagn Rs 50 000\" pou enn konkour ouswa promosion ki ou pa finn zame partisipe.",
+        secrecy: "\"Pa dir personn, mem staf labank\" — enn vre lorganizasion pa zame dimann ou kasiet enn transaksion.",
+        lookalike_url:
+          "Enn lien parey kouma mcb-secure.top ouswa sbm.mu-login.com — asez pros pou tronp enn regar rapid, me se pa vre domenn labank la.",
+      },
+    },
+    trends: {
+      title: "Bann eskrokri konplet dan Moris",
+      intro:
+        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel — se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
+      categories: [
+        {
+          title: "SMS ki imit enn labank",
+          body: "Bann mesaz ki fer krwar zot MCB, SBM, Absa Mauritius ouswa Bank One, ki dir ou kont finn sispann ouswa enn transfer bizin konfirme dirzans.",
+          example: "\"Alert MCB: Ou kont finn sispann. Verifie aster lor mcb-secure.top\"",
+        },
+        {
+          title: "Eskrokri pri telekom",
+          body: "Fos mesaz My.t ouswa Emtel ki dir ou finn gagn data, kredi ouswa larzan, ki pouse ou pou klik enn lien ouswa apel enn nimero pey.",
+          example: "\"Felisitasion! Ou nimero finn gagn Rs 25 000 kot My.t. Reklam aster: myt-prize.win\"",
+        },
+        {
+          title: "Fraud mobile money",
+          body: 'Enn dimoun ki fer krwar li enn azan mobile money dimann ou PIN ouswa OTP pou "aret" enn move peyman ouswa "amelior" ou kont.',
+          example: "\"Sa se sipor MCB Juice. Partaz kod la pou nou anile move transfer la.\"",
+        },
+      ],
+      footerNote:
+        "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
     },
     result: {
       title: "Rezilta",

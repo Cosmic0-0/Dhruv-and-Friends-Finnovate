@@ -21,7 +21,7 @@ export function ResultHeader({ copy, sender }: { copy: Copy; sender?: string }) 
       <Link
         href="/"
         aria-label={copy.result.back}
-        className="grid size-10 shrink-0 place-items-center rounded-full border border-card-border bg-card text-ink shadow-card"
+        className="grid size-10 shrink-0 place-items-center rounded-full border border-card-border bg-card text-ink"
       >
         <ChevronLeftIcon className="size-5" strokeWidth={2} />
       </Link>
@@ -119,6 +119,8 @@ export function MessageCard({
       <p className="text-[1rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {segments.map((s, i) =>
           s.severity ? (
+            // 3px is an inline text-highlight radius, not a surface — intentionally
+            // outside the card/pill radius scale (see globals.css's "Shape" tokens).
             <mark
               key={i}
               className={`rounded-[3px] px-0.5 text-ink underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] ${tone}`}
@@ -139,7 +141,7 @@ export function SentPanel({ redacted, copy }: { redacted: string; copy: Copy }) 
     <details className="card">
       <summary className="cursor-pointer text-sm font-semibold text-ink">{copy.result.sentTitle}</summary>
       <p className="mt-3 text-sm text-ink-muted">{copy.result.sentBody}</p>
-      <p className="mt-3 rounded-lg bg-muted-surface px-3 py-2 font-mono text-[0.8125rem] whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
+      <p className="mt-3 rounded-card bg-muted-surface px-3 py-2 font-mono text-[0.8125rem] whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
         {redacted}
       </p>
     </details>

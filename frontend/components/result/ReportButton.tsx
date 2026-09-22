@@ -83,7 +83,7 @@ export default function ReportButton({
             placeholder={r.senderPlaceholder}
             inputMode="text"
             autoComplete="off"
-            className="rounded-xl border border-card-border bg-page px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted/70 focus:border-ink/40"
+            className="rounded-card border border-card-border bg-page px-4 py-3 text-base text-ink outline-none placeholder:text-ink-muted/70 focus:border-ink/40"
           />
           <button
             type="submit"

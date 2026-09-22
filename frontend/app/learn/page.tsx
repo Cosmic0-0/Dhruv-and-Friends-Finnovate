@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import AppHeader from "@/components/AppHeader";
-import PlaceholderScreen from "@/components/PlaceholderScreen";
+import LearnContent from "@/components/LearnContent";
 
-export const metadata: Metadata = { title: "Learn" };
+export const metadata: Metadata = { title: "Learn", alternates: { canonical: "/learn" } };
 
 export default function LearnPage() {
   return (
     <main className="flex flex-col gap-8">
       <AppHeader />
-      <PlaceholderScreen page="learn" />
+      <LearnContent />
     </main>
   );
 }

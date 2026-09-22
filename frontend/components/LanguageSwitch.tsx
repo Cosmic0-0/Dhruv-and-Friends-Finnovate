@@ -11,7 +11,7 @@ export default function LanguageSwitch() {
     <div
       role="radiogroup"
       aria-label={copy.languageSwitcher}
-      className="flex items-center rounded-pill border border-card-border bg-card p-1 shadow-card"
+      className="flex items-center rounded-pill border border-card-border bg-card p-1"
     >
       {UI_LANGUAGES.map((l) => {
         const active = l.id === lang;
