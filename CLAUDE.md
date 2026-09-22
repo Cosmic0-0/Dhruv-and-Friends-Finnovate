@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Commit attribution
+
+Commits and PRs from this repo are attributed to the human pushing them only.
+Do not add `Co-Authored-By: Claude` (or any other Claude/Anthropic attribution
+line) to commit messages or PR descriptions for this project.
+
 ## Project
 
 FraudLens AI — built for Finnovate Hackathon 2026 (Challenge 5, sponsored by Clarity).
