@@ -1,6 +1,6 @@
 # Analysis service
 
-Owner: **the backend owner**. See `CLAUDE.md` → Role gating.
+See `CLAUDE.md` → Role gating for ownership.
 
 Prompt design + structured output schema for `POST /api/analyze`. Calls a
 **local** LLM inference endpoint (`LLM_BASE_URL` / `LLM_MODEL` in `.env` —

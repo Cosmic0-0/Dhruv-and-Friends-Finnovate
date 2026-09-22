@@ -3,7 +3,7 @@ import express from "express";
 const app = express();
 app.use(express.json());
 
-// Owned by the backend owner — see ../../CLAUDE.md#role-gating
+// See ../../CLAUDE.md#role-gating for ownership.
 // Route handlers live in ./routes, business logic in ./services, wire them up here.
 
 app.get("/health", (_req, res) => {

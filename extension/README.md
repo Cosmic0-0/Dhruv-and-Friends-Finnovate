@@ -1,6 +1,6 @@
 # Browser extension (stretch goal)
 
-Owner: **the backend owner**. See `CLAUDE.md` → Role gating and Scope boundaries.
+See `CLAUDE.md` → Role gating and Scope boundaries for ownership.
 
 Do not start this until the core app (`backend/` + `frontend/`) is
 demo-stable. Manifest V3 + content script; calls the deployed

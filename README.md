@@ -45,10 +45,9 @@ no cloud LLM API key to set up.
 
 | Owner | Area |
 |---|---|
-| the backend owner | Backend + browser extension (stretch) |
 | Joshua | Kreol language support |
 | Oleg | UI |
 | Dhruv | OCR ingestion + batch scan |
 | Caellum | Test payloads and QA |
 
-See `CLAUDE.md` for detailed responsibilities per role.
+Full role list (including backend + extension ownership) is in `CLAUDE.md`.
