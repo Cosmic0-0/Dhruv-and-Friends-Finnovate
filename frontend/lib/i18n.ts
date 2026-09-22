@@ -15,6 +15,9 @@ import type { QuizLanguage, TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity } from "./types";
 
+/** One label per wait stage: 0–4s, 4–15s, 15–40s, 40s+ (see components/WaitProgress.tsx). */
+export type WaitStages = readonly [string, string, string, string];
+
 export type UiLanguage = Extract<LanguageHint, "en" | "fr" | "kreol">;
 
 export const UI_LANGUAGES: readonly { id: UiLanguage; label: string; htmlLang: string }[] = [
@@ -30,8 +33,19 @@ export interface Copy {
   messageLabel: string;
   placeholder: string;
   submit: string;
-  checking: string;
-  stillWorking: string;
+  /**
+   * Staged copy for a long wait (components/WaitProgress.tsx). Index = stage:
+   * 0–4s, 4–15s, 15–40s, 40s+. Never a percentage or a time estimate.
+   */
+  wait: {
+    check: WaitStages;
+    /** Compact versions on the disabled submit button: same stages, fewer words. */
+    checkShort: WaitStages;
+    screenshot: WaitStages;
+    /** Accessible name for the progress bar. */
+    progressLabel: string;
+    cancel: string;
+  };
   uploadScreenshot: string;
   /** Short micro-label under the upload button's icon. */
   screenshotLabel: string;
@@ -44,9 +58,6 @@ export interface Copy {
   shot: {
     remove: string;
     alt: string;
-    preparing: string;
-    reading: string;
-    stillReading: string;
     extracted: string;
     typeInstead: string;
   };
@@ -335,12 +346,20 @@ const RESULT_EN: Copy["result"] = {
 const IMAGE_PRIVACY_EN =
   "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
 
+/** Stage 3 (40s+) is shown once and stays: honest, calm, no repeated apology. */
+const STILL_WORKING_EN = "Still working — this can take a couple of minutes on our current setup.";
+
+const WAIT_EN: Copy["wait"] = {
+  check: ["Checking the message…", "Looking for warning signs…", "The AI is reading closely…", STILL_WORKING_EN],
+  checkShort: ["Checking…", "Looking for signs…", "Reading closely…", "Still working…"],
+  screenshot: ["Reading the screenshot…", "Pulling out the text…", "Reading the text carefully…", STILL_WORKING_EN],
+  progressLabel: "Progress",
+  cancel: "Cancel",
+};
+
 const SHOT_EN: Copy["shot"] = {
   remove: "Remove screenshot",
   alt: "Your screenshot",
-  preparing: "Preparing the image…",
-  reading: "Reading the text…",
-  stillReading: "Still reading. This can take up to a minute.",
   extracted: "Text added from your screenshot. Check it and fix anything that's wrong, then press Check.",
   typeInstead: "Type it instead",
 };
@@ -369,8 +388,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "The message",
     placeholder: "Paste the SMS, WhatsApp or email text here...",
     submit: "Check this message",
-    checking: "Checking…",
-    stillWorking: "The AI is still working…",
+    wait: WAIT_EN,
     uploadScreenshot: "Upload a screenshot",
     screenshotLabel: "Screenshot",
     imagePrivacyNote: IMAGE_PRIVACY_EN,
@@ -444,8 +462,23 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "Le message",
     placeholder: "Collez ici le texte du SMS, WhatsApp ou e-mail...",
     submit: "Vérifier ce message",
-    checking: "Vérification…",
-    stillWorking: "L'IA travaille encore…",
+    wait: {
+      check: [
+        "Vérification du message…",
+        "Recherche des signaux d'alerte…",
+        "L'IA lit attentivement…",
+        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+      ],
+      checkShort: ["Vérification…", "Recherche…", "Lecture attentive…", "Toujours en cours…"],
+      screenshot: [
+        "Lecture de la capture…",
+        "Extraction du texte…",
+        "Lecture attentive du texte…",
+        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+      ],
+      progressLabel: "Progression",
+      cancel: "Annuler",
+    },
     uploadScreenshot: "Importer une capture d'écran",
     screenshotLabel: "Capture d'écran",
     imagePrivacyNote:
@@ -453,9 +486,6 @@ export const COPY: Record<UiLanguage, Copy> = {
     shot: {
       remove: "Retirer la capture",
       alt: "Votre capture d'écran",
-      preparing: "Préparation de l'image…",
-      reading: "Lecture du texte…",
-      stillReading: "Lecture en cours. Cela peut prendre jusqu'à une minute.",
       extracted:
         "Texte ajouté depuis votre capture. Vérifiez-le et corrigez ce qui est faux, puis appuyez sur Vérifier.",
       typeInstead: "Le saisir à la place",
@@ -669,20 +699,34 @@ export const COPY: Record<UiLanguage, Copy> = {
     messageLabel: "Mesaz la",
     placeholder: "Kol text SMS, WhatsApp ouswa email la isi...",
     submit: "Verifie sa mesaz la",
-    checking: "Pe verifie…",
-    stillWorking: "LIA pe ankor travay…",
+    // Stage 0 reuses the reviewed "Pe verifie…" / "Pe lir text la…"; the rest is new and unreviewed.
+    wait: {
+      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel."],
+      checkShort: [
+        "Pe verifie…",
+        "Pe rod siny…",
+        "Pe lir bien…",
+        "Pe travay ankor…",
+      ],
+      screenshot: [
+        "Pe lir text la…",
+        "Pe tir text la…",
+        "Pe lir text la bien…",
+        "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel.",
+      ],
+      progressLabel: "Progre",
+      cancel: "Anile",
+    },
     uploadScreenshot: "Met enn screenshot",
     screenshotLabel: "Screenshot",
-    // New with screenshot upload, not reviewed yet: TODO_KREOL ones show English.
-    imagePrivacyNote: TODO_KREOL(IMAGE_PRIVACY_EN),
+    // Screenshot upload: Kreol drafted, pending the frontend owner's read-through.
+    imagePrivacyNote: 
+      "Screenshot la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor text la apre sa bann detay-la finn tire, apre ou finn relir li ek pes Verifie.",
     shot: {
       remove: "Tir screenshot la",
       alt: "Ou screenshot",
-      preparing: "Pe prepar limaz la…",
-      reading: "Pe lir text la…",
-      stillReading: TODO_KREOL(SHOT_EN.stillReading),
-      extracted: TODO_KREOL(SHOT_EN.extracted),
-      typeInstead: TODO_KREOL(SHOT_EN.typeInstead),
+      extracted: "Text depi ou screenshot finn azoute. Relir li ek koriz seki pa bon, apre pes Verifie.",
+      typeInstead: "Ekrir li plito",
     },
     privacyNote: "Nimero telefonn, email ek nimero kont tire avan nanye analize.",
     telegram: "Ouswa avoy li ar @FraudLensBot lor Telegram.",
@@ -706,7 +750,8 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
         image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
         image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
-        image_text_too_long: TODO_KREOL(IMAGE_ERRORS_EN.image_text_too_long),
+        image_text_too_long: 
+          "Ena tro boukou text dan sa screenshot la pou nou verifie enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",
@@ -715,7 +760,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       network: "Pa kapav kontak servis verifikasion la aster. Get ou koneksion ek esey ankor.",
       timeoutTitle: "Sa inn pran tro boukou letan",
       timeout: "Verifikasion la inn pran tro boukou letan, nou finn aret li. Esey ankor, souvan li pli vit dezyem fwa.",
-      ...TODO_KREOL(OCR_ERROR_EN),
+      ocrTitle: "Nou pa finn kapav lir sa imaz la",
+      ocr: "Enn problem finn arive pandan nou ti pe lir text la. Esey ankor, ouswa ekrir mesaz la plito.",
       unexpectedTitle: "Ena enn problem",
       unexpected: "Nou finn gagn enn repons ki nou pa kapav lir. Esey ankor.",
     },
@@ -813,7 +859,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       sentTitle: "Seki finn avoye pou analiz",
       sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
-      sentBodyScreenshot: TODO_KREOL(RESULT_EN.sentBodyScreenshot),
+      sentBodyScreenshot: 
+        "Ou screenshot finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text-la kot detay personel finn tire.",
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
@@ -822,7 +869,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     // have no Kreol translation yet (they show English until one is written).
     learn: {
       headline: "Aprann rekonet zot",
-      streak: TODO_KREOL(LEARN_EN.streak),
+      streak: (d) => `${d} zour ki swiv`,
       quizLabel: "Eskrokri ouswa vre?",
       scam: "Eskrokri",
       genuine: "Vre",
@@ -837,21 +884,48 @@ export const COPY: Record<UiLanguage, Copy> = {
       seeScore: "Get ou skor",
       scoreLabel: "Ou skor",
       scoreLine: (k, t) => `Ou finn rekonet ${k} lor ${t}.`,
-      scoreComment: TODO_KREOL(LEARN_EN.scoreComment),
+      scoreComment: (k, t) =>
+        k === t
+          ? "Parfe. Ou ti pou rekonet zot dan lavi reel osi."
+          : k / t >= 0.75
+            ? "Bon lizie. Zwe ankor pou gagn enn lot melanz."
+            : "Sa bann-la difisil ekspre. Zwe ankor ek get bien bann siny danze.",
       best: (b, t) => `Ou pli bon skor: ${b} / ${t}`,
       playAgain: "Zwe ankor",
-      syntheticNote: TODO_KREOL(LEARN_EN.syntheticNote),
-      trendsTitle: TODO_KREOL(LEARN_EN.trendsTitle),
-      trends: TODO_KREOL(LEARN_EN.trends),
-      languageName: TODO_KREOL(LEARN_EN.languageName),
-      fewItems: TODO_KREOL(LEARN_EN.fewItems),
-      offerOther: TODO_KREOL(LEARN_EN.offerOther),
-      kreolMixNote: TODO_KREOL(LEARN_EN.kreolMixNote),
-      practisingIn: TODO_KREOL(LEARN_EN.practisingIn),
-      dailyProgress: TODO_KREOL(LEARN_EN.dailyProgress),
-      dailyDone: TODO_KREOL(LEARN_EN.dailyDone),
-      celebrate: TODO_KREOL(LEARN_EN.celebrate),
-      dev: TODO_KREOL(LEARN_EN.dev),
+      syntheticNote: 
+        "Bann mesaz pratik ek egzanp lor sa paz-la inventer, depi nou dataset Kreol. Nom kouma OceanBank pa egziste.",
+      trendsTitle: "Bann kalite arnak kouran",
+      trends: {
+        parcel_fee: {
+          tag: "Fre koli",
+          body: "Enn SMS dir ou koli bloke ladwann ek demann ou pey enn ti fre atraver enn lien. Vre konpani livrezon pa pran fre par lien SMS, al get lor zot prop sit web plito.",
+        },
+        fake_relative: {
+          tag: "Fos fami",
+          body: "Enn dimounn dir li ou zanfan ouswa enn fami lor enn nouvo nimero, bizin larzan irzan, ek demann ou pa dir personn. Apel zot lor nimero ki ou deza ena avan ou avoy nanye.",
+        },
+        investment: {
+          tag: "Investisman",
+          body: "Enn etranze promet pou double ouswa triple ou larzan dan kek zour, san okenn risk. Profi garanti pa egziste: sa depo-la limem arnak la.",
+        },
+      },
+      languageName: { en: "Angle", fr: "Franse", kreol: "Kreol" },
+      fewItems: (l) => `Plis mesaz pratik an ${l} pe vini byento.`,
+      offerOther: (l) => `Pratik an ${l} plito`,
+      kreolMixNote: "Mesaz Kreol souvan melanz enn tigit Angle ouswa Franse, parey kouma vre SMS Moris.",
+      practisingIn: (l) => `Pe pratik an ${l}`,
+      dailyProgress: (a, g) => `Zordi: ${a} lor ${g} pou ou serie zour`,
+      dailyDone: "Pratik zordi fini.",
+      celebrate: {
+        title: (n) => `${n} zour ki swiv`,
+        dayOne: "Premie zour fini. Revini demin pou koumans enn serie.",
+        streakLine: (n) => `Ou finn pratik ${n} zour ki swiv.`,
+        score: (r, t) => `Zordi: ${r} lor ${t} bon`,
+        mistakesTitle: "Get sa bann-la ankor",
+        allRight: "Ou finn gagn tou bon zordi. Nanye pou relir.",
+        keepGoing: "Kontinie",
+      },
+      dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
   },
 };
