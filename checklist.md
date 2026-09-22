@@ -229,12 +229,17 @@ product. Judges and casual visitors notice these fast.
       `productionBrowserSourceMaps: false`.
 - [ ] **No console errors** on any page in the normal user flow (paste
       message → verdict, upload screenshot → verdict, batch scan → summary).
-      Not verified 2026-09-22: `next build` (types + Next's build-time
-      checks) is clean and the built app serves without server-side errors,
-      but this specific item needs a human exercising the live paste →
-      verdict / screenshot → verdict / batch-scan flows against a running
-      backend with DevTools open — that's a QA pass (Caellum's area), not
-      something confirmable from source or a cold static build.
+      Partially verified 2026-09-22: live-exercised paste → verdict (`/`
+      → `/result`, through the real fallback LLM path), the Learn quiz
+      flow, and `/trends`, all with DevTools console tracking on — zero
+      errors on any of them, only harmless Next.js dev Fast Refresh logs.
+      Screenshot → verdict and batch scan → summary are NOT verified and
+      currently can't be: the screenshot upload button in
+      `frontend/components/CheckForm.tsx` is still disabled ("coming
+      soon"), and there is no batch-scan UI page at all
+      (`frontend/app/` has no batch route — only `lib/api.ts` calls the
+      backend route). Both flows are backend-complete and unit-tested but
+      have no live UI path to exercise yet.
 - [x] **JS bundle isn't massive** — check bundle size before the demo;
       trim unused dependencies (especially anything pulled in for the LLM
       or OCR call that isn't needed client-side). Verified 2026-09-22:
