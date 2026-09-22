@@ -27,12 +27,11 @@ Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 > `source` on `signals[]` comes from the shared `services/analysis` and
 > `services/domain-matching` modules, so it also appears on
 > `/api/analyze/screenshot` and `/api/batch-scan` results. `riskCategories`
-> and the new `IDENTITY_MISMATCH` evidence item (see below) are now also
-> computed on **`/api/batch-scan`** (2026-09-22 — see Known Gaps for the
-> `summarizeBatch()` field-passthrough bug this required fixing alongside
-> it), but are still **not** computed on `/api/analyze/screenshot`. That's
-> a known gap, not an oversight — see "Known Gaps" at the bottom of this
-> document.
+> and the new `IDENTITY_MISMATCH` evidence item (see below) are now
+> computed on all three routes — `/api/analyze`, `/api/batch-scan`
+> (2026-09-22, see Known Gaps for the `summarizeBatch()` field-passthrough
+> bug this required fixing alongside it), and `/api/analyze/screenshot`
+> (2026-09-22).
 
 ### Request
 
@@ -380,18 +379,14 @@ Flagging these so Oleg/Dhruv/extension know what's stable to build against
 versus what's likely to change before the demo:
 
 - **`riskCategories` and `IDENTITY_MISMATCH`/`identity_check` evidence are
-  computed on `/api/analyze` and `/api/batch-scan`, but still NOT on
-  `/api/analyze/screenshot`** (2026-09-22) — the screenshot route still
-  runs OCR + the original analyze path only, out of scope for this
-  change. `signals[].source` (the other part of this same change) does
-  appear on all three routes since it comes from the shared
-  `services/analysis` / `services/domain-matching` modules. If OCR needs
-  the same categories and identity check, wire in `computeRiskCategories()`
-  (`backend/src/services/risk-categories/index.js`) and
-  `checkIdentityConsistency()`
-  (`backend/src/services/identity-consistency/index.js`) into
-  `/api/analyze/screenshot`'s handler the same way `/api/analyze` and
-  `/api/batch-scan` now do in `backend/src/routes/index.js`.
+  now computed on all three analyze routes** (`/api/analyze`,
+  `/api/batch-scan`, `/api/analyze/screenshot` — the last one wired in
+  2026-09-22, verified live with a real ImageMagick-generated PNG against
+  the dev server: OCR extraction → local-model analysis → `riskCategories`
+  + `IDENTITY_MISMATCH` all present, same pattern as the manual
+  verification method already used for this route per the note below on
+  it having no automated HTTP test). No remaining route gap for these two
+  fields as of 2026-09-22.
 - **Extending `/api/batch-scan` to compute these (2026-09-22) surfaced a
   real, pre-existing bug**: `summarizeBatch()`
   (`backend/src/services/batch/index.js`) was destructuring only five

@@ -146,8 +146,16 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   }
 
   try {
+    const urlSignals = checkUrls(extractedText);
+    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(extractedText));
+
     const result = await analyzeMessage(extractedText, language);
-    result.signals.push(...checkUrls(extractedText));
+    attachAges();
+    // Same three additive, non-LLM checks as /api/analyze and
+    // /api/batch-scan - see the comment on /api/analyze above.
+    result.signals.push(...urlSignals);
+    result.signals.push(...checkIdentityConsistency(extractedText));
+    result.riskCategories = computeRiskCategories(result.signals);
     res.json({ extractedText, ...withSenderReports(result) });
   } catch (err) {
     console.error(err);
