@@ -165,7 +165,7 @@ export function buildRound(items: readonly QuizItem[], random?: () => number): Q
   return out;
 }
 
-// ---------- "Going around this week" ----------
+// ---------- "Common scam patterns" ----------
 
 export type TrendCategory = "parcel_fee" | "fake_relative" | "investment";
 
