@@ -47,18 +47,21 @@ sender data touches the demo, since the app ingests untrusted user input
 - [x] **Parameterize all DB queries** — verified 2026-09-22: every query in
       `backend/src/db/index.js` uses `?` placeholders via `better-sqlite3`'s
       `.prepare().run()`, no string concatenation.
-- [ ] **Validate all input** server-side — partially done 2026-09-22:
-      `/api/analyze`, `/api/batch-scan`, `/api/report` now reject
-      missing/empty/oversized/wrong-type `message`/`messages`/`sender`
-      (`backend/src/routes/index.js`, non-empty-string + length-cap checks,
-      400 on failure). Screenshot upload validation is still open — OCR
-      ingestion isn't implemented yet, recheck when it lands.
+- [x] **Validate all input** server-side — verified 2026-09-22:
+      `/api/analyze`, `/api/batch-scan`, `/api/report`, and
+      `/api/analyze/screenshot` all reject missing/empty/oversized/
+      wrong-type input server-side (`backend/src/routes/index.js`), 400 on
+      failure. Recheck if any route's validation logic changes.
 - [ ] **Escape user content** before rendering it back in the UI (verdict
       display, flagged-signal view, batch results) to prevent stored/reflected
       XSS from a malicious pasted message.
-- [ ] **Restrict file uploads** (screenshot ingestion) — enforce file type,
-      size limits, and strip/ignore executable content; never trust the
-      client-reported MIME type.
+- [x] **Restrict file uploads** (screenshot ingestion) — verified
+      2026-09-22: `/api/analyze/screenshot` (`backend/src/routes/index.js`)
+      caps decoded image size at 5MB, sniffs PNG/JPEG/WEBP by magic bytes
+      rather than trusting the client (there is no client-supplied MIME
+      field at all), and the buffer is only ever handed to the tesseract.js
+      worker in memory — never written to disk or served back, so there's
+      no stored-file execution surface to strip.
 - [ ] **Trim API responses** — don't leak internal fields (raw LLM prompt,
       stack traces, DB row internals) in `/api/analyze`, `/api/batch-scan`,
       or `/api/report` responses.

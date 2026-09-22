@@ -1,19 +1,39 @@
-import { Router } from "express";
+import { Router, json } from "express";
 import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls } from "../services/domain-matching/index.js";
 import { summarizeBatch } from "../services/batch/index.js";
+import { extractTextFromImage } from "../services/ocr/index.js";
 import { reportSender, saveBatchHistory } from "../db/index.js";
 
 export const router = Router();
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_BATCH_MESSAGES = 50;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB, before base64 overhead
+
+// Magic-byte signatures - the screenshot route never trusts a
+// client-reported MIME type (see checklist.md § Security), it sniffs the
+// decoded bytes instead.
+const IMAGE_SIGNATURES = [
+  { mimeType: "image/png", bytes: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a] },
+  { mimeType: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
+];
+
+function sniffImageType(buffer) {
+  for (const { mimeType, bytes } of IMAGE_SIGNATURES) {
+    if (buffer.length >= bytes.length && bytes.every((b, i) => buffer[i] === b)) return mimeType;
+  }
+  if (buffer.length >= 12 && buffer.toString("ascii", 0, 4) === "RIFF" && buffer.toString("ascii", 8, 12) === "WEBP") {
+    return "image/webp";
+  }
+  return null;
+}
 
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-router.post("/analyze", async (req, res) => {
+router.post("/analyze", json({ limit: "300kb" }), async (req, res) => {
   const { message, language } = req.body;
   if (!isNonEmptyString(message)) {
     return res.status(400).json({ error: "message is required and must be a non-empty string" });
@@ -30,7 +50,49 @@ router.post("/analyze", async (req, res) => {
   }
 });
 
-router.post("/batch-scan", async (req, res) => {
+router.post("/analyze/screenshot", json({ limit: "8mb" }), async (req, res) => {
+  const { image, language } = req.body;
+  if (!isNonEmptyString(image)) {
+    return res.status(400).json({ error: "image is required and must be a base64-encoded string" });
+  }
+
+  const base64 = image.replace(/^data:[^;]+;base64,/, "");
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length === 0) {
+    return res.status(400).json({ error: "image could not be decoded as base64" });
+  }
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    return res.status(400).json({ error: `image exceeds maximum size of ${MAX_IMAGE_BYTES / (1024 * 1024)}MB` });
+  }
+  if (!sniffImageType(buffer)) {
+    return res
+      .status(400)
+      .json({ error: "image must be a valid PNG, JPEG, or WEBP file (checked by content, not the declared type)" });
+  }
+
+  let extractedText;
+  try {
+    extractedText = await extractTextFromImage(buffer);
+  } catch (err) {
+    return res.status(502).json({ error: `OCR failed: ${err.message}` });
+  }
+  if (!isNonEmptyString(extractedText)) {
+    return res.status(400).json({ error: "no readable text was found in the image" });
+  }
+  if (extractedText.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `extracted text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
+  }
+
+  try {
+    const result = await analyzeMessage(extractedText, language);
+    result.signals.push(...checkUrls(extractedText));
+    res.json({ extractedText, ...result });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+router.post("/batch-scan", json({ limit: "300kb" }), async (req, res) => {
   const { messages } = req.body;
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "messages must be a non-empty array" });
@@ -67,7 +129,7 @@ router.post("/batch-scan", async (req, res) => {
   res.json({ results, summary });
 });
 
-router.post("/report", (req, res) => {
+router.post("/report", json({ limit: "300kb" }), (req, res) => {
   const { sender } = req.body;
   if (!isNonEmptyString(sender)) {
     return res.status(400).json({ error: "sender is required and must be a non-empty string" });

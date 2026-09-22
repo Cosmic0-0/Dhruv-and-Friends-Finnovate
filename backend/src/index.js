@@ -3,7 +3,9 @@ import { router } from "./routes/index.js";
 import { checkOllamaHealth, llmStatus } from "./services/analysis/llmClient.js";
 
 const app = express();
-app.use(express.json());
+// Each route declares its own express.json() limit (see routes/index.js) -
+// text routes stay small, the screenshot route needs room for a base64
+// image - so there's no blanket body-size limit here.
 app.use("/api", router);
 
 app.get("/health", (_req, res) => {
