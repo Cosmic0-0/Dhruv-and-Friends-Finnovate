@@ -5,7 +5,7 @@ const OLLAMA_URL = process.env.OLLAMA_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const FALLBACK_PROVIDER = process.env.FALLBACK_PROVIDER || "anthropic";
 const FALLBACK_API_KEY = process.env.FALLBACK_API_KEY || "";
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "liquid/lfm-2.5-2.6b:free";
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 15000;
 const LLM_MODE = process.env.LLM_MODE || "auto"; // local | fallback | auto
 
