@@ -12,6 +12,26 @@ Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
 ## `POST /api/analyze`
 
+> **RESPONSE SHAPE CHANGE — flag to Oleg (frontend), Dhruv (OCR/batch), and
+> the extension owner before merging.** Two additive changes to this route's
+> `200 OK` response, layered on top of the shape below:
+> 1. Every item in `signals[]` now also carries a `source` field (see the
+>    updated response block below) — purely additive, no existing
+>    `signals[]` field was removed or renamed.
+> 2. A new top-level `riskCategories` object breaks risk into five
+>    LOW/MEDIUM/HIGH categories. **`riskScore` is unchanged and still
+>    present** — `riskCategories` is additive alongside it, not a
+>    replacement, specifically so the frontend's existing `riskScore` UI
+>    keeps working unmodified.
+>
+> `source` on `signals[]` comes from the shared `services/analysis` and
+> `services/domain-matching` modules, so it also appears on
+> `/api/analyze/screenshot` and `/api/batch-scan` results. `riskCategories`
+> and the new `IDENTITY_MISMATCH` evidence item (see below), however, are
+> currently wired into **`/api/analyze` only** — `/api/analyze/screenshot`
+> and `/api/batch-scan` do not yet compute either. That's a known gap, not
+> an oversight — see "Known Gaps" at the bottom of this document.
+
 ### Request
 
 ```json
@@ -31,30 +51,91 @@ LLM prompt as a hint string.
   "verdict": "safe" | "suspicious" | "scam",
   "signals": [
     {
-      "type": "string, e.g. \"sender_mismatch\" | \"urgency_language\" | \"lookalike_url\" | \"spoofed_identity\"",
+      "type": "string, e.g. \"sender_mismatch\" | \"urgency_language\" | \"lookalike_url\" | \"spoofed_identity\" | \"IDENTITY_MISMATCH\"",
       "description": "string",
       "severity": "low" | "medium" | "high",
-      "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()-appended lookalike_url signals never set it.",
+      "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()/checkIdentityConsistency()-appended signals never set it.",
+      "source": "\"message_text\" | \"url_parser\" | \"community_reports\" | \"llm_analysis\" | \"identity_check\" — NEW field, where in the pipeline this signal came from. See below.",
       "domainAgeDays": "number, optional — registered-domain age in days for a lookalike_url signal's host, from a live RDAP lookup (backend/src/services/domain-age/index.js). Best-effort and non-blocking: capped at a 1.5s timeout, wrapped in try/catch, and cached 24h per domain (backend/src/db/index.js) — omitted entirely (not null/0) on any failure, timeout, or if it simply didn't resolve before the response was ready. Never a dependency of the core verdict; only ever set on lookalike_url signals."
     }
   ],
   "suggestedAction": "string, free-form (not an enforced enum)",
   "explanation": "string, localized to the input language",
-  "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range.",
+  "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range. Unchanged by this update.",
   "sender": "string, optional — identity the message claims to be from (phone number, short code, or name), as extracted by the LLM. Omitted if none was apparent.",
-  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present."
+  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present.",
+  "riskCategories": "object, NEW — see below. Always present."
 }
 ```
 
-`signals` is the union of the LLM's structured output and the non-LLM
-domain-matching check (`checkUrls`) — any lookalike URL found in the message
-is appended as an additional `type: "lookalike_url"` signal, independent of
-what the LLM returned. `riskScore`/`sender`/`evidence` are LLM-supplied and
-best-effort: a malformed or missing value is silently omitted, it never
-fails the request (`backend/src/services/analysis/index.js`). `domainAgeDays`
-is best-effort for a different reason — it's an external network dependency
-(RDAP), not an LLM field — but the guarantee is the same: its absence never
-means anything went wrong with the rest of the response.
+`signals` is the union of the LLM's structured output, the non-LLM
+domain-matching check (`checkUrls`), and the non-LLM identity-consistency
+check (`checkIdentityConsistency`) — any lookalike URL found in the message
+is appended as an additional `type: "lookalike_url"` signal, and any
+claimed-identity/domain/beneficiary mismatch is appended as a
+`type: "IDENTITY_MISMATCH"` signal, independent of what the LLM returned.
+`riskScore`/`sender`/`evidence` are LLM-supplied and best-effort: a malformed
+or missing value is silently omitted, it never fails the request
+(`backend/src/services/analysis/index.js`). `domainAgeDays` is best-effort
+for a different reason — it's an external network dependency (RDAP), not an
+LLM field — but the guarantee is the same: its absence never means anything
+went wrong with the rest of the response.
+
+#### `signals[].source` (NEW)
+
+Every evidence/signal item now carries a `source` string documenting where
+in the pipeline it came from:
+
+| Value | Meaning |
+|---|---|
+| `"message_text"` | LLM signal whose `type` matches a direct message-content pattern (urgency language, OTP/credential request, secrecy instruction, etc.) — classified deterministically from `type` by `classifySignalSource()` in `backend/src/services/analysis/index.js`, not itself an LLM call. |
+| `"llm_analysis"` | LLM signal that doesn't match a message-text pattern — the LLM's own inferential scam-pattern reasoning (e.g. `sender_mismatch`, `spoofed_identity`). Default bucket when `message_text` doesn't match. |
+| `"url_parser"` | Signal appended by the non-LLM domain-matching module (`checkUrls`, `backend/src/services/domain-matching/index.js`) — currently only `lookalike_url`. |
+| `"identity_check"` | Signal appended by the new non-LLM identity-consistency module (`checkIdentityConsistency`, `backend/src/services/identity-consistency/index.js`) — currently only `IDENTITY_MISMATCH`. |
+| `"community_reports"` | Reserved for a signal derived from the crowdsourced sender-reputation store (`backend/src/db/index.js`). Not currently emitted by any code path — the report count is still only exposed via the existing top-level `senderReports` field, not as a `signals[]` item. Documented here so the value is reserved if/when that changes. |
+
+#### `IDENTITY_MISMATCH` (NEW evidence type)
+
+Emitted by `checkIdentityConsistency()` (`backend/src/services/identity-consistency/index.js`), a deterministic, non-LLM check run alongside `checkUrls()`. It extracts a claimed
+sender/identity from known Mauritius bank/telecom/government brand tokens
+mentioned in the message text (MCB, SBM, Absa, Bank One, my.t, Emtel, MRA —
+`BRAND_DOMAIN_MAP` in `backend/src/services/domain-matching/index.js`), then
+checks that identity against (a) the domain of any URL in the message
+(reusing `extractHostnames()` from domain-matching — no URL/domain parsing
+is duplicated) and (b) a payment beneficiary/recipient name if the message
+states one (plain-text pattern match only, no QR decoding or image
+parsing). A mismatch on either produces exactly one `severity: "high"`
+signal:
+
+```json
+{ "type": "IDENTITY_MISMATCH", "description": "The message claims to be from MCB but the link points to a different domain (...)", "severity": "high", "source": "identity_check" }
+```
+
+#### `riskCategories` (NEW)
+
+```json
+{
+  "identity_risk": "LOW" | "MEDIUM" | "HIGH",
+  "behavioral_risk": "LOW" | "MEDIUM" | "HIGH",
+  "payment_risk": "LOW" | "MEDIUM" | "HIGH",
+  "technical_risk": "LOW" | "MEDIUM" | "HIGH",
+  "verification_risk": "LOW" | "MEDIUM" | "HIGH"
+}
+```
+
+Computed by `computeRiskCategories()`
+(`backend/src/services/risk-categories/index.js`), a pure, deterministic
+function of the final `signals[]` array (LLM + `checkUrls` +
+`checkIdentityConsistency` combined) — no LLM call, no store lookup. Each
+`signals[]` item's `type` is keyword-classified into one of the five
+categories (e.g. `lookalike_url`/`domain`-ish types → `technical_risk`,
+`IDENTITY_MISMATCH`/`spoofed_identity`-ish types → `identity_risk`,
+`urgency`/`secrecy`-ish types → `behavioral_risk`, `otp`/`credential`/
+`payment`-ish types → `payment_risk`; unmatched types default to
+`behavioral_risk`), and a category's rating is the highest severity among
+its matched signals, or `"LOW"` if none matched. **This is purely additive
+— `riskScore` (the existing single 0-100 LLM confidence number) is
+unchanged and still returned exactly as before.**
 
 ### Errors
 
@@ -296,6 +377,20 @@ There is no error status for this route — it always resolves 200, with
 Flagging these so Oleg/Dhruv/extension know what's stable to build against
 versus what's likely to change before the demo:
 
+- **`riskCategories` and `IDENTITY_MISMATCH`/`identity_check` evidence are
+  only computed on `/api/analyze`** — `/api/analyze/screenshot` and
+  `/api/batch-scan` still run OCR/batch-summary logic that was explicitly
+  out of scope for this change, so their results have no `riskCategories`
+  field and never include an `IDENTITY_MISMATCH` signal, even though
+  `signals[].source` (the other part of this same change) does appear on
+  all three routes since it comes from the shared `services/analysis` /
+  `services/domain-matching` modules. If OCR/batch scan need the same
+  categories and identity check, that's follow-up work for whoever owns
+  those routes, wiring in `computeRiskCategories()`
+  (`backend/src/services/risk-categories/index.js`) and
+  `checkIdentityConsistency()`
+  (`backend/src/services/identity-consistency/index.js`) the same way
+  `/api/analyze` does in `backend/src/routes/index.js`.
 - **`/api/report`'s `message` and `reportedBy` fields are accepted in the
   request shape but silently ignored** — nothing is persisted beyond the
   `sender` string and its report count (`backend/src/db/index.js` only has a

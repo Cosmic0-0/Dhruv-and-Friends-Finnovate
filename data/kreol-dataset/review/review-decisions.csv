@@ -1,6 +1,9 @@
 id,reviewer,decision,corrected_original_message,corrected_english_meaning,signals_to_add,signals_to_remove,review_notes,reviewed_at
+FL-KM-0001,Caellum,EDIT,Ou kont OceanBank pou bloke zordi si ou pa verifye. Klik lor oceanbank-verify-secure.test deswit.,,,SENSITIVE_INFO_REQUEST,,2026-09-22T11:11:13+00:00
 FL-KM-0001,Joshua,EDIT,Ou kont OceanBank pou bloke zordi si ou pa fer verification. Klik lor oceanbank-verify-secure.test deswit.,,,SENSITIVE_INFO_REQUEST,,2026-09-22T11:01:43+00:00
+FL-KM-0002,Caellum,EDIT,"Dear customer, IslandTrust Bank security equip pe demande ou konfirm OTP 583291 lor sa nimero-la pou anile enn transaksion sispek.",,,,,2026-09-22T11:12:52+00:00
 FL-KM-0002,Joshua,EDIT,"Ser client, lekip sekirite IslandTrust Bank pe demann ou konfirm OTP (583291) lor sa nimero-la pou anil enn transaksion sispe.","Dear customer, the IslandTrust Bank security team is asking you to confirm OTP (583291) on this number to cancel a suspicious transaction.",,SENSITIVE_INFO_REQUEST,,2026-09-22T11:04:20+00:00
+FL-KM-0003,Caellum,APPROVE,,,,,,2026-09-22T11:14:34+00:00
 FL-KM-0003,Joshua,EDIT,ALERT SunCoast Bank: To kart inn sispann pou rezon sekirite. Apel sa nimero-la dans 24 er temps: +230 5xxx xxxx.,,,,,2026-09-22T11:05:22+00:00
 FL-KM-0004,Joshua,EDIT,Ou compte Meridian Bank inn sispann temporairement. Verifye ou compte lor meridianbank-secure-login.test avan minwi.,Your Meridian Bank account has been temporarily suspended. Verify your account on meridianbank-secure-login.test before midnight.,,,,2026-09-22T11:07:50+00:00
 FL-KM-0005,Joshua,EDIT,"Ser client, ou compte OceanBank inn bloke pou bann raison de securite. Konfirm ou code PIN deswit lor sa lyen-la.",,,,,2026-09-22T11:09:54+00:00

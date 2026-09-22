@@ -1,12 +1,32 @@
 // Non-LLM, deterministic — must stay unit-testable independent of the LLM call path.
 
-export const LEGIT_DOMAINS = ["mcb.mu", "sbmgroup.mu", "absa.mu", "bankone.mu", "myt.mu", "emtel.com"];
+// Single source of truth for known-legit Mauritius bank/telecom/government
+// domains, keyed by the brand token used to spot them mentioned in message
+// text. Exported as a map (rather than two parallel arrays) so other
+// deterministic checks — e.g. services/identity-consistency — can look up
+// "what domain should this claimed identity's link point to" without
+// duplicating this knowledge.
+export const BRAND_DOMAIN_MAP = {
+  mcb: "mcb.mu",
+  sbm: "sbmgroup.mu",
+  absa: "absa.mu",
+  bankone: "bankone.mu",
+  myt: "myt.mu",
+  emtel: "emtel.com",
+  mra: "mra.gov.mu",
+};
 
-// Brand tokens checked as hostname substrings, independent of the
-// Levenshtein distance check below — catches prefix/suffix phishing
-// patterns like mcb-secure.top that a distance-2 threshold misses
-// (see data/test-payloads/FINDINGS.md #3).
-const BRAND_TOKENS = ["mcb", "sbm", "absa", "bankone", "myt", "emtel"];
+export const LEGIT_DOMAINS = Object.values(BRAND_DOMAIN_MAP);
+
+// Brand tokens checked against whole hostname labels (split on "." and
+// "-"), independent of the Levenshtein distance check below — catches
+// prefix/suffix phishing patterns like mcb-secure.top that a distance-2
+// threshold misses (see data/test-payloads/FINDINGS.md #3). Matching must
+// be label-exact, not `host.includes(token)`: a raw substring check flags
+// unrelated domains that merely contain a token's letters in sequence,
+// e.g. mythology-store.com ("myt"), absalom-books.com ("absa"), and
+// sbmarketing.co.uk ("sbm") (see FINDINGS.md #10).
+export const BRAND_TOKENS = Object.keys(BRAND_DOMAIN_MAP);
 
 // Requires a final all-alpha "TLD-like" label of 2-10 chars so scheme-less
 // matches don't fire on ordinary prose (e.g. "Rs.5000", "e.g.") while still
@@ -27,24 +47,36 @@ function levenshtein(a, b) {
   return dp[a.length][b.length];
 }
 
+// Extracts hostnames from any URL-shaped substrings in the message — legit
+// or not, unfiltered. Exported so other deterministic (non-LLM) checks —
+// e.g. services/identity-consistency, which needs to compare a claimed
+// identity's expected domain against ANY linked host, not just lookalikes —
+// can reuse this exact extraction instead of reimplementing URL parsing.
+export function extractHostnames(message) {
+  const urls = message.match(URL_PATTERN) || [];
+  const hostnames = [];
+  for (const url of urls) {
+    const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    try {
+      hostnames.push(new URL(withScheme).hostname.replace(/^www\./, "").toLowerCase());
+    } catch {
+      continue;
+    }
+  }
+  return hostnames;
+}
+
 // Shared by checkUrls() and extractLookalikeHosts() so the host used for the
 // (optional, separately-enriched) domainAgeDays lookup can never drift out
 // of sync with which URLs actually got flagged.
 function findLookalikes(message) {
-  const urls = message.match(URL_PATTERN) || [];
   const found = [];
-  for (const url of urls) {
-    const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
-    let host;
-    try {
-      host = new URL(withScheme).hostname.replace(/^www\./, "").toLowerCase();
-    } catch {
-      continue;
-    }
+  for (const host of extractHostnames(message)) {
     if (LEGIT_DOMAINS.includes(host)) continue;
 
     const closest = LEGIT_DOMAINS.find((d) => levenshtein(host, d) <= 2);
-    const brandToken = BRAND_TOKENS.find((token) => host.includes(token));
+    const labels = host.split(/[.-]/);
+    const brandToken = BRAND_TOKENS.find((token) => labels.includes(token));
 
     // Either check firing should produce exactly one signal per URL.
     if (closest) {
@@ -53,6 +85,7 @@ function findLookalikes(message) {
         type: "lookalike_url",
         description: `${host} closely resembles legitimate domain ${closest}`,
         severity: "high",
+        source: "url_parser",
       });
     } else if (brandToken) {
       found.push({
@@ -60,6 +93,7 @@ function findLookalikes(message) {
         type: "lookalike_url",
         description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
         severity: "high",
+        source: "url_parser",
       });
     }
   }

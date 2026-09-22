@@ -24,8 +24,24 @@ function validate(parsed) {
   );
 }
 
-function sanitizeSignal(s) {
-  const out = { type: s.type, description: s.description, severity: s.severity };
+// Every signal the LLM returns is, mechanically, "LLM output" — but for
+// evidence provenance we want to say something more useful to the frontend
+// than "the LLM said so": whether the LLM is directly quoting a pattern in
+// the message text (urgency phrasing, an OTP/credential ask, a secrecy
+// instruction) versus applying its own scam-pattern reasoning (spoofed
+// identity, sender/channel mismatch, general fraud pattern-matching). This
+// is a plain keyword classification over the signal `type` string — kept
+// deterministic and separate from the LLM call itself.
+const MESSAGE_TEXT_TYPE_PATTERN = /urgen|otp|credential|password|pin\b|secrecy|secret|pressure|threat|deadline/i;
+
+// Exported for unit testing (see index.test.js) — pure/deterministic, no
+// LLM call involved.
+export function classifySignalSource(type) {
+  return MESSAGE_TEXT_TYPE_PATTERN.test(type) ? "message_text" : "llm_analysis";
+}
+
+export function sanitizeSignal(s) {
+  const out = { type: s.type, description: s.description, severity: s.severity, source: classifySignalSource(s.type) };
   if (typeof s.evidence === "string" && s.evidence.trim() !== "") out.evidence = s.evidence;
   return out;
 }
