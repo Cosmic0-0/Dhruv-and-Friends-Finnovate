@@ -1,4 +1,5 @@
 import { callLLM } from "./llmClient.js";
+import { getKreolGrounding } from "./kreolGrounding.js";
 
 const VERDICTS = ["safe", "suspicious", "scam"];
 const SEVERITIES = ["low", "medium", "high"];
@@ -35,7 +36,13 @@ function sanitizeSignal(s) {
 // OPTIONAL-FUTURE handling (frontend/lib/types.ts) falls back to its
 // no-score/no-sender display.
 export async function analyzeMessage(message, language) {
-  const prompt = `${SYSTEM_PROMPT}\n\nLanguage hint: ${language || "unspecified"}\nMessage: ${message}`;
+  // Best-effort Kreol/French/English grounding (see kreolGrounding.js):
+  // synchronous, in-memory, and defensive on its own, so this can never
+  // throw or block - it degrades to bare SYSTEM_PROMPT below when the
+  // dataset is missing or nothing relevant is found for this message.
+  const { promptBlock } = getKreolGrounding(message);
+  const groundedPrompt = promptBlock ? `${SYSTEM_PROMPT}\n\n${promptBlock}` : SYSTEM_PROMPT;
+  const prompt = `${groundedPrompt}\n\nLanguage hint: ${language || "unspecified"}\nMessage: ${message}`;
   const { text } = await callLLM(prompt);
 
   let parsed;
