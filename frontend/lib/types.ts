@@ -61,6 +61,22 @@ export interface AnalyzeResponse {
   };
 }
 
+// ---- POST /api/analyze/screenshot ----
+
+export interface AnalyzeScreenshotRequest {
+  /** Base64-encoded image, with or without a "data:<mime>;base64," prefix. PNG/JPEG/WEBP, ≤5MB decoded. */
+  image: string;
+  language?: LanguageHint | string;
+}
+
+export interface AnalyzeScreenshotResponse extends AnalyzeResponse {
+  /**
+   * OCR output, already redacted server-side (identifiers never leave the
+   * OCR step) - this is what was actually analyzed, not the raw extraction.
+   */
+  extractedText: string;
+}
+
 // ---- POST /api/batch-scan ----
 
 export interface BatchScanRequest {
@@ -123,3 +139,5 @@ export interface ApiErrorBody {
 
 export const MAX_MESSAGE_LENGTH = 5000;
 export const MAX_BATCH_SIZE = 50;
+/** Decoded image size cap; backend also enforces this (backend/src/routes/index.js). */
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

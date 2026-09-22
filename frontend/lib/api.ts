@@ -15,6 +15,8 @@
 import type {
   AnalyzeRequest,
   AnalyzeResponse,
+  AnalyzeScreenshotRequest,
+  AnalyzeScreenshotResponse,
   BatchScanRequest,
   BatchScanResponse,
   BatchScanResult,
@@ -59,6 +61,11 @@ export type ValidationReason =
   | "batch_item_empty"
   | "batch_item_too_long"
   | "sender_empty"
+  | "image_missing"
+  | "image_invalid"
+  | "image_too_large"
+  | "image_unreadable"
+  | "image_no_text"
   | "invalid";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -70,9 +77,18 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-/** Local LLM inference can be slow on first token; batch runs messages sequentially server-side. */
+/**
+ * Backend LLM_TIMEOUT_MS (currently 60s) applies PER PROVIDER ATTEMPT: in
+ * "auto" mode a request can try Ollama, time out, then try the hosted
+ * fallback - up to ~2x LLM_TIMEOUT_MS before the backend responds at all
+ * (see backend/src/services/analysis/llmClient.js). These must stay
+ * comfortably above that worst case, not just above one provider's budget,
+ * or the client shows "timeout" while the backend is still legitimately
+ * working. `screenshot` adds a little more for OCR itself.
+ */
 const DEFAULT_TIMEOUTS = {
-  analyze: 45_000,
+  analyze: 130_000,
+  screenshot: 135_000,
   batch: 180_000,
   report: 15_000,
 } as const;
@@ -86,6 +102,11 @@ const FRIENDLY = {
   batchItemEmpty: "One of the messages is empty. Remove it or add some text.",
   batchItemTooLong: "One of the messages is over 5,000 characters. Please shorten it.",
   senderEmpty: "Enter the sender's number or name to report it.",
+  imageMissing: "Choose a screenshot to upload.",
+  imageInvalid: "That file isn't a PNG, JPEG, or WEBP image.",
+  imageTooLarge: "That image is too large. Please keep it under 5MB.",
+  imageUnreadable: "That image couldn't be read. Try a different file.",
+  imageNoText: "We couldn't find any readable text in that screenshot.",
   llm: "Our analysis service is busy right now. Please try again in a moment.",
   network: "We can't reach FraudLens right now. Check your connection and try again.",
   timeout: "This is taking longer than usual. Please try again.",
@@ -106,6 +127,12 @@ const VALIDATION_MAP: Array<[RegExp, ValidationReason, string]> = [
   [/^every message in the batch must be a non-empty string/i, "batch_item_empty", FRIENDLY.batchItemEmpty],
   [/^every message must be 5000 characters or fewer/i, "batch_item_too_long", FRIENDLY.batchItemTooLong],
   [/^sender is required/i, "sender_empty", FRIENDLY.senderEmpty],
+  [/^image is required/i, "image_missing", FRIENDLY.imageMissing],
+  [/^image could not be decoded/i, "image_invalid", FRIENDLY.imageInvalid],
+  [/^image exceeds maximum size/i, "image_too_large", FRIENDLY.imageTooLarge],
+  [/^image must be a valid/i, "image_invalid", FRIENDLY.imageInvalid],
+  [/^no readable text was found/i, "image_no_text", FRIENDLY.imageNoText],
+  [/^extracted text exceeds maximum length/i, "message_too_long", FRIENDLY.messageTooLong],
 ];
 
 function friendlyValidation(raw: string | undefined): { reason: ValidationReason; message: string } {
@@ -256,6 +283,10 @@ function isAnalyzeResponse(v: unknown): v is AnalyzeResponse {
   return isObj(v) && VERDICTS.includes(v.verdict) && hasAnalysisShape(v);
 }
 
+function isAnalyzeScreenshotResponse(v: unknown): v is AnalyzeScreenshotResponse {
+  return isObj(v) && isStr(v.extractedText) && isAnalyzeResponse(v);
+}
+
 function isBatchScanResult(v: unknown): v is BatchScanResult {
   return isObj(v) && BATCH_VERDICTS.includes(v.verdict) && hasAnalysisShape(v) && isStr(v.message);
 }
@@ -319,6 +350,19 @@ function normaliseBatch(data: BatchScanResponse): ClientBatchScanResponse {
 
 export function analyzeMessage(req: AnalyzeRequest, opts: RequestOptions = {}): Promise<ApiResult<AnalyzeResponse>> {
   return postJson("/api/analyze", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.analyze, isAnalyzeResponse, opts.signal);
+}
+
+export function analyzeScreenshot(
+  req: AnalyzeScreenshotRequest,
+  opts: RequestOptions = {},
+): Promise<ApiResult<AnalyzeScreenshotResponse>> {
+  return postJson(
+    "/api/analyze/screenshot",
+    req,
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.screenshot,
+    isAnalyzeScreenshotResponse,
+    opts.signal,
+  );
 }
 
 export async function batchScan(

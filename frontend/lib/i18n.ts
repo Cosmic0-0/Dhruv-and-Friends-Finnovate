@@ -33,8 +33,8 @@ export interface Copy {
   checking: string;
   stillWorking: string;
   uploadScreenshot: string;
-  comingSoon: string;
-  soon: string;
+  /** Short micro-label under the upload button's icon. */
+  screenshotLabel: string;
   /** Must only claim what lib/redact.ts actually removes. */
   privacyNote: string;
   telegram: string;
@@ -281,8 +281,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Checking…",
     stillWorking: "The AI is still working…",
     uploadScreenshot: "Upload a screenshot",
-    comingSoon: "Screenshot upload is coming soon",
-    soon: "Soon",
+    screenshotLabel: "Screenshot",
     privacyNote: "Phone numbers, emails and account numbers are removed before anything is analysed.",
     telegram: "Or forward it to @FraudLensBot on Telegram.",
     recentTitle: "Recent checks",
@@ -300,6 +299,11 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "One of the messages is empty.",
         batch_item_too_long: "One of the messages is over 5,000 characters.",
         sender_empty: "Enter the sender's number or name.",
+        image_missing: "Choose a screenshot to upload.",
+        image_invalid: "That file isn't a PNG, JPEG, or WEBP image.",
+        image_too_large: "That image is too large. Please keep it under 5MB.",
+        image_unreadable: "That image couldn't be read. Try a different file.",
+        image_no_text: "We couldn't find any readable text in that screenshot.",
         invalid: "Something about that message didn't look right. Please check it and try again.",
       },
       llmTitle: "Our checker is busy",
@@ -353,8 +357,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Vérification…",
     stillWorking: "L'IA travaille encore…",
     uploadScreenshot: "Importer une capture d'écran",
-    comingSoon: "L'import de capture d'écran arrive bientôt",
-    soon: "Bientôt",
+    screenshotLabel: "Capture d'écran",
     privacyNote: "Les numéros de téléphone, e-mails et numéros de compte sont retirés avant toute analyse.",
     telegram: "Ou transférez-le à @FraudLensBot sur Telegram.",
     recentTitle: "Vérifications récentes",
@@ -372,6 +375,11 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "Un des messages est vide.",
         batch_item_too_long: "Un des messages dépasse 5 000 caractères.",
         sender_empty: "Indiquez le numéro ou le nom de l'expéditeur.",
+        image_missing: "Choisissez une capture d'écran à envoyer.",
+        image_invalid: "Ce fichier n'est pas une image PNG, JPEG ou WEBP.",
+        image_too_large: "Cette image est trop grande. Limitez-vous à 5 Mo.",
+        image_unreadable: "Cette image n'a pas pu être lue. Essayez un autre fichier.",
+        image_no_text: "Nous n'avons trouvé aucun texte lisible dans cette capture d'écran.",
         invalid: "Ce message pose un problème. Vérifiez-le et réessayez.",
       },
       llmTitle: "Notre service est occupé",
@@ -538,8 +546,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     checking: "Pe verifie…",
     stillWorking: "LIA pe ankor travay…",
     uploadScreenshot: "Met enn screenshot",
-    comingSoon: "Screenshot pe vini byento",
-    soon: "Byento",
+    screenshotLabel: "Screenshot",
     privacyNote: "Nimero telefonn, email ek nimero kont tire avan nanye analize.",
     telegram: "Ouswa avoy li ar @FraudLensBot lor Telegram.",
     recentTitle: "Dernie verifikasion",
@@ -557,6 +564,11 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_empty: "Enn mesaz vid.",
         batch_item_too_long: "Enn mesaz depas 5 000 karakter.",
         sender_empty: "Met nimero ouswa nom sa kinn avoy li.",
+        image_missing: "Swazir enn kaptir ekran pou anvoye.",
+        image_invalid: "Fisie la pa enn imaz PNG, JPEG, ouswa WEBP.",
+        image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
+        image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
+        image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",

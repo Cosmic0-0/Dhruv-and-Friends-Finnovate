@@ -7,6 +7,7 @@ import { checkIdentityConsistency } from "../services/identity-consistency/index
 import { computeRiskCategories } from "../services/risk-categories/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
+import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount } from "../db/index.js";
 
 export const router = Router();
@@ -141,22 +142,30 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   if (!isNonEmptyString(extractedText)) {
     return res.status(400).json({ error: "no readable text was found in the image" });
   }
-  if (extractedText.length > MAX_MESSAGE_LENGTH) {
+
+  // The raw image has to reach the server for OCR, so - unlike the text-paste
+  // path, which redacts in the browser before anything is sent - this is the
+  // earliest point identifiers can be redacted. Everything downstream
+  // (length check, analysis, the response) uses the redacted text only, so
+  // the same "personal identifiers never leave [this boundary]" guarantee
+  // holds for screenshots too (see backend/src/services/redact/index.js).
+  const { redacted: redactedText } = redact(extractedText);
+  if (redactedText.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: `extracted text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
 
   try {
-    const urlSignals = checkUrls(extractedText);
-    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(extractedText));
+    const urlSignals = checkUrls(redactedText);
+    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(redactedText));
 
-    const result = await analyzeMessage(extractedText, language);
+    const result = await analyzeMessage(redactedText, language);
     attachAges();
     // Same three additive, non-LLM checks as /api/analyze and
     // /api/batch-scan - see the comment on /api/analyze above.
     result.signals.push(...urlSignals);
-    result.signals.push(...checkIdentityConsistency(extractedText));
+    result.signals.push(...checkIdentityConsistency(redactedText));
     result.riskCategories = computeRiskCategories(result.signals);
-    res.json({ extractedText, ...withSenderReports(result) });
+    res.json({ extractedText: redactedText, ...withSenderReports(result) });
   } catch (err) {
     console.error(err);
     res.status(502).json({ error: "analysis failed, try again shortly" });
