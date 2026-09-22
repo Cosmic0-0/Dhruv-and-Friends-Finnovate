@@ -134,6 +134,12 @@ data/sender-reputation-seed/   Caellum  — seed data for the crowdsourced feed 
 directory that isn't self-explanatory has its own `README.md` restating its
 owner and scope.
 
+Everyone except the backend owner works on their own branch (`joshua`,
+`oleg`, `dhruv`, `caellum`) and opens a PR into `main`; the backend owner
+merges. This is a convention, not an enforced GitHub rule — no branch
+protection is configured, so it relies on everyone actually using their
+branch instead of pushing straight to `main`.
+
 ## API Contract (PLACEHOLDER — must be agreed and locked before parallel work starts)
 
 This is the first thing to fill in. Oleg (UI), Dhruv (OCR/batch), and the extension
