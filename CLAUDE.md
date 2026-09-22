@@ -139,6 +139,18 @@ Response:
 **Status: UNLOCKED.** Fill in exact field names/types once backend work starts, then
 treat this section as frozen for the remainder of the hackathon.
 
+## Compliance checklist
+
+`checklist.md` at the repo root tracks security hardening and
+production-credibility items (SEO/meta tags, no exposed source maps, no
+console errors, etc.). Claude Code should periodically re-check the current
+state of the codebase against `checklist.md` — at minimum before any commit
+that touches an API endpoint, auth, file uploads, or deployment config, and
+whenever asked to review or ship the app — and report which items are now
+satisfied, which regressed, and which are still open. Update the checkboxes
+in `checklist.md` to reflect reality rather than letting it drift out of sync
+with the code.
+
 ## Coding conventions
 
 - Backend: standard Node.js REST conventions (Express or equivalent) — route
