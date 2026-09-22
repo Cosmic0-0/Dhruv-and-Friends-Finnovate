@@ -1,13 +1,20 @@
 import express from "express";
+import { router } from "./routes/index.js";
+import { checkOllamaHealth, llmStatus } from "./services/analysis/llmClient.js";
 
 const app = express();
 app.use(express.json());
-
-// See ../../CLAUDE.md#role-gating for ownership.
-// Route handlers live in ./routes, business logic in ./services, wire them up here.
+app.use("/api", router);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
+});
+
+app.get("/health/llm", async (_req, res) => {
+  const reachable = await checkOllamaHealth();
+  const status = llmStatus();
+  const activeProvider = reachable ? "ollama" : status.fallbackConfigured ? status.fallbackProvider : "none";
+  res.json({ reachable, activeProvider, ...status });
 });
 
 const port = process.env.PORT || 4000;
