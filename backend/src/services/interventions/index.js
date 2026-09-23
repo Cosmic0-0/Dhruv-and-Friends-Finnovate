@@ -6,7 +6,7 @@
 // "reduceConcern" lists checks that would LOWER concern. It never says a
 // message is safe: one reassuring fact does not prove legitimacy.
 
-export const POLICY_VERSION = "interventions-1.1";
+export const POLICY_VERSION = "interventions-1.2";
 
 const ACTIONS = Object.freeze({
   dont_open_link: "Do not open the link in this message.",
@@ -35,6 +35,9 @@ const ACTIONS = Object.freeze({
   phish_open_independently: "Open the organisation's service independently.",
   dont_open_attachment: "Do not open this attachment. Ask your IT or security team to check it first.",
   dont_reply_to_address: "Do not reply to this email directly - replies would go to a different address than the sender's.",
+  // Uploaded documents (services/document-forensics).
+  doc_verify_with_issuer: "Do not rely on this document. Ask the organisation that supposedly issued it to confirm it, using contact details you find yourself - not the ones in the document.",
+  doc_dont_enable_content: "Do not enable editing, macros or content in this file, and do not open files attached inside it.",
   no_warning_signs: "No warning signs were found. Only act on requests you were expecting.",
 });
 
@@ -42,6 +45,9 @@ const URL_CODES = ["URL-01", "URL-02", "URL-03", "URL-04", "URL-06", "URL-07", "
 const PAY_CODES = ["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-06", "PAY-07", "EMAIL-06", "EMAIL-07"];
 const SUPPLIER_IDENTITY_CODES = ["EMAIL-02", "EMAIL-04", "EMAIL-10"];
 const SUPPLIER_PAYMENT_ACTIONS = ["supplier_dont_use_details", "supplier_contact_known", "supplier_verify_verbally"];
+// Document forgery artefacts. DOC-02 only counts when the change came after a
+// digital signature (a plain incremental save is too common to act on).
+const DOC_FORGERY_CODES = ["DOC-04", "DOC-05", "DOC-08"];
 
 // Ordered rules: [condition, action ids]. Every matching rule contributes.
 const RULES = [
@@ -51,6 +57,8 @@ const RULES = [
   [(c) => c.isEmail && c.hasAny([...URL_CODES, "SEC-01"]), ["phish_no_password", "phish_open_independently"]],
   [(c) => c.has("EMAIL-05"), ["dont_open_attachment"]],
   [(c) => c.has("EMAIL-01"), ["dont_reply_to_address"]],
+  [(c) => c.hasAny(DOC_FORGERY_CODES) || c.hasVariant("DOC-02", "after_signature"), ["doc_verify_with_issuer"]],
+  [(c) => c.has("DOC-07"), ["doc_dont_enable_content"]],
   [(c) => !c.isEmail && c.hasAny(URL_CODES), ["dont_open_link", "open_official_directly"]],
   [(c) => c.has("SEC-01"), ["dont_share_code", "contact_verified_channel"]],
   [(c) => c.has("SEC-02"), ["dont_install", "contact_verified_channel"]],
@@ -82,11 +90,13 @@ function legacySuggestedAction(level) {
 }
 
 /**
- * @param {{ level: string, codes: Iterable<string>, scamType?: string|null, stage?: string|null, source?: string }} input
+ * @param {{ level: string, codes: Iterable<string>, variants?: Iterable<string>, scamType?: string|null, stage?: string|null, source?: string }} input
+ *   variants: "CODE:variant" keys of signals that carry metadata.variant (optional)
  * @returns {{ policyVersion: string, actions: {id: string, text: string}[], reduceConcern: string[], suggestedAction: string }}
  */
-export function planInterventions({ level, codes, scamType = null, stage = null, source = null }) {
+export function planInterventions({ level, codes, variants = [], scamType = null, stage = null, source = null }) {
   const codeSet = new Set(codes);
+  const variantSet = new Set(variants);
   const ctx = {
     level,
     isEmail: source === "email",
@@ -94,6 +104,7 @@ export function planInterventions({ level, codes, scamType = null, stage = null,
     stage,
     has: (code) => codeSet.has(code),
     hasAny: (list) => list.some((code) => codeSet.has(code)),
+    hasVariant: (code, variant) => variantSet.has(`${code}:${variant}`),
   };
 
   const ids = [];

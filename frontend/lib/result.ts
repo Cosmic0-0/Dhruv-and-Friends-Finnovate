@@ -29,7 +29,8 @@ export type SignalKind =
   | "credential_request"
   | "payment_request"
   | "prize_offer"
-  | "secrecy";
+  | "secrecy"
+  | "document_integrity";
 
 /** "Bank Impersonation" / "bank-impersonation" / "bankImpersonation" → "bank_impersonation" */
 export function normalizeType(type: string): string {
@@ -46,6 +47,10 @@ export function normalizeType(type: string): string {
 // `type` isn't an enforced enum, so the LLM's variations are folded into
 // known kinds. Order matters: the first rule that matches wins.
 const KIND_RULES: ReadonlyArray<[SignalKind, RegExp]> = [
+  // Document-forensics findings (backend DOC-* codes, legacy types
+  // "document_*"). First, so "document_edited" etc. never fall into the
+  // message-text kinds below.
+  ["document_integrity", /^document_/],
   ["lookalike_url", /^lookalike_url$|lookalike|phish|(suspicious|malicious|fake|spoofed)_(link|url|domain)|typosquat/],
   // IDENTITY_MISMATCH (backend identity-consistency check): claims to be a brand
   // but the link or beneficiary doesn't match, i.e. "not who it claims".

@@ -7,7 +7,8 @@ import { ChartIcon, GridIcon, HomeIcon, PersonIcon } from "@/components/icons";
  * itself; this list is the four real destinations, in bar order.
  *
  * `match` decides which tab is current. Check owns every screen reached from a
- * check (result, replay, safepay, conversation, network, batch, sandbox), so a
+ * check (result, replay, safepay, conversation, network, batch, sandbox,
+ * document), so a
  * user is never left with no tab lit.
  */
 export const NAV_TABS = [
@@ -23,7 +24,8 @@ export const NAV_TABS = [
       p.startsWith("/conversation") ||
       p.startsWith("/sandbox") ||
       p.startsWith("/network") ||
-      p.startsWith("/batch"),
+      p.startsWith("/batch") ||
+      p.startsWith("/document"),
   },
   { href: "/learn", key: "learn", Icon: GridIcon, match: (p: string) => p.startsWith("/learn") },
   { href: "/trends", key: "trends", Icon: ChartIcon, match: (p: string) => p.startsWith("/trends") },

@@ -7,6 +7,15 @@ request or response shape changes.
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
+> **ADDITIVE CHANGE (2026-09-23): document forensics.** New route
+> `POST /api/analyze/document` (see below), new reason codes `DOC-01`..`DOC-08`,
+> ruleset `rs-1.4` (rs-1.0..1.3 unchanged and selectable), intervention
+> policy `interventions-1.2` (two new action ids), `analysis.source` value
+> `"document"`, an optional `analysis.detectorVersions.document`, and a
+> generic `413` for any request body over a route's size limit. No existing
+> field changed type or meaning, and existing clients need no change. Flag it
+> to the frontend, OCR/batch, extension and Outlook owners before merging.
+
 ## `POST /api/analyze`
 
 > **DECISION-ARCHITECTURE CHANGE (2026-09-23) — flag to Oleg (frontend),
@@ -91,10 +100,10 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.3",
-    "source": "pasted_text" | "screenshot" | "batch" | "email",
+    "rulesetVersion": "rs-1.4",
+    "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.1", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0" },
+    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
     "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.1", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
@@ -113,7 +122,7 @@ a `PAY-*` code → `PAYMENT_REQUEST`).
 {
   "code": "URL-02",                     // stable reason code - authoritative
   "type": "lookalike_url",              // legacy name kept for existing UI (mapping in services/signals/registry.js)
-  "category": "technical" | "identity" | "social" | "payment" | "credential" | "reputation" | "email_identity" | "email_auth" | "email_attachment" | "email_payment",
+  "category": "technical" | "identity" | "social" | "payment" | "credential" | "reputation" | "email_identity" | "email_auth" | "email_attachment" | "email_payment" | "document_integrity",
   "sourceType": "rule" | "lexicon" | "intel" | "semantic_model" | "community",   // authoritative provenance
   "source": "url_parser" | "identity_check" | "llm_analysis" | "community_reports", // legacy bucket: every non-AI signal maps to url_parser/identity_check
   "tier": "V" | "D" | "L" | "S",        // verified / deterministic / lexicon / semantic
@@ -162,8 +171,9 @@ and never shown or scored.
 | REP-03 | Sender reported ≥ 3 times | community |
 | REP-04, REP-05 | Confirmed scam template / known-malicious URL (reserved for intel feeds; floors exist) | intel |
 | EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
+| DOC-01..DOC-08 | Structural evidence in an uploaded PDF/DOCX - see `POST /api/analyze/document` | rule (document forensics) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.3`)
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.4`)
 
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
@@ -184,6 +194,15 @@ claim combined with free/cracked-download bait language). Deliberately not
 inflated to reach "high" on its own: that still needs an actual technical
 or payment/credential fact (e.g. a download-unlock fee reaching "high"
 through the existing IX-1, since ID-04 is already in its `a` list).
+
+`rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
+fingerprints) and adds the document-forensics weights, interaction DX-1 and
+floor FLOOR-DOC-FORGED-INSTITUTION (see `POST /api/analyze/document`).
+Text-only analyses score identically because they cannot emit a DOC-* code;
+the 84-case deterministic eval gives the same results under rs-1.3 and rs-1.4.
+The engine gained one additive feature: a floor may carry `anyVariants`,
+which narrows its `any` codes by `metadata.variant` exactly as an
+interaction's `aVariants` narrows `a`. No earlier ruleset sets it.
 
 1. **Dedupe:** signals about the same link (URL-01..04, URL-08, ID-01 on one
    host) are one finding; the same code from lexicon + semantic is one
@@ -373,6 +392,7 @@ explainable reputation lookups only; there is no live retraining.
 | `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
 | `400` | `{ "error": "emailContext.<field> ..." }` | invalid `emailContext` (wrong type, unparsable address, too many entries) |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is no longer an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
+| `413` | `{ "error": "request body is too large" }` | the body exceeds the route's JSON limit. This applies to every route and is mapped in `backend/src/services/http-errors`. Malformed JSON is `400 { "error": "invalid JSON body" }`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
 
 ## `POST /api/analyze/screenshot`
@@ -419,6 +439,146 @@ then submits it to `/api/analyze`).
 | `502` | `{ "error": "OCR failed, try again shortly" }` | the tesseract.js worker itself threw. The real error is logged server-side, never returned to the client. |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error after OCR succeeded. An LLM outage is **not** an error (see `/api/analyze`). |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (shares the 20 req/15min bucket with `/api/analyze`) |
+
+## `POST /api/analyze/document`
+
+**Additive (2026-09-23).** Document forensics. The route looks for structural
+warning signs in an uploaded PDF or Word (.docx) file: a signature pasted onto
+a scan, text typed onto a scan, a change after digital signing, editing-tool
+metadata, hidden text and active content. It also runs the document's text
+through the same `runPipeline()` as every other route.
+
+The result is **one deterministic verdict**. The structural findings are
+ordinary `DOC-*` entries in `signals[]`, scored by `rs-1.4`. The LLM sees only
+the redacted text, never the file, its images or the forensic facts. An LLM
+outage still returns `200` with the full deterministic verdict.
+
+### Request
+
+```json
+{
+  "file": "string, required - the file's bytes as base64, or a data URL (the data:...;base64, prefix is stripped). Max 10MB decoded.",
+  "fileName": "string, optional - display only; ignored by the backend and never echoed",
+  "language": "string, optional - same free-form hint as /api/analyze"
+}
+```
+
+The type is decided **by magic bytes only**:
+
+- `%PDF-` is a PDF.
+- A ZIP (`PK\x03\x04`) must declare a Word main document in
+  `[Content_Types].xml`. The .docx/.dotx and macro-enabled .docm/.dotm content
+  types all count.
+
+The body limit is 14MB, the base64 size of a 10MB file. The route shares the
+analyze rate limit (20 req/15min/IP).
+
+How it runs (`backend/src/services/document-forensics`):
+
+- Parsing happens in a `worker_threads` worker with a 256MB heap limit and a
+  hard timeout (`DOCUMENT_TIMEOUT_MS`, default 15s). A hostile or huge file can
+  only exhaust that worker, which is then terminated.
+- At most 2 documents are analysed at once.
+- The first 10 PDF pages are inspected.
+- The text comes from the file's text layer when that layer has at least 50
+  letters/digits. Otherwise the scans on the first 3 pages are OCR'd.
+  `ocrQuality` reaches the engine. An OCR failure is not an error: the result
+  then says `textSource: "none"`.
+- The text is redacted server-side with the same `redact()` as screenshot OCR.
+  **Unlike a screenshot, text over 5000 characters is cut at a line or word
+  boundary rather than rejected.** `document.textTruncated` says when that
+  happened.
+
+Nothing is stored: not the file, its text or its previews. Like every check,
+the pipeline may record the same privacy-minimised aggregate observations
+(ScamDNA type/claimed-identity counts) that text checks record.
+
+### Response - `200 OK`
+
+The full `/api/analyze` response (`analysis.source: "document"`,
+`analysis.detectorVersions.document: "document-1.0"`) plus:
+
+```jsonc
+{
+  "extractedText": "string - the redacted (and possibly truncated) text that was analysed",
+  "document": {
+    "fileType": "pdf" | "docx",
+    "pageCount": 3,            // number | null (DOCX: from docProps/app.xml when present)
+    "pagesAnalyzed": 3,        // number | null (null for DOCX); at most 10
+    "textSource": "text_layer" | "ocr" | "none",
+    "textTruncated": false,
+    "metadata": {              // tool names and dates only - author/person fields are never returned
+      "producer": "iLovePDF",  // string | null, sanitised, <= 120 chars (DOCX: the Application)
+      "creator": "iLovePDF",   // string | null (always null for DOCX)
+      "created": "2026-09-01T09:30:00.000Z",   // ISO string | null
+      "modified": "2026-09-15T14:12:00.000Z",  // ISO string | null
+      "incrementalUpdates": 1, // saved revisions after the first; null for DOCX
+      "signed": false          // a digital signature (/ByteRange) is present
+    },
+    "previews": [              // <= 4, one per flagged pasted image (DOC-04)
+      {
+        "signalCode": "DOC-04",
+        "page": 1,             // null for DOCX
+        "widthPx": 116, "heightPx": 44,
+        "effectiveDpi": 48,    // pixels per placed inch (the worse axis)
+        "backgroundDpi": 150,  // the scan's own dpi; null for DOCX
+        "hasAlpha": true,
+        "hardEdgeRatio": 1,    // 0..1: opaque pixels next to fully transparent ones vs anti-aliased edge pixels; null if no edges
+        "dataUrl": "data:image/png;base64,..."   // <= 256px on the long side, palette PNG
+      }
+    ]
+  }
+}
+```
+
+A DOC-04 signal that has a preview carries `metadata.previewIndex`, its index in
+`document.previews`.
+
+#### Document reason codes (detector `document-1.0`, ruleset `rs-1.4`)
+
+Each one is a warning sign, not proof. All of them are `sourceType: "rule"` and
+`category: "document_integrity"`, which feeds `riskCategories.technical_risk`.
+Their legacy `type` has the form `document_*`.
+
+| Code | Emitted when (evidence required) | rs-1.4 points |
+|---|---|---|
+| DOC-01 | Producer/Creator (Info or XMP), or the DOCX Application/creator fields, name a consumer editing or design tool from `CONSUMER_EDITING_TOOLS` (Canva, iLovePDF, Smallpdf, Sejda, PDFescape, PDF24, Photoshop, GIMP, ...). Word, LibreOffice, scanners and PDF libraries are never flagged. The tools are in `metadata.tools`. | 10 |
+| DOC-02 | `after_signature`: bytes were appended after the last signed `/ByteRange`, and they are not DSS/VRI validation data. `incremental_update`: there is a saved revision after the first that is not a signature being added, DSS data or linearization. | 30 / 8 |
+| DOC-03 | `mod_before_create` (by more than 60s), `future_date` (more than 24h ahead), or `producer_mismatch` (the Info and XMP producers share no word) | 6 |
+| DOC-04 | Only on a **scan page**, meaning a raster covering at least 85% of the page with at most 400 visible text characters. Fires on an image drawn over the scan. `transparent_overlay`: at least 1% of its pixels are transparent. `resolution_mismatch`: below 0.5x the scan's dpi. `overlay`: neither. Stencil masks at or above the scan's dpi (compact/MRC scans) and extra full-page layers are ignored. The DOCX variant `docx_transparent_image` is a floating (`wp:anchor`) PNG with transparency. | 25 / 20 / 10 / 8 |
+| DOC-05 | Visible text (render mode not 3/7, not white) drawn on a scan page. The evidence is up to 3 redacted snippets of up to 120 characters each. | 20 |
+| DOC-06 | At least 20 hidden characters on a page without a full-page image. Variants: `invisible_render_mode`, `white_text` (only on pages with no images and no coloured fills), `tiny_font` (under 1pt). The hidden text also flows into the pipeline, where SOC-07 can fire. | 10 |
+| DOC-07 | PDF: `javascript`, `launch_action`, `embedded_file`, or `submit_form` to an external URL. Found by enumerating every object, including compressed object streams. DOCX: `macro` (`vbaProject.bin`), `external_template` (an attachedTemplate with `TargetMode="External"`; the host is in `metadata.host`), or `ole_object`. Nothing is executed or fetched. | 20 / 30 / 10 / 15; 30 / 30 / 15 |
+| DOC-08 | Native pages only. Needs at least 10 visible text items, with one font family on at least half of them. Fires on an amount, account number, IBAN or date item in a family used by at most 2 items. Bold or italic of the same family never counts. The fonts are in `metadata.font` and `metadata.dominantFont`. | 12 |
+
+- Several variants of the same code make one finding, at the strongest weight
+  (normal dedupe).
+- **DX-1** (+15, applied once) combines a forgery artefact with ID-01..04 or
+  PAY-01..07. The forgery artefacts are DOC-04 (not the DOCX variant),
+  DOC-05, DOC-08 and DOC-02 `after_signature`.
+- **Floor `FLOOR-DOC-FORGED-INSTITUTION`** sets at least `high` when DOC-04
+  `transparent_overlay`/`resolution_mismatch` or DOC-05 appears on a document
+  whose text claims a registry institution.
+- Each weak signal alone stays `low`. Alone, DOC-04 (transparent or
+  upscaled), DOC-05, DOC-02 after-signing and the high-severity DOC-07 variants
+  reach `elevated`, never `high`.
+- Actions (`interventions-1.2`): `doc_verify_with_issuer` for a forgery
+  artefact, and `doc_dont_enable_content` for DOC-07.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "document is required and must be a base64-encoded string" }` | `file` missing, not a string, or empty |
+| `400` | `{ "error": "document could not be decoded as base64" }` | decodes to zero bytes |
+| `400` | `{ "error": "document exceeds maximum size of 10MB" }` | decoded file over 10MB |
+| `400` | `{ "error": "document must be a PDF or Word (.docx) file (checked by content, not the file name)" }` | unrecognised magic bytes, a ZIP that is not a Word document, or a legacy .doc |
+| `400` | `{ "error": "document is password-protected" }` | a PDF that needs a password to open, or a password-encrypted Office file. PDFs with permissions-only encryption open without a password and **are analysed**. |
+| `400` | `{ "error": "document could not be read" }` | the file could not be parsed, the worker timed out, or it ran out of memory. The real reason is logged server-side only. |
+| `413` | `{ "error": "request body is too large" }` | body over 14MB |
+| `429` | `{ "error": "too many analyze requests, try again shortly" }` | shares the 20 req/15min analyze bucket |
+| `503` | `{ "error": "document analysis is busy, try again shortly" }` | 2 documents are already being analysed |
+| `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error. An LLM outage is **not** an error. |
 
 ## `POST /api/batch-scan`
 
@@ -742,9 +902,24 @@ versus what's likely to change before the demo:
   entries carry `verification.status: "unverified"` until someone checks
   each domain on the institution's own website. `official_phones` is
   empty on purpose (nothing verified yet).
-- **OCR quality is not yet passed to the engine** — `runPipeline()` accepts
-  `ocrQuality` (lowers evidence confidence) but the screenshot route does
-  not compute it yet.
+- **OCR quality reaches the engine only for documents.** The document route
+  passes `ocrQuality` when it had to OCR a scan. The screenshot route still
+  does not compute it.
+- **Document forensics limits** (`POST /api/analyze/document`):
+  - Metadata can be stripped or forged, so DOC-01/03 prove nothing on their own.
+  - A forgery that was printed and scanned again leaves no structural trace.
+  - There is no pixel-level error-level analysis.
+  - PDF annotations (e.g. form fields filled on a scan) and XFA forms are not
+    inspected.
+  - For PDFs with permissions-only encryption, the active-content scan is
+    best-effort: their compressed object streams are ciphertext to the object
+    enumerator.
+  - Only the first 10 pages are inspected, and at most 3 scanned pages are OCR'd.
+  - Through the web app's Next.js proxy, request bodies are cloned up to
+    `middlewareClientMaxBodySize` (15mb, `frontend/next.config.ts`). A body
+    larger than that is cut short by Next and comes back as a generic proxy 500
+    rather than the backend's 413. The web app never sends one: it refuses
+    files over 10MB before uploading.
 - **No auth on any route** — ties to the open items in `checklist.md` §
   Security. Every route is currently unauthenticated; there's no user/session
   concept in the app at all yet, so this only matters once one is added.

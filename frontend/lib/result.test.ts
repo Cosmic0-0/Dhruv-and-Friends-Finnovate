@@ -110,3 +110,9 @@ test("safe checklist only claims what's true", () => {
     ["no_link", "informs_not_asks", "no_pressure"],
   );
 });
+
+test("document-forensics legacy types map to their own kind, never a message-text kind", () => {
+  for (const type of ["document_editing_tool", "document_edited", "document_pasted_image", "document_inserted_text", "document_hidden_text", "document_active_content", "document_font_outlier", "document_metadata_inconsistent"]) {
+    assert.equal(signalKind(type), "document_integrity", type);
+  }
+});

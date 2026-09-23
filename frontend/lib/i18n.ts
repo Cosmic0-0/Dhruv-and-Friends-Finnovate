@@ -11,6 +11,7 @@
  */
 
 import type { ValidationReason } from "./api";
+import type { DocFinding, DocFindingKey, PreviewFacts } from "./document";
 import type { QuizLanguage, TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
 import type { LanguageHint, Severity, ScamStage } from "./types";
@@ -104,6 +105,8 @@ export interface Copy {
     /** Shown when the clipboard is empty or the browser refuses to read it. */
     pasteFallback: string;
     screenshot: string;
+    /** Hero button to the document check (app/document). */
+    document: string;
     payRow: string;
     /** Checking state (design/mockup/Checking.png). */
     checkingLabel: string;
@@ -117,7 +120,17 @@ export interface Copy {
    * The "Tools" list on Radar. Batch scan, Conversation and Sandbox have no
    * tab of their own in the five-slot bar, so this card is their entry point.
    */
-  tools: { title: string; batch: string; conversation: string; sandbox: string; batchHint: string; conversationHint: string; sandboxHint: string };
+  tools: {
+    title: string;
+    batch: string;
+    conversation: string;
+    sandbox: string;
+    document: string;
+    batchHint: string;
+    conversationHint: string;
+    sandboxHint: string;
+    documentHint: string;
+  };
   /** Settings screen: the language switch, the privacy note and an about section. */
   settings: {
     title: string;
@@ -203,6 +216,8 @@ export interface Copy {
     noLinkBody: string;
     scamAdvice: string;
     messageYouSent: string;
+    /** Title of the same card when the text came from an uploaded document. */
+    documentText: string;
     /** Shown once, above the highlighted message, when at least one signal has evidence to highlight ("Scam X-Ray"). */
     xrayHint: string;
     whyTitle: string;
@@ -268,6 +283,8 @@ export interface Copy {
     sentBody: string;
     /** "What was sent" explanation when the text came from a screenshot (the image itself also left the device). */
     sentBodyScreenshot: string;
+    /** "What was sent" explanation for a document check (the file itself went to the server). */
+    sentBodyDocument: string;
     /** Which AI (if any) served the semantic analysis — local self-hosted model, hosted fallback, or none. */
     aiSource: {
       label: string;
@@ -416,6 +433,73 @@ export interface Copy {
     checkAnother: string;
     /** Navigates away to the normal Check screen (shown under the empty form). */
     back: string;
+  };
+  document: DocumentCopy;
+}
+
+/**
+ * Document check (app/document, components/document/DocumentCheck.tsx) and
+ * the result screen's "Document integrity" panel. Every finding sentence is
+ * a warning sign, never "this is fake": the backend's checks cannot prove a
+ * forgery, and a printed-and-rescanned one leaves no trace.
+ */
+export interface DocumentCopy {
+  title: string;
+  subtitle: string;
+  intro: string;
+  /** Must describe what really happens: the file reaches the server, is analysed in memory and never stored. */
+  privacy: string;
+  drop: string;
+  dropActive: string;
+  choose: string;
+  types: string;
+  remove: string;
+  check: string;
+  cancel: string;
+  status: {
+    reading: string;
+    /** Null when the browser can't report upload progress. */
+    uploading: (percent: number | null) => string;
+    analysing: string;
+    analysingNote: string;
+  };
+  storageFailed: string;
+  /** Result screen subtitle for a document check. */
+  resultFrom: (fileName: string) => string;
+  /**
+   * "What to do now" for a document. The backend's intervention policy picks
+   * the actions (ids in response.actions); this only words them.
+   */
+  whatToDo: { dontAct: string; doc_verify_with_issuer: string; doc_dont_enable_content: string; verify: string };
+  panel: {
+    title: string;
+    subtitle: string;
+    fileFacts: string;
+    fileType: string;
+    fileTypes: Record<"pdf" | "docx", string>;
+    pages: string;
+    pagesValue: (analysed: number | null, total: number | null) => string;
+    producer: string;
+    creator: string;
+    created: string;
+    modified: string;
+    revisions: string;
+    revisionsValue: (n: number) => string;
+    signature: string;
+    signed: string;
+    notSigned: string;
+    textSource: string;
+    textSources: Record<"text_layer" | "ocr" | "none", string>;
+    truncated: string;
+    editedAfterSigning: string;
+    editedAfterCreation: string;
+    findingsTitle: string;
+    none: string;
+    findings: Record<DocFindingKey, (f: DocFinding) => string>;
+    previewsTitle: string;
+    previewCaption: (f: PreviewFacts) => string;
+    previewAlt: (page: number | null) => string;
+    caveat: string;
   };
 }
 
@@ -569,6 +653,7 @@ const RESULT_EN: Copy["result"] = {
   noLinkBody: "Nothing here can open a fake page.",
   scamAdvice: "Do not pay, do not open the link, and never share a code sent to your phone.",
   messageYouSent: "The message you sent",
+  documentText: "Text found in the document",
   whyTitle: "Why this looks wrong",
   signalTitles: {
     sender_mismatch: "The sender is not who it claims",
@@ -579,6 +664,7 @@ const RESULT_EN: Copy["result"] = {
     payment_request: "It asks you to pay or send money",
     prize_offer: "It promises something too good to be true",
     secrecy: "It asks you to keep it secret",
+    document_integrity: "The file itself shows signs of editing",
   },
   genericSignal: "Something doesn't look right",
   severity: { low: "Low", medium: "Medium", high: "High" },
@@ -655,6 +741,8 @@ const RESULT_EN: Copy["result"] = {
   sentBody: "Only this version left your phone. Phone numbers, emails and account numbers were replaced first.",
   sentBodyScreenshot:
     "Your screenshot was sent to our server to read the text, with everything in it visible. Your result is based only on this redacted version of the text.",
+  sentBodyDocument:
+    "Your file was sent to our server, analysed in memory and not stored. Account numbers, phone numbers and emails were removed from its text before this version was analysed.",
   aiSource: {
     label: "Analyzed by",
     local: "Local AI model (self-hosted, on-device)",
@@ -688,6 +776,7 @@ const REPLAY_EN: Copy["replay"] = {
     payment_request: "Framing it as a fee or refund makes paying feel like the normal next step.",
     prize_offer: "An unexpected reward lowers your guard before you check who's actually asking.",
     secrecy: "Being told to keep it quiet removes the chance for someone else to catch the trick.",
+    document_integrity: "An official-looking document feels like proof, so few people check how the file itself was made.",
   },
 };
 
@@ -747,6 +836,14 @@ const IMAGE_ERRORS_EN: Record<ImageReason, string> = {
     "That screenshot has more text than we can check at once. Crop it to just the message, or paste the text.",
 };
 
+type DocumentReason = Extract<ValidationReason, `document_${string}`>;
+const DOCUMENT_ERRORS_EN: Record<DocumentReason, string> = {
+  document_too_large: "That file is too large. Please keep it under 10 MB.",
+  document_unsupported: "That file isn't a PDF or Word (.docx) document.",
+  document_encrypted: "That document is password-protected. Open it, save a copy without a password, and try again.",
+  document_unreadable: "We couldn't read that document. It may be damaged or too complex. Try another copy of it.",
+};
+
 const OCR_ERROR_EN = {
   ocrTitle: "We couldn't read that image",
   ocr: "Something went wrong while reading the text. Try again, or type the message instead.",
@@ -794,6 +891,230 @@ const SAFEPAY_EN: Copy["safepay"] = {
   back: "Check a message instead",
 };
 
+const onPage = (page: number | null, en = true) => (page === null ? "" : en ? `Page ${page}: ` : `Page ${page} : `);
+const quoted = (s: string | null) => (s ? ` "${s}"` : "");
+
+const DOCUMENT_EN: DocumentCopy = {
+  title: "Check a document",
+  subtitle: "A PDF or Word file that feels off",
+  intro:
+    "Upload a bank form, statement, invoice or payment confirmation. FraudLens checks how the file itself was made (pasted-on signatures, text typed onto a scan, changes after signing) and reads its text for scam warning signs.",
+  privacy:
+    "Your file is sent to the FraudLens server, analysed in memory and never stored. Account numbers, phone numbers and emails are removed from its text before the text is analysed.",
+  drop: "Drop a PDF or Word file here",
+  dropActive: "Drop it to check",
+  choose: "Choose a file",
+  types: "PDF or Word (.docx), up to 10 MB",
+  remove: "Remove",
+  check: "Check this document",
+  cancel: "Cancel",
+  status: {
+    reading: "Reading the file…",
+    uploading: (p) => (p === null ? "Sending the file…" : `Sending the file… ${p}%`),
+    analysing: "Checking the file's structure and text…",
+    analysingNote: "Scanned documents can take up to a minute.",
+  },
+  storageFailed: "Your browser couldn't keep the result. Close some other tabs and try again.",
+  resultFrom: (name) => `Document: ${name}`,
+  whatToDo: {
+    dontAct: "Don't pay, sign or send anything because of this document until it is confirmed.",
+    doc_verify_with_issuer:
+      "Ask the organisation that supposedly issued it to confirm it, using contact details you find yourself, not the ones in the document.",
+    doc_dont_enable_content: "Don't enable editing, macros or content in this file, and don't open files attached inside it.",
+    verify: "Check the document with the organisation it comes from before you act on it.",
+  },
+  panel: {
+    title: "Document integrity",
+    subtitle: "How the file itself was made, not only what it says.",
+    fileFacts: "The file",
+    fileType: "Type",
+    fileTypes: { pdf: "PDF", docx: "Word document" },
+    pages: "Pages",
+    pagesValue: (analysed, total) =>
+      total === null ? (analysed === null ? "Not recorded" : `${analysed}`) : analysed !== null && analysed < total ? `${total} (first ${analysed} checked)` : `${total}`,
+    producer: "Made or saved with",
+    creator: "Created in",
+    created: "Created",
+    modified: "Last changed",
+    revisions: "Saved again",
+    revisionsValue: (n) => (n === 0 ? "No" : n === 1 ? "Once after it was created" : `${n} times after it was created`),
+    signature: "Digital signature",
+    signed: "Present",
+    notSigned: "None",
+    textSource: "Text read from",
+    textSources: { text_layer: "The file's own text", ocr: "The scanned image (OCR)", none: "No readable text found" },
+    truncated:
+      "This document has more text than one check covers, so only the first part of its text was checked. The structure checks covered its first pages.",
+    editedAfterSigning: "Changed after it was digitally signed",
+    editedAfterCreation: "Edited after it was created",
+    findingsTitle: "What we found in the file",
+    none: "No structural warning signs found in this file.",
+    findings: {
+      "DOC-01": (f) =>
+        `Saved with ${f.tools.join(", ") || "a consumer editing tool"}. Real bank documents normally come straight from the bank's own systems, not from an online editor.`,
+      "DOC-02": () => "The file was changed after it was created.",
+      "DOC-02:incremental_update": () => "The file was edited and saved again after it was first created.",
+      "DOC-02:after_signature": () => "The file was changed after it was digitally signed, so what you see may not be what was signed.",
+      "DOC-03": () => "The file's details (dates or the program that made it) don't add up.",
+      "DOC-03:mod_before_create": () => "The file says it was changed before it was created.",
+      "DOC-03:future_date": () => "The file carries a date in the future.",
+      "DOC-03:producer_mismatch": () => "The file's two records of which program made it disagree, which happens when a file is re-saved in another tool.",
+      "DOC-04": (f) => `${onPage(f.page)}A separate image was placed on top of the scanned page.`,
+      "DOC-04:transparent_overlay": (f) =>
+        `${onPage(f.page)}An image with a transparent background was pasted on top of the scan${f.ratio && f.ratio >= 2 ? `, at ${fmt(f.ratio, "en")}x lower resolution than the scan around it` : ""}. Pasted signatures and stamps look like this.`,
+      "DOC-04:resolution_mismatch": (f) =>
+        `${onPage(f.page)}An image placed on top of the scan is much blurrier than the scan around it${f.ratio ? ` (${fmt(f.ratio, "en")}x lower resolution)` : ""}, as if it was enlarged from a small picture.`,
+      "DOC-04:overlay": (f) => `${onPage(f.page)}A separate image was placed on top of the scanned page.`,
+      "DOC-04:docx_transparent_image": () =>
+        "A picture with a transparent background floats over the text, often a pasted signature or stamp. Genuine Word signatures can look like this too.",
+      "DOC-05": (f) => `${onPage(f.page)}Text was typed on top of the scan:${quoted(f.snippet)}. A real scan carries its text inside the image.`,
+      "DOC-06": (f) => `${onPage(f.page)}The file contains text you can't see.`,
+      "DOC-06:invisible_render_mode": (f) =>
+        `${onPage(f.page)}The file contains invisible text. Hidden text can carry instructions meant to fool automated checkers.`,
+      "DOC-06:white_text": (f) => `${onPage(f.page)}The file contains white text on a white page, invisible to you but readable by a computer.`,
+      "DOC-06:tiny_font": (f) => `${onPage(f.page)}The file contains text too small to read.`,
+      "DOC-07": () => "The file contains active content that can run when it is opened.",
+      "DOC-07:javascript": () => "The PDF contains code (JavaScript) that can run when you open it.",
+      "DOC-07:launch_action": () => "The PDF tries to open another file or program.",
+      "DOC-07:embedded_file": () => "Other files are hidden inside this PDF.",
+      "DOC-07:submit_form": () => "The PDF has a form that sends what you type to a website.",
+      "DOC-07:macro": () => "The Word file contains macros: code that runs if you click “Enable content”.",
+      "DOC-07:external_template": (f) =>
+        `The Word file loads a template from the internet when it opens${f.host ? ` (${f.host})` : ""}. This is a known way to deliver malware.`,
+      "DOC-07:ole_object": () => "The Word file contains an embedded object that can run content.",
+      "DOC-08": (f) =>
+        `${onPage(f.page)}${f.snippet ? `"${f.snippet}" uses` : "An amount, account number or date uses"} a different font${f.font ? ` (${f.font})` : ""} from the rest of the page${f.dominantFont ? ` (${f.dominantFont})` : ""}, a common trace of an edited amount or date.`,
+      other: () => "Something about how this file was made looks unusual.",
+    },
+    previewsTitle: "Images found pasted onto the document",
+    previewCaption: (f) => {
+      const parts = [f.transparent ? "Pasted image with a transparent background" : "Image placed on top of the scan"];
+      if (f.lowerRes) parts.push(`${fmt(f.lowerRes, "en")}x lower resolution than the scan around it`);
+      if (f.hardEdges) parts.push("hard, pixelated edges");
+      return `${parts.join(", ")}${f.page !== null ? ` (page ${f.page})` : ""}.`;
+    },
+    previewAlt: (page) => (page === null ? "Image found pasted onto the document" : `Image found pasted onto page ${page}`),
+    caveat:
+      "These are warning signs, not proof. Legitimate tools can leave some of them, and a forgery that was printed and scanned again leaves no trace in the file. If in doubt, ask the organisation that issued it to confirm, using contact details you find yourself.",
+  },
+};
+
+const DOCUMENT_FR: DocumentCopy = {
+  title: "Vérifier un document",
+  subtitle: "Un PDF ou un fichier Word qui vous semble louche",
+  intro:
+    "Envoyez un formulaire bancaire, un relevé, une facture ou une confirmation de paiement. FraudLens vérifie comment le fichier lui-même a été fabriqué (signature collée, texte tapé sur un scan, modification après signature) et lit son texte à la recherche de signes d'arnaque.",
+  privacy:
+    "Votre fichier est envoyé au serveur FraudLens, analysé en mémoire et jamais conservé. Les numéros de compte, de téléphone et les adresses e-mail sont retirés de son texte avant l'analyse du texte.",
+  drop: "Déposez un PDF ou un fichier Word ici",
+  dropActive: "Déposez-le pour le vérifier",
+  choose: "Choisir un fichier",
+  types: "PDF ou Word (.docx), 10 Mo maximum",
+  remove: "Retirer",
+  check: "Vérifier ce document",
+  cancel: "Annuler",
+  status: {
+    reading: "Lecture du fichier…",
+    uploading: (p) => (p === null ? "Envoi du fichier…" : `Envoi du fichier… ${p} %`),
+    analysing: "Vérification de la structure et du texte du fichier…",
+    analysingNote: "Un document scanné peut prendre jusqu'à une minute.",
+  },
+  storageFailed: "Votre navigateur n'a pas pu garder le résultat. Fermez quelques onglets et réessayez.",
+  resultFrom: (name) => `Document : ${name}`,
+  whatToDo: {
+    dontAct: "Ne payez, ne signez et n'envoyez rien à cause de ce document tant qu'il n'est pas confirmé.",
+    doc_verify_with_issuer:
+      "Demandez à l'organisme censé l'avoir émis de le confirmer, avec des coordonnées que vous trouvez vous-même, pas celles du document.",
+    doc_dont_enable_content:
+      "N'activez ni la modification, ni les macros, ni le contenu de ce fichier, et n'ouvrez pas les fichiers joints à l'intérieur.",
+    verify: "Vérifiez le document auprès de l'organisme dont il provient avant d'agir.",
+  },
+  panel: {
+    title: "Intégrité du document",
+    subtitle: "Comment le fichier lui-même a été fabriqué, pas seulement ce qu'il dit.",
+    fileFacts: "Le fichier",
+    fileType: "Type",
+    fileTypes: { pdf: "PDF", docx: "Document Word" },
+    pages: "Pages",
+    pagesValue: (analysed, total) =>
+      total === null
+        ? analysed === null
+          ? "Non indiqué"
+          : `${analysed}`
+        : analysed !== null && analysed < total
+          ? `${total} (les ${analysed} premières vérifiées)`
+          : `${total}`,
+    producer: "Créé ou enregistré avec",
+    creator: "Créé dans",
+    created: "Créé le",
+    modified: "Dernière modification",
+    revisions: "Réenregistré",
+    revisionsValue: (n) => (n === 0 ? "Non" : n === 1 ? "Une fois après sa création" : `${n} fois après sa création`),
+    signature: "Signature numérique",
+    signed: "Présente",
+    notSigned: "Aucune",
+    textSource: "Texte lu depuis",
+    textSources: { text_layer: "Le texte du fichier", ocr: "L'image scannée (OCR)", none: "Aucun texte lisible trouvé" },
+    truncated:
+      "Ce document contient plus de texte qu'une vérification n'en couvre : seule la première partie de son texte a été vérifiée. Les contrôles de structure ont porté sur ses premières pages.",
+    editedAfterSigning: "Modifié après sa signature numérique",
+    editedAfterCreation: "Modifié après sa création",
+    findingsTitle: "Ce que nous avons trouvé dans le fichier",
+    none: "Aucun signe d'alerte dans la structure de ce fichier.",
+    findings: {
+      "DOC-01": (f) =>
+        `Enregistré avec ${f.tools.join(", ") || "un outil d'édition grand public"}. Les vrais documents bancaires sortent normalement des systèmes de la banque, pas d'un éditeur en ligne.`,
+      "DOC-02": () => "Le fichier a été modifié après sa création.",
+      "DOC-02:incremental_update": () => "Le fichier a été modifié et réenregistré après sa création.",
+      "DOC-02:after_signature": () =>
+        "Le fichier a été modifié après sa signature numérique : ce que vous voyez n'est peut-être pas ce qui a été signé.",
+      "DOC-03": () => "Les informations du fichier (dates ou logiciel d'origine) ne concordent pas.",
+      "DOC-03:mod_before_create": () => "Le fichier indique avoir été modifié avant d'avoir été créé.",
+      "DOC-03:future_date": () => "Le fichier porte une date dans le futur.",
+      "DOC-03:producer_mismatch": () =>
+        "Les deux mentions du logiciel qui a créé le fichier se contredisent, ce qui arrive quand un fichier est réenregistré dans un autre outil.",
+      "DOC-04": (f) => `${onPage(f.page, false)}Une image distincte a été placée sur la page scannée.`,
+      "DOC-04:transparent_overlay": (f) =>
+        `${onPage(f.page, false)}Une image à fond transparent a été collée sur le scan${f.ratio && f.ratio >= 2 ? `, avec une résolution ${fmt(f.ratio, "fr")} fois plus faible que le scan autour` : ""}. Les signatures et tampons collés ressemblent à cela.`,
+      "DOC-04:resolution_mismatch": (f) =>
+        `${onPage(f.page, false)}Une image placée sur le scan est bien plus floue que le scan autour${f.ratio ? ` (résolution ${fmt(f.ratio, "fr")} fois plus faible)` : ""}, comme si elle avait été agrandie à partir d'une petite image.`,
+      "DOC-04:overlay": (f) => `${onPage(f.page, false)}Une image distincte a été placée sur la page scannée.`,
+      "DOC-04:docx_transparent_image": () =>
+        "Une image à fond transparent flotte sur le texte, souvent une signature ou un tampon collé. Une vraie signature Word peut aussi ressembler à cela.",
+      "DOC-05": (f) =>
+        `${onPage(f.page, false)}Du texte a été tapé par-dessus le scan :${quoted(f.snippet)}. Un vrai scan contient son texte dans l'image.`,
+      "DOC-06": (f) => `${onPage(f.page, false)}Le fichier contient du texte que vous ne pouvez pas voir.`,
+      "DOC-06:invisible_render_mode": (f) =>
+        `${onPage(f.page, false)}Le fichier contient du texte invisible. Un texte caché peut contenir des instructions destinées à tromper les outils de vérification.`,
+      "DOC-06:white_text": (f) =>
+        `${onPage(f.page, false)}Le fichier contient du texte blanc sur une page blanche, invisible pour vous mais lisible par un ordinateur.`,
+      "DOC-06:tiny_font": (f) => `${onPage(f.page, false)}Le fichier contient du texte trop petit pour être lu.`,
+      "DOC-07": () => "Le fichier contient du contenu actif qui peut s'exécuter à l'ouverture.",
+      "DOC-07:javascript": () => "Le PDF contient du code (JavaScript) qui peut s'exécuter à l'ouverture.",
+      "DOC-07:launch_action": () => "Le PDF essaie d'ouvrir un autre fichier ou programme.",
+      "DOC-07:embedded_file": () => "D'autres fichiers sont cachés dans ce PDF.",
+      "DOC-07:submit_form": () => "Le PDF contient un formulaire qui envoie ce que vous tapez à un site web.",
+      "DOC-07:macro": () => "Le fichier Word contient des macros : du code qui s'exécute si vous cliquez sur « Activer le contenu ».",
+      "DOC-07:external_template": (f) =>
+        `Le fichier Word charge un modèle depuis Internet à l'ouverture${f.host ? ` (${f.host})` : ""}. C'est une technique connue pour diffuser des logiciels malveillants.`,
+      "DOC-07:ole_object": () => "Le fichier Word contient un objet intégré qui peut exécuter du contenu.",
+      "DOC-08": (f) =>
+        `${onPage(f.page, false)}${f.snippet ? `« ${f.snippet} » utilise` : "Un montant, un numéro de compte ou une date utilise"} une police différente${f.font ? ` (${f.font})` : ""} du reste de la page${f.dominantFont ? ` (${f.dominantFont})` : ""}, une trace fréquente d'un montant ou d'une date modifiés.`,
+      other: () => "Quelque chose d'inhabituel dans la façon dont ce fichier a été fabriqué.",
+    },
+    previewsTitle: "Images trouvées collées sur le document",
+    previewCaption: (f) => {
+      const parts = [f.transparent ? "Image collée à fond transparent" : "Image placée sur le scan"];
+      if (f.lowerRes) parts.push(`résolution ${fmt(f.lowerRes, "fr")} fois plus faible que le scan autour`);
+      if (f.hardEdges) parts.push("bords nets et pixelisés");
+      return `${parts.join(", ")}${f.page !== null ? ` (page ${f.page})` : ""}.`;
+    },
+    previewAlt: (page) => (page === null ? "Image trouvée collée sur le document" : `Image trouvée collée sur la page ${page}`),
+    caveat:
+      "Ce sont des signes d'alerte, pas des preuves. Des outils légitimes peuvent en laisser certains, et un faux imprimé puis scanné à nouveau ne laisse aucune trace dans le fichier. En cas de doute, demandez à l'organisme émetteur de confirmer le document, avec des coordonnées que vous trouvez vous-même.",
+  },
+};
+
 export const COPY: Record<UiLanguage, Copy> = {
   en: {
     languageSwitcher: "Language",
@@ -826,6 +1147,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         batch_item_too_long: "One of the messages is over 5,000 characters.",
         sender_empty: "Enter the sender's number or name.",
         ...IMAGE_ERRORS_EN,
+        ...DOCUMENT_ERRORS_EN,
         invalid: "Something about that message didn't look right. Please check it and try again.",
       },
       llmTitle: "Our checker is busy",
@@ -848,6 +1170,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Paste & check",
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
+      document: "Check a document",
       payRow: "About to pay someone?",
       checkingLabel: "Checking the message",
       checkingNote: "This can take up to a minute. You can keep this screen open.",
@@ -880,6 +1203,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       conversationHint: "A whole thread",
       sandbox: "Sandbox",
       sandboxHint: "Practise safely",
+      document: "Check a document",
+      documentHint: "PDF or Word",
     },
     settings: {
       title: "Settings",
@@ -942,6 +1267,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     card: CARD_EN,
     learn: LEARN_EN,
     safepay: SAFEPAY_EN,
+    document: DOCUMENT_EN,
   },
 
   fr: {
@@ -1017,6 +1343,10 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_no_text: "Nous n'avons trouvé aucun texte lisible dans cette capture d'écran.",
         image_text_too_long:
           "Cette capture contient trop de texte pour une seule vérification. Recadrez-la sur le message, ou collez le texte.",
+        document_too_large: "Ce fichier est trop volumineux. 10 Mo maximum.",
+        document_unsupported: "Ce fichier n'est pas un document PDF ou Word (.docx).",
+        document_encrypted: "Ce document est protégé par un mot de passe. Ouvrez-le, enregistrez une copie sans mot de passe et réessayez.",
+        document_unreadable: "Nous n'avons pas pu lire ce document. Il est peut-être endommagé ou trop complexe. Essayez une autre copie.",
         invalid: "Ce message pose un problème. Vérifiez-le et réessayez.",
       },
       llmTitle: "Notre service est occupé",
@@ -1040,6 +1370,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Coller et vérifier",
       pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
       screenshot: "Vérifier une capture d'écran",
+      document: "Vérifier un document",
       payRow: "Sur le point de payer ?",
       checkingLabel: "Analyse du message",
       checkingNote: "Cela peut prendre jusqu'à une minute. Vous pouvez laisser cet écran ouvert.",
@@ -1072,6 +1403,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       conversationHint: "Tout un échange",
       sandbox: "Simulation",
       sandboxHint: "S'entraîner sans risque",
+      document: "Vérifier un document",
+      documentHint: "PDF ou Word",
     },
     settings: {
       title: "Réglages",
@@ -1169,6 +1502,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       noLinkBody: "Rien ici ne peut ouvrir une fausse page.",
       scamAdvice: "Ne payez pas, n'ouvrez pas le lien et ne partagez jamais un code reçu sur votre téléphone.",
       messageYouSent: "Le message envoyé",
+      documentText: "Texte trouvé dans le document",
       whyTitle: "Pourquoi c'est suspect",
       signalTitles: {
         sender_mismatch: "L'expéditeur n'est pas celui qu'il prétend être",
@@ -1179,6 +1513,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         payment_request: "Il vous demande de payer ou d'envoyer de l'argent",
         prize_offer: "Il promet quelque chose de trop beau pour être vrai",
         secrecy: "Il vous demande de garder le secret",
+        document_integrity: "Le fichier lui-même porte des traces de modification",
       },
       genericSignal: "Quelque chose cloche",
       severity: { low: "Faible", medium: "Moyen", high: "Élevé" },
@@ -1256,6 +1591,8 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Seule cette version a quitté votre téléphone. Les numéros de téléphone, e-mails et numéros de compte ont d'abord été remplacés.",
       sentBodyScreenshot:
         "Votre capture a été envoyée à notre serveur pour lire le texte, avec tout son contenu visible. Votre résultat repose uniquement sur cette version masquée du texte.",
+      sentBodyDocument:
+        "Votre fichier a été envoyé à notre serveur, analysé en mémoire et non conservé. Les numéros de compte, de téléphone et les e-mails ont été retirés de son texte avant l'analyse de cette version.",
       aiSource: {
         label: "Analysé par",
         local: "Modèle IA local (auto-hébergé, sur l'appareil)",
@@ -1288,6 +1625,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         payment_request: "Présenter cela comme des frais ou un remboursement rend le paiement naturel.",
         prize_offer: "Une récompense inattendue baisse votre vigilance avant que vous vérifiiez qui demande vraiment.",
         secrecy: "Demander la discrétion empêche quelqu'un d'autre de repérer la supercherie.",
+        document_integrity: "Un document d'apparence officielle ressemble à une preuve : peu de gens vérifient comment le fichier a été fabriqué.",
       },
     },
     simple: {
@@ -1407,6 +1745,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       checkAnother: "Vérifier un autre paiement",
       back: "Vérifier un message à la place",
     },
+    document: DOCUMENT_FR,
   },
 
   kreol: {
@@ -1471,6 +1810,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
         image_text_too_long: 
           "Ena tro boukou text dan sa screenshot la pou nou verifie enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
+        ...TODO_KREOL(DOCUMENT_ERRORS_EN),
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",
@@ -1500,6 +1840,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Paste & check",
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
+      document: "Check a document",
       payRow: "About to pay someone?",
       checkingLabel: "Checking the message",
       checkingNote: "This can take up to a minute. You can keep this screen open.",
@@ -1532,6 +1873,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       conversationHint: "A whole thread",
       sandbox: "Sandbox",
       sandboxHint: "Practise safely",
+      document: "Check a document",
+      documentHint: "PDF or Word",
     }),
     settings: TODO_KREOL({
       title: "Settings",
@@ -1616,6 +1959,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       noLinkBody: TODO_KREOL("Nothing here can open a fake page."),
       scamAdvice: "Pa pey, pa ouver lien la, ek zame partaz enn kod ki ou gagn lor ou telefonn.",
       messageYouSent: "Mesaz ki ou finn avoye",
+      documentText: TODO_KREOL(RESULT_EN.documentText),
       whyTitle: "Kifer sa paret pa bon",
       signalTitles: {
         sender_mismatch: "Sa kinn avoy li pa seki li dir li ete",
@@ -1626,6 +1970,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         payment_request: "Li pe dimann ou pey ouswa avoy larzan",
         prize_offer: "Li pe promet enn zafer ki tro bon pou vre",
         secrecy: "Li pe dir ou gard sa sekre",
+        document_integrity: TODO_KREOL("The file itself shows signs of editing"),
       },
       genericSignal: "Ena kiksoz ki pa bon",
       severity: { low: "Ba", medium: "Mwayen", high: "O" },
@@ -1686,6 +2031,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
       sentBodyScreenshot:
         "Ou screenshot finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text-la kot detay personel finn tire.",
+      sentBodyDocument: TODO_KREOL(RESULT_EN.sentBodyDocument),
       aiSource: {
         label: "Analize par",
         local: "Model AI lokal (self-hosted, lor aparey)",
@@ -1771,6 +2117,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
     safepay: TODO_KREOL(SAFEPAY_EN),
+    document: TODO_KREOL(DOCUMENT_EN),
   },
 };
 

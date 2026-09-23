@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import type { Copy } from "@/lib/i18n";
-import { ClipboardIcon, ImageIcon } from "../icons";
+import { ClipboardIcon, DocumentIcon, ImageIcon } from "../icons";
 
 /**
  * The dark hero on the Check screen (frontend/design/mockup/Main.html):
  * greeting, "Is this a scam?", one line, then the primary "Paste & check"
- * button and the screenshot button beside it.
+ * button, then the screenshot button and the document-check link beside it.
  *
  * The buttons are white-on-hero in BOTH schemes, as drawn — the hero is a dark
  * card in dark mode too, so they do not invert.
@@ -50,6 +51,16 @@ export default function CheckHero({
         >
           <ImageIcon className="size-[21px]" strokeWidth={1.9} />
         </button>
+        {/* A PDF or Word file goes to its own screen: it is checked as a file
+            (app/document), not turned into editable text like a screenshot. */}
+        <Link
+          href="/document"
+          aria-label={c.document}
+          title={c.document}
+          className="pressable flex size-[50px] shrink-0 items-center justify-center rounded-full bg-white/[0.14] text-white"
+        >
+          <DocumentIcon className="size-[21px]" strokeWidth={1.9} />
+        </Link>
       </div>
     </section>
   );

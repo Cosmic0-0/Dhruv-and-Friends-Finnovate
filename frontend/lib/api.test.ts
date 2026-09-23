@@ -3,7 +3,7 @@
 // error classification, including never surfacing raw backend text.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeMessage, analyzeScreenshot, batchScan, checkSender, reportSender } from "./api.ts";
+import { analyzeDocument, analyzeMessage, analyzeScreenshot, batchScan, checkSender, reportSender } from "./api.ts";
 
 type Call = { url: string; body: unknown };
 let calls: Call[] = [];
@@ -138,5 +138,138 @@ test("fetch rejecting is a network error; caller abort is 'aborted'", async () =
     return new Response("{}");
   }) as typeof fetch;
   res = await analyzeMessage({ message: "hi" }, { signal: controller.signal });
+  assert.equal(!res.ok && res.error.kind, "aborted");
+});
+
+// ---- analyzeDocument: XMLHttpRequest (for real upload progress), same error classification ----
+
+type SentXhr = { method: string; url: string; headers: Record<string, string>; body: string; timeout: number };
+type ProgressEvt = { lengthComputable: boolean; loaded: number; total: number };
+
+class FakeXhr {
+  static sent: SentXhr[] = [];
+  static respond: (xhr: FakeXhr) => void = () => {};
+  status = 0;
+  responseText = "";
+  timeout = 0;
+  upload: { onprogress: ((e: ProgressEvt) => void) | null; onload: (() => void) | null } = { onprogress: null, onload: null };
+  onload: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  ontimeout: (() => void) | null = null;
+  onabort: (() => void) | null = null;
+  private req: SentXhr = { method: "", url: "", headers: {}, body: "", timeout: 0 };
+  open(method: string, url: string) {
+    this.req.method = method;
+    this.req.url = url;
+  }
+  setRequestHeader(name: string, value: string) {
+    this.req.headers[name] = value;
+  }
+  send(body: string) {
+    this.req.body = body;
+    this.req.timeout = this.timeout;
+    FakeXhr.sent.push(this.req);
+    queueMicrotask(() => FakeXhr.respond(this));
+  }
+  abort() {
+    this.onabort?.();
+  }
+}
+
+const realXhr = globalThis.XMLHttpRequest;
+function withXhr(respond: (xhr: FakeXhr) => void) {
+  FakeXhr.sent = [];
+  FakeXhr.respond = respond;
+  globalThis.XMLHttpRequest = FakeXhr as unknown as typeof XMLHttpRequest;
+}
+function reply(status: number, body: unknown) {
+  return (xhr: FakeXhr) => {
+    xhr.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 });
+    xhr.upload.onprogress?.({ lengthComputable: true, loaded: 100, total: 100 });
+    xhr.upload.onload?.();
+    xhr.status = status;
+    xhr.responseText = typeof body === "string" ? body : JSON.stringify(body);
+    xhr.onload?.();
+  };
+}
+afterEach(() => {
+  globalThis.XMLHttpRequest = realXhr;
+});
+
+const PNG = "data:image/png;base64,iVBORw0KGgo=";
+const documentBlock = (previews: unknown[] = []) => ({
+  fileType: "pdf",
+  pageCount: 1,
+  pagesAnalyzed: 1,
+  textSource: "text_layer",
+  textTruncated: false,
+  metadata: { producer: "iLovePDF", creator: null, created: "2026-09-01T09:30:00.000Z", modified: null, incrementalUpdates: 1, signed: false },
+  previews,
+});
+const preview = (dataUrl: string) => ({ signalCode: "DOC-04", page: 1, widthPx: 116, heightPx: 44, effectiveDpi: 48, backgroundDpi: 150, hasAlpha: true, hardEdgeRatio: 1, dataUrl });
+
+test("document: exact path, JSON body, upload progress then 'uploaded', validated result", async () => {
+  withXhr(reply(200, { ...verdict, extractedText: "text", document: documentBlock([preview(PNG)]) }));
+  const progress: number[] = [];
+  let uploaded = false;
+  const res = await analyzeDocument(
+    { file: "data:application/pdf;base64,JVBERi0=", fileName: "form.pdf", language: "en" },
+    { onUploadProgress: (f) => progress.push(f), onUploaded: () => (uploaded = true) },
+  );
+  const [req] = FakeXhr.sent;
+  assert.equal(req.method, "POST");
+  assert.equal(req.url, "/api/analyze/document");
+  assert.equal(req.headers["Content-Type"], "application/json");
+  assert.deepEqual(JSON.parse(req.body), { file: "data:application/pdf;base64,JVBERi0=", fileName: "form.pdf", language: "en" });
+  assert.ok(req.timeout > 130_000, "longer than a text check");
+  assert.deepEqual(progress, [0.5, 1]);
+  assert.equal(uploaded, true);
+  assert.equal(res.ok, true);
+  assert.equal(res.ok && res.data.document.metadata.producer, "iLovePDF");
+  assert.equal(res.ok && res.data.document.previews.length, 1);
+});
+
+test("document: previews that aren't small PNG data URLs never reach the page", async () => {
+  const bad = [preview("javascript:alert(1)"), preview("data:image/svg+xml;base64,PHN2Zz4="), preview(`${PNG}"onerror="x`), { dataUrl: PNG }];
+  withXhr(reply(200, { ...verdict, extractedText: "", document: documentBlock([...bad, preview(PNG)]) }));
+  const res = await analyzeDocument({ file: "x" });
+  assert.equal(res.ok, true);
+  assert.deepEqual(res.ok && res.data.document.previews.map((p) => p.dataUrl), [PNG]);
+});
+
+test("document: backend errors map to document reasons; raw text never surfaces", async () => {
+  const cases: Array<[number, string, string]> = [
+    [400, "document exceeds maximum size of 10MB", "document_too_large"],
+    [400, "document must be a PDF or Word (.docx) file (checked by content, not the file name)", "document_unsupported"],
+    [400, "document is password-protected", "document_encrypted"],
+    [400, "document could not be read", "document_unreadable"],
+    [400, "document is required and must be a base64-encoded string", "document_unreadable"],
+    [413, "request body is too large", "document_too_large"],
+  ];
+  for (const [status, error, reason] of cases) {
+    withXhr(reply(status, { error }));
+    const res = await analyzeDocument({ file: "x" });
+    assert.equal(!res.ok && res.error.kind, "validation", error);
+    assert.equal(!res.ok && res.error.reason, reason, error);
+    assert.ok(!res.ok && res.error.message !== error && !res.error.message.startsWith("document "), "friendly copy, not the backend string");
+  }
+  withXhr(reply(503, { error: "document analysis is busy, try again shortly" }));
+  const busy = await analyzeDocument({ file: "x" });
+  assert.equal(!busy.ok && busy.error.kind, "llm_unavailable");
+  withXhr(reply(200, { ...verdict, extractedText: "t" }));
+  const offContract = await analyzeDocument({ file: "x" });
+  assert.equal(!offContract.ok && offContract.error.kind, "unexpected");
+});
+
+test("document: network error, timeout and caller abort", async () => {
+  withXhr((xhr) => xhr.onerror?.());
+  let res = await analyzeDocument({ file: "x" });
+  assert.equal(!res.ok && res.error.kind, "network");
+  withXhr((xhr) => xhr.ontimeout?.());
+  res = await analyzeDocument({ file: "x" });
+  assert.equal(!res.ok && res.error.kind, "timeout");
+  const controller = new AbortController();
+  withXhr(() => controller.abort());
+  res = await analyzeDocument({ file: "x" }, { signal: controller.signal });
   assert.equal(!res.ok && res.error.kind, "aborted");
 });

@@ -13,6 +13,8 @@
  */
 
 import type {
+  AnalyzeDocumentRequest,
+  AnalyzeDocumentResponse,
   AnalyzeRequest,
   AnalyzeResponse,
   AnalyzeScreenshotRequest,
@@ -22,6 +24,8 @@ import type {
   BatchScanResult,
   CheckSenderRequest,
   CheckSenderResponse,
+  DocumentInfo,
+  DocumentPreview,
   ReportRequest,
   ReportResponse,
   Signal,
@@ -71,6 +75,10 @@ export type ValidationReason =
   | "image_unreadable" // couldn't be opened/decoded in the browser
   | "image_no_text"
   | "image_text_too_long" // OCR found more text than one check allows
+  | "document_too_large" // over 10MB (checked in the browser and by the backend)
+  | "document_unsupported" // not a PDF or Word file (by content, not by name)
+  | "document_encrypted" // needs a password to open
+  | "document_unreadable" // damaged, too complex to finish in time, or not decodable
   | "invalid";
 
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
@@ -99,6 +107,10 @@ const DEFAULT_TIMEOUTS = {
   report: 15_000,
   // Single indexed SELECT, same cost class as report - no LLM/OCR involved.
   checkSender: 15_000,
+  // Upload (up to ~13MB of base64), parsing in a worker (<=15s), OCR of up
+  // to three scanned pages when there is no text layer, then the same LLM
+  // analysis. Still below next.config.ts's 190s proxy timeout.
+  document: 170_000,
 } as const;
 
 const FRIENDLY = {
@@ -117,6 +129,10 @@ const FRIENDLY = {
   imageNoText: "We couldn't find any readable text in that screenshot.",
   imageTextTooLong: "That screenshot has more text than we can check at once. Crop it to just the message.",
   ocrFailed: "We couldn't read that screenshot right now. Try again, or type the message instead.",
+  documentTooLarge: "That file is too large. Please keep it under 10MB.",
+  documentUnsupported: "That file isn't a PDF or Word (.docx) document.",
+  documentEncrypted: "That document is password-protected. Open it, save a copy without a password, and try again.",
+  documentUnreadable: "We couldn't read that document. It may be damaged or too complex. Try another copy of it.",
   rateLimited: "Lots of checks are running right now. Please try again in a moment.",
   llm: "Our analysis service is busy right now. Please try again in a moment.",
   network: "We can't reach FraudLens right now. Check your connection and try again.",
@@ -146,6 +162,10 @@ const VALIDATION_MAP: Array<[RegExp, ValidationReason, string]> = [
   // Its own reason (not message_too_long): the user didn't type anything too long,
   // the screenshot held too much text, so the fix is different (crop it).
   [/^extracted text exceeds maximum length/i, "image_text_too_long", FRIENDLY.imageTextTooLong],
+  [/^document exceeds maximum size/i, "document_too_large", FRIENDLY.documentTooLarge],
+  [/^document must be a PDF or Word/i, "document_unsupported", FRIENDLY.documentUnsupported],
+  [/^document is password-protected/i, "document_encrypted", FRIENDLY.documentEncrypted],
+  [/^document (?:is required|could not be)/i, "document_unreadable", FRIENDLY.documentUnreadable],
 ];
 
 function friendlyValidation(raw: string | undefined): { reason: ValidationReason; message: string } {
@@ -172,6 +192,49 @@ function fail(
   reason?: ValidationReason,
 ): { ok: false; error: ApiError } {
   return { ok: false, error: { kind, message, status, ...(reason ? { reason } : {}) } };
+}
+
+/**
+ * One classification for every non-2xx answer, shared by the fetch path
+ * (postJson) and the upload path (analyzeDocument, XMLHttpRequest).
+ * `raw` is the backend's `{ error }` text, or undefined when the body wasn't
+ * backend JSON. `tooLarge` is the reason to report for a 413 (a body over the
+ * backend's size limit); without one a 413 stays "unexpected".
+ */
+function classifyFailure(
+  path: string,
+  status: number,
+  raw: string | undefined,
+  tooLarge?: { reason: ValidationReason; message: string },
+): { ok: false; error: ApiError } {
+  if (status === 400) {
+    console.warn(`[api] ${path} 400:`, raw);
+    const { reason, message } = friendlyValidation(raw);
+    return fail("validation", message, 400, reason);
+  }
+  if (status === 413 && tooLarge) {
+    console.warn(`[api] ${path} 413:`, raw);
+    return fail("validation", tooLarge.message, 413, tooLarge.reason);
+  }
+  if (status === 429) {
+    // Per-IP rate limit (contract: 20 req / 15 min, shared by the analyze routes).
+    console.warn(`[api] ${path} 429 rate limited:`, raw);
+    return fail("llm_unavailable", FRIENDLY.rateLimited, 429);
+  }
+  if (status >= 500) {
+    if (raw === undefined) {
+      // No JSON `{ error }` body means the backend never answered: the
+      // Next rewrite proxy couldn't reach it (backend down) or gave up.
+      console.warn(`[api] ${path} ${status} from the proxy: backend unreachable (check BACKEND_URL)`);
+      return status === 504 ? fail("timeout", FRIENDLY.timeout, 504) : fail("network", FRIENDLY.network, status);
+    }
+    // 502 carries raw LLM/provider error text: log only, never display.
+    console.warn(`[api] ${path} ${status}:`, raw);
+    if (/^OCR failed/i.test(raw)) return fail("ocr_failed", FRIENDLY.ocrFailed, status);
+    return fail("llm_unavailable", FRIENDLY.llm, status);
+  }
+  console.warn(`[api] ${path} unexpected status ${status}:`, raw);
+  return fail("unexpected", FRIENDLY.unexpected, status);
 }
 
 async function postJson<T>(
@@ -221,35 +284,7 @@ async function postJson<T>(
       return fail("network", FRIENDLY.network);
     }
 
-    if (!res.ok) {
-      const raw = await readErrorText(res);
-      if (res.status === 400) {
-        console.warn(`[api] ${path} 400:`, raw);
-        const { reason, message } = friendlyValidation(raw);
-        return fail("validation", message, 400, reason);
-      }
-      if (res.status === 429) {
-        // Per-IP rate limit (contract: 20 req / 15 min, shared by analyze and screenshot).
-        console.warn(`[api] ${path} 429 rate limited:`, raw);
-        return fail("llm_unavailable", FRIENDLY.rateLimited, 429);
-      }
-      if (res.status >= 500) {
-        if (raw === undefined) {
-          // No JSON `{ error }` body means the backend never answered: the
-          // Next rewrite proxy couldn't reach it (backend down) or gave up.
-          console.warn(`[api] ${path} ${res.status} from the proxy: backend unreachable (check BACKEND_URL)`);
-          return res.status === 504
-            ? fail("timeout", FRIENDLY.timeout, 504)
-            : fail("network", FRIENDLY.network, res.status);
-        }
-        // 502 carries raw LLM/provider error text: log only, never display.
-        console.warn(`[api] ${path} ${res.status}:`, raw);
-        if (/^OCR failed/i.test(raw)) return fail("ocr_failed", FRIENDLY.ocrFailed, res.status);
-        return fail("llm_unavailable", FRIENDLY.llm, res.status);
-      }
-      console.warn(`[api] ${path} unexpected status ${res.status}:`, raw);
-      return fail("unexpected", FRIENDLY.unexpected, res.status);
-    }
+    if (!res.ok) return classifyFailure(path, res.status, await readErrorText(res));
 
     let data: unknown;
     try {
@@ -310,6 +345,59 @@ function isAnalyzeResponse(v: unknown): v is AnalyzeResponse {
  */
 function isAnalyzeScreenshotResponse(v: unknown): v is AnalyzeScreenshotResponse {
   return isObj(v) && isStr(v.extractedText);
+}
+
+const TEXT_SOURCES: readonly unknown[] = ["text_layer", "ocr", "none"];
+/** Previews are rendered as <img src>, so only small PNG data URLs are ever kept. */
+export const MAX_PREVIEW_DATA_URL = 200_000;
+const PNG_DATA_URL = /^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/;
+
+function isNumOrNull(v: unknown): v is number | null {
+  return v === null || isNum(v);
+}
+function isStrOrNull(v: unknown): v is string | null {
+  return v === null || isStr(v);
+}
+
+function isDocumentInfo(v: unknown): v is DocumentInfo {
+  if (!isObj(v) || !isObj(v.metadata) || !Array.isArray(v.previews)) return false;
+  const m = v.metadata;
+  return (
+    (v.fileType === "pdf" || v.fileType === "docx") &&
+    TEXT_SOURCES.includes(v.textSource) &&
+    typeof v.textTruncated === "boolean" &&
+    isNumOrNull(v.pageCount) &&
+    isNumOrNull(v.pagesAnalyzed) &&
+    isStrOrNull(m.producer) &&
+    isStrOrNull(m.creator) &&
+    isStrOrNull(m.created) &&
+    isStrOrNull(m.modified) &&
+    isNumOrNull(m.incrementalUpdates) &&
+    typeof m.signed === "boolean"
+  );
+}
+
+export function isSafePreview(v: unknown): v is DocumentPreview {
+  return (
+    isObj(v) &&
+    isStr(v.dataUrl) &&
+    v.dataUrl.length <= MAX_PREVIEW_DATA_URL &&
+    PNG_DATA_URL.test(v.dataUrl) &&
+    isStr(v.signalCode) &&
+    isNumOrNull(v.page) &&
+    isNum(v.widthPx) &&
+    isNum(v.heightPx) &&
+    isNumOrNull(v.effectiveDpi) &&
+    isNumOrNull(v.backgroundDpi) &&
+    typeof v.hasAlpha === "boolean" &&
+    isNumOrNull(v.hardEdgeRatio)
+  );
+}
+
+function isAnalyzeDocumentResponse(v: unknown): v is AnalyzeDocumentResponse {
+  if (!isObj(v)) return false;
+  const { extractedText, document } = v;
+  return isAnalyzeResponse(v) && isStr(extractedText) && isDocumentInfo(document);
 }
 
 function isBatchScanResult(v: unknown): v is BatchScanResult {
@@ -393,6 +481,80 @@ export function analyzeScreenshot(
     isAnalyzeScreenshotResponse,
     opts.signal,
   );
+}
+
+export interface UploadOptions extends RequestOptions {
+  /** 0..1 while the request body is being sent, when the browser can tell. */
+  onUploadProgress?: (fraction: number) => void;
+  /** The whole file has been sent; the server is analysing it now. */
+  onUploaded?: () => void;
+}
+
+/**
+ * POST /api/analyze/document. XMLHttpRequest rather than fetch because it
+ * reports upload progress, so the UI can truthfully show "uploading" and then
+ * "analysing" for a file of up to 10MB. Every failure goes through the same
+ * classifyFailure() as the fetch-based calls, so the error kinds match.
+ * Previews that aren't small PNG data URLs are dropped before anything
+ * renders or stores them.
+ */
+export function analyzeDocument(
+  req: AnalyzeDocumentRequest,
+  opts: UploadOptions = {},
+): Promise<ApiResult<AnalyzeDocumentResponse>> {
+  const path = "/api/analyze/document";
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUTS.document;
+  return new Promise((resolve) => {
+    if (opts.signal?.aborted) {
+      resolve(fail("aborted", FRIENDLY.aborted));
+      return;
+    }
+    const xhr = new XMLHttpRequest();
+    const onAbort = () => xhr.abort();
+    const done = (result: ApiResult<AnalyzeDocumentResponse>) => {
+      opts.signal?.removeEventListener("abort", onAbort);
+      resolve(result);
+    };
+
+    xhr.open("POST", path);
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.setRequestHeader("Accept", "application/json");
+    xhr.timeout = timeoutMs;
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && e.total > 0) opts.onUploadProgress?.(e.loaded / e.total);
+    };
+    xhr.upload.onload = () => opts.onUploaded?.();
+    xhr.onload = () => {
+      let body: unknown;
+      try {
+        body = JSON.parse(xhr.responseText);
+      } catch {
+        body = undefined;
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        const raw = isObj(body) && isStr(body.error) ? body.error : undefined;
+        done(classifyFailure(path, xhr.status, raw, { reason: "document_too_large", message: FRIENDLY.documentTooLarge }));
+        return;
+      }
+      if (!isAnalyzeDocumentResponse(body)) {
+        console.warn(`[api] ${path} response did not match the contract`, body);
+        done(fail("unexpected", FRIENDLY.unexpected, xhr.status));
+        return;
+      }
+      done({ ok: true, data: { ...body, document: { ...body.document, previews: body.document.previews.filter(isSafePreview) } } });
+    };
+    xhr.onerror = () => {
+      console.warn(`[api] ${path} network error (is the frontend server reachable?)`);
+      done(fail("network", FRIENDLY.network));
+    };
+    xhr.ontimeout = () => {
+      console.warn(`[api] ${path} timed out after ${timeoutMs}ms`);
+      done(fail("timeout", FRIENDLY.timeout));
+    };
+    xhr.onabort = () => done(fail("aborted", FRIENDLY.aborted));
+    opts.signal?.addEventListener("abort", onAbort, { once: true });
+    xhr.send(JSON.stringify(req));
+  });
 }
 
 export async function batchScan(

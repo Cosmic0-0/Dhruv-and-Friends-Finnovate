@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import type { Copy } from "@/lib/i18n";
-import { ChevronRightIcon, LayersIcon, SearchIcon, BookIcon } from "./icons";
+import { ChevronRightIcon, DocumentIcon, LayersIcon, SearchIcon, BookIcon } from "./icons";
 
 /**
- * Batch scan, Conversation and Sandbox in the Recent-list row style.
+ * Document check, Batch scan, Conversation and Sandbox in the Recent-list row style.
  *
  * The five-slot tab bar has no room for them, and the old tools grid that
  * linked them was removed with the rest of the desktop chrome — this card is
@@ -16,6 +16,7 @@ import { ChevronRightIcon, LayersIcon, SearchIcon, BookIcon } from "./icons";
 export default function ToolsCard({ copy }: { copy: Copy }) {
   const t = copy.tools;
   const rows = [
+    { href: "/document", Icon: DocumentIcon, label: t.document, hint: t.documentHint },
     { href: "/batch", Icon: LayersIcon, label: t.batch, hint: t.batchHint },
     { href: "/conversation", Icon: SearchIcon, label: t.conversation, hint: t.conversationHint },
     { href: "/sandbox", Icon: BookIcon, label: t.sandbox, hint: t.sandboxHint },

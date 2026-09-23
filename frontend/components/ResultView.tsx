@@ -11,6 +11,7 @@ import MobileCollapsible from "./MobileCollapsible";
 import SafetyCard from "./SafetyCard";
 import SimpleMode from "./SimpleMode";
 import ActionDock from "./result/ActionDock";
+import DocumentIntegrityPanel, { DocumentWhatToDo } from "./result/DocumentIntegrityPanel";
 import ReportButton from "./result/ReportButton";
 import { CheckAnotherButton, MessageCard, ResultHeader, SentPanel } from "./result/parts";
 import ResultHero from "./result/ResultHero";
@@ -106,9 +107,19 @@ export default function ResultView() {
   const topSignal = sortSignals(response.signals)[0];
   const topIssue = topSignal ? signalDescription(topSignal, copy, show) : undefined;
 
+  // A document check: the file's own structure is the headline evidence, so
+  // its panel sits right under the verdict; the "message" is the text found in it.
+  const fromDocument = result.source === "document";
+  const documentPanel = response.document ? (
+    <DocumentIntegrityPanel document={response.document} signals={response.signals} copy={copy} lang={lang} />
+  ) : null;
+  const textTitle = fromDocument ? copy.result.documentText : undefined;
+
   return (
     <div>
-      <ResultHeader copy={copy} sender={sender} />
+      {/* A document's "sender" is only the institution its text names, so the
+          header names the file instead of "SMS from ...". */}
+      <ResultHeader copy={copy} sender={sender} subtitle={fromDocument && result.fileName ? copy.document.resultFrom(result.fileName) : undefined} />
 
       <div className="gutter flex flex-col gap-4 pt-5">
         {response.verdict === "safe" ? (
@@ -118,6 +129,7 @@ export default function ResultView() {
             <div className="span-2">
               <ResultHero response={response} label={label} copy={copy} />
             </div>
+            {documentPanel && <div className="span-2">{documentPanel}</div>}
             <div className="grid grid-cols-12 items-start gap-3.5">
               <div className="col-span-7">
                 <SafeChecklist
@@ -129,7 +141,7 @@ export default function ResultView() {
               </div>
               <LinksCard text={original} copy={copy} />
             </div>
-            <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+            <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
           </div>
         ) : (
           <>
@@ -159,12 +171,13 @@ export default function ResultView() {
                 </div>
 
                 <div className="flex flex-col gap-4">
+                  {documentPanel}
                   <div className="grid grid-cols-12 items-start gap-3.5">
                     <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
                     <LinkCard response={response} copy={copy} />
                   </div>
 
-                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -209,29 +222,43 @@ export default function ResultView() {
                     "The link" card above is the same deterministic
                     domain-matching output, and showing both listed the host,
                     the site it imitates and its age twice on one screen. */}
-                <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
+                {fromDocument ? (
+                  <DocumentWhatToDo actions={response.actions} copy={copy} />
+                ) : (
+                  <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
+                )}
                 </div>
               </div>
             )}
 
-            <ActionDock response={response} hasReportSection copy={copy} />
+            {/* Reporting is for message senders: a document's "sender" would be
+                the institution it names, which must never be reported as a scammer. */}
+            <ActionDock response={response} hasReportSection={!fromDocument} copy={copy} />
 
-            <div id="report-section" className="scroll-mt-6">
-              <ReportButton
-                sender={sender}
-                redacted={redacted}
-                reported={result.reported}
-                onReported={onReported}
-                copy={copy}
-              />
-            </div>
+            {!fromDocument && (
+              <div id="report-section" className="scroll-mt-6">
+                <ReportButton
+                  sender={sender}
+                  redacted={redacted}
+                  reported={result.reported}
+                  onReported={onReported}
+                  copy={copy}
+                />
+              </div>
+            )}
 
             <SafetyCard response={response} claimedIdentity={claimedIdentity} copy={copy} lang={lang} show={show} />
           </>
         )}
 
         <CheckAnotherButton copy={copy} />
-        <SentPanel redacted={redacted} fromScreenshot={result.source === "screenshot"} analysis={response.analysis} copy={copy} />
+        <SentPanel
+          redacted={redacted}
+          fromScreenshot={result.source === "screenshot"}
+          fromDocument={fromDocument}
+          analysis={response.analysis}
+          copy={copy}
+        />
       </div>
     </div>
   );

@@ -43,7 +43,9 @@ semantic status as unavailable.
 
 ## Analysis flow
 
-All text paths eventually call `backend/src/services/pipeline/runPipeline`:
+All text paths eventually call `backend/src/services/pipeline/runPipeline`. A
+document upload also does (see "Document forensics" below): its structural
+findings join the deterministic evidence through `extraSignals`.
 
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
@@ -62,6 +64,80 @@ All text paths eventually call `backend/src/services/pipeline/runPipeline`:
 The response includes both the compatibility fields (`verdict`, `riskScore`,
 `signals`, `suggestedAction`) and the newer decision architecture (`risk`,
 `decision`, `trace`, `actions`, and `analysis`).
+
+## Document forensics
+
+`POST /api/analyze/document` checks a PDF or Word (.docx) file that feels off,
+such as a bank form, statement, invoice or payment confirmation. It looks at
+how the **file itself** was made, not only what it says. Each finding is a
+normal deterministic signal (DOC-01..08, ruleset `rs-1.4`). The result is
+still one verdict from the same risk engine.
+
+```text
+upload (base64 JSON, <=10MB) -> magic-byte type check (never the file name)
+  -> worker thread (256MB heap, 15s hard timeout; terminated on overrun)
+       PDF:  pdf.js operator list + text layer + decoded pixels,
+             pdf-lib object enumeration, raw revision/signature bytes
+       DOCX: bounded ZIP reader -> named XML parts only
+     => plain facts (no verdicts, no signals)
+  -> main thread: detectors.js (facts -> DOC-* signals), sharp previews,
+     text layer or OCR of the first 3 scanned pages
+  -> redact() -> cut to 5000 characters -> runPipeline(text, { extraSignals })
+```
+
+The flagship case is a signature pasted onto a scan. The overlay has a
+transparent background and hard, pixelated edges, and was stretched far beyond
+the scan's resolution. The detectors see this as a raster image drawn over a
+full-page scan. The overlay's effective dpi (pixels per placed inch) is compared
+with the scan's, and its alpha channel gives `hardEdgeRatio`. The result
+carries a small PNG preview of the pasted image for the "Document integrity"
+panel.
+
+**Library choice (spike, 2026-09-23).** `pdfjs-dist` 6.3.289 (legacy build,
+pinned exactly) passed all three spike checks in Node:
+
+- (a) text items carry their font;
+- (b) the operator list exposes the transformation matrix, image paints
+  (including inside form XObjects), text render mode, glyph Unicode and fill
+  colour;
+- (c) decoded images arrive with an SMask merged into an alpha channel.
+
+It also decodes every image filter (JPEG, Flate, JPX, JBIG2, CCITT), so real
+scanner output works. Three 300-dpi A4 scans parsed in about 1.9s inside a
+worker capped at 256MB heap. `pdf-lib` is used only to enumerate objects:
+JavaScript, launch actions, attachments and form submissions are often packed
+in compressed object streams that a raw byte scan cannot see. The spike found
+an obfuscated `/J#61vaScript` action this way. Revision sections and
+digital-signature ranges are read from the raw bytes. DOCX files are unzipped
+by a small central-directory reader and fflate's streaming inflater with a
+running output cap. fflate's one-shot `unzipSync` grows its buffer past
+an entry's declared size, so it could not enforce a zip-bomb limit by itself.
+
+pdf.js runs hardened: no font-face or system fonts, no XFA, no canvas, capped
+image size, and resource tables read from the installed package, never the
+network.
+
+**Privacy.** The file must reach the server, as screenshots do. It is parsed in
+memory, never written to disk and never stored. The same goes for its text and
+previews. The LLM receives only the redacted text, never the file, its images or
+the forensic facts. The response returns tool names and dates from the metadata.
+Author and "last saved by" fields are read only to match against the
+editing-tool list, and are never returned.
+
+**False-positive guards.**
+
+- Word, LibreOffice, scanners and PDF libraries are never "editing tools".
+- A linearized file's second revision section is normal.
+- Adding a signature, or appending long-term-validation data after one, is not
+  an edit.
+- A full-page image under lots of real text is a designed page, not a scan.
+- Compact (MRC) scanner layers are not overlays.
+- OCR'd scans legitimately carry invisible text.
+- Bold/italic of the same font family is not a font outlier.
+- Every weak signal alone stays LOW, and none reaches HIGH without a payment,
+  impersonation or claimed-institution fact.
+
+The fixtures in `data/test-payloads/documents/` demonstrate each case.
 
 ## Model transport
 
@@ -138,6 +214,9 @@ until an authentication and ownership model exists.
 The Next.js frontend provides:
 
 - Check: paste/type or screenshot intake and the main result view.
+- Document check: upload a PDF or Word file. The result screen adds a
+  "Document integrity" panel with the file's facts, its findings in plain
+  words, and previews of images found pasted onto a scan.
 - Before You Pay: structured payment-context questions.
 - Conversation: per-message analysis with the furthest observed journey stage.
 - Batch: up to 50 messages with aggregate results and observed campaign groups.
@@ -163,7 +242,12 @@ an exact `OUTLOOK_ADDIN_ORIGINS` allowlist, and a production-rendered manifest; 
 
 ## Reliability and security boundaries
 
-- API routes enforce message, batch, and image limits and have per-IP rate limits.
+- API routes enforce message, batch, image and document limits and have per-IP
+  rate limits. A body over a route's size limit gets a generic JSON 413.
+- Uploaded documents are parsed only inside a worker thread with a heap limit
+  and a hard timeout, at most two at a time. ZIP entry counts and declared sizes
+  are checked before anything is inflated, and each inflated part has a hard
+  output cap.
 - Helmet supplies API security headers. Production HTTP is redirected when the
   deployment proxy supplies `x-forwarded-proto`.
 - Site-security scans reject private/reserved destinations and revalidate network
@@ -197,16 +281,28 @@ so the setting must match the real topology before production use.
   check.
 - The project does not declare/enforce Node 22, although frontend tests require it.
 - Accessibility and responsive behavior need a final real-browser pass across the
-  result, screenshot, batch, conversation, network, and extension flows.
+  result, screenshot, document, batch, conversation, network, and extension flows.
+- Document forensics finds warning signs, not proof:
+  - Metadata can be stripped or forged.
+  - A forgery that was printed and scanned again leaves no structural trace.
+  - There is no pixel-level error-level analysis.
+  - PDF annotations and XFA forms are not inspected.
+  - Legitimate e-signing tools can also place transparent signature images on a
+    scan, which is why that finding alone is ELEVATED ("verify first"), not HIGH.
+  - For PDFs with permissions-only encryption, the active-content scan is
+    best-effort.
 
 ## Verification baseline
 
 As of 2026-09-23 in the current worktree:
 
-- Backend: 160 tests pass when localhost binding is allowed.
-- Frontend: all 9 test files pass under Node 22.
+- Backend: 469 tests pass when localhost binding is allowed (run on Node
+  24.18, the version installed on the build machine; the project targets 22).
+- Backend: the 84-case deterministic eval (`npm run eval`) gives identical
+  results under rs-1.3 and rs-1.4, and `npm run test:fallback` passes.
+- Frontend: all 10 test files (95 tests) pass.
 - Frontend: `npm run typecheck` passes.
-- Frontend: `npm run build` passes and generates all 16 app routes.
+- Frontend: `npm run build` passes and generates all 17 app routes.
 - Outlook add-in: run `npm test`, `npm run build`, and `npm run validate` in
   `outlook-addin/`; the live fixture smoke test additionally requires the backend.
 - Frontend lint: unavailable until ESLint is configured.

@@ -216,12 +216,83 @@ export const RULESET_RS_1_3 = Object.freeze({
   bands: RULESET_RS_1_2.bands,
 });
 
-export const ACTIVE_RULESET = RULESET_RS_1_3;
+// rs-1.4 adds document-forensics evidence (DOC-01..08, services/
+// document-forensics): structural facts about an uploaded PDF/DOCX. Every
+// published ruleset above stays frozen and selectable; text-only analyses
+// score identically because none of them can emit a DOC-* code.
+//
+// Weight reasoning:
+//   Weak alone (<20, stays LOW by itself): DOC-01 consumer editing tool 10
+//     (people legitimately re-save PDFs in online tools); DOC-02 incremental
+//     update 8 (form filling and annotations append too); DOC-03 metadata
+//     inconsistency 6; DOC-04 plain overlay 10 / DOCX transparent image 8
+//     (logos and real Word signatures); DOC-06 hidden text 10; DOC-07
+//     embedded file 10 / OLE object 15 / external form submission 15;
+//     DOC-08 font outlier 12.
+//   Medium (ELEVATED alone, never HIGH alone): DOC-04 transparent overlay
+//     25 / upscaled overlay 20 - how pasted signatures and stamps look, but
+//     e-signing tools can place transparent images too; DOC-05 visible text
+//     typed onto a scan 20; DOC-07 JavaScript 20; DOC-02 changed after a
+//     digital signature 30; DOC-07 launch action / macro / remote template
+//     30 (malware delivery, not forgery).
+//   HIGH needs a forgery artefact plus an identity or payment fact (DX-1),
+//   or the forged-institution floor below - never a structural fact alone.
+const DOC_FORGERY_B = ["ID-01", "ID-02", "ID-03", "ID-04", "PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-06", "PAY-07"];
+export const RULESET_RS_1_4 = Object.freeze({
+  version: "rs-1.4",
+  weights: Object.freeze({
+    ...RULESET_RS_1_3.weights,
+    "DOC-01": 10,
+    "DOC-02": { variants: { after_signature: 30, incremental_update: 8 }, default: 8 },
+    "DOC-03": 6,
+    "DOC-04": { variants: { transparent_overlay: 25, resolution_mismatch: 20, overlay: 10, docx_transparent_image: 8 }, default: 10 },
+    "DOC-05": 20,
+    "DOC-06": 10,
+    "DOC-07": {
+      variants: { javascript: 20, launch_action: 30, embedded_file: 10, submit_form: 15, macro: 30, external_template: 30, ole_object: 15 },
+      default: 10,
+    },
+    "DOC-08": 12,
+  }),
+  caps: RULESET_RS_1_3.caps,
+  hostCodes: RULESET_RS_1_3.hostCodes,
+  absorb: RULESET_RS_1_3.absorb,
+  interactions: Object.freeze([
+    ...RULESET_RS_1_3.interactions,
+    // DX-1: a forgery artefact combined with an impersonation or payment
+    // fact. Three entries share one group (so DX-1 applies at most once)
+    // because interaction variant filters apply to every code in `a`: a DOCX
+    // transparent image is excluded (real Word signatures), and only a change
+    // made AFTER a digital signature counts from DOC-02.
+    { id: "DX-1", points: 15, group: "document-forgery", reason: "Document forgery artefact combined with an impersonation or payment request",
+      a: ["DOC-04"], aVariants: ["transparent_overlay", "resolution_mismatch", "overlay"], b: DOC_FORGERY_B },
+    { id: "DX-1", points: 15, group: "document-forgery", reason: "Document forgery artefact combined with an impersonation or payment request",
+      a: ["DOC-05", "DOC-08"], b: DOC_FORGERY_B },
+    { id: "DX-1", points: 15, group: "document-forgery", reason: "Document forgery artefact combined with an impersonation or payment request",
+      a: ["DOC-02"], aVariants: ["after_signature"], b: DOC_FORGERY_B },
+  ]),
+  floors: Object.freeze([
+    ...RULESET_RS_1_3.floors,
+    // Two entries, one rule: a scanned document that names a known
+    // institution AND carries a pasted transparent/upscaled image or typed-on
+    // text. `anyVariants` keeps a plain logo overlay and a DOCX signature
+    // image out of the floor (they still score their own weak points).
+    { id: "FLOOR-DOC-FORGED-INSTITUTION", level: "high", reason: "Scanned document claiming a known institution has a pasted image or typed-on text",
+      all: [], any: ["DOC-04"], anyVariants: ["transparent_overlay", "resolution_mismatch"], requiresClaimedInstitution: true },
+    { id: "FLOOR-DOC-FORGED-INSTITUTION", level: "high", reason: "Scanned document claiming a known institution has a pasted image or typed-on text",
+      all: [], any: ["DOC-05"], requiresClaimedInstitution: true },
+  ]),
+  policies: RULESET_RS_1_3.policies,
+  bands: RULESET_RS_1_3.bands,
+});
+
+export const ACTIVE_RULESET = RULESET_RS_1_4;
 export const RULESETS = Object.freeze({
   [RULESET_RS_1_0.version]: RULESET_RS_1_0,
   [RULESET_RS_1_1.version]: RULESET_RS_1_1,
   [RULESET_RS_1_2.version]: RULESET_RS_1_2,
   [RULESET_RS_1_3.version]: RULESET_RS_1_3,
+  [RULESET_RS_1_4.version]: RULESET_RS_1_4,
 });
 
 const LEVEL_ORDER = ["low", "elevated", "high", "critical"];
@@ -409,7 +480,9 @@ export function score(signals, context = {}, rulesetVersion = ACTIVE_RULESET.ver
   const nonSemantic = (f) => !isSemanticOnly(f);
   for (const floor of ruleset.floors) {
     if (!floor.all.every((c) => present([c], nonSemantic).length > 0)) continue;
-    if (floor.any && present(floor.any, nonSemantic).length === 0) continue;
+    // rs-1.4+: `anyVariants` narrows `any` the way interactions' aVariants
+    // narrows `a`; no earlier ruleset sets it, so their floors are unchanged.
+    if (floor.any && present(floor.any, nonSemantic, floor.anyVariants ?? null).length === 0) continue;
     if (floor.requiresClaimedInstitution && !context.claimedInstitution) continue;
     if (LEVEL_ORDER.indexOf(floor.level) <= LEVEL_ORDER.indexOf(level)) continue;
     const min = ruleset.bands.find((b) => b.level === floor.level).min;
