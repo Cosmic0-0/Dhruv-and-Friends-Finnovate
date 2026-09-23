@@ -73,6 +73,13 @@ export default function TeamSection() {
           {HACKATHON}.
         </p>
       </div>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/group_photo.jpeg"
+        alt={`The ${TEAM_NAME} team`}
+        className="landing-group-photo"
+        loading="lazy"
+      />
       <div className="landing-team">
         {TEAM.map((member) => (
           <ProfileCard key={member.id} member={member} />
