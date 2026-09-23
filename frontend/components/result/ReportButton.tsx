@@ -33,8 +33,8 @@ export default function ReportButton({
 
   if (reported) {
     return (
-      <div role="status" className="flex items-center gap-3 border-l-2 border-l-accent bg-accent-soft px-4 py-3.5">
-        <CheckIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2.5} />
+      <div role="status" className="suggestion flex items-center gap-3 px-5 py-4">
+        <CheckIcon className="size-[18px] shrink-0 text-safe-ink" strokeWidth={2.5} />
         <p className="text-[0.9375rem] leading-snug font-medium text-ink">{r.done(reported.reportCount)}</p>
       </div>
     );
@@ -70,7 +70,7 @@ export default function ReportButton({
             void send(value);
           }}
         >
-          <div className="flex flex-col gap-2.5 p-4">
+          <div className="flex flex-col gap-2.5 p-5">
             <label htmlFor="report-sender" className="micro text-ink-muted">
               {r.senderLabel}
             </label>
@@ -82,13 +82,13 @@ export default function ReportButton({
               placeholder={r.senderPlaceholder}
               inputMode="text"
               autoComplete="off"
-              className="data border border-card-border bg-page px-3 py-2.5 text-[0.9375rem] text-ink outline-none placeholder:text-ink-muted/60 focus:border-accent"
+              className="data rounded-2xl bg-muted-surface px-3.5 py-3 text-[0.9375rem] text-ink outline-none placeholder:text-ink-muted/60 focus:border-accent"
             />
           </div>
           <button
             type="submit"
             disabled={!value.trim() || sending}
-            className="pressable micro flex min-h-12 items-center justify-center gap-2 bg-surface-dark px-5 text-on-ink hover:bg-surface-dark-2 disabled:bg-surface-dark/25"
+            className="pill pressable m-5 mt-0 bg-primary text-on-primary disabled:bg-surface-dark/25"
           >
             {sending && <Spinner className="size-4" />}
             {sending ? r.sending : r.submit}
@@ -99,18 +99,18 @@ export default function ReportButton({
           type="button"
           disabled={sending}
           onClick={() => (sender ? void send(sender) : setStatus("form"))}
-          className="pressable micro flex min-h-13 items-center justify-center gap-2.5 border border-danger/40 bg-card px-5 text-danger-ink hover:bg-danger-soft disabled:opacity-60"
+          className="pill pressable w-full bg-danger-soft text-danger-ink hover:bg-danger-soft disabled:opacity-60"
         >
           {sending ? <Spinner className="size-4" /> : <FlagIcon className="size-4" strokeWidth={2} />}
           {sending ? r.sending : sender ? r.reportSender : r.reportMessage}
         </button>
       )}
       {error && (
-        <p role="alert" className="text-sm text-danger-ink">
+        <p role="alert" className="px-1 text-[0.9375rem] text-danger-ink">
           {error}
         </p>
       )}
-      <p className="text-[0.8125rem] leading-snug text-ink-muted">{r.note}</p>
+      <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{r.note}</p>
     </section>
   );
 }

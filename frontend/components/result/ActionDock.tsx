@@ -1,17 +1,20 @@
 import Link from "next/link";
 import type { Copy } from "@/lib/i18n";
 import type { AnalyzeResponse } from "@/lib/types";
-import { FlagIcon, LinkIcon, SearchIcon, ShieldIcon } from "../icons";
+import { ChevronRightIcon, FlagIcon, LinkIcon, SearchIcon, ShieldIcon } from "../icons";
 
 /**
- * Persistent contextual actions for a non-safe result. In flow (not sticky)
- * below md: TabBar already owns a fixed bar at the physical bottom of the
- * screen there, and stacking two bottom bars — or sticking this one to
- * bottom:0 without knowing about --tabbar-height — would put it behind
- * TabBar. Sticky to the bottom of the viewport at md+ only, where nothing
- * else claims that slot (--tabbar-height resets to 0 at that breakpoint, see
- * globals.css). "View connections" only appears when ScamDNA actually found
- * a campaign match — never a fabricated link.
+ * Where to go next from a flagged result, as a list card in the same row style
+ * as Recent and Tools.
+ *
+ * It used to be a sticky bar, which only made sense while the tab bar was
+ * hidden at desktop widths. The floating tab bar is now present at every width
+ * and owns the bottom of the screen, so a second bar down there would either
+ * stack or overlap; in flow, it reads as what it is — a short list of next
+ * steps.
+ *
+ * "View connections" only appears when ScamDNA actually matched a campaign,
+ * never as a fabricated link.
  */
 export default function ActionDock({
   response,
@@ -24,43 +27,40 @@ export default function ActionDock({
 }) {
   const matched = response.scamDna?.matchStrength === "matched";
 
+  const rows: { href: string; Icon: typeof ShieldIcon; label: string; danger?: boolean }[] = [
+    { href: "/safepay", Icon: ShieldIcon, label: copy.home.payCta },
+    { href: "/replay", Icon: SearchIcon, label: copy.replay.openReplay },
+  ];
+  if (matched && response.scamDna) {
+    rows.push({
+      href: `/network/${encodeURIComponent(response.scamDna.fingerprintId)}`,
+      Icon: LinkIcon,
+      label: copy.result.networkLink,
+    });
+  }
+  if (hasReportSection) {
+    rows.push({ href: "#report-section", Icon: FlagIcon, label: copy.result.report.reportMessage, danger: true });
+  }
+
   return (
-    <nav
-      aria-label={copy.result.whatToDoTitle}
-      className="z-10 grid grid-cols-2 border border-card-border bg-card md:sticky md:bottom-0 md:grid-cols-4"
-    >
-      <Link
-        href="/safepay"
-        className="pressable flex min-h-14 items-center justify-center gap-2 px-3 text-center text-sm font-semibold text-ink not-first:border-t not-first:border-card-border hover:bg-muted-surface md:border-t-0 md:not-first:border-t-0 md:not-first:border-l"
-      >
-        <ShieldIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2} />
-        {copy.home.payCta}
-      </Link>
-      <Link
-        href="/replay"
-        className="pressable flex min-h-14 items-center justify-center gap-2 border-t border-card-border px-3 text-center text-sm font-semibold text-ink hover:bg-muted-surface md:border-t-0 md:border-l"
-      >
-        <SearchIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2} />
-        {copy.replay.openReplay}
-      </Link>
-      {matched && response.scamDna && (
-        <Link
-          href={`/network/${encodeURIComponent(response.scamDna.fingerprintId)}`}
-          className="pressable flex min-h-14 items-center justify-center gap-2 border-t border-card-border px-3 text-center text-sm font-semibold text-ink hover:bg-muted-surface md:border-t-0 md:border-l"
-        >
-          <LinkIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2} />
-          {copy.result.networkLink}
-        </Link>
-      )}
-      {hasReportSection && (
-        <a
-          href="#report-section"
-          className="pressable flex min-h-14 items-center justify-center gap-2 border-t border-card-border px-3 text-center text-sm font-semibold text-danger-ink hover:bg-danger-soft md:border-t-0 md:border-l"
-        >
-          <FlagIcon className="size-4 shrink-0" strokeWidth={2} />
-          {copy.result.report.reportMessage}
-        </a>
-      )}
+    <nav aria-label={copy.result.whatToDoTitle} className="sheet">
+      <ul className="flex flex-col px-5 [&>li+li]:border-t [&>li+li]:border-card-border">
+        {rows.map(({ href, Icon, label, danger }) => (
+          <li key={href}>
+            <Link href={href} className="pressable flex min-h-[52px] items-center gap-3 py-3">
+              <span
+                className={`flex size-[34px] shrink-0 items-center justify-center rounded-full ${
+                  danger ? "bg-danger-soft text-danger-ink" : "bg-muted-surface text-ink"
+                }`}
+              >
+                <Icon className="size-[17px]" strokeWidth={2} />
+              </span>
+              <span className={`flex-1 text-[1.0625rem] ${danger ? "text-danger-ink" : "text-ink"}`}>{label}</span>
+              <ChevronRightIcon className="size-[18px] shrink-0 text-icon-idle" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </nav>
   );
 }

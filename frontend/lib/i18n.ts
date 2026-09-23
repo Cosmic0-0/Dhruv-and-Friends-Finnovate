@@ -105,6 +105,9 @@ export interface Copy {
     pasteFallback: string;
     screenshot: string;
     payRow: string;
+    /** Checking state (design/mockup/Checking.png). */
+    checkingLabel: string;
+    checkingNote: string;
     week: { title: string; checks: (n: number) => string; caught: (n: number) => { strong: string; rest: string }; nothing: string };
     practice: { title: string; streak: (n: number) => string; start: string };
     install: { body: string; add: string; notNow: string; iosTitle: string; iosStep1: string; iosStep2: string };
@@ -118,6 +121,8 @@ export interface Copy {
   /** Settings screen: the language switch, the privacy note and an about section. */
   settings: {
     title: string;
+    /** Appearance: follow the device, or force light/dark. */
+    theme: { title: string; system: string; light: string; dark: string; note: string };
     languageTitle: string;
     languageNote: string;
     privacyTitle: string;
@@ -179,6 +184,23 @@ export interface Copy {
     back: string;
     warningSigns: (n: number) => string;
     risk: (score: number) => string;
+    /** The dark result hero and the two-card row (design/mockup/Result-*.png). */
+    hero: {
+      riskScore: string;
+      outOf: string;
+      warningSignsLabel: string;
+      signsFound: (n: number) => string;
+      linkMadeLabel: string;
+      daysAgo: (n: number) => string;
+    };
+    whatsWrong: string;
+    signsUnit: (n: number) => string;
+    theLink: string;
+    daysOld: (n: number) => string;
+    realSite: (domain: string) => string;
+    linksTitle: string;
+    linksToTap: (n: number) => string;
+    noLinkBody: string;
     scamAdvice: string;
     messageYouSent: string;
     /** Shown once, above the highlighted message, when at least one signal has evidence to highlight ("Scam X-Ray"). */
@@ -223,6 +245,13 @@ export interface Copy {
     steps: Record<StepKey, string>;
     whatWeCheckedTitle: string;
     checks: Record<SafeCheckKey, string>;
+    /**
+     * Terse versions for the "What we checked" card, which sits in a narrow
+     * 7-of-12 column (design/mockup/Result-Genuine.png). The full sentences
+     * above are still used where there is room to read them, such as the Learn
+     * quiz explanations.
+     */
+    checksShort: Record<SafeCheckKey, string>;
     safeCaveat: string;
     report: {
       reportSender: string;
@@ -522,6 +551,22 @@ const RESULT_EN: Copy["result"] = {
   back: "Back",
   warningSigns: (n) => (n === 0 ? "No warning signs" : n === 1 ? "1 warning sign" : `${n} warning signs`),
   risk: (s) => `Risk ${s} / 100`,
+  hero: {
+    riskScore: "Risk score",
+    outOf: "/ 100",
+    warningSignsLabel: "Warning signs",
+    signsFound: (n) => `${n} found`,
+    linkMadeLabel: "Link made",
+    daysAgo: (n) => (n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`),
+  },
+  whatsWrong: "What's wrong",
+  signsUnit: (n) => (n === 1 ? "sign" : "signs"),
+  theLink: "The link",
+  daysOld: (n) => (n === 1 ? "day old" : "days old"),
+  realSite: (d) => `Real site: ${d}`,
+  linksTitle: "Links",
+  linksToTap: (n) => (n === 1 ? "to tap" : "to tap"),
+  noLinkBody: "Nothing here can open a fake page.",
   scamAdvice: "Do not pay, do not open the link, and never share a code sent to your phone.",
   messageYouSent: "The message you sent",
   whyTitle: "Why this looks wrong",
@@ -585,6 +630,13 @@ const RESULT_EN: Copy["result"] = {
     informs_not_asks: "It tells you something rather than asking you to act",
     last_four_only: "Shows only the last 4 digits, as a real bank does",
     no_pressure: "No urgency, no code requested, no secrecy",
+  },
+  checksShort: {
+    no_link: "No link",
+    no_lookalike: "No fake link",
+    informs_not_asks: "Nothing to do",
+    last_four_only: "Last 4 digits only",
+    no_pressure: "No code, no rush",
   },
   safeCaveat:
     "We cannot promise a message is real. If money is involved and you have any doubt, call your bank on the number on your card.",
@@ -797,6 +849,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
       payRow: "About to pay someone?",
+      checkingLabel: "Checking the message",
+      checkingNote: "This can take up to a minute. You can keep this screen open.",
       week: {
         title: "This week",
         checks: (n) => `${n} ${n === 1 ? "check" : "checks"}`,
@@ -829,6 +883,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     settings: {
       title: "Settings",
+      theme: {
+        title: "Appearance",
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+        note: "System follows your phone's own light or dark setting.",
+      },
       languageTitle: "Language",
       languageNote: "Changes every screen, and tells the analysis which language to answer in.",
       privacyTitle: "Privacy",
@@ -980,6 +1041,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
       screenshot: "Vérifier une capture d'écran",
       payRow: "Sur le point de payer ?",
+      checkingLabel: "Analyse du message",
+      checkingNote: "Cela peut prendre jusqu'à une minute. Vous pouvez laisser cet écran ouvert.",
       week: {
         title: "Cette semaine",
         checks: (n) => `${n} vérification${n === 1 ? "" : "s"}`,
@@ -1012,6 +1075,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     settings: {
       title: "Réglages",
+      theme: {
+        title: "Apparence",
+        system: "Système",
+        light: "Clair",
+        dark: "Sombre",
+        note: "Système suit le réglage clair ou sombre de votre téléphone.",
+      },
       languageTitle: "Langue",
       languageNote: "Change tous les écrans, et indique à l'analyse dans quelle langue répondre.",
       privacyTitle: "Confidentialité",
@@ -1081,6 +1151,22 @@ export const COPY: Record<UiLanguage, Copy> = {
       warningSigns: (n) =>
         n === 0 ? "Aucun signal d'alerte" : n === 1 ? "1 signal d'alerte" : `${n} signaux d'alerte`,
       risk: (s) => `Risque ${s} / 100`,
+      hero: {
+        riskScore: "Score de risque",
+        outOf: "/ 100",
+        warningSignsLabel: "Signaux d'alerte",
+        signsFound: (n) => `${n} trouvé${n === 1 ? "" : "s"}`,
+        linkMadeLabel: "Lien créé",
+        daysAgo: (n) => (n === 0 ? "aujourd'hui" : n === 1 ? "il y a 1 jour" : `il y a ${n} jours`),
+      },
+      whatsWrong: "Ce qui ne va pas",
+      signsUnit: (n) => (n === 1 ? "signal" : "signaux"),
+      theLink: "Le lien",
+      daysOld: (n) => (n === 1 ? "jour d'ancienneté" : "jours d'ancienneté"),
+      realSite: (d) => `Vrai site : ${d}`,
+      linksTitle: "Liens",
+      linksToTap: () => "à ouvrir",
+      noLinkBody: "Rien ici ne peut ouvrir une fausse page.",
       scamAdvice: "Ne payez pas, n'ouvrez pas le lien et ne partagez jamais un code reçu sur votre téléphone.",
       messageYouSent: "Le message envoyé",
       whyTitle: "Pourquoi c'est suspect",
@@ -1144,6 +1230,13 @@ export const COPY: Record<UiLanguage, Copy> = {
         informs_not_asks: "Il vous informe au lieu de vous demander d'agir",
         last_four_only: "Il n'affiche que les 4 derniers chiffres, comme une vraie banque",
         no_pressure: "Pas d'urgence, pas de code demandé, pas de secret",
+      },
+      checksShort: {
+        no_link: "Aucun lien",
+        no_lookalike: "Aucun faux lien",
+        informs_not_asks: "Rien à faire",
+        last_four_only: "4 derniers chiffres",
+        no_pressure: "Ni code ni urgence",
       },
       safeCaveat:
         "Nous ne pouvons pas garantir qu'un message est authentique. S'il y a de l'argent en jeu et le moindre doute, appelez votre banque au numéro indiqué sur votre carte.",
@@ -1408,6 +1501,8 @@ export const COPY: Record<UiLanguage, Copy> = {
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
       payRow: "About to pay someone?",
+      checkingLabel: "Checking the message",
+      checkingNote: "This can take up to a minute. You can keep this screen open.",
       week: {
         title: "This week",
         checks: (n: number) => `${n} ${n === 1 ? "check" : "checks"}`,
@@ -1440,6 +1535,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     }),
     settings: TODO_KREOL({
       title: "Settings",
+      theme: {
+        title: "Appearance",
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+        note: "System follows your phone's own light or dark setting.",
+      },
       languageTitle: "Language",
       languageNote: "Changes every screen, and tells the analysis which language to answer in.",
       privacyTitle: "Privacy",
@@ -1496,6 +1598,22 @@ export const COPY: Record<UiLanguage, Copy> = {
       back: "Retour",
       warningSigns: (n) => (n === 0 ? "Pena okenn siny danze" : `${n} siny danze`),
       risk: (s) => `Risk ${s} / 100`,
+      hero: TODO_KREOL({
+        riskScore: "Risk score",
+        outOf: "/ 100",
+        warningSignsLabel: "Warning signs",
+        signsFound: (n: number) => `${n} found`,
+        linkMadeLabel: "Link made",
+        daysAgo: (n: number) => (n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`),
+      }),
+      whatsWrong: TODO_KREOL("What's wrong"),
+      signsUnit: (n: number) => (n === 1 ? "siny" : "siny"),
+      theLink: TODO_KREOL("The link"),
+      daysOld: (n: number) => (n === 1 ? "zour" : "zour"),
+      realSite: (d: string) => `Vre sit: ${d}`,
+      linksTitle: TODO_KREOL("Links"),
+      linksToTap: TODO_KREOL(() => "to tap"),
+      noLinkBody: TODO_KREOL("Nothing here can open a fake page."),
       scamAdvice: "Pa pey, pa ouver lien la, ek zame partaz enn kod ki ou gagn lor ou telefonn.",
       messageYouSent: "Mesaz ki ou finn avoye",
       whyTitle: "Kifer sa paret pa bon",
@@ -1543,6 +1661,13 @@ export const COPY: Record<UiLanguage, Copy> = {
         informs_not_asks: "Li pe dir ou kiksoz, li pa pe dimann ou fer kiksoz",
         last_four_only: "Li montre zis 4 dernie sif, parey kouma enn vre labank",
         no_pressure: "Pa presse, pa dimann kod, pa sekre",
+      },
+      checksShort: {
+        no_link: "Pena lien",
+        no_lookalike: "Pena fo lien",
+        informs_not_asks: TODO_KREOL("Nothing to do"),
+        last_four_only: TODO_KREOL("Last 4 digits only"),
+        no_pressure: TODO_KREOL("No code, no rush"),
       },
       safeCaveat:
         "Nou pa kapav garanti ki enn mesaz vre. Si ena larzan ladan ek ou ena enn dout, apel ou labank lor nimero ki lor ou kart.",

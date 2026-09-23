@@ -12,9 +12,11 @@ import SafetyCard from "./SafetyCard";
 import SimpleMode from "./SimpleMode";
 import ActionDock from "./result/ActionDock";
 import ReportButton from "./result/ReportButton";
-import { CheckAnotherButton, MessageCard, ResultHeader, SentPanel, VerdictBanner } from "./result/parts";
+import { CheckAnotherButton, MessageCard, ResultHeader, SentPanel } from "./result/parts";
+import ResultHero from "./result/ResultHero";
+import { LinkCard, LinksCard, WhatsWrongCard } from "./result/SignalCards";
 import ScamJourney from "./result/ScamJourney";
-import { IdentityCompare, LinkCheckPanel, SafeChecklist, signalDescription, signalTitle, WhatToDo, WhySection } from "./result/sections";
+import { IdentityCompare, SafeChecklist, signalDescription, signalTitle, WhatToDo, WhySection } from "./result/sections";
 
 /**
  * Result screen. The user's ORIGINAL text is rebuilt locally from the
@@ -56,14 +58,11 @@ export default function ResultView() {
     return (
       <div>
         <ResultHeader copy={copy} />
-        <div className="gutter pt-6">
-          <div className="sheet flex flex-col gap-3 p-5">
-            <h1 className="text-title">{copy.result.missingTitle}</h1>
-            <p>{copy.result.missingBody}</p>
-            <Link
-              href="/"
-              className="micro mt-1 w-fit text-accent-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent"
-            >
+        <div className="gutter pt-4">
+          <div className="card flex flex-col items-start gap-3">
+            <h2>{copy.result.missingTitle}</h2>
+            <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
+            <Link href="/" className="pill-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
@@ -115,23 +114,28 @@ export default function ResultView() {
         {response.verdict === "safe" ? (
           // A safe verdict has nothing to investigate across regions — one
           // continuous report sheet, same as before.
-          <div className="sheet">
-            <VerdictBanner response={response} label={label} copy={copy} />
+          <>
+            <ResultHero response={response} label={label} copy={copy} />
+            <div className="grid grid-cols-12 items-start gap-3.5">
+              <div className="col-span-7">
+                <SafeChecklist
+                  checks={safeChecks(response.signals, original, redactions)}
+                  explanation={response.explanation}
+                  copy={copy}
+                  show={show}
+                />
+              </div>
+              <LinksCard text={original} copy={copy} />
+            </div>
             <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
-            <SafeChecklist
-              checks={safeChecks(response.signals, original, redactions)}
-              explanation={response.explanation}
-              copy={copy}
-              show={show}
-            />
-          </div>
+          </>
         ) : (
           <>
             <button
               type="button"
               onClick={toggleSimple}
               aria-pressed={simple}
-              className="pressable micro flex min-h-10 w-fit items-center gap-2 self-end border border-card-border bg-card px-3 text-ink-muted hover:bg-muted-surface hover:text-ink"
+              className="pill-sm pressable w-fit self-end bg-muted-surface font-medium text-ink-muted"
             >
               {simple ? copy.simple.turnOff : copy.simple.turnOn}
             </button>
@@ -140,35 +144,34 @@ export default function ResultView() {
               <SimpleMode response={response} claimedIdentity={claimedIdentity} topIssue={topIssue} copy={copy} lang={lang} show={show} />
             ) : (
               <>
-                {/*
-                 * Two instrument faces side by side on wide screens instead of
-                 * one long column: what was found (left) and why it was
-                 * flagged (right). Each keeps its own hairline-rule rhythm
-                 * (.sheet > * + *); the grid gap is the boundary between them.
-                 */}
-                <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-                  <div className="sheet">
-                    <VerdictBanner response={response} label={label} copy={copy} />
-                    <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
-                  </div>
-                  <div className="sheet">
-                    {/* Collapsed by default on a phone screen (Phase 13C
-                        progressive disclosure), open by default at lg+ where
-                        this is already its own column. */}
-                    <MobileCollapsible summary={copy.result.whyTitle}>
-                      <div className="[&>*+*]:border-t [&>*+*]:border-card-border">
-                        <WhySection
-                          signals={response.signals}
-                          explanation={response.explanation}
-                          senderReports={response.senderReports}
-                          copy={copy}
-                          lang={lang}
-                          show={show}
-                        />
-                        <IdentityCompare response={response} copy={copy} />
-                      </div>
-                    </MobileCollapsible>
-                  </div>
+                {/* Order as drawn (design/mockup/Result-Scam.png): the
+                    verdict, then what is wrong and the link, then the message
+                    with its evidence, then the evidence detail and what to do. */}
+                <ResultHero response={response} label={label} copy={copy} />
+
+                <div className="grid grid-cols-12 items-start gap-3.5">
+                  <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
+                  <LinkCard response={response} copy={copy} />
+                </div>
+
+                <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+
+                <div className="sheet">
+                  {/* Collapsed by default: the cards above already answer
+                      "what is wrong", and this is the detail behind them. */}
+                  <MobileCollapsible summary={copy.result.whyTitle}>
+                    <div className="[&>*+*]:border-t [&>*+*]:border-card-border">
+                      <WhySection
+                        signals={response.signals}
+                        explanation={response.explanation}
+                        senderReports={response.senderReports}
+                        copy={copy}
+                        lang={lang}
+                        show={show}
+                      />
+                      <IdentityCompare response={response} copy={copy} />
+                    </div>
+                  </MobileCollapsible>
                 </div>
 
                 {(response.journey || response.scamDna?.matchStrength === "matched") && (
@@ -190,10 +193,11 @@ export default function ResultView() {
                   </div>
                 )}
 
-                <div className="sheet">
-                  <LinkCheckPanel response={response} copy={copy} />
-                  <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
-                </div>
+                {/* LinkCheckPanel is deliberately not rendered here: the
+                    "The link" card above is the same deterministic
+                    domain-matching output, and showing both listed the host,
+                    the site it imitates and its age twice on one screen. */}
+                <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
               </>
             )}
 

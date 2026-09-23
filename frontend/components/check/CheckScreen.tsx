@@ -6,10 +6,12 @@ import { visibleStreak } from "@/lib/streak";
 import { localDay } from "@/lib/learn-content";
 import { weekStats, type WeekStats } from "@/lib/week";
 import CheckForm, { type CheckFormHandle } from "../CheckForm";
+import type { WaitPhase } from "../WaitProgress";
 import { useLanguage } from "../LanguageProvider";
 import RecentChecks from "../RecentChecks";
 import ScreenTitle from "../ScreenTitle";
 import CheckHero from "./CheckHero";
+import CheckingHero, { ResultSkeleton } from "./CheckingHero";
 import InstallCard from "./InstallCard";
 import PayRow from "./PayRow";
 import { PracticeCard, WeekCard } from "./WeekCard";
@@ -34,7 +36,14 @@ export default function CheckScreen() {
   const [week, setWeek] = useState<WeekStats | null>(null);
   const [practice, setPractice] = useState<{ answered: number; streak: number } | null>(null);
   const [now, setNow] = useState(0);
-  const [{ busy, shotBusy }, setFormState] = useState({ busy: false, shotBusy: false });
+  const [{ busy, shotBusy, loading, phase, stage, reveal }, setFormState] = useState<{
+    busy: boolean;
+    shotBusy: boolean;
+    loading: boolean;
+    phase: WaitPhase;
+    stage: number;
+    reveal: string[];
+  }>({ busy: false, shotBusy: false, loading: false, phase: "running", stage: 0, reveal: [] });
 
   useEffect(() => {
     const list = getRecentChecks();
@@ -57,14 +66,29 @@ export default function CheckScreen() {
       <ScreenTitle tabKey="check" />
 
       <div className="gutter flex flex-col gap-4 pt-4">
-        <CheckHero
-          copy={copy}
-          onPaste={() => form.current?.pasteAndFocus()}
-          onScreenshot={() => form.current?.pickScreenshot()}
-          screenshotBusy={shotBusy}
-        />
+        {/* The hero becomes the wait while a check runs, rather than the
+            screen navigating to a separate checking route: the abort and
+            cancel behaviour all lives in CheckForm, which stays mounted. */}
+        {loading ? (
+          <CheckingHero
+            copy={copy}
+            phase={phase}
+            stage={stage}
+            reveal={reveal}
+            progressLabel={copy.wait.progressLabel}
+          />
+        ) : (
+          <CheckHero
+            copy={copy}
+            onPaste={() => form.current?.pasteAndFocus()}
+            onScreenshot={() => form.current?.pickScreenshot()}
+            screenshotBusy={shotBusy}
+          />
+        )}
 
         <CheckForm ref={form} onStateChange={setFormState} />
+
+        {loading && <ResultSkeleton />}
 
         {!busy && (
           <>

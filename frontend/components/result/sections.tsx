@@ -297,19 +297,20 @@ export function WhatToDo({
   const { steps, prose } = actionPlan(verdict, suggestedAction);
   if (steps.length === 0 && !prose) return null;
   return (
-    <section className="flex flex-col gap-4 bg-accent-soft px-5 py-5" aria-labelledby="todo-label">
-      <h2 id="todo-label" className="text-[1.5rem] leading-tight text-accent-ink">
+    <section className="suggestion flex flex-col gap-3.5 px-5 py-[18px]" aria-labelledby="todo-label">
+      <h2 id="todo-label" className="micro text-ink-muted">
         {copy.result.whatToDoTitle}
       </h2>
       {/* The model's own advice (when suggestedAction is a sentence) leads; the fixed steps follow. */}
-      {prose && <p className="text-[0.9375rem] leading-relaxed text-ink">{show(prose)}</p>}
+      {prose && <p className="text-[1.0625rem] leading-[1.4375rem] text-ink">{show(prose)}</p>}
       <ol className="flex flex-col">
         {steps.map((k) => copy.result.steps[k]).map((text, i) => (
-          <li key={i} className="flex gap-3.5 border-t border-accent/20 py-3 first:border-t-0 first:pt-0 last:pb-0">
-            <span aria-hidden="true" className="data mt-0.5 shrink-0 font-medium text-accent-ink">
-              {String(i + 1).padStart(2, "0")}
+          <li key={i} className="flex gap-3 border-t border-black/[0.08] py-2.5 first:border-t-0 first:pt-0 last:pb-0">
+            {/* These really are ordered steps, so they are numbered. */}
+            <span aria-hidden="true" className="data mt-px shrink-0 font-semibold text-ink-muted">
+              {i + 1}
             </span>
-            <span className="text-[0.9375rem] leading-relaxed text-ink">{text}</span>
+            <span className="text-[0.9375rem] leading-5 text-ink">{text}</span>
           </li>
         ))}
       </ol>
@@ -329,24 +330,24 @@ export function SafeChecklist({
   show: (s: string) => string;
 }) {
   return (
-    <section aria-labelledby="checked-label">
-      <div className="flex flex-col gap-2.5 px-5 pt-5 pb-4">
+    <section className="sheet" aria-labelledby="checked-label">
+      <div className="flex flex-col gap-2.5 px-5 pt-4 pb-3">
         <SectionLabel id="checked-label">{copy.result.whatWeCheckedTitle}</SectionLabel>
         {explanation && <p className="leading-relaxed text-ink-soft">{show(explanation)}</p>}
       </div>
       {checks.length > 0 && (
-        <ul className="flex flex-col border-t border-card-border">
+        <ul className="flex flex-col px-5 pb-1 [&>li+li]:border-t [&>li+li]:border-card-border">
           {checks.map((k) => (
-            <li key={k} className="flex items-start gap-3 px-5 py-3 not-first:border-t not-first:border-card-border">
-              <CheckIcon className="mt-0.5 size-4 shrink-0 text-accent" strokeWidth={2.5} />
-              <span className="text-[0.9375rem] leading-snug text-ink">{copy.result.checks[k]}</span>
+            <li key={k} className="flex items-center gap-3 py-3">
+              <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-safe-soft text-safe-ink">
+                <CheckIcon className="size-[17px]" strokeWidth={2.5} />
+              </span>
+              <span className="text-[1.0625rem] leading-snug text-ink">{copy.result.checksShort[k]}</span>
             </li>
           ))}
         </ul>
       )}
-      <p className="border-t border-card-border bg-muted-surface px-5 py-4 text-sm leading-relaxed text-ink-muted">
-        {copy.result.safeCaveat}
-      </p>
+      <p className="px-5 py-4 text-[0.9375rem] leading-5 text-ink-muted">{copy.result.safeCaveat}</p>
     </section>
   );
 }

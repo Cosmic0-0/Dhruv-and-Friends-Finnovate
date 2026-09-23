@@ -11,7 +11,7 @@ import type { Copy } from "@/lib/i18n";
 import InvestigationReveal from "./InvestigationReveal";
 import { useLanguage } from "./LanguageProvider";
 import { ScreenshotRow, useScreenshot } from "./ScreenshotUpload";
-import { SUCCESS_DELAY_MS, useWaitStage, WaitFill, WaitStatus } from "./WaitProgress";
+import { SUCCESS_DELAY_MS, useWaitStage, WaitFill, type WaitPhase } from "./WaitProgress";
 import { RetryIcon } from "./icons";
 
 /** Per-item reveal pace in InvestigationReveal, plus a beat to read the last line before navigating. */
@@ -50,11 +50,21 @@ export default function CheckForm({
 }: {
   ref?: React.Ref<CheckFormHandle>;
   /**
+   * Reported up so the Check screen can draw the wait in its dark hero
+   * (design/mockup/Checking.png) instead of the form drawing its own row.
+   *
    * `busy`: the field is open or a check is running, so the screen hides the
    * cards below. `shotBusy`: a screenshot is being read, which is the only
    * thing that should grey out the hero's screenshot button.
    */
-  onStateChange?: (s: { busy: boolean; shotBusy: boolean }) => void;
+  onStateChange?: (s: {
+    busy: boolean;
+    shotBusy: boolean;
+    loading: boolean;
+    phase: WaitPhase;
+    stage: number;
+    reveal: string[];
+  }) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -142,9 +152,12 @@ export default function CheckForm({
   useImperativeHandle(ref, () => ({ pasteAndFocus, pickScreenshot }));
 
   const loading = status === "loading" || status === "finishing";
+  const waitPhase: WaitPhase = status === "finishing" ? "done" : "running";
+  const stage = useWaitStage(loading);
+
   useEffect(() => {
-    onStateChange?.({ busy: open || loading, shotBusy: shot.busy });
-  }, [open, loading, shot.busy, onStateChange]);
+    onStateChange?.({ busy: open || loading, shotBusy: shot.busy, loading, phase: waitPhase, stage, reveal });
+  }, [open, loading, shot.busy, waitPhase, stage, reveal, onStateChange]);
 
   // Handoff from the browser extension ("Open in FraudLens", "Check selected
   // text"): a scanned/selected snippet arrives as ?scan=, pre-fills the field
@@ -180,10 +193,6 @@ export default function CheckForm({
 
   const length = text.length;
   const overLimit = length > MAX_MESSAGE_LENGTH;
-  // Waiting covers the request and the short success finish, so the bar and
-  // the button stay in one state until the result screen takes over.
-  const waitPhase = status === "finishing" ? "done" : "running";
-  const stage = useWaitStage(loading);
   const canSubmit = text.trim().length > 0 && !overLimit && !loading && !shot.busy;
   // The screenshot wording applies once an image is on its way to (or reached) the
   // server. A file rejected in the browser (no preview) never left the device.
@@ -282,6 +291,7 @@ export default function CheckForm({
   return (
     <section className="flex flex-col gap-3.5">
       {picker}
+      {!loading && (
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -358,36 +368,31 @@ export default function CheckForm({
           </div>
         </div>
       </form>
+      )}
 
-      {/* One slot: the wait row while checking, the reveal checklist once the
-          response is in, or the error card if it fails. */}
-      {status === "finishing" && reveal.length > 0 ? (
-        <div className="card">
-          <InvestigationReveal heading={copy.result.investigate.heading} steps={reveal} />
-        </div>
-      ) : (
-        loading && (
-          <div className="card flex items-start gap-4">
-            <WaitStatus phase={waitPhase} stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} />
-            {status === "loading" && (
-              <button
-                type="button"
-                onClick={cancel}
-                className="pressable micro -mr-1 min-h-11 shrink-0 px-2 text-ink-muted"
-              >
-                {copy.wait.cancel}
-              </button>
-            )}
-          </div>
-        )
+      {/* The staged copy, the bar and the reveal all live in the hero now
+          (components/check/CheckingHero.tsx). Only cancelling stays here,
+          because only this component can abort the request. */}
+      {status === "loading" && (
+        <button
+          type="button"
+          onClick={cancel}
+          className="pressable micro mx-auto min-h-11 px-4 text-ink-muted"
+        >
+          {copy.wait.cancel}
+        </button>
       )}
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 
       {/* Each promise only where it's true: typed text is redacted in the browser
-          before anything leaves it; a screenshot goes to the server as it is. */}
-      <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted" aria-live="polite">
-        {imageInvolved ? copy.imagePrivacyNote : copy.privacyNote}
-      </p>
+          before anything leaves it; a screenshot goes to the server as it is.
+          Hidden while checking: by then the message has already been sent, and
+          the note would sit between the hero and the result placeholders. */}
+      {!loading && (
+        <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted" aria-live="polite">
+          {imageInvolved ? copy.imagePrivacyNote : copy.privacyNote}
+        </p>
+      )}
     </section>
   );
 }
