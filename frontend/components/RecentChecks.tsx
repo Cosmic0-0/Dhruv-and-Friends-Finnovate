@@ -1,47 +1,62 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getRecentChecks, type RecentCheck } from "@/lib/storage";
-import { getVerdictDisplay, getVerdictCopy } from "@/lib/verdict";
+import { RECENT_LIMIT, type RecentCheck } from "@/lib/storage";
 import { useLanguage } from "./LanguageProvider";
+import { ArrowDownLeftIcon, CheckIcon, WarningIcon } from "./icons";
+import type { Verdict } from "@/lib/types";
 
-/** Last 5 checks from localStorage. Only redacted text is ever stored. */
-export default function RecentChecks() {
-  const { lang, copy } = useLanguage();
-  // null until mounted: localStorage isn't available during server render.
-  const [checks, setChecks] = useState<RecentCheck[] | null>(null);
-  const [now, setNow] = useState(0);
+/**
+ * The Recent list (frontend/design/mockup/Main.html): a tinted verdict circle,
+ * the message, and the verdict with its age on the right.
+ *
+ * Only redacted text is ever stored, so the row title is the start of the
+ * redacted message rather than a tidy summary. The mockup's short titles
+ * ("Account blocked") are not something the data can supply, and inventing one
+ * would mean showing the user words they did not receive.
+ *
+ * Checks are passed in rather than read here: the Check screen already reads
+ * localStorage once for the week counts, and one read keeps the list and the
+ * counts describing the same history.
+ */
 
-  useEffect(() => {
-    setChecks(getRecentChecks());
-    setNow(Date.now());
-    const tick = setInterval(() => setNow(Date.now()), 60_000);
-    return () => clearInterval(tick);
-  }, []);
+const TONE: Record<Verdict, { bg: string; fg: string; Icon: typeof CheckIcon }> = {
+  scam: { bg: "bg-danger-soft", fg: "text-danger-ink", Icon: ArrowDownLeftIcon },
+  suspicious: { bg: "bg-caution-soft", fg: "text-caution-ink", Icon: WarningIcon },
+  safe: { bg: "bg-safe-soft", fg: "text-safe-ink", Icon: CheckIcon },
+};
+
+export default function RecentChecks({ checks, now }: { checks: RecentCheck[]; now: number }) {
+  const { copy } = useLanguage();
+  const shown = checks.slice(0, RECENT_LIMIT);
 
   return (
-    <section aria-labelledby="recent-title" className="flex flex-col gap-2.5">
-      <h2 id="recent-title" className="micro border-b border-line-strong pb-2 text-ink-muted">
-        {copy.recentTitle}
-      </h2>
+    <section className="sheet" aria-labelledby="recent-title">
+      <div className="px-5 pt-4 pb-1">
+        <h2 id="recent-title" className="micro text-ink-muted">
+          {copy.check.recent.title}
+        </h2>
+      </div>
 
-      {checks !== null && checks.length === 0 && <p className="text-sm text-ink-muted">{copy.recentEmpty}</p>}
-
-      {checks !== null && checks.length > 0 && (
-        <ul className="flex flex-col divide-y divide-card-border">
-          {checks.map((c) => {
-            const display = getVerdictDisplay(c.verdict);
+      {shown.length === 0 ? (
+        <p className="px-5 py-4 text-[0.9375rem] text-ink-muted">{copy.check.recent.empty}</p>
+      ) : (
+        <ul className="flex flex-col px-5 pb-1 [&>li+li]:border-t [&>li+li]:border-card-border">
+          {shown.map((c) => {
+            const { bg, fg, Icon } = TONE[c.verdict];
             return (
-              <li key={c.id} className="flex items-baseline gap-3 py-3">
-                {/* Severity reads from the rule colour before the label does. */}
-                <span aria-hidden="true" className={`mt-1.5 h-2.5 w-0.5 shrink-0 ${display.classes.bg}`} />
-                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <p className="truncate text-[0.9375rem] text-ink">{c.text.replace(/\s+/g, " ").trim()}</p>
-                  <p className={`micro ${display.classes.inkText}`}>{getVerdictCopy(c.verdict, lang).label}</p>
-                </div>
-                <time dateTime={new Date(c.at).toISOString()} className="data shrink-0 text-ink-muted">
-                  {copy.relativeTime(Math.max(0, now - c.at))}
-                </time>
+              <li key={c.id} className="flex items-center gap-3 py-[13px]">
+                <span className={`flex size-[34px] shrink-0 items-center justify-center rounded-full ${bg} ${fg}`}>
+                  <Icon className="size-[17px]" strokeWidth={2} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[1.0625rem] text-ink">
+                  {c.text.replace(/\s+/g, " ").trim()}
+                </span>
+                <span className="shrink-0 text-right text-[0.9375rem] text-ink-muted">
+                  {copy.check.recent.short[c.verdict]}
+                  {/* now is 0 until the client has mounted, so the server and
+                      first client render agree on the text. */}
+                  {now > 0 && `, ${copy.relativeTime(Math.max(0, now - c.at))}`}
+                </span>
               </li>
             );
           })}

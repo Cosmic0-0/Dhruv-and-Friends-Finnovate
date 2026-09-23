@@ -19,6 +19,14 @@ const RECENT_KEY = "fraudlens.recent.v1";
 const RESULT_KEY = "fraudlens.result.v1";
 const LANGUAGE_KEY = "fraudlens.language.v1";
 const SIMPLE_MODE_KEY = "fraudlens.simpleMode.v1";
+
+/**
+ * How many checks to KEEP. The Check screen shows only the newest few, but the
+ * "This week" card counts a rolling 7 days, which needs more than a screenful
+ * of history to be true. 50 redacted messages is a few KB.
+ */
+export const RECENT_KEEP = 50;
+/** How many to SHOW in the Recent list. */
 export const RECENT_LIMIT = 5;
 
 export interface RecentCheck {
@@ -79,12 +87,12 @@ export function getRecentChecks(): RecentCheck[] {
         VERDICTS.includes(c.verdict) &&
         typeof c.at === "number",
     )
-    .slice(0, RECENT_LIMIT);
+    .slice(0, RECENT_KEEP);
 }
 
 export function addRecentCheck(check: Omit<RecentCheck, "id">): void {
   const id = `${check.at}-${Math.random().toString(36).slice(2, 8)}`;
-  write(local, RECENT_KEY, [{ id, ...check }, ...getRecentChecks()].slice(0, RECENT_LIMIT));
+  write(local, RECENT_KEY, [{ id, ...check }, ...getRecentChecks()].slice(0, RECENT_KEEP));
 }
 
 export function saveResult(result: StoredResult): void {

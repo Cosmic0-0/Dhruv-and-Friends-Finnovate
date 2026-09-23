@@ -94,6 +94,22 @@ export interface Copy {
   relativeTime: (ms: number) => string;
   /** Tab-bar accessible names. The bar itself is icons only (mockup/Main.html). */
   tabs: { check: string; learn: string; trends: string; settings: string; newCheck: string };
+  /** Check screen (frontend/design/mockup/Main.html). */
+  check: {
+    /** Time-of-day greeting above the hero question. */
+    greeting: (hour: number) => string;
+    question: string;
+    heroLine: string;
+    paste: string;
+    /** Shown when the clipboard is empty or the browser refuses to read it. */
+    pasteFallback: string;
+    screenshot: string;
+    payRow: string;
+    week: { title: string; checks: (n: number) => string; caught: (n: number) => { strong: string; rest: string }; nothing: string };
+    practice: { title: string; streak: (n: number) => string; start: string };
+    install: { body: string; add: string; notNow: string; iosTitle: string; iosStep1: string; iosStep2: string };
+    recent: { title: string; empty: string; short: Record<"safe" | "suspicious" | "scam", string> };
+  };
   /**
    * The "Tools" list on Radar. Batch scan, Conversation and Sandbox have no
    * tab of their own in the five-slot bar, so this card is their entry point.
@@ -740,6 +756,35 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
     tabs: { check: "Check", learn: "Learn", trends: "Radar", settings: "Settings", newCheck: "Check a new message" },
+    check: {
+      greeting: (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
+      question: "Is this a scam?",
+      heroLine: "Paste a message before you pay, tap a link or share a code.",
+      paste: "Paste & check",
+      pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
+      screenshot: "Check a screenshot",
+      payRow: "About to pay someone?",
+      week: {
+        title: "This week",
+        checks: (n) => `${n} ${n === 1 ? "check" : "checks"}`,
+        caught: (n) => ({ strong: `${n} ${n === 1 ? "scam" : "scams"}`, rest: "caught" }),
+        nothing: "nothing caught",
+      },
+      practice: { title: "Practice", streak: (n) => `${n}-day streak`, start: "Start a streak" },
+      install: {
+        body: "Keep FraudLens on your Home Screen, so it's there when the next message lands.",
+        add: "Add to Home Screen",
+        notNow: "Not now",
+        iosTitle: "On iPhone",
+        iosStep1: "Tap the Share button in Safari.",
+        iosStep2: 'Choose "Add to Home Screen".',
+      },
+      recent: {
+        title: "Recent",
+        empty: "Your checks will show here.",
+        short: { safe: "Genuine", suspicious: "Careful", scam: "Scam" },
+      },
+    },
     tools: {
       title: "Tools",
       batch: "Batch scan",
@@ -894,6 +939,35 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
     tabs: { check: "Vérifier", learn: "Apprendre", trends: "Radar", settings: "Réglages", newCheck: "Vérifier un nouveau message" },
+    check: {
+      greeting: (h) => (h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir"),
+      question: "Est-ce une arnaque ?",
+      heroLine: "Collez un message avant de payer, d'ouvrir un lien ou de partager un code.",
+      paste: "Coller et vérifier",
+      pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
+      screenshot: "Vérifier une capture d'écran",
+      payRow: "Sur le point de payer ?",
+      week: {
+        title: "Cette semaine",
+        checks: (n) => `${n} vérification${n === 1 ? "" : "s"}`,
+        caught: (n) => ({ strong: `${n} arnaque${n === 1 ? "" : "s"}`, rest: n === 1 ? "détectée" : "détectées" }),
+        nothing: "rien détecté",
+      },
+      practice: { title: "Entraînement", streak: (n) => `${n} jour${n === 1 ? "" : "s"} d'affilée`, start: "Commencer une série" },
+      install: {
+        body: "Gardez FraudLens sur votre écran d'accueil, pour l'avoir sous la main au prochain message.",
+        add: "Ajouter à l'écran d'accueil",
+        notNow: "Plus tard",
+        iosTitle: "Sur iPhone",
+        iosStep1: "Touchez le bouton Partager dans Safari.",
+        iosStep2: "Choisissez « Sur l’écran d’accueil ».",
+      },
+      recent: {
+        title: "Récent",
+        empty: "Vos vérifications apparaîtront ici.",
+        short: { safe: "Authentique", suspicious: "Prudence", scam: "Arnaque" },
+      },
+    },
     tools: {
       title: "Outils",
       batch: "Analyse groupée",
@@ -1278,6 +1352,35 @@ export const COPY: Record<UiLanguage, Copy> = {
       settings: TODO_KREOL("Settings"),
       newCheck: TODO_KREOL("Check a new message"),
     },
+    check: TODO_KREOL({
+      greeting: (h: number) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
+      question: "Is this a scam?",
+      heroLine: "Paste a message before you pay, tap a link or share a code.",
+      paste: "Paste & check",
+      pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
+      screenshot: "Check a screenshot",
+      payRow: "About to pay someone?",
+      week: {
+        title: "This week",
+        checks: (n: number) => `${n} ${n === 1 ? "check" : "checks"}`,
+        caught: (n: number) => ({ strong: `${n} ${n === 1 ? "scam" : "scams"}`, rest: "caught" }),
+        nothing: "nothing caught",
+      },
+      practice: { title: "Practice", streak: (n: number) => `${n}-day streak`, start: "Start a streak" },
+      install: {
+        body: "Keep FraudLens on your Home Screen, so it's there when the next message lands.",
+        add: "Add to Home Screen",
+        notNow: "Not now",
+        iosTitle: "On iPhone",
+        iosStep1: "Tap the Share button in Safari.",
+        iosStep2: 'Choose "Add to Home Screen".',
+      },
+      recent: {
+        title: "Recent",
+        empty: "Your checks will show here.",
+        short: { safe: "Genuine", suspicious: "Careful", scam: "Scam" },
+      },
+    }),
     tools: TODO_KREOL({
       title: "Tools",
       batch: "Batch scan",

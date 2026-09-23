@@ -1,11 +1,5 @@
 import { Suspense } from "react";
-import ScreenTitle from "@/components/ScreenTitle";
-import CheckForm from "@/components/CheckForm";
-import IntelligenceTools from "@/components/IntelligenceTools";
-import Hero from "@/components/Hero";
-import RecentChecks from "@/components/RecentChecks";
-import { T } from "@/components/LanguageProvider";
-import { SendIcon } from "@/components/icons";
+import CheckScreen from "@/components/check/CheckScreen";
 
 const JSON_LD = {
   "@context": "https://schema.org", "@type": "WebApplication",
@@ -18,26 +12,10 @@ export default function CheckPage() {
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-      <ScreenTitle tabKey="check" />
-      <div className="gutter flex flex-col gap-8 pt-4">
-        <div className="grid items-stretch border border-card-border bg-card lg:grid-cols-[0.95fr_1.05fr]">
-          <Hero />
-          <section id="check-message" className="flex scroll-mt-6 flex-col justify-center gap-5 p-5 md:p-7">
-            <div className="flex flex-col gap-3">
-              <h2 className="text-[1.875rem] leading-tight"><T k="headline" /></h2>
-              <p className="max-w-[46ch] text-sm leading-relaxed text-ink-soft"><T k="subline" /></p>
-            </div>
-            <Suspense fallback={null}>
-              <CheckForm />
-            </Suspense>
-          </section>
-        </div>
-        <IntelligenceTools />
-        <RecentChecks />
-        <p className="flex items-center gap-2.5 border-t border-card-border pt-4 text-[0.8125rem] text-ink-muted">
-          <SendIcon className="size-4 shrink-0" /><span><T k="telegram" /></span>
-        </p>
-      </div>
+      {/* CheckScreen reads ?scan= / ?new=1 via useSearchParams. */}
+      <Suspense fallback={null}>
+        <CheckScreen />
+      </Suspense>
     </main>
   );
 }
