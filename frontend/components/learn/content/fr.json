@@ -1,0 +1,33 @@
+{
+  "eyebrow": "APPRENDRE",
+  "title": "Apprendre",
+  "lede": "Cinq vrais messages vérifiés par jour. Entraînez-vous à repérer une arnaque avant qu'elle ne vous arrive pour de vrai.",
+  "stats": {
+    "today": "Aujourd’hui",
+    "todayCount": "{done} sur {goal}",
+    "streak": "Série",
+    "days": "Série de {n} jours",
+    "noStreak": "Pas encore de série",
+    "accuracy": "Précision",
+    "accuracyEmpty": "Pas encore"
+  },
+  "week": {
+    "title": "Cette semaine"
+  },
+  "goal": {
+    "title": "Objectif du jour",
+    "more": "Encore {n}",
+    "done": "Objectif du jour atteint"
+  },
+  "rule": {
+    "title": "Règle de base",
+    "body": "Une vraie banque, un vrai transporteur ou un vrai service public ne vous demande jamais de payer des frais, de partager un code OTP, ou de transférer de l’argent en urgence par SMS, WhatsApp ou appel. Si un message vous pousse à agir vite et à rester discret, arrêtez-vous et vérifiez avec le numéro du site officiel — jamais celui du message."
+  },
+  "patterns": {
+    "title": "Schémas d’arnaque courants",
+    "seeAll": "Voir les données en direct sur Radar"
+  },
+  "senderGenuine": "Message authentique",
+  "doneToday": "Terminé pour aujourd’hui",
+  "practiceMore": "Pratiquer une autre série"
+}

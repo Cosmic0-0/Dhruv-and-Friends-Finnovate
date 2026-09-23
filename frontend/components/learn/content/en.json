@@ -1,0 +1,33 @@
+{
+  "eyebrow": "LEARN",
+  "title": "Learn",
+  "lede": "Five real, checked messages a day. Practice telling a scam from a genuine one before it reaches you for real.",
+  "stats": {
+    "today": "Today",
+    "todayCount": "{done} of {goal}",
+    "streak": "Streak",
+    "days": "{n} day streak",
+    "noStreak": "No streak yet",
+    "accuracy": "Accuracy",
+    "accuracyEmpty": "Not yet"
+  },
+  "week": {
+    "title": "This week"
+  },
+  "goal": {
+    "title": "Today's goal",
+    "more": "{n} more to go",
+    "done": "Goal reached for today"
+  },
+  "rule": {
+    "title": "Rule of thumb",
+    "body": "A real bank, courier or government office never asks you to pay a fee, share an OTP, or move money urgently over SMS, WhatsApp or a call. When a message pushes you to act fast and stay quiet, stop and verify through the number on the official website — never the one in the message."
+  },
+  "patterns": {
+    "title": "Common scam patterns",
+    "seeAll": "See live data on Radar"
+  },
+  "senderGenuine": "Genuine message",
+  "doneToday": "Done for today",
+  "practiceMore": "Practice another set"
+}

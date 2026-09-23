@@ -1,0 +1,30 @@
+{
+  "eyebrow": "BAC À SABLE",
+  "title": "S'entraîner à repérer une arnaque",
+  "lede": "Parcourez une conversation d'arnaque fictive, un message à la fois. Rien n'est envoyé à personne ici — c'est un ensemble fixe de scénarios basés sur de vrais schémas d'arnaque.",
+  "scenario": { "label": "Choisir un scénario", "loading": "Chargement des scénarios…" },
+  "objective": { "title": "Votre objectif", "body": "Remarquez le passage d'une introduction crédible à une demande d'argent, d'identifiants ou de contrôle." },
+  "progress": "Progression de la simulation",
+  "reset": "Réinitialiser et choisir un autre scénario",
+  "start": "Démarrer la simulation",
+  "continueLabel": "Continuer la simulation",
+  "finish": "Terminer la simulation",
+  "preparing": "Préparation du prochain message…",
+  "cancel": "Annuler cette étape",
+  "scammer": "Arnaqueur",
+  "simulated": "Message simulé",
+  "tactic": "Tactique",
+  "introTitle": "Un endroit sûr pour repérer le schéma.",
+  "introBody": "Avancez un message à la fois. Chaque message fictif est accompagné d'une explication de la technique utilisée.",
+  "ended": {
+    "title": "Simulation terminée",
+    "headline": "Vous avez vu le schéma.",
+    "tacticsSeen": "Tactiques rencontrées",
+    "advice": "Dans une vraie conversation, arrêtez-vous avant de partager un code ou d'envoyer de l'argent. Vérifiez via l'application officielle de l'institution ou un numéro auquel vous faites déjà confiance.",
+    "another": "Essayer un autre scénario",
+    "check": "Vérifier un vrai message"
+  },
+  "reload": "Recharger les scénarios",
+  "fictionNote": "Messages fictifs. Aucun message n'est envoyé à personne. Aucune information personnelle n'est nécessaire.",
+  "sourceLangNote": "Les messages du scénario et les explications des tactiques sont affichés dans la langue source."
+}

@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "check": "Vérifier",
+    "learn": "Apprendre",
+    "radar": "Radar",
+    "pay": "Avant de payer",
+    "doc": "Document",
+    "batch": "Analyse groupée",
+    "convo": "Conversation",
+    "report": "Signaler une arnaque",
+    "settings": "Réglages",
+    "home": "Accueil FraudLens",
+    "theme": "Basculer entre mode clair et sombre",
+    "language": "Langue",
+    "more": "Plus",
+    "about": "À propos de FraudLens",
+    "createdBy": "Créé par",
+    "sandbox": "Simulation"
+  },
+  "common": {
+    "whatToDo": "Que faire maintenant",
+    "verdict": "Verdict"
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DcPage, PageHeader, Pill, card, pillStyle, TONE, MONO } from "@/components/dc";
 import {
   buildRound,
   languagePool,
@@ -12,28 +13,47 @@ import {
 } from "@/lib/learn-content";
 import { redact } from "@/lib/redact";
 import { safeChecks } from "@/lib/result";
-import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState } from "@/lib/streak";
+import { DAILY_GOAL, recordAnswer, visibleStreak, weekHistory, type Mistake, type StreakState } from "@/lib/streak";
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
 import { ChartIcon, CheckIcon, PersonIcon, WarningIcon } from "../icons";
 import Celebration from "./Celebration";
-import ScreenTitle from "../ScreenTitle";
 import StreakCards from "./StreakCards";
+import { learnCopy, fill, type LearnCopy } from "./content";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
+const SCAM_TYPE_LABEL: Record<string, string> = {
+  account_verification: "Account verification",
+  bank_impersonation: "Bank impersonation",
+  family_impersonation: "Family impersonation",
+  government_impersonation: "Government impersonation",
+  investment: "Investment offer",
+  job_scam: "Job offer",
+  merchant_payment_change: "Payment details change",
+  otp_theft: "OTP request",
+  parcel_customs: "Parcel & customs fee",
+  payment_request: "Payment request",
+  prize_lottery: "Prize / lottery",
+  refund_scam: "Refund offer",
+};
+
+/** A label derived from the item's own scam_type (or "genuine") — never a fabricated sender name, number or handle. */
+function senderLabel(item: QuizItem, genuineLabel: string): string {
+  if (!item.isScam) return genuineLabel;
+  return SCAM_TYPE_LABEL[item.scamType] ?? item.scamType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /**
- * Learn tab. Fully client-side over build-time corpus data: no API call.
- * Explanations reuse the result screen's exact wording (copy.result.*), so
- * a player recognises the same phrases when they check a real message.
- *
- * The quiz only ever shows messages in the selected language. If that
- * language has too few, a note says more are coming and offers another set;
- * it's never swapped in silently.
+ * Learn tab, restyled to the Claude Design system (components/dc). Fully
+ * client-side over build-time corpus data: no API call. A round is exactly
+ * DAILY_GOAL (5) questions, so the quiz card's own position counter and the
+ * daily-goal bar always agree.
  */
 export default function LearnScreen({ items, trends }: { items: QuizItem[]; trends: TrendCard[] }) {
   const { lang, copy, ready } = useLanguage();
+  const t = learnCopy(lang);
   // null until mounted: localStorage isn't available during server render.
   const [state, setState] = useState<StreakState | null>(null);
   const [acceptedFallback, setAcceptedFallback] = useState<QuizLanguage | null>(null);
@@ -41,7 +61,6 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
   const today = localDay();
 
   useEffect(() => setState(getStreakState()), []);
-  // A fallback accepted for one language doesn't carry over to another.
   useEffect(() => setAcceptedFallback(null), [lang]);
 
   const save = (next: StreakState) => {
@@ -51,148 +70,179 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
+  const done = state ? Math.min(state.today.answered, DAILY_GOAL) : 0;
+  const week = state ? weekHistory(state, today) : [];
 
   return (
     <>
-      <ScreenTitle tabKey="learn" />
-      {/*
-        * Phone: one column, in the order drawn. Desktop: the quiz on the left,
-        * today's progress and the reference list on the right, so the width
-        * carries a second column instead of stretching the question.
-        */}
-      <div className="gutter screen-grid learn-layout flex flex-col gap-4 pt-4 lg:grid">
-        <div className="flex flex-col gap-4">
+      <DcPage label="learn" maxWidth={1180} gap={36}>
+        <PageHeader eyebrow={t.eyebrow} title={t.title} lede={t.lede} titleSize={48} />
 
-      {/* Wait for the saved language so a wrong-language question never flashes. */}
-      {!ready ? (
-        <div className="h-72 bg-surface-dark" aria-hidden="true" />
-      ) : !quizLang ? (
-        <LanguageNote pool={pool} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {quizLang !== lang && (
-            <p className="micro w-fit bg-muted-surface px-2 py-1.5 text-ink-soft">
-              {copy.learn.practisingIn(copy.learn.languageName[quizLang])}
-            </p>
-          )}
-          <Quiz
-            key={quizLang}
-            items={items}
-            quizLang={quizLang}
-            copy={copy}
-            lang={lang}
-            onAnswered={(item, correct) => {
-              const { state: next, completedNow } = recordAnswer(getStreakState(today), { item, correct }, today);
-              const celebrate = completedNow && !next.today.celebrated;
-              if (celebrate) next.today = { ...next.today, celebrated: true }; // once per day, even across reloads
-              save(next);
-              if (celebrate) {
-                setCelebration({
-                  streak: next.streak,
-                  right: next.today.correct,
-                  total: next.today.answered,
-                  mistakes: next.today.mistakes,
-                });
-              }
-            }}
-            onFinished={(score, total) => {
-              const current = getStreakState(today);
-              const prev = current.best;
-              if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
-                save({ ...current, best: { score, total } });
-              }
-            }}
-            best={state?.best ?? null}
-          />
-        </div>
-      )}
+        {ready && state && <StreakCards state={state} today={today} t={t} />}
 
-          {state && ready && quizLang && (
-            <div aria-live="polite">
-              <StreakCards
-                answered={state.today.answered}
-                streak={visibleStreak(state, today)}
-                copy={copy}
-              />
+        {ready && state && (
+          <div style={{ ...card(28), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }} data-fx>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--dc-ink)" }}>{t.goal.title}</span>
+              <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>
+                {done >= DAILY_GOAL ? t.goal.done : fill(t.goal.more, { n: DAILY_GOAL - done })}
+              </span>
             </div>
-          )}
+            <div style={{ display: "flex", gap: 6 }}>
+              {Array.from({ length: DAILY_GOAL }, (_, i) => (
+                <span
+                  key={i}
+                  aria-hidden="true"
+                  style={{ height: 6, flex: 1, borderRadius: 3, background: i < done ? "var(--dc-accent)" : "var(--dc-line2)" }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-          <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
+        {ready && state && <WeekStrip week={week} t={t} />}
+
+        <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,0.85fr)", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {!ready ? (
+              <div style={{ ...card(32), minHeight: 320 }} aria-hidden="true" />
+            ) : !quizLang ? (
+              <LanguageNote pool={pool} t={t} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
+            ) : (
+              <>
+                {quizLang !== lang && (
+                  <p style={{ fontSize: 13, color: "var(--dc-text3)", width: "fit-content", background: "var(--dc-hover)", padding: "6px 10px", borderRadius: 8 }}>
+                    {copy.learn.practisingIn(copy.learn.languageName[quizLang])}
+                  </p>
+                )}
+                <Quiz
+                  key={quizLang}
+                  items={items}
+                  quizLang={quizLang}
+                  copy={copy}
+                  t={t}
+                  lang={lang}
+                  onAnswered={(item, correct) => {
+                    const { state: next, completedNow } = recordAnswer(getStreakState(today), { item, correct }, today);
+                    const celebrate = completedNow && !next.today.celebrated;
+                    if (celebrate) next.today = { ...next.today, celebrated: true };
+                    save(next);
+                    if (celebrate) {
+                      setCelebration({ streak: next.streak, right: next.today.correct, total: next.today.answered, mistakes: next.today.mistakes });
+                    }
+                  }}
+                  onFinished={(score, total) => {
+                    const current = getStreakState(today);
+                    const prev = current.best;
+                    if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
+                      save({ ...current, best: { score, total } });
+                    }
+                  }}
+                  best={state?.best ?? null}
+                  goalMet={done >= DAILY_GOAL}
+                />
+              </>
+            )}
+            <p style={{ padding: "0 4px", fontSize: 13, color: "var(--dc-text3)" }}>{copy.learn.syntheticNote}</p>
+
+            <div style={{ ...card(28), padding: 24, display: "flex", flexDirection: "column", gap: 10 }} data-fx>
+              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t.rule.title}</h2>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: "var(--dc-text2)" }}>{t.rule.body}</p>
+            </div>
+          </div>
+
+          <Patterns trends={trends} copy={copy} t={t} />
         </div>
 
-        <div className="flex flex-col gap-4">
-          <Trends trends={trends} copy={copy} />
-        </div>
-
-      {process.env.NODE_ENV === "development" && (
-        <DevTools
-          copy={copy}
-          onReset={() => {
-            resetStreakState();
-            setState(getStreakState());
-          }}
-          onSeed={() => {
-            seedStreakEndingYesterday(2);
-            setState(getStreakState());
-          }}
-        />
-      )}
+        {process.env.NODE_ENV === "development" && (
+          <DevTools
+            copy={copy}
+            onReset={() => {
+              resetStreakState();
+              setState(getStreakState());
+            }}
+            onSeed={() => {
+              seedStreakEndingYesterday(2);
+              setState(getStreakState());
+            }}
+          />
+        )}
+      </DcPage>
 
       {celebration && <Celebration {...celebration} copy={copy} onClose={() => setCelebration(null)} />}
-      </div>
     </>
   );
 }
 
+function WeekStrip({ week, t }: { week: ReturnType<typeof weekHistory>; t: LearnCopy }) {
+  const WD = ["S", "M", "T", "W", "T", "F", "S"];
+  return (
+    <div style={{ ...card(28), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }} data-fx>
+      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--dc-ink)" }}>{t.week.title}</span>
+      <div style={{ display: "flex", gap: 10 }}>
+        {week.map((d) => {
+          const dow = new Date(`${d.day}T00:00:00`).getDay();
+          return (
+            <div key={d.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  width: "100%",
+                  height: 36,
+                  borderRadius: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: d.goalMet ? "var(--dc-accent)" : d.answered > 0 ? "var(--dc-accent-soft)" : "var(--dc-hover)",
+                  color: d.goalMet ? "var(--dc-surface)" : "var(--dc-text3)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                {d.answered > 0 ? d.answered : ""}
+              </div>
+              <span style={{ fontSize: 11, color: "var(--dc-text3)" }}>{WD[dow]}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** Too few practice messages in this language: say so, and offer another set (never swap silently). */
-function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy; onAccept: () => void }) {
+function LanguageNote({ pool, t, copy, onAccept }: { pool: LanguagePool; t: LearnCopy; copy: Copy; onAccept: () => void }) {
   const L = copy.learn;
   return (
-    <section className="hero flex flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
-      <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
-        {L.quizLabel}
+    <section style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 14 }} aria-labelledby="quiz-label">
+      <p id="quiz-label" style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>
+        {t.eyebrow}
       </p>
-      <p className="text-[1.375rem] leading-[1.8125rem] font-semibold text-white">{L.fewItems(L.languageName[pool.lang])}</p>
+      <p style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em" }}>{L.fewItems(L.languageName[pool.lang])}</p>
       {pool.fallback && (
         <>
-          <button
-            type="button"
-            onClick={onAccept}
-            className="btn pressable w-full bg-white text-[#111113]"
-          >
+          <Pill onClick={onAccept} height={52}>
             {L.offerOther(L.languageName[pool.fallback])}
-          </button>
-          {pool.fallback === "kreol" && <p className="text-[0.9375rem] leading-5 text-white/[0.62]">{L.kreolMixNote}</p>}
+          </Pill>
+          {pool.fallback === "kreol" && <p style={{ margin: 0, fontSize: 14, color: "var(--dc-text3)" }}>{L.kreolMixNote}</p>}
         </>
       )}
     </section>
   );
 }
 
-/**
- * `next dev` only (compiled out of production builds): replay the daily
- * celebration. "Reset streak" forgets everything, so 5 answers show the day-one
- * tick; "Pretend 2 days done" makes today day 3, so 5 answers show the flame.
- */
+/** `next dev` only: replay the daily celebration on demand. */
 function DevTools({ copy, onReset, onSeed }: { copy: Copy; onReset: () => void; onSeed: () => void }) {
   return (
-    <section className="flex flex-col gap-2.5 border border-dashed border-line-strong p-4" aria-label={copy.learn.dev.title}>
-      <p className="micro text-ink-muted">{copy.learn.dev.title}</p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={onReset}
-          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
-        >
+    <section style={{ border: "1px dashed var(--dc-line-strong)", borderRadius: 20, padding: 16, display: "flex", flexDirection: "column", gap: 10 }} aria-label={copy.learn.dev.title}>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text3)" }}>{copy.learn.dev.title}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <Pill variant="outline" height={40} onClick={onReset}>
           {copy.learn.dev.reset}
-        </button>
-        <button
-          type="button"
-          onClick={onSeed}
-          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
-        >
+        </Pill>
+        <Pill variant="outline" height={40} onClick={onSeed}>
           {copy.learn.dev.seed}
-        </button>
+        </Pill>
       </div>
     </section>
   );
@@ -204,21 +254,24 @@ function Quiz({
   items,
   quizLang,
   copy,
+  t,
   lang,
   onAnswered,
   onFinished,
   best,
+  goalMet,
 }: {
   items: QuizItem[];
-  /** Language of the messages in the round (may differ from the UI language after an accepted fallback). */
   quizLang: QuizLanguage;
   copy: Copy;
+  t: LearnCopy;
   lang: UiLanguage;
   onAnswered: (item: QuizItem, correct: boolean) => void;
   onFinished: (score: number, total: number) => void;
   best: { score: number; total: number } | null;
+  /** Whether today's daily goal was already met before this round started. */
+  goalMet: boolean;
 }) {
-  // First round is deterministic per language (rehearsable); "Play again" reshuffles within it.
   const [round, setRound] = useState<QuizItem[]>(() => buildRound(items, quizLang));
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -230,8 +283,6 @@ function Quiz({
   const moved = useRef(false);
   const L = copy.learn;
 
-  // Keep the viewport steady: scroll only as far as needed, so the question
-  // stays on screen next to its explanation. Focus follows without jumping.
   useEffect(() => {
     if (!answer) return;
     nextRef.current?.focus({ preventScroll: true });
@@ -239,7 +290,7 @@ function Quiz({
   }, [answer]);
 
   useEffect(() => {
-    if (!moved.current) return; // not on first render
+    if (!moved.current) return;
     cardRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (finished) playAgainRef.current?.focus({ preventScroll: true });
   }, [index, finished]);
@@ -247,17 +298,18 @@ function Quiz({
   if (round.length === 0) return null;
 
   if (finished) {
+    const doneForToday = !goalMet; // this round is the one that met (or re-confirms) today's goal
     return (
-      <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-live="polite">
-        <p className="text-[0.9375rem] font-semibold text-white/70">{L.scoreLabel}</p>
-        <p className="data text-[3.125rem] leading-none font-bold text-white">
-          {score} <span className="text-[1.25rem] font-medium text-white/50">/ {round.length}</span>
+      <section ref={cardRef} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 14 }} aria-live="polite">
+        <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{doneForToday ? t.doneToday : L.scoreLabel}</p>
+        <p className="dc-mono" style={{ margin: 0, fontFamily: MONO, fontSize: 44, fontWeight: 700, lineHeight: 1, color: "var(--dc-ink)" }}>
+          {score} <span style={{ fontSize: 18, fontWeight: 500, color: "var(--dc-text3)" }}>/ {round.length}</span>
         </p>
-        <div className="flex flex-col gap-1">
-          <p className="text-[1.0625rem] font-medium">{L.scoreLine(score, round.length)}</p>
-          <p className="text-[0.9375rem] leading-relaxed text-white/[0.72]">{L.scoreComment(score, round.length)}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>{L.scoreLine(score, round.length)}</p>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--dc-text2)" }}>{L.scoreComment(score, round.length)}</p>
         </div>
-        {best && <p className="text-sm text-white/[0.62]">{L.best(best.score, best.total)}</p>}
+        {best && <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{L.best(best.score, best.total)}</p>}
         <button
           ref={playAgainRef}
           type="button"
@@ -268,16 +320,15 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="btn pressable mt-1 w-full bg-white text-[#111113]"
+          style={{ ...pillStyle("ink", 52), marginTop: 4, width: "100%" }}
         >
-          {L.playAgain}
+          {t.practiceMore}
         </button>
       </section>
     );
   }
 
   const item = round[index];
-  const right = score;
   const choose = (choseScam: boolean) => {
     if (answer) return;
     const correct = choseScam === item.isScam;
@@ -297,59 +348,60 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="hero learn-specimen flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
-      <div className="flex items-center justify-between gap-3">
-        <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
-          {L.quizLabel}
-        </p>
-        <span className="data text-[0.9375rem] text-white/55">
-          {index + 1} / {round.length}
-        </span>
+    <section ref={cardRef} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 16 }} aria-labelledby="quiz-label">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span id="quiz-label" className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-accent)", letterSpacing: "0.04em" }}>
+            {`MESSAGE ${index + 1} OF ${round.length}`.toUpperCase()}
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: 6 }} aria-hidden="true">
+          {Array.from({ length: round.length }, (_, i) => (
+            <span key={i} style={{ height: 5, flex: 1, borderRadius: 3, background: i <= index ? "var(--dc-accent)" : "var(--dc-line2)" }} />
+          ))}
+        </div>
       </div>
-      {/* A verbatim scam-or-genuine sample — same monospaced, rule-marked
-          treatment as a quoted scam sample elsewhere (see TrendsContent),
-          so it reads as quoted evidence rather than the app talking. */}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 13, fontWeight: 500, padding: "4px 10px", borderRadius: 999, background: "var(--dc-hover)", color: "var(--dc-text2)" }}>
+          {senderLabel(item, t.senderGenuine)}
+        </span>
+        {item.languageMix !== lang && item.languageMix !== "en" && (
+          <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{item.languageMix}</span>
+        )}
+      </div>
+
       <blockquote
         key={item.id}
         lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        className="learn-message mt-1 text-[1.375rem] leading-[1.8125rem] font-semibold [overflow-wrap:anywhere]"
+        style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: 20, padding: "16px 18px", fontSize: 17, lineHeight: 1.5, fontWeight: 500, overflowWrap: "anywhere" }}
       >
         &ldquo;{item.text}&rdquo;
       </blockquote>
 
-      <div className="mt-2 grid grid-cols-2 gap-2.5">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {([true, false] as const).map((isScamButton) => {
           const chosen = answer?.choseScam === isScamButton;
           return (
-            <button
+            <Pill
               key={String(isScamButton)}
               type="button"
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
-              aria-pressed={chosen}
-              className={`btn pressable transition-opacity ${
-                isScamButton ? "bg-white text-[#111113]" : "bg-white/[0.14] text-white"
-              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white/70" : ""}`}
+              variant={isScamButton ? "ink" : "outline"}
+              height={52}
+              style={{ width: "100%", opacity: answer && !chosen ? 0.4 : 1, boxShadow: chosen ? "0 0 0 2px var(--dc-accent)" : "none" }}
             >
               {isScamButton ? L.scam : L.genuine}
-            </button>
+            </Pill>
           );
         })}
       </div>
 
-      <p className="text-[0.9375rem] text-white/[0.62]" aria-live="polite">
-        {L.progress(index + 1, round.length, right)}
-      </p>
-
       {answer && <Reveal item={item} answer={answer} copy={copy} lang={lang} />}
 
       {answer && (
-        <button
-          ref={nextRef}
-          type="button"
-          onClick={next}
-          className="btn pressable w-full bg-white text-[#111113]"
-        >
+        <button ref={nextRef} type="button" onClick={next} style={{ ...pillStyle("ink", 52), width: "100%" }}>
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>
       )}
@@ -357,34 +409,33 @@ function Quiz({
   );
 }
 
-/** Why it's a scam (result-screen signal titles) or why it's genuine (result-screen SAFE ticks). */
+/** Why it's a scam (result-screen signal titles) or why it's genuine (result-screen SAFE ticks). Both come from real item data. */
 function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; copy: Copy; lang: UiLanguage }) {
   const L = copy.learn;
   const reasons = item.isScam
     ? item.reasons.slice(0, 4).map((k) => copy.result.signalTitles[k])
     : safeChecks([], item.text, redact(item.text).redactions).map((k) => copy.result.checks[k]);
   const showMeaning = lang !== "kreol" && item.languageMix !== "en" && item.englishMeaning;
+  const tone = item.isScam ? TONE.red : TONE.green;
 
   return (
-    <div role="status" className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4">
-      <p className="text-[1.0625rem] font-semibold">
-        {/* Correct/incorrect reuses the same accent/danger tones as the
-            Genuine/Scam choice buttons above, rather than a separate
-            green/pink pair, so the feedback colour ties directly back to
-            the choice the player made. */}
-        <span className={answer.correct ? "text-safe" : "text-danger"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
+    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 10, background: tone.hl, borderRadius: 18, padding: 16 }}>
+      <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
+        <span style={{ color: answer.correct ? "var(--dc-green)" : "var(--dc-red)" }}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
         {item.isScam ? L.isScam : L.isGenuine}
       </p>
       {reasons.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="micro text-white/[0.62]">{L.whyLabel}</p>
-          <ul className="flex flex-col gap-1.5">
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text3)" }}>{L.whyLabel}</p>
+          <ul style={{ display: "flex", flexDirection: "column", gap: 6, margin: 0, padding: 0, listStyle: "none" }}>
             {reasons.map((r) => (
-              <li key={r} className="flex items-start gap-2.5 text-[0.9375rem] leading-snug">
+              <li key={r} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, lineHeight: 1.4 }}>
                 {item.isScam ? (
-                  <span aria-hidden="true" className="mt-[0.45em] size-1.5 shrink-0 bg-danger" />
+                  <span aria-hidden="true" style={{ marginTop: 6, width: 6, height: 6, borderRadius: "50%", background: "var(--dc-red)", flexShrink: 0 }} />
                 ) : (
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-safe" strokeWidth={2.5} />
+                  <span aria-hidden="true" style={{ marginTop: 2, color: "var(--dc-green)", display: "inline-flex", flexShrink: 0 }}>
+                    <CheckIcon className="size-4" strokeWidth={2.5} />
+                  </span>
                 )}
                 {r}
               </li>
@@ -393,56 +444,53 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
         </div>
       )}
       {showMeaning && (
-        <p className="text-sm leading-relaxed text-white/70">
-          <span className="font-semibold text-white/85">{L.inEnglish}:</span> {item.englishMeaning}
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--dc-text2)" }}>
+          <span style={{ fontWeight: 600, color: "var(--dc-ink)" }}>{L.inEnglish}:</span> {item.englishMeaning}
         </p>
       )}
     </div>
   );
 }
 
-/** Tint and glyph per pattern, so the three rows read apart at a glance. */
-const TAG_TONE: Record<TrendCard["category"], { chip: string; Icon: typeof WarningIcon }> = {
-  parcel_fee: { chip: "bg-caution-soft text-caution-ink", Icon: WarningIcon },
-  fake_relative: { chip: "bg-danger-soft text-danger-ink", Icon: PersonIcon },
-  investment: { chip: "bg-safe-soft text-safe-ink", Icon: ChartIcon },
+const TAG_TONE: Record<TrendCard["category"], { tone: typeof TONE.red; Icon: typeof WarningIcon }> = {
+  parcel_fee: { tone: TONE.amber, Icon: WarningIcon },
+  fake_relative: { tone: TONE.red, Icon: PersonIcon },
+  investment: { tone: TONE.green, Icon: ChartIcon },
 };
 
-/**
- * No report counts here on purpose: data/sender-reputation-seed/ has no data
- * yet, and a fraud screen must not show numbers we can't source. When seed
- * data mapped to these categories lands, add the count from it.
- */
-function Trends({ trends, copy }: { trends: TrendCard[]; copy: Copy }) {
+/** "Common scam patterns": each row's example is a real corpus row, its language tag the item's own languageMix. */
+function Patterns({ trends, copy, t }: { trends: TrendCard[]; copy: Copy; t: LearnCopy }) {
   const L = copy.learn;
   return (
-    <section className="learn-patterns" aria-labelledby="trends-label">
-      <div className="px-5 pt-4 pb-1">
-        <h2 id="trends-label" className="micro text-ink-muted">
-          {L.trendsTitle}
-        </h2>
+    <section className="dc-sticky" style={{ ...card(32), padding: 24, display: "flex", flexDirection: "column", gap: 18, position: "sticky", top: 92 }} data-fx>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t.patterns.title}</h2>
       </div>
-      <ul className="flex flex-col px-5 pb-2 [&>li+li]:border-t [&>li+li]:border-card-border">
-        {trends.map((t) => (
-          <li key={t.category} className="flex flex-col gap-2 py-3.5">
-            <div className="flex items-center gap-3">
-              <span className={`flex size-[34px] shrink-0 items-center justify-center rounded-full ${TAG_TONE[t.category].chip}`}>
-                {(() => {
-                  const Glyph = TAG_TONE[t.category].Icon;
-                  return <Glyph className="size-[17px]" strokeWidth={2} />;
-                })()}
-              </span>
-              <span className="flex-1 text-[1.0625rem] font-medium text-ink">{L.trends[t.category].tag}</span>
-            </div>
-            {t.example && (
-              <p className="rounded-2xl bg-muted-surface px-3.5 py-3 text-[0.9375rem] leading-5 text-ink-soft [overflow-wrap:anywhere]">
-                &ldquo;{t.example.text}&rdquo;
-              </p>
-            )}
-            <p className="text-[0.9375rem] leading-5 text-ink-muted">{L.trends[t.category].body}</p>
-          </li>
-        ))}
+      <ul style={{ display: "flex", flexDirection: "column", gap: 16, margin: 0, padding: 0, listStyle: "none" }}>
+        {trends.map((tr) => {
+          const tone = TAG_TONE[tr.category].tone;
+          const Icon = TAG_TONE[tr.category].Icon;
+          return (
+            <li key={tr.category} style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid var(--dc-line2)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 12 }}>
+                <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: "50%", background: tone.hl, color: tone.fg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Icon className="size-[15px]" strokeWidth={2} />
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 500 }}>{L.trends[tr.category].tag}</span>
+              </div>
+              {tr.example && (
+                <p style={{ margin: 0, background: "var(--dc-hover)", borderRadius: 14, padding: "10px 14px", fontSize: 13, lineHeight: 1.5, color: "var(--dc-text2)", overflowWrap: "anywhere" }}>
+                  &ldquo;{tr.example.text}&rdquo;
+                </p>
+              )}
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--dc-text3)" }}>{L.trends[tr.category].body}</p>
+            </li>
+          );
+        })}
       </ul>
+      <Pill href="/trends" variant="outline" height={44} style={{ width: "100%" }}>
+        {t.patterns.seeAll}
+      </Pill>
     </section>
   );
 }

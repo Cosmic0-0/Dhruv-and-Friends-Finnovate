@@ -59,7 +59,7 @@ test("the first round is deterministic, mixes genuine messages in, and spreads s
   const b = buildRound(items, "kreol");
   assert.deepEqual(a.map((i) => i.id), b.map((i) => i.id));
   assert.equal(a.length, ROUND_SIZE);
-  assert.equal(a.filter((i) => !i.isScam).length, 3);
+  assert.equal(a.filter((i) => !i.isScam).length, 2);
   const bankCount = a.filter((i) => i.scamType === "bank_impersonation").length;
   assert.ok(bankCount <= 1, `expected scam types spread out, got ${bankCount} bank messages`);
   assert.equal(new Set(a.map((i) => i.id)).size, a.length, "no repeats");
@@ -74,7 +74,7 @@ test("a reshuffled round has the same mix and no repeats", () => {
   ]);
   const r = buildRound(items, "kreol", random);
   assert.equal(r.length, ROUND_SIZE);
-  assert.equal(r.filter((i) => !i.isScam).length, 3);
+  assert.equal(r.filter((i) => !i.isScam).length, 2);
   assert.equal(new Set(r.map((i) => i.id)).size, r.length);
 });
 
@@ -128,10 +128,10 @@ test("corpus rows map to quiz languages; code-switched rows count as Kreol", () 
 test("a round only ever contains the selected language, shortened rather than padded", () => {
   const items = toQuizItems([
     ...Array.from({ length: 10 }, (_, i) => row({ id: `K${i}`, language_mix: i % 2 ? "mfe" : "mfe+en" })),
-    ...Array.from({ length: 5 }, (_, i) => row({ id: `E${i}`, language_mix: "en", scam_type: i < 2 ? "legitimate" : "bank_impersonation" })),
+    ...Array.from({ length: 4 }, (_, i) => row({ id: `E${i}`, language_mix: "en", scam_type: i < 1 ? "legitimate" : "bank_impersonation" })),
   ]);
   const en = buildRound(items, "en");
-  assert.equal(en.length, 5, "only 5 English items exist: a shorter round, not padded");
+  assert.equal(en.length, 4, "only 4 English items exist: a shorter round, not padded");
   assert.ok(en.every((i) => i.languageMix === "en"));
   assert.ok(buildRound(items, "kreol").every((i) => i.languageMix.startsWith("mfe")));
   assert.equal(buildRound(items, "fr").length, 0);

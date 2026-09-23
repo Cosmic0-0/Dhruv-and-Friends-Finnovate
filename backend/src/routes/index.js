@@ -7,8 +7,12 @@ import rateLimit from "express-rate-limit";
 import { assessUrl } from "../services/url-reputation/index.js";
 import { runPipeline } from "../services/pipeline/index.js";
 import { validatePaymentContext } from "../services/payment-context/index.js";
+import { evaluatePayee, validatePayeeRequest } from "../services/payee-check/index.js";
 import { validateEmailContext } from "../services/email-context/index.js";
 import { validatePageForms } from "../services/page-forms/index.js";
+import { validateChannel } from "../services/channel/index.js";
+import { profileText } from "../services/text-profile/index.js";
+import { parseShareSamples } from "../services/sharing/index.js";
 import { listCampaigns, OUTCOME_LABELS, recordOutcome } from "../services/org-intel/index.js";
 import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
@@ -17,6 +21,7 @@ import { ingestDocument, extractDocumentText } from "../services/document-store/
 import { analyzeDocumentForensics } from "../services/document-forensics-client/index.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
+import { getRadar, RADAR_RANGES } from "../services/radar/index.js";
 import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
 import {
   analyzeDocument, DocumentError, DOCUMENT_DETECTOR_VERSION, MAX_DOCUMENT_BYTES, sniffDocumentType,
@@ -149,17 +154,25 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   // forms (never values). Only meaningful with a pageUrl.
   const forms = validatePageForms(req.body.pageForms);
   if (forms.error) return res.status(400).json({ error: forms.error });
+  // "Received by" on the web Check screen: context only, never scored.
+  const channel = validateChannel(req.body.channel);
+  if (channel.error) return res.status(400).json({ error: channel.error });
+  // Settings > "Share anonymous scam samples" off: store nothing from this message.
+  const sharing = parseShareSamples(req.body.shareSamples);
+  if (sharing.error) return res.status(400).json({ error: sharing.error });
   const pageHost = pageHostFrom(pageUrl);
   try {
     res.json(
       await runPipeline(message, {
         source: "pasted_text",
         language,
+        channel: channel.value,
         paymentContext: payment.value,
         emailContext: email.value,
         pageHost,
         pageForms: pageHost ? forms.value : null,
         ip: req.ip,
+        record: sharing.record,
       })
     );
   } catch (err) {
@@ -170,6 +183,8 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
 
 router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async (req, res) => {
   const { image, language } = req.body;
+  const sharing = parseShareSamples(req.body.shareSamples);
+  if (sharing.error) return res.status(400).json({ error: sharing.error });
   if (!isNonEmptyString(image)) {
     return res.status(400).json({ error: "image is required and must be a base64-encoded string" });
   }
@@ -211,7 +226,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   }
 
   try {
-    const result = await runPipeline(redactedText, { source: "screenshot", language, ip: req.ip });
+    const result = await runPipeline(redactedText, { source: "screenshot", language, ip: req.ip, record: sharing.record });
     res.json({ extractedText: redactedText, ...result });
   } catch (err) {
     console.error(err);
@@ -263,6 +278,8 @@ function capDocumentText(text) {
 // endpoint (see that route's own comment).
 router.post("/analyze/document", analyzeLimiter, json({ limit: "14mb" }), async (req, res) => {
   const { file, language } = req.body ?? {};
+  const sharing = parseShareSamples(req.body?.shareSamples);
+  if (sharing.error) return res.status(400).json({ error: sharing.error });
   if (!isNonEmptyString(file)) {
     return res.status(400).json({ error: "document is required and must be a base64-encoded string" });
   }
@@ -293,12 +310,15 @@ router.post("/analyze/document", analyzeLimiter, json({ limit: "14mb" }), async 
   // Storage failing is not a reason to fail an otherwise-successful
   // analysis - same "enrichment, not a precondition" stance the OCR/
   // forensics calls on /api/documents below take.
+  // Skipped entirely when the user opted out of sharing samples.
   let documentId = null;
-  try {
-    const stored = ingestDocument({ buffer, sourceChannel: "web_upload" });
-    if (!stored.error) documentId = stored.id;
-  } catch (err) {
-    console.error(err);
+  if (sharing.record) {
+    try {
+      const stored = ingestDocument({ buffer, sourceChannel: "web_upload" });
+      if (!stored.error) documentId = stored.id;
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   // Same server-side redaction as screenshot OCR text: identifiers never
@@ -309,6 +329,7 @@ router.post("/analyze/document", analyzeLimiter, json({ limit: "14mb" }), async 
       source: "document",
       language,
       ip: req.ip,
+      record: sharing.record,
       extraSignals: doc.signals,
       extraDetectorVersions: { document: DOCUMENT_DETECTOR_VERSION },
       ...(doc.ocrQuality ? { ocrQuality: doc.ocrQuality } : {}),
@@ -412,6 +433,8 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   if (messages.some((m) => m.length > MAX_MESSAGE_LENGTH)) {
     return res.status(400).json({ error: `every message must be ${MAX_MESSAGE_LENGTH} characters or fewer` });
   }
+  const sharing = parseShareSamples(req.body.shareSamples);
+  if (sharing.error) return res.status(400).json({ error: sharing.error });
 
   // Never throws: a single message's analysis failure must not fail the
   // whole batch (see docs/API-CONTRACT.md — no top-level 5xx for this
@@ -421,7 +444,7 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   // summary never counts it as scam/suspicious/safe.
   const analyze = async (message) => {
     try {
-      return await runPipeline(message, { source: "batch", ip: req.ip });
+      return await runPipeline(message, { source: "batch", ip: req.ip, record: sharing.record });
     } catch (err) {
       console.error(err);
       return {
@@ -435,8 +458,27 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   };
 
   const { results, summary } = await summarizeBatch(messages, { analyze });
-  saveBatchHistory(summary);
+  if (sharing.record) saveBatchHistory(summary);
   res.json({ results, summary });
+});
+
+// Describes pasted text for the web Check screen's meta row (language,
+// link count) while the user types. Pure, in-memory, no LLM, no storage,
+// no score - see services/text-profile. Own bucket: it is called on a
+// debounce while typing, so it must not eat into check-url's budget.
+const textProfileLimiter = rateLimited("too many text-profile requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 600,
+});
+router.post("/text-profile", textProfileLimiter, json({ limit: "60kb" }), (req, res) => {
+  const { text } = req.body;
+  if (typeof text !== "string") {
+    return res.status(400).json({ error: "text is required and must be a string" });
+  }
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    return res.status(400).json({ error: `text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
+  }
+  res.json(profileText(text));
 });
 
 // Non-LLM, synchronous domain check for the browser extension (see
@@ -497,6 +539,17 @@ router.post("/check-sender", checkSenderLimiter, json({ limit: "10kb" }), (req, 
     return res.status(400).json({ error: "sender is required and must be a non-empty string" });
   }
   res.json({ sender, reportCount: getReportCount(sender) });
+});
+
+// "Before paying": deterministic payee check (services/payee-check). Read
+// only, like /check-sender: the lookup never counts as a report, and the
+// identifier, name and amount are neither stored nor logged.
+router.post("/check-payee", checkSenderLimiter, json({ limit: "10kb" }), (req, res) => {
+  const parsed = validatePayeeRequest(req.body);
+  if (parsed.error) return res.status(400).json({ error: parsed.error });
+  const { method, purpose } = parsed.value;
+  const result = evaluatePayee(parsed.value, { reportCount: getReportCount(parsed.value.identifier) });
+  res.json({ method, ...(purpose ? { purpose } : {}), ...result });
 });
 
 router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {
@@ -571,9 +624,15 @@ function maskSender(raw) {
 
 // Real aggregate counts only - see db/index.js's getTrendSummary() doc
 // comment. Cheap indexed reads, same cost class as /check-sender.
-router.get("/trends", checkSenderLimiter, (_req, res) => {
+router.get("/trends", checkSenderLimiter, (req, res) => {
+  // Optional ?range= adds Radar's ranged aggregates (services/radar).
+  const range = req.query.range;
+  if (range !== undefined && (typeof range !== "string" || !RADAR_RANGES.includes(range))) {
+    return res.status(400).json({ error: `range must be one of: ${RADAR_RANGES.join(", ")}` });
+  }
   const { topSenders, topCampaigns, scamTypeCounts, totals } = getTrendSummary();
   res.json({
+    ...(range ? { radar: getRadar(range) } : {}),
     totals,
     // A blank/whitespace-only sender can exist in old report rows from
     // before input validation tightened - never surface it as a leaderboard

@@ -1,0 +1,24 @@
+{
+  "nav": {
+    "check": "Check",
+    "learn": "Learn",
+    "radar": "Radar",
+    "pay": "Before paying",
+    "doc": "Document",
+    "batch": "Batch scan",
+    "convo": "Conversation",
+    "report": "Report a scam",
+    "settings": "Settings",
+    "home": "FraudLens home",
+    "theme": "Toggle light and dark mode",
+    "language": "Language",
+    "more": "More",
+    "about": "About FraudLens",
+    "createdBy": "Created by",
+    "sandbox": "Sandbox"
+  },
+  "common": {
+    "whatToDo": "What to do now",
+    "verdict": "Verdict"
+  }
+}

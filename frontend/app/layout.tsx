@@ -1,30 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Sans } from "next/font/google";
+import { JetBrains_Mono, Onest } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import SideNav from "@/components/SideNav";
+import Fx from "@/components/dc/Fx";
+import TopNav from "@/components/TopNav";
 import TabBar from "@/components/TabBar";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
 /**
- * One webfont, for the app's own voice.
- *
- * Instrument Sans is a humanist grotesque: enough personality to stop the UI
- * reading as a default system-font utility, and clean diacritics for Kreol and
- * French. next/font self-hosts it, so the PWA still works offline and nothing
- * is fetched from Google at runtime.
- *
- * The message bubble deliberately does NOT use it. A received SMS is rendered
- * in the system font, because that is the face it actually arrived in on the
- * user's phone. The app never sets the scammer's words in its own type.
+ * The Claude Design type: Onest for the interface, JetBrains Mono for
+ * figures, codes and addresses. next/font self-hosts both, so the PWA still
+ * works offline and nothing is fetched from Google at runtime.
  */
-const instrument = Instrument_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-ui",
-  display: "swap",
-});
+const onest = Onest({ subsets: ["latin", "latin-ext"], weight: ["400", "500", "600", "700"], variable: "--font-onest", display: "swap" });
+const mono = JetBrains_Mono({ subsets: ["latin", "latin-ext"], weight: ["400", "500"], variable: "--font-jbmono", display: "swap" });
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const TITLE = "FraudLens AI: check a message before you pay";
@@ -70,32 +60,28 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // One per scheme, matching the page colour behind the status bar in each
-  // (globals.css --c-page), so the bar never reads as a separate strip.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F2F2F3" },
-    { media: "(prefers-color-scheme: dark)", color: "#0C0C0D" },
-  ],
-  colorScheme: "light dark",
+  // The design's dark page colour; lib/theme.ts swaps it when Light is chosen.
+  themeColor: "#000000",
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={instrument.variable}>
+    <html lang="en" className={`${onest.variable} ${mono.variable}`}>
       <head>
         {/* Applies a saved light/dark choice before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body>
         <LanguageProvider>
-          {/* One row at md+: navigation rail beside the app column. Below md
-              the frame is a plain block and the column is the whole layout. */}
+          {/* Desktop: the design's top bar. Below 64rem: the tab bar. */}
+          <TopNav />
           <div className="app-frame">
-            <SideNav />
             <div className="app-shell">{children}</div>
           </div>
           <TabBar />
         </LanguageProvider>
+        <Fx />
         <ServiceWorkerRegister />
       </body>
     </html>

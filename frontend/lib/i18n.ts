@@ -445,7 +445,7 @@ export interface Copy {
 }
 
 /**
- * Document check (app/document, components/document/DocumentCheck.tsx) and
+ * Document check (app/document, components/document/CheckDocumentScreen.tsx) and
  * the result screen's "Document integrity" panel. Every finding sentence is
  * a warning sign, never "this is fake": the backend's checks cannot prove a
  * forgery, and a printed-and-rescanned one leaves no trace.

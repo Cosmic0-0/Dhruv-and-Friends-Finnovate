@@ -1,4 +1,4 @@
-import DocumentCheck from "@/components/document/DocumentCheck";
+import CheckDocumentScreen from "@/components/document/CheckDocumentScreen";
 
 export const metadata = {
   title: "Check a document",
@@ -7,15 +7,14 @@ export const metadata = {
 };
 
 /**
- * Document forensics entry point: a PDF/DOCX goes to
- * POST /api/analyze/document and the result opens on the normal /result
- * screen with its "Document integrity" panel. The heading and copy live in
- * DocumentCheck (a client component), which reads the current language.
+ * Document forensics entry point (Check Document.dc.html): a PDF/DOCX goes to
+ * POST /api/analyze/document and the result renders inline - see
+ * components/document/CheckDocumentScreen.tsx.
  */
 export default function DocumentPage() {
   return (
     <main>
-      <DocumentCheck />
+      <CheckDocumentScreen />
     </main>
   );
 }

@@ -18,6 +18,9 @@ export type Severity = "low" | "medium" | "high";
 /** Free-form hint passed straight into the LLM prompt; not validated server-side. */
 export type LanguageHint = "en" | "fr" | "kreol" | "mixed";
 
+/** How the user says a message arrived (the web Check screen's "Received by"). Context only — never a signal. */
+export type Channel = "sms" | "whatsapp" | "email" | "facebook" | "call";
+
 export type SignalSource = "message_text" | "url_parser" | "community_reports" | "llm_analysis" | "identity_check";
 
 export type RiskLevel = "LOW" | "MEDIUM" | "HIGH";
@@ -55,10 +58,14 @@ export interface AnalyzeRequest {
   /** 1–5000 characters. */
   message: string;
   language?: LanguageHint | string;
+  /** How the user says this arrived (web Check screen "Received by"). Context only — never adds a signal or changes the score. */
+  channel?: Channel;
 }
 
 export interface AnalyzeResponse {
   scamProfile?: { type: ScamType | null; stage: ScamStage; claimedIdentity: string | null };
+  /** OPTIONAL: the deterministic risk engine's own view — `confidence` is confidence IN THE SCORING (how much evidence backs it), never an LLM confidence. */
+  risk?: { score: number; level: "low" | "elevated" | "high" | "critical"; confidence: "low" | "moderate" | "high" };
   journey?: { currentStage: ScamStage; likelyNextStages: { stage: ScamStage; reason: string }[] };
   scamDna?: { fingerprintId: string; matchStrength: "new" | "matched"; relatedReports: number; relatedSenders: number; relatedDomains: number };
 
@@ -96,6 +103,8 @@ export interface AnalyzeResponse {
       /** e.g. "ollama" (local/self-hosted) or "anthropic"/"openai"/"openrouter" (hosted fallback). */
       provider?: string;
     };
+    /** Echoed back only when the request sent `channel`. */
+    channel?: Channel;
   };
 }
 
@@ -207,6 +216,111 @@ export interface BatchScanResponse {
   summary: BatchScanSummary;
 }
 
+// ---- POST /api/analyze/conversation ----
+
+export const MAX_CONVERSATION_MESSAGES = 500;
+export const MAX_CONVERSATION_MESSAGE_LENGTH = 5000;
+
+export interface ConversationMessage {
+  from: "me" | "them";
+  /** 1-5000 characters. */
+  text: string;
+}
+
+export interface ConversationRequest {
+  /** 1-500 items, at least one "them" message. */
+  messages: ConversationMessage[];
+  language?: LanguageHint | string;
+}
+
+export interface ConversationFlag {
+  /** Index into the request's `messages` array. */
+  index: number;
+  code: string;
+  severity: Severity;
+  label: string;
+  /** Exact quote from that message (already redacted, same as what was sent). */
+  evidence: string;
+}
+
+export interface ConversationStageEvent {
+  stage: ScamStage;
+  /** Index of the first message this stage was observed at. */
+  index: number;
+}
+
+/** The whole conversation, analysed once as a single transcript (see backend/src/services/conversation). */
+export interface ConversationResponse extends AnalyzeResponse {
+  conversation: {
+    messageCount: number;
+    theirMessageCount: number;
+    /** How many of "their" messages fit in one analysis (older ones may be dropped when truncated). */
+    analysedMessageCount: number;
+    truncated: boolean;
+    firstAnalysedIndex: number | null;
+    flags: ConversationFlag[];
+    stages: ConversationStageEvent[];
+  };
+}
+
+// ---- POST /api/check-url ----
+
+export interface CheckUrlRequest {
+  /** A bare hostname or full URL, e.g. "mcb-secure.top" or "https://mcb-secure.top/login". */
+  url: string;
+}
+
+export interface CheckUrlCertificate {
+  validation: "EV" | "OV" | "DV" | null;
+  organization: string | null;
+  issuer: string | null;
+  validFrom: string;
+  validTo: string;
+  issuedDaysAgo: number;
+  expiresInDays: number;
+  trusted: boolean;
+  problem: null | "expired" | "not_yet_valid" | "self_signed" | "wrong_host" | "untrusted";
+}
+
+/**
+ * Non-LLM domain/reputation check ("Link" mode on the web Check screen and
+ * the extension's toolbar badge) — the page itself is never opened. Same
+ * `checkUrls()` deterministic check /api/analyze uses for lookalike_url signals.
+ */
+export interface CheckUrlResponse {
+  url: string;
+  host: string | null;
+  flagged: boolean;
+  signals: Signal[];
+  reportCount: number;
+  officialInstitution: string | null;
+  trusted: boolean;
+  domainAgeDays: number | null;
+  /** Only for a known URL shortener: where it points (one redirect hop, destination never fetched). */
+  resolvedUrl: string | null;
+  firstCertificateDays: number | null;
+  certificate: CheckUrlCertificate | null;
+  version: string;
+}
+
+// ---- POST /api/text-profile ----
+
+export interface TextProfileRequest {
+  /** 0-5000 characters. */
+  text: string;
+}
+
+/**
+ * Describes pasted text for the Check screen's meta row while typing.
+ * Descriptive only: no signal, score, verdict, LLM call or storage.
+ */
+export interface TextProfileResponse {
+  /** null = too few marker words to tell. */
+  language: "en" | "fr" | "kreol" | "mixed" | null;
+  links: number;
+  hosts: string[];
+}
+
 // ---- POST /api/check-sender ----
 
 export interface CheckSenderRequest {
@@ -250,3 +364,47 @@ export const MAX_BATCH_SIZE = 50;
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 /** File size cap for /api/analyze/document; the backend enforces it too. */
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
+
+// ---- POST /api/check-payee ("Before paying") ----
+
+export type PayeeMethod = "phone" | "bank_account" | "iban";
+export type PayeePurpose = "car" | "rent_deposit" | "online_shop" | "family" | "invoice";
+
+export interface CheckPayeeRequest {
+  method: PayeeMethod;
+  /** Phone number, account number or IBAN, as the payee gave it. ≤64 chars. */
+  identifier: string;
+  /** Only used to notice an organisation's name on a personal number; never stored. ≤100 chars. */
+  name?: string;
+  /** Rupees. */
+  amount?: number;
+  purpose?: PayeePurpose;
+}
+
+export type PayeeFindingCode =
+  | "REPORTED"
+  | "NOT_REPORTED"
+  | "IBAN_FORMAT_INVALID"
+  | "IBAN_CHECKSUM_FAILED"
+  | "IBAN_LENGTH_WRONG"
+  | "IBAN_FOREIGN"
+  | "IBAN_VALID"
+  | "PHONE_VALID"
+  | "PHONE_NOT_MU_MOBILE"
+  | "ACCOUNT_FORMAT_ODD"
+  | "ORGANISATION_ON_PERSONAL_NUMBER"
+  | "LARGE_AMOUNT";
+
+export interface PayeeFinding {
+  code: PayeeFindingCode | string;
+  severity: "red" | "amber" | "ok";
+  params?: { count?: number; country?: string; organisation?: string; amount?: number; threshold?: number };
+}
+
+export interface CheckPayeeResponse {
+  method: PayeeMethod;
+  purpose?: PayeePurpose;
+  verdict: "stop" | "caution" | "clear";
+  findings: PayeeFinding[];
+  reportCount: number;
+}

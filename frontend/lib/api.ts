@@ -12,6 +12,7 @@
  * an "Issue" badge, which would appear mid-demo.
  */
 
+import { loadShareSamples } from "./storage";
 import type {
   AnalyzeDocumentRequest,
   AnalyzeDocumentResponse,
@@ -22,13 +23,23 @@ import type {
   BatchScanRequest,
   BatchScanResponse,
   BatchScanResult,
+  CheckPayeeRequest,
+  CheckPayeeResponse,
   CheckSenderRequest,
   CheckSenderResponse,
+  CheckUrlRequest,
+  CheckUrlResponse,
+  ConversationFlag,
+  ConversationRequest,
+  ConversationResponse,
+  ConversationStageEvent,
   DocumentInfo,
   DocumentPreview,
   ReportRequest,
   ReportResponse,
   Signal,
+  TextProfileRequest,
+  TextProfileResponse,
   Verdict,
 } from "./types";
 
@@ -104,9 +115,18 @@ const DEFAULT_TIMEOUTS = {
   // OCR, then a full LLM analysis server-side, before the extracted text comes back.
   screenshot: 135_000,
   batch: 180_000,
+  // Same single-LLM-call cost class as /api/analyze; the transcript is
+  // bigger but it's still one runPipeline() call server-side.
+  conversation: 130_000,
   report: 15_000,
   // Single indexed SELECT, same cost class as report - no LLM/OCR involved.
   checkSender: 15_000,
+  // Deterministic, one indexed SELECT (POST /api/check-payee).
+  checkPayee: 15_000,
+  // Deterministic (RDAP + a live TLS handshake + crt.sh), no LLM. POST /api/check-url.
+  checkUrl: 20_000,
+  // Pure in-memory, no LLM, no storage (POST /api/text-profile) - called on a debounce while typing.
+  textProfile: 8_000,
   // Upload (up to ~13MB of base64), parsing in a worker (<=15s), OCR of up
   // to three scanned pages when there is no text layer, then the same LLM
   // analysis. Still below next.config.ts's 190s proxy timeout.
@@ -337,6 +357,31 @@ function isAnalyzeResponse(v: unknown): v is AnalyzeResponse {
   return isObj(v) && VERDICTS.includes(v.verdict) && hasAnalysisShape(v);
 }
 
+function isConversationFlag(v: unknown): v is ConversationFlag {
+  return isObj(v) && isNum(v.index) && isStr(v.code) && SEVERITIES.includes(v.severity) && isStr(v.label) && isStr(v.evidence);
+}
+
+function isConversationStageEvent(v: unknown): v is ConversationStageEvent {
+  return isObj(v) && isStr(v.stage) && isNum(v.index);
+}
+
+function isConversationResponse(v: unknown): v is ConversationResponse {
+  if (!isObj(v) || !VERDICTS.includes(v.verdict) || !hasAnalysisShape(v)) return false;
+  const c = v.conversation;
+  return (
+    isObj(c) &&
+    isNum(c.messageCount) &&
+    isNum(c.theirMessageCount) &&
+    isNum(c.analysedMessageCount) &&
+    typeof c.truncated === "boolean" &&
+    (c.firstAnalysedIndex === null || isNum(c.firstAnalysedIndex)) &&
+    Array.isArray(c.flags) &&
+    c.flags.every(isConversationFlag) &&
+    Array.isArray(c.stages) &&
+    c.stages.every(isConversationStageEvent)
+  );
+}
+
 /**
  * Only `extractedText` is checked: it's the only field the UI uses. The
  * server's verdict in the same response is ignored by design (the user
@@ -466,8 +511,17 @@ function normaliseBatch(data: BatchScanResponse): ClientBatchScanResponse {
 
 // ---- Public API ----
 
+/**
+ * Settings > "Share anonymous scam samples" off: tell the backend to store
+ * nothing derived from this request (docs/API-CONTRACT.md "Sharing samples").
+ * Omitted when on, so the default request is unchanged.
+ */
+function withSharing<T extends object>(req: T): T & { shareSamples?: false } {
+  return typeof window !== "undefined" && !loadShareSamples() ? { ...req, shareSamples: false } : req;
+}
+
 export function analyzeMessage(req: AnalyzeRequest, opts: RequestOptions = {}): Promise<ApiResult<AnalyzeResponse>> {
-  return postJson("/api/analyze", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.analyze, isAnalyzeResponse, opts.signal);
+  return postJson("/api/analyze", withSharing(req), opts.timeoutMs ?? DEFAULT_TIMEOUTS.analyze, isAnalyzeResponse, opts.signal);
 }
 
 export function analyzeScreenshot(
@@ -476,7 +530,7 @@ export function analyzeScreenshot(
 ): Promise<ApiResult<AnalyzeScreenshotResponse>> {
   return postJson(
     "/api/analyze/screenshot",
-    req,
+    withSharing(req),
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.screenshot,
     isAnalyzeScreenshotResponse,
     opts.signal,
@@ -553,7 +607,7 @@ export function analyzeDocument(
     };
     xhr.onabort = () => done(fail("aborted", FRIENDLY.aborted));
     opts.signal?.addEventListener("abort", onAbort, { once: true });
-    xhr.send(JSON.stringify(req));
+    xhr.send(JSON.stringify(withSharing(req)));
   });
 }
 
@@ -563,7 +617,7 @@ export async function batchScan(
 ): Promise<ApiResult<ClientBatchScanResponse>> {
   const res = await postJson(
     "/api/batch-scan",
-    req,
+    withSharing(req),
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.batch,
     isBatchScanResponse,
     opts.signal,
@@ -585,6 +639,79 @@ export function checkSender(
     req,
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.checkSender,
     isCheckSenderResponse,
+    opts.signal,
+  );
+}
+
+function isCheckPayeeResponse(v: unknown): v is CheckPayeeResponse {
+  return (
+    isObj(v) &&
+    (v.verdict === "stop" || v.verdict === "caution" || v.verdict === "clear") &&
+    isNum(v.reportCount) &&
+    Array.isArray(v.findings) &&
+    v.findings.every((f) => isObj(f) && isStr(f.code) && (f.severity === "red" || f.severity === "amber" || f.severity === "ok"))
+  );
+}
+
+/** "Before paying": deterministic, read-only payee check (reports, format, context). Never counts as a report. */
+export function checkPayee(req: CheckPayeeRequest, opts: RequestOptions = {}): Promise<ApiResult<CheckPayeeResponse>> {
+  return postJson("/api/check-payee", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.checkPayee, isCheckPayeeResponse, opts.signal);
+}
+
+function isCheckUrlResponse(v: unknown): v is CheckUrlResponse {
+  return (
+    isObj(v) &&
+    isStr(v.url) &&
+    isStrOrNull(v.host) &&
+    typeof v.flagged === "boolean" &&
+    Array.isArray(v.signals) &&
+    v.signals.every(isSignal) &&
+    isNum(v.reportCount) &&
+    isStrOrNull(v.officialInstitution) &&
+    typeof v.trusted === "boolean" &&
+    isNumOrNull(v.domainAgeDays)
+  );
+}
+
+/**
+ * "Link" mode on the Check screen: a deterministic, non-LLM domain/reputation
+ * check (POST /api/check-url) — the page itself is never opened. Same
+ * checkUrls() function /api/analyze uses for its lookalike_url signals.
+ */
+export function checkUrl(req: CheckUrlRequest, opts: RequestOptions = {}): Promise<ApiResult<CheckUrlResponse>> {
+  return postJson("/api/check-url", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.checkUrl, isCheckUrlResponse, opts.signal);
+}
+
+function isTextProfileResponse(v: unknown): v is TextProfileResponse {
+  const LANGS: readonly unknown[] = ["en", "fr", "kreol", "mixed", null];
+  return isObj(v) && LANGS.includes(v.language) && isNum(v.links) && Array.isArray(v.hosts) && v.hosts.every(isStr);
+}
+
+/**
+ * The Check screen's live meta row while typing (language detected / link
+ * count) — descriptive only, no signal, score or storage. Callers should
+ * debounce; this has its own rate-limit bucket (POST /api/text-profile).
+ */
+export function textProfile(req: TextProfileRequest, opts: RequestOptions = {}): Promise<ApiResult<TextProfileResponse>> {
+  return postJson("/api/text-profile", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.textProfile, isTextProfileResponse, opts.signal);
+}
+
+/**
+ * Whole-conversation analysis (POST /api/analyze/conversation, backend/src/services/conversation):
+ * the other party's messages are joined into one transcript and run through
+ * the same deterministic pipeline as /api/analyze, once. `conversation.flags`
+ * attaches each grounded signal back to the message it came from;
+ * `conversation.stages` is the first message each playbook stage appeared at.
+ */
+export function analyzeConversation(
+  req: ConversationRequest,
+  opts: RequestOptions = {},
+): Promise<ApiResult<ConversationResponse>> {
+  return postJson(
+    "/api/analyze/conversation",
+    withSharing(req),
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.conversation,
+    isConversationResponse,
     opts.signal,
   );
 }

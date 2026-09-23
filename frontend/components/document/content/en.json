@@ -1,0 +1,47 @@
+{
+  "eyebrow": "CHECK A DOCUMENT",
+  "whatWeInspectTitle": "What we inspect",
+  "privacyTitle": "Your file's privacy",
+  "dropFileLabel": "File for verification",
+  "dropTypesLabel": "PDF / DOCX",
+  "checkAnotherFile": "Check another file",
+  "pageTag": "Page {n}",
+  "howMadeTitle": "How the file was made",
+  "fileHistoryTitle": "File history",
+  "whatItSaysTitle": "What it says",
+  "noSemanticFindings": "No scam language found in the file's text.",
+  "extractedTextTitle": "Extracted text",
+  "noExtractedText": "No readable text was found in this file.",
+  "verdict": {
+    "safe": "Nothing in the text stands out",
+    "suspicious": "Some warning signs in the text",
+    "scam": "Strong scam warning signs"
+  },
+  "whatToDo": {
+    "safe": "Still confirm before you act.",
+    "suspicious": "Verify before you act on this.",
+    "scam": "Don't act on this document."
+  },
+  "whatToDoBody": {
+    "safe": "A clean check isn't proof. If this document asks for money or credentials, confirm it independently first.",
+    "suspicious": "Confirm this document with the organisation it claims to be from, using contact details you find yourself.",
+    "scam": "Don't pay, sign or share credentials because of this file. Confirm it with the organisation it claims to be from, using contact details you find yourself."
+  },
+  "checkAccountBeforePaying": "Check this account before paying",
+  "downloadReport": "Download report",
+  "history": {
+    "created": "Created",
+    "modified": "Last changed",
+    "revisions": "Saved again",
+    "signature": "Digital signature"
+  },
+  "report": {
+    "title": "FraudLens document report",
+    "generated": "Generated",
+    "file": "File",
+    "verdict": "Verdict",
+    "structural": "How the file was made",
+    "semantic": "What it says",
+    "none": "None found."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "nav": {
+    "check": "Verifie",
+    "learn": "Aprann",
+    "radar": "Radar",
+    "pay": "Avan pey",
+    "doc": "Dokiman",
+    "batch": "Verifie an gro",
+    "convo": "Konversasion",
+    "report": "Rapor enn eskrokri",
+    "settings": "Paramet",
+    "home": "Lakaz FraudLens",
+    "theme": "Sanz ant kler ek fonse",
+    "language": "Langaz",
+    "more": "Plis",
+    "about": "Lor FraudLens",
+    "createdBy": "Kreye par",
+    "sandbox": "Similasion"
+  },
+  "common": {
+    "whatToDo": "Ki pou fer aster la",
+    "verdict": "Verdik"
+  }
+}

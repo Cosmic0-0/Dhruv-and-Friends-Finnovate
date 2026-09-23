@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import TrendsContent from "@/components/TrendsContent";
+import RadarScreen from "@/components/radar/RadarScreen";
 
-export const metadata: Metadata = { title: "Trends", alternates: { canonical: "/trends" } };
+export const metadata: Metadata = { title: "Radar", alternates: { canonical: "/trends" } };
 
 export default function TrendsPage() {
   return (
     <main>
-        <TrendsContent />
+      <RadarScreen />
     </main>
   );
 }
+// touch 1790202907

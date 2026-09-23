@@ -1,0 +1,158 @@
+{
+  "eyebrow": "ESCALATION MATRIX",
+  "title": "Report a scam",
+  "lede": "Who to contact depends on what has happened. Pick the one that matches, and follow the steps in order.",
+  "danger": "In danger right now? Call 999",
+  "whatHappened": "What happened?",
+  "level": "Level",
+  "levels": {
+    "1": {
+      "urgency": "When you can",
+      "title": "I got it but did nothing",
+      "sub": "No reply, no click, no money",
+      "headline": "Report it so others get warned.",
+      "steps": [
+        {
+          "who": "CERT-MU",
+          "what": "Report the message on MAUCORS+ with a screenshot and the sender’s number or address.",
+          "actions": "cert"
+        },
+        {
+          "who": "The company being copied",
+          "what": "Forward it to the real bank or company using the contact on their official website.",
+          "actions": "none"
+        },
+        {
+          "who": "Then block the sender",
+          "what": "Once you’ve reported it, block the number and delete the message.",
+          "actions": "none"
+        }
+      ]
+    },
+    "2": {
+      "urgency": "Within the hour",
+      "title": "I clicked or typed in details",
+      "sub": "Link opened, password or card entered",
+      "headline": "Lock your accounts first, then report.",
+      "steps": [
+        {
+          "who": "Your bank",
+          "what": "If you entered card or banking details, call the number on the back of your card and ask them to block it.",
+          "actions": "none"
+        },
+        {
+          "who": "Change your passwords",
+          "what": "Start with email and banking. Use a different password for each.",
+          "actions": "none"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Report what you entered and on which site.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "3": {
+      "urgency": "Right now",
+      "title": "I sent money or shared a code",
+      "sub": "OTP given, transfer or Juice payment made",
+      "headline": "Call your bank now. Every minute counts.",
+      "steps": [
+        {
+          "who": "Your bank",
+          "what": "Call the number on your card. Ask them to freeze the account and try to recall the payment. Note the reference they give you.",
+          "actions": "none"
+        },
+        {
+          "who": "Police Cybercrime Unit",
+          "what": "Report the fraud. You can also make a statement at your nearest police station.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "File a report on MAUCORS+ with your bank reference and screenshots.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "4": {
+      "urgency": "Emergency",
+      "title": "I’m being threatened",
+      "sub": "Blackmail, sextortion, someone in danger",
+      "headline": "Don’t pay. Call the police.",
+      "steps": [
+        {
+          "who": "Police",
+          "what": "If anyone is in immediate danger, call 999 or 112.",
+          "actions": "emergency"
+        },
+        {
+          "who": "Police Cybercrime Unit",
+          "what": "For blackmail or sextortion online. Keep every message, don’t reply and don’t pay.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Report the account on MAUCORS+ so it can be taken down.",
+          "actions": "cert"
+        }
+      ]
+    }
+  },
+  "matrixTitle": "The full matrix",
+  "matrixSub": "Who handles what, by situation.",
+  "contactFirst": "Contact first",
+  "alsoReport": "Also report",
+  "notNeeded": "Not needed",
+  "situation": "Situation",
+  "orgs": [
+    "Your bank",
+    "Police 999",
+    "Cybercrime Unit",
+    "CERT-MU",
+    "FSC",
+    "Data Protection"
+  ],
+  "situations": [
+    "Scam message, no action taken",
+    "Clicked a link or entered details",
+    "Sent money or shared an OTP",
+    "Paid an investment scheme",
+    "Personal data or ID shared",
+    "Blackmail or sextortion",
+    "Someone in immediate danger"
+  ],
+  "contactsTitle": "Contacts",
+  "contactNames": {
+    "cert": "CERT-MU / MAUCORS+",
+    "ccu": "Police Cybercrime Unit",
+    "emergency": "Police emergency",
+    "bank": "Your bank",
+    "dpo": "Data Protection Office",
+    "fsc": "Financial Services Commission"
+  },
+  "contactFor": {
+    "cert": "Online scams, phishing, fake accounts",
+    "ccu": "Fraud where money was lost, blackmail",
+    "emergency": "Anyone in immediate danger",
+    "bank": "Money sent, card or code shared",
+    "dpo": "Your personal data was misused",
+    "fsc": "Unlicensed investment schemes. Online portal only"
+  },
+  "bankLine": "Number on the back of your card",
+  "emergencyLine": "999 or 112",
+  "beforeTitle": "Before you report",
+  "beforeBody": "Keep the originals. Don’t delete the chat or block the number until you’ve saved these.",
+  "checklist": [
+    "Screenshots of every message",
+    "Sender’s number, email or profile link",
+    "Any links, copied as text",
+    "Payment reference, amount and time",
+    "Your bank’s case reference"
+  ],
+  "sourceNote": "Checked in September 2026 against CERT-MU, MAUCORS, the Police and the FSC. Check the official sites if a number doesn’t connect.",
+  "actions": {
+    "maucors": "Report on MAUCORS+",
+    "call": "Call {n}"
+  }
+}

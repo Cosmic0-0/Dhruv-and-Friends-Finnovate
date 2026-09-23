@@ -1,0 +1,136 @@
+{
+  "header": {
+    "home": "FraudLens home",
+    "how": "How it works",
+    "tools": "Tools",
+    "learn": "Learn",
+    "radar": "Radar",
+    "createdBy": "Created by",
+    "theme": "Toggle light and dark mode",
+    "getExtension": "Get the extension",
+    "check": "Check a message",
+    "nav": "Sections"
+  },
+  "hero": {
+    "badge": "Made for Mauritius · English, Français, Kreol",
+    "title": "Catch the scam before you act on it.",
+    "lede": "Paste a message, link or document. FraudLens tells you if it's genuine or a scam, and shows you exactly why.",
+    "primary": "Check a message",
+    "secondary": "Get the browser extension"
+  },
+  "demo": {
+    "label": "Example of a check",
+    "receive": "You receive",
+    "shows": "FraudLens shows you",
+    "channel": "SMS · 08:14",
+    "verdict": "Scam",
+    "confidence": "High confidence",
+    "reasons": [
+      [
+        "mcb-secure.top",
+        " is not MCB, the real site is ",
+        "mcb.mu"
+      ],
+      [
+        "Asks for your one-time code, MCB never does"
+      ],
+      [
+        "Threatens to block the account today"
+      ]
+    ],
+    "action": "Don't reply. Call MCB on the number on your card."
+  },
+  "how": {
+    "title": "Evidence you can see, not just a label.",
+    "cards": [
+      {
+        "n": "01",
+        "title": "Reads the way Mauritius writes",
+        "body": "English, French and Kreol Morisien, even when all three are in the same message."
+      },
+      {
+        "n": "02",
+        "title": "Knows the real senders",
+        "body": "Local banks, Mauritius Post, MRA and mobile operators, their real addresses and what they never ask for."
+      },
+      {
+        "n": "03",
+        "title": "Checks documents too",
+        "body": "Finds pasted-on signatures and edits made after a statement, letter or invoice was signed."
+      }
+    ]
+  },
+  "extension": {
+    "title": "Check without leaving the page.",
+    "body": "The FraudLens extension checks links in Gmail, WhatsApp Web and Facebook before you click them.",
+    "chrome": "Add to Chrome",
+    "other": "Firefox & Edge",
+    "badLink": "This link is not MCB",
+    "official": "Official site"
+  },
+  "footer": {
+    "built": "FraudLens · Built in Mauritius by ",
+    "team": "Dhruv & Friends",
+    "privacy": "Privacy",
+    "report": "Report a scam",
+    "contact": "Contact"
+  },
+  "extensionPage": {
+    "eyebrow": "BROWSER EXTENSION",
+    "title": "FraudLens Link Guard",
+    "lede": "The extension checks the site you are on against the real addresses of Mauritius banks and telecoms, and can scan a page or a selected message on request. It is not in any browser store yet, so you install it from the project's source.",
+    "chromeTitle": "Chrome and Edge",
+    "chromeNote": "Works in Chrome 102 or later and in Microsoft Edge.",
+    "steps": [
+      "Download the FraudLens source code as a zip and unzip it.",
+      "Open chrome://extensions (in Edge: edge://extensions).",
+      "Turn on Developer mode.",
+      "Click Load unpacked and choose the extension folder inside the unzipped project."
+    ],
+    "download": "Download source (.zip)",
+    "viewSource": "View the extension code",
+    "firefoxTitle": "Firefox",
+    "firefoxBody": "Not supported yet. The extension is built for Chromium browsers (Manifest V3 service worker), and it has not been packaged or tested for Firefox.",
+    "whatTitle": "What it does",
+    "what": [
+      "Checks each site's address against the real domains of Mauritius banks and telecoms, and marks the toolbar icon.",
+      "Scan This Page: reads the page's visible text, never form fields or anything you typed, and checks it.",
+      "Right-click a link or selected text to check it.",
+      "Security Report: a passive check of a site's HTTPS, headers and cookies."
+    ],
+    "privacy": "Read the extension's privacy policy",
+    "back": "Back to FraudLens",
+    "notSupported": "Not supported",
+    "edgeBody": "Same steps as Chrome, on edge://extensions."
+  },
+  "privacyPage": {
+    "eyebrow": "PRIVACY",
+    "title": "Privacy",
+    "lede": "What FraudLens does with the messages you check, in plain words.",
+    "sections": [
+      {
+        "title": "Messages you paste",
+        "body": "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Links, domains and codes are kept, because the checks depend on them."
+      },
+      {
+        "title": "Screenshots and documents",
+        "body": "Screenshots and documents are sent to our server as they are. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed."
+      },
+      {
+        "title": "What the server keeps",
+        "body": "Text sent for analysis is used to produce your result and is not written to a database. Community reports are the exception: they are stored as a one-way fingerprint of the redacted text, never the text itself, and are deleted after 90 days."
+      },
+      {
+        "title": "What stays on your device",
+        "body": "Your recent checks, your Learn streak and your settings are saved in this browser only. Clearing the site's data removes them."
+      },
+      {
+        "title": "Who else sees it",
+        "body": "Analysis runs on a language model we host. A hosted provider (currently Anthropic) is used only as a fallback when ours is unavailable. We don't sell data, run ads or use analytics trackers."
+      }
+    ],
+    "extensionPolicy": "Read the full privacy policy for the browser extension",
+    "contact": "Questions? Open an issue on the project's GitHub.",
+    "contactCta": "Contact us on GitHub"
+  }
+}

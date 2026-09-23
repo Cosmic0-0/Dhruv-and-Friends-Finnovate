@@ -1,0 +1,26 @@
+{
+  "eyebrow": "CONVERSATION",
+  "title": "Analyse a whole conversation",
+  "lede": "Upload a WhatsApp chat export (or a Messenger JSON export). We read who said what and when, and run one real analysis across the whole thing.",
+  "upload": {
+    "label": "Upload a chat export",
+    "hint": "WhatsApp: open the chat, Export chat, Without media (.txt). Messenger: Download your information, a conversation, as JSON.",
+    "choose": "Choose file",
+    "invalid": "That file doesn't look like a WhatsApp or Messenger export.",
+    "empty": "We couldn't find any messages in that export."
+  },
+  "who": { "title": "Which participant are you?", "hint": "Only the other person's messages are analysed; yours are shown for context." },
+  "submit": "Analyse conversation",
+  "analysing": "Analysing…",
+  "another": "Upload a different export",
+  "header": { "with": "Conversation with {name}", "range": "{from} – {to}", "messages": "{n} messages", "truncated": "Only the most recent messages were analysed; this export was longer than one check covers." },
+  "story": { "title": "How the story changed", "empty": "No playbook stage was detected in this conversation." },
+  "thread": { "title": "Conversation", "me": "You", "flag": "{n} warning sign", "flags": "{n} warning signs" },
+  "todo": { "label": "What to do now" },
+  "empty": { "title": "No conversation loaded yet.", "body": "Upload a chat export above to see the full analysis." },
+  "errors": {
+    "tooManyMessages": "This export has more than {max} messages; only the most recent {max} were analysed.",
+    "network": "Something went wrong reading that file. Please try again."
+  },
+  "sourceNote": "Only the redacted, size-limited text of this conversation is sent for analysis; the export itself stays on this device."
+}

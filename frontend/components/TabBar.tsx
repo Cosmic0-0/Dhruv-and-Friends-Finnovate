@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookIcon, ChartIcon, DocumentIcon, HomeIcon, LayersIcon, PersonIcon, SearchIcon, ShieldIcon } from "./icons";
 import { useLanguage } from "./LanguageProvider";
+import { dcCopy } from "./dc/content";
 
 export default function TabBar() {
   const pathname = usePathname() ?? "/";
@@ -31,6 +32,9 @@ export default function TabBar() {
       {moreOpen && (
         <div className="mobile-more" id="mobile-more-menu">
           <p className="mobile-more-title">FraudLens</p>
+          <Link href="/report" className="report-pill" onClick={() => setMoreOpen(false)} aria-current={pathname.startsWith("/report") ? "page" : undefined}>
+            <span className="report-pill-dot" aria-hidden="true" />{dcCopy(lang).nav.report}
+          </Link>
           {other.map(({ href, label, Icon }) => (
             <Link key={href} href={href} onClick={() => setMoreOpen(false)} aria-current={pathname.startsWith(href) ? "page" : undefined}>
               <Icon className="size-5" />{label}

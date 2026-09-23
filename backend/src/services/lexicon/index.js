@@ -430,10 +430,15 @@ const KREOL_MARKERS = /\b(?:ou|mo|to|nou|pou|lor|finn|inn|pe|bizin|zordi|deswit|
 const FRENCH_MARKERS = /\b(?:vous|votre|vos|est|les|des|une|pour|avec|dans|sur|nous|merci|compte|veuillez|cette)\b/giu;
 const ENGLISH_MARKERS = /\b(?:the|your|you|is|are|to|and|this|will|please|account|now|with)\b/giu;
 
+/** Marker-word counts per language (used by detectLanguage and services/text-profile). */
+export function languageScores(text) {
+  const count = (re) => (text.match(re) || []).length;
+  return { kreol: count(KREOL_MARKERS), fr: count(FRENCH_MARKERS), en: count(ENGLISH_MARKERS) };
+}
+
 /** Coarse deterministic language guess for explanation templates: "en" | "fr" | "kreol". */
 export function detectLanguage(text) {
-  const count = (re) => (text.match(re) || []).length;
-  const scores = { kreol: count(KREOL_MARKERS), fr: count(FRENCH_MARKERS), en: count(ENGLISH_MARKERS) };
+  const scores = languageScores(text);
   const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
   return best[1] === 0 ? "en" : best[0];
 }

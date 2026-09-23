@@ -1,0 +1,37 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "SCAN AN GRUP",
+  "title": "Verifie plizir mesaz an mem tan",
+  "lede": "Kopi plizir mesaz ouswa met kopi lekran, ek scan zot ansam. Sakenn gagn mem verifikasion reel ki enn sel check.",
+  "modes": { "paste": "Kopi mesaz", "screenshots": "Met kopi lekran" },
+  "paste": {
+    "label": "Mesaz pou scan",
+    "placeholder": "Premie mesaz…\n\nDezyem mesaz…\n\nTwazyem mesaz…",
+    "hint": "Separ sak mesaz par enn lign vid, ziska {max} an mem tan.",
+    "count": "{n} / {max}"
+  },
+  "screenshots": {
+    "add": "Azout kopi lekran",
+    "hint": "Met enn ouswa plizir kopi lekran. Text la li otomatikman — verifie ek korize li avan ou scan.",
+    "reading": "Pe lir…",
+    "failed": "Pa finn kapav lir sa kopi lekran la.",
+    "remove": "Retire",
+    "empty": "Pankor ena okenn kopi lekran."
+  },
+  "submit": "Scan mesaz yo",
+  "scanning": "Pe scan…",
+  "summary": {
+    "scam": "Eskrokri",
+    "caution": "Fer atansion",
+    "genuine": "Bon",
+    "unanalysed": "{n} ladan pa finn kapav verifie ek bizin trate avek prudans."
+  },
+  "results": { "title": "Rezilta", "filtered": "filtre", "clear": "Efas filtre" },
+  "row": { "screenshot": "Kopi lekran {n}", "line": "Lign {n}", "open": "Get rezilta complet" },
+  "empty": { "title": "Pankor ena nanye scan.", "body": "Kopi kek mesaz ouswa met kopi lekran anho, apre scan zot ansam." },
+  "errors": {
+    "tooMany": "Ou kapav scan ziska {max} mesaz an mem tan.",
+    "tooLong": "Enn mesaz depas {max} karakter."
+  },
+  "verdictUnknown": "Pa finn kapav verifie"
+}

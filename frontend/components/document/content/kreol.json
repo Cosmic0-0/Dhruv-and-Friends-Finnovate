@@ -1,0 +1,48 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "VERIFIE ENN DOKIMAN",
+  "whatWeInspectTitle": "Kisannla nou examine",
+  "privacyTitle": "Konfidansialite ou dokiman",
+  "dropFileLabel": "Dokiman pou verifye",
+  "dropTypesLabel": "PDF / DOCX",
+  "checkAnotherFile": "Verifie enn lot fisie",
+  "pageTag": "Paz {n}",
+  "howMadeTitle": "Kouma sa fisie-la finn fabrike",
+  "fileHistoryTitle": "Istorik fisie",
+  "whatItSaysTitle": "Ki li dir",
+  "noSemanticFindings": "Pena langaz eskrokri dan tex sa fisie-la.",
+  "extractedTextTitle": "Tex ki finn ekstrait",
+  "noExtractedText": "Pena tex lisib dan sa fisie-la.",
+  "verdict": {
+    "safe": "Nanye pa resorti dan tex-la",
+    "suspicious": "Ena serten sign avertisman dan tex-la",
+    "scam": "Gro sign eskrokri"
+  },
+  "whatToDo": {
+    "safe": "Konfirm kanmem avan ou aziy.",
+    "suspicious": "Verifie avan ou aziy lor sa.",
+    "scam": "Pa aziy lor sa dokiman-la."
+  },
+  "whatToDoBody": {
+    "safe": "Enn check prop pa enn prev. Si sa dokiman-la demann kas ouswa kredansiel, konfirm li endepandaman dabor.",
+    "suspicious": "Konfirm sa dokiman-la ar lorganizasion ki li dir li sorti, avek detay kontak ou'nn trouv ou mem.",
+    "scam": "Pa pey, siyn ouswa partaz kredansiel akoz sa fisie-la. Konfirm li ar lorganizasion ki li dir li sorti, avek detay kontak ou'nn trouv ou mem."
+  },
+  "checkAccountBeforePaying": "Verifie sa kont-la avan ou pey",
+  "downloadReport": "Telesarz rapor",
+  "history": {
+    "created": "Kree",
+    "modified": "Dernie sanzman",
+    "revisions": "Anrezistre ankor",
+    "signature": "Siyati numerik"
+  },
+  "report": {
+    "title": "Rapor dokiman FraudLens",
+    "generated": "Zenere",
+    "file": "Fisie",
+    "verdict": "Verdik",
+    "structural": "Kouma sa fisie-la finn fabrike",
+    "semantic": "Ki li dir",
+    "none": "Nanye pa trouve."
+  }
+}

@@ -13,8 +13,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/document`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/conversation`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/sandbox`, changeFrequency: "monthly", priority: 0.7 },
+    { url: `${SITE_URL}/report`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/batch`, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/learn`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/trends`, changeFrequency: "daily", priority: 0.5 },
+    { url: `${SITE_URL}/extension`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/created-by`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
   ];
 }

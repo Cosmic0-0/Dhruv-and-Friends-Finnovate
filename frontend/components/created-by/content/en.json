@@ -1,0 +1,21 @@
+{
+  "eyebrow": "CREATED BY",
+  "title": "Dhruv & Friends",
+  "lede": "Four developers from Mauritius. FraudLens started at the Finnovate Hackathon 2026.",
+  "badgeAlt": "Dhruv & Friends badge",
+  "groupAlt": "The team at Finnovate Hackathon 2026",
+  "caption": "Finnovate Hackathon 2026",
+  "team": "The team",
+  "github": "GitHub",
+  "linkedin": "LinkedIn",
+  "offDuty": "Off duty",
+  "pair": "Dhruv and Oleg",
+  "pairAlt": "Dhruv and Oleg",
+  "contact": "Get in touch",
+  "roles": {
+    "dhruv": "Backend, browser extension and forensics",
+    "caellum": "Quality, testing and document checks",
+    "joshua": "Risk engine, Outlook add-in and Kreol",
+    "oleg": "Product design and web app"
+  }
+}

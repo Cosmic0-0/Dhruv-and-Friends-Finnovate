@@ -96,6 +96,8 @@ export function getRecentChecks(): RecentCheck[] {
 }
 
 export function addRecentCheck(check: Omit<RecentCheck, "id">): void {
+  // Settings > "Keep my check history" off: nothing new is kept on this device.
+  if (!loadKeepHistory()) return;
   const id = `${check.at}-${Math.random().toString(36).slice(2, 8)}`;
   write(local, RECENT_KEY, [{ id, ...check }, ...getRecentChecks()].slice(0, RECENT_KEEP));
 }
@@ -171,4 +173,69 @@ export function seedStreakEndingYesterday(days: number, today: string = localDay
   const d = new Date();
   d.setDate(d.getDate() - 1);
   write(local, STREAK_KEY, { ...emptyState(today), streak: days, lastCompletedDay: localDay(d) });
+}
+
+// ---------- Settings preferences (components/settings) ----------
+
+const KEEP_HISTORY_KEY = "fraudlens.keepHistory.v1";
+const SHARE_SAMPLES_KEY = "fraudlens.shareSamples.v1";
+const SCAM_ALERTS_KEY = "fraudlens.scamAlerts.v1";
+const PRACTICE_REMINDER_KEY = "fraudlens.practiceReminder.v1";
+
+/** Keep recent checks on this device. On unless the user turned it off. */
+export function loadKeepHistory(): boolean {
+  return read<unknown>(local, KEEP_HISTORY_KEY) !== false;
+}
+export function saveKeepHistory(on: boolean): void {
+  write(local, KEEP_HISTORY_KEY, on);
+}
+
+/** Let analyses add to shared evidence (the API's shareSamples). On unless turned off. */
+export function loadShareSamples(): boolean {
+  return read<unknown>(local, SHARE_SAMPLES_KEY) !== false;
+}
+export function saveShareSamples(on: boolean): void {
+  write(local, SHARE_SAMPLES_KEY, on);
+}
+
+/** Scam alerts: off until the user turns them on (they need notification permission). */
+export interface ScamAlertsState {
+  on: boolean;
+  /** Campaign ids and message counts already seen, so only new or growing campaigns alert. */
+  seen: Record<string, number>;
+}
+export function loadScamAlerts(): ScamAlertsState {
+  const raw = read<Partial<ScamAlertsState>>(local, SCAM_ALERTS_KEY);
+  const seen = raw && typeof raw.seen === "object" && raw.seen !== null ? (raw.seen as Record<string, number>) : {};
+  return { on: raw?.on === true, seen };
+}
+export function saveScamAlerts(state: ScamAlertsState): void {
+  write(local, SCAM_ALERTS_KEY, state);
+}
+
+/** Daily practice reminder: off until turned on. `lastShown` is the local day it last fired. */
+export interface PracticeReminderState {
+  on: boolean;
+  lastShown: string | null;
+}
+export function loadPracticeReminder(): PracticeReminderState {
+  const raw = read<Partial<PracticeReminderState>>(local, PRACTICE_REMINDER_KEY);
+  return { on: raw?.on === true, lastShown: typeof raw?.lastShown === "string" ? raw.lastShown : null };
+}
+export function savePracticeReminder(state: PracticeReminderState): void {
+  write(local, PRACTICE_REMINDER_KEY, state);
+}
+
+/** Settings > "Delete my check history": the recent list and the last result hand-off. */
+export function clearCheckHistory(): void {
+  try {
+    local().removeItem(RECENT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
+  try {
+    session().removeItem(RESULT_KEY);
+  } catch {
+    /* storage unavailable */
+  }
 }

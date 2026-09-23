@@ -1,11 +1,12 @@
-import BatchScan from "@/components/BatchScan";
+import type { Metadata } from "next";
+import BatchScreen from "@/components/batch/BatchScreen";
 
-export const metadata = { title: "Batch scan · FraudLens" };
+export const metadata: Metadata = { title: "Batch scan · FraudLens", alternates: { canonical: "/batch" } };
 
 export default function BatchPage() {
   return (
     <main>
-      <BatchScan />
+      <BatchScreen />
     </main>
   );
 }

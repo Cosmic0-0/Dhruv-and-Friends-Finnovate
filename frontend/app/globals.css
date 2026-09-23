@@ -98,13 +98,13 @@
      call sites keep compiling; all three resolve to the same stack, because
      the design has no serif and no monospace. */
   /* The app's own voice. */
-  --font-sans: var(--font-ui), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-onest), system-ui, sans-serif;
   /* A received message, in the face it arrived in on the user's phone. Never
      the app's typeface: the app does not put the scammer's words in its own
      voice. */
   --font-message: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: var(--font-sans);
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
 
   /* Scale from DESIGN.md: large title 34/41, hero headline 42/46, body 17/23. */
   --text-display: 2.375rem;
@@ -134,10 +134,10 @@
   /* Buttons and inputs are soft rectangles; full-round is kept for things that
      really are chips or circles (tab bar, icon badges, status dots, verdict
      chips). That split is what stops the UI reading as a field of ovals. */
-  --radius-button: 14px;
+  --radius-button: 999px;
   --radius-field: 16px;
   --radius-pill: 9999px;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 20px rgb(0 0 0 / 5%);
+  --shadow-card: var(--dc-shadow);
   --shadow-hero: 0 10px 28px rgb(0 0 0 / 14%);
   --shadow-tabbar: 0 10px 30px rgb(0 0 0 / 12%);
   --shadow-lift: 0 8px 24px rgb(0 0 0 / 8%);
@@ -151,7 +151,7 @@
   --space-4: 2rem;     /* between regions */
 
   /* ---- Layout ---- */
-  --container-app: 430px;
+  --container-app: none;
   --spacing-gutter: 18px;
   --spacing-section: 2rem;
 }
@@ -461,12 +461,17 @@
    * strip stranded in empty space. Every phone pixel is unchanged: everything
    * desktop is behind the media query below.
    */
+  /*
+   * Page frame for the Claude Design pages (frontend design project,
+   * *.dc.html). The top bar (components/TopNav.tsx) sits above a full-width
+   * shell; each page centres its own 1280px column (components/dc). Below the
+   * desktop breakpoint the floating tab bar is the navigation.
+   */
   .app-shell {
     position: relative;
     z-index: 1;
-    margin-inline: auto;
     width: 100%;
-    max-width: var(--container-app);
+    min-width: 0;
     min-height: 100dvh;
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
   }
@@ -475,51 +480,17 @@
     display: block;
   }
 
-  /*
-   * Desktop, from 64rem. The phone column stops being a column: the rail is
-   * pinned to the left edge on its own surface and the content region takes
-   * the rest of the window, the way a desktop app is laid out rather than a
-   * phone page centred in a browser.
-   *
-   * 64rem, not 48rem: a rail plus a usable content region needs about 1000px.
-   * Below that a tablet keeps the phone layout, which is the design rather
-   * than a squeezed desktop one.
-   */
   @media (min-width: 64rem) {
     :root {
-      /* No floating bar at this width: the rail is the navigation. */
       --tabbar-height: 0rem;
-      /* The content region is the frame's second column, so the column cap
-         that constrained the phone layout no longer applies. */
       --container-app: none;
       --spacing-gutter: 2.5rem;
     }
 
-    .app-frame {
-      display: grid;
-      grid-template-columns: 264px minmax(0, 1fr);
-      align-items: start;
-      min-height: 100dvh;
-    }
-
     .app-shell {
-      max-width: none;
-      margin-inline: 0;
-      min-width: 0;
-      padding-bottom: 4rem;
+      padding-bottom: 0;
     }
 
-    /*
-     * Screens whose blocks are independent enough to sit side by side. One
-     * column of phone-width cards stretched across a monitor is the thing
-     * that reads as a phone page; two columns is what makes the width useful.
-     * Capped so the content does not sprawl on an ultra-wide display.
-     */
-    /*
-     * Equal columns and a shared row baseline. Unequal fractions plus
-     * align-items:start meant no two cards ever lined up, which is what made
-     * the page read as scattered boxes rather than a grid.
-     */
     .screen-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: stretch;
@@ -954,148 +925,190 @@
   }
 }
 
-/* Verification system: the product's evidence, seal, and provenance vocabulary. */
-body:has(.app-frame:not(:has(.landing))) { background: #10191b; }
-.app-frame:not(:has(.landing)) {
-  --c-page: #10191b;
-  --c-card: #1d2b2d;
-  --c-card-gradient: #1d2b2d;
-  --c-card-edge: #3c5352;
-  --c-muted: #263638;
-  --c-suggestion: #253536;
-  --c-bubble: #293a3b;
-  --c-brand: #e9a64b;
-  --c-brand-deep: #f1bd72;
-  --c-brand-soft: #403220;
-  --c-brand-ink: #e9a64b;
-  --c-on-brand: #10191b;
-  --c-glow: #e9a64b;
-  --c-glow-ink: #e9a64b;
-  --c-glow-soft: #403220;
-  --c-surface-dark: #172426;
-  --c-surface-dark-2: #223336;
-  --c-hero: #1d2b2d;
-  --c-hero-edge: #53625b;
-  --c-ink: #f3efe4;
-  --c-ink-soft: #d2dcd6;
-  --c-ink-muted: #b9c8c5;
-  --c-on-ink: #f3efe4;
-  --c-icon-idle: #b9c8c5;
-  --c-hairline: #3c5352;
-  --c-line-strong: #62736b;
-  --c-red: #f07868;
-  --c-red-ink: #ff9a8d;
-  --c-red-tint: #442b2b;
-  --c-green: #72c89c;
-  --c-green-ink: #91d9b3;
-  --c-green-tint: #203e33;
-  --c-orange: #e9a64b;
-  --c-orange-ink: #e9a64b;
-  --c-orange-tint: #403220;
-  --c-tabbar: #172426;
-  --c-tabbar-edge: #62736b;
-  background: var(--c-page);
-  color: var(--c-ink);
-}
-.app-frame:not(:has(.landing)) :focus-visible,
-.verification-tabbar :focus-visible,
-.mobile-more :focus-visible {
-  outline: 3px solid #e9a64b;
-  outline-offset: 3px;
-}
-.app-frame:not(:has(.landing)) h1 { color: #f3efe4; }
-.app-frame:not(:has(.landing)) .sheet,
-.app-frame:not(:has(.landing)) .card,
-.app-frame:not(:has(.landing)) .panel {
-  box-shadow: none;
-  border-radius: 9px;
-}
-.app-frame:not(:has(.landing)) .hero { box-shadow: none; border-radius: 12px; }
-.app-frame:not(:has(.landing)) .btn { border-radius: 7px; }
-.app-frame:not(:has(.landing)) .screen-grid { gap: clamp(20px, 2.5vw, 36px); }
-.verification-sidenav { background: #172426 !important; border-color: #3c5352 !important; }
-.verification-sidenav > div:first-child { padding-bottom: 20px; border-bottom: 1px solid #3c5352; }
-.verification-sidenav a[aria-current="page"] { color: #e9a64b; background: #263638; border-left: 3px solid #e9a64b; border-radius: 2px; }
-.verification-sidenav a:not([aria-current="page"]):hover { background: #263638; }
-.verification-sidenav .bg-primary { border-radius: 6px; }
 
+/* =====================================================================
+ * Claude Design system (design project "FraudLens", *.dc.html).
+ *
+ * Every page is implemented from its .dc.html file with the design's own
+ * values. The palette below is copied verbatim from those files as --dc-*
+ * tokens. Dark is the design's default; Settings' "Light" stamps
+ * data-theme="light". The older --c-* tokens that Tailwind utilities read
+ * (bg-card, text-ink, ...) are mapped onto the same palette, so anything
+ * not rebuilt inline still matches.
+ * ===================================================================== */
+:root {
+  --dc-bg: #000000; --dc-bar: rgba(0,0,0,0.72); --dc-ink: #FFFFFF; --dc-surface: #111115;
+  --dc-line: #1F1F25; --dc-line2: #1B1B20; --dc-line3: #17171C;
+  --dc-text2: #B3B4BD; --dc-text3: #8A8B95; --dc-text4: #5E5F68;
+  --dc-line-strong: #2A2A31; --dc-underline: #3A3A42; --dc-hover: #1A1A20; --dc-ink-hover: #E4E4EA;
+  --dc-text-body: #D6D7DE;
+  --dc-red: #FF6B64; --dc-red-dot: #FF453A; --dc-red-hl: rgba(255,69,58,0.18);
+  --dc-amber-hl: rgba(255,176,32,0.18); --dc-amber: #FFB547;
+  --dc-green: #34D399; --dc-green-dot: #12B76A; --dc-green-hl: rgba(52,211,153,0.16);
+  --dc-accent: #8A8CFF; --dc-accent-soft: rgba(124,127,255,0.16);
+  --dc-bubble: #23232A; --dc-mine: #4B4BD8;
+  --dc-shadow: none;
+  --dc-shadow-lg: 0 30px 80px -30px rgba(0,0,0,0.8);
+  /* fx.js */
+  --dc-dot: rgba(255,255,255,0.07); --dc-glow: rgba(124,127,255,0.16); --dc-glow2: rgba(52,211,153,0.05); --dc-grain: .07;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --dc-bg: #F4F4F6; --dc-bar: rgba(244,244,246,0.8); --dc-ink: #0B0B0F; --dc-surface: #FFFFFF;
+  --dc-line: #E6E6EB; --dc-line2: #EFEFF3; --dc-line3: #F4F4F7;
+  --dc-text2: #55565E; --dc-text3: #80818A; --dc-text4: #A9AAB2;
+  --dc-line-strong: #DCDCE2; --dc-underline: #CFCFD6; --dc-hover: #F0F0F3; --dc-ink-hover: #26262D;
+  --dc-text-body: #33343B;
+  --dc-red: #D92D2A; --dc-red-dot: #F04438; --dc-red-hl: #FFE4E2;
+  --dc-amber-hl: #FFF1D6; --dc-amber: #9A5B00;
+  --dc-green: #0A8A4E; --dc-green-dot: #12B76A; --dc-green-hl: #DDF7E9;
+  --dc-accent: #5B5BF6; --dc-accent-soft: #EDEDFF;
+  --dc-bubble: #E9E9EE; --dc-mine: #5B5BF6;
+  --dc-shadow: 0 1px 2px rgba(11,11,15,0.04), 0 12px 32px -12px rgba(11,11,15,0.08);
+  --dc-shadow-lg: 0 1px 2px rgba(11,11,15,0.04), 0 24px 60px -20px rgba(11,11,15,0.18);
+  --dc-dot: rgba(11,11,15,0.09); --dc-glow: rgba(91,91,246,0.10); --dc-glow2: rgba(18,183,106,0.05); --dc-grain: .05;
+  color-scheme: light;
+}
+/* The app's older tokens, pointed at the design palette. */
+:root {
+  --c-page: var(--dc-bg); --c-card: var(--dc-surface); --c-card-gradient: var(--dc-surface);
+  --c-card-edge: var(--dc-line); --c-muted: var(--dc-hover); --c-suggestion: var(--dc-hover);
+  --c-bubble: var(--dc-bubble);
+  --c-brand: var(--dc-ink); --c-brand-deep: var(--dc-ink-hover); --c-brand-soft: var(--dc-accent-soft);
+  --c-brand-ink: var(--dc-accent); --c-on-brand: var(--dc-surface);
+  --c-glow: var(--dc-amber); --c-glow-soft: var(--dc-amber-hl); --c-glow-ink: var(--dc-amber);
+  --c-surface-dark: var(--dc-surface); --c-surface-dark-2: var(--dc-hover);
+  --c-hero: var(--dc-surface); --c-hero-edge: var(--dc-line);
+  --c-skeleton: var(--dc-hover); --c-track: var(--dc-line-strong);
+  --c-ink: var(--dc-ink); --c-ink-soft: var(--dc-text2); --c-ink-muted: var(--dc-text3);
+  --c-on-ink: var(--dc-ink); --c-icon-idle: var(--dc-text3);
+  --c-hairline: var(--dc-line); --c-line-strong: var(--dc-line-strong);
+  --c-red: var(--dc-red-dot); --c-red-ink: var(--dc-red); --c-red-tint: var(--dc-red-hl);
+  --c-green: var(--dc-green-dot); --c-green-ink: var(--dc-green); --c-green-tint: var(--dc-green-hl);
+  --c-orange: var(--dc-amber); --c-orange-ink: var(--dc-amber); --c-orange-tint: var(--dc-amber-hl);
+  --c-mark-ink: var(--dc-red);
+  --c-tabbar: var(--dc-bar); --c-tabbar-edge: var(--dc-line);
+  --c-scrim: rgba(0,0,0,0.6);
+}
+
+html, body { background: var(--dc-bg); }
+body {
+  color: var(--dc-ink); font-family: var(--font-onest), system-ui, sans-serif; line-height: normal;
+  -webkit-font-smoothing: antialiased; transition: background .25s;
+}
+h1, h2, h3 { font-family: inherit; color: inherit; line-height: normal; }
+:focus-visible { outline: 2px solid var(--dc-accent); outline-offset: 2px; }
+.dc-mono { font-family: var(--font-jbmono), ui-monospace, monospace; }
+.dc-link { color: var(--dc-ink); text-decoration: none; }
+.dc-link:hover { color: var(--dc-text2); }
+textarea:focus, input:focus { outline: none; }
+input:focus-visible, textarea:focus-visible { outline: none; }
+
+/* ---- fx.js: dot grid, grain, drifting glow, scroll progress, reveal, hover lift ---- */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(var(--dc-dot) 1px, transparent 1.2px); background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--dc-grain); mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.fl-glow {
+  position: fixed; z-index: 0; pointer-events: none; left: 50%; top: -38vh; width: 120vw; height: 90vh;
+  transform: translate(-50%, 0); border-radius: 50%;
+  background: radial-gradient(closest-side, var(--dc-glow), transparent 70%), radial-gradient(closest-side at 80% 60%, var(--dc-glow2), transparent 70%);
+  filter: blur(20px); animation: flDrift 18s ease-in-out infinite alternate;
+}
+.fl-progress {
+  position: fixed; left: 0; top: 0; height: 2px; width: 100%; z-index: 50; background: var(--dc-accent);
+  transform-origin: 0 50%; transform: scaleX(0); pointer-events: none;
+}
+@keyframes flDrift { 0% { margin-left: -4vw } 100% { margin-left: 4vw } }
+button, .dc-pill {
+  transition: transform .28s cubic-bezier(.2,.8,.2,1), background-color .2s, border-color .2s, color .2s, box-shadow .28s, opacity .2s;
+}
+button:not(:disabled):hover, .dc-pill:hover { transform: translateY(-1.5px); }
+.dc-pill-ink:hover { box-shadow: 0 10px 28px -10px var(--dc-accent); }
+button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
+.dc-lift { transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .35s; }
+.dc-lift:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px rgba(0,0,0,.35); }
+[data-flr] { opacity: 0; transform: translateY(22px); filter: blur(4px); }
+[data-flr][data-flin] {
+  opacity: 1; transform: none; filter: none;
+  transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1), filter .8s;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-flr] { opacity: 1; transform: none; filter: none; }
+  .fl-glow { animation: none; }
+  button:hover, a:hover, .dc-lift:hover { transform: none !important; }
+}
+
+/* ---- Top bar (Nav.dc.html) ---- */
+.dc-topnav {
+  position: sticky; top: 0; z-index: 30; background: var(--dc-bar);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--dc-line);
+}
+.dc-topnav a { text-decoration: none; }
+.dc-topnav .dc-navlink:hover { color: var(--dc-ink) !important; }
+@media (max-width: 63.999rem) { .dc-topnav { display: none; } }
+@media (max-width: 79.999rem) { .dc-topnav .dc-tools { display: none !important; } }
+
+/* ---- Page frame: every design page is a centred 1280px column. Below the
+   desktop breakpoint the design's multi-column grids stack. ---- */
+.dc-main { position: relative; z-index: 1; }
+@media (max-width: 63.999rem) {
+  .dc-main { padding: 32px 20px 64px !important; gap: 40px !important; }
+  .dc-h1 { font-size: 40px !important; }
+  .dc-split { grid-template-columns: minmax(0, 1fr) !important; }
+  .dc-sticky { position: static !important; }
+  .dc-panel { padding: 24px !important; }
+  .dc-scroll { overflow-x: auto !important; }
+  .dc-table { min-width: 880px; }
+}
+@media (max-width: 39.999rem) {
+  .dc-cols-1 { grid-template-columns: minmax(0, 1fr) !important; }
+}
+
+/* ---- Mobile tab bar, in the design palette ---- */
 .verification-tabbar {
   position: fixed; z-index: 40; left: 0; right: 0; bottom: 0;
   display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: calc(68px + env(safe-area-inset-bottom));
   padding: 5px 8px env(safe-area-inset-bottom);
-  border-top: 1px solid #62736b; background: #172426; color: #b9c8c5;
+  border-top: 1px solid var(--dc-line); background: var(--dc-bar); color: var(--dc-text3);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
 .verification-tabbar a, .verification-tabbar button {
   display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px;
   min-width: 0; min-height: 54px; padding: 4px; color: inherit;
-  font-size: 0.72rem; font-weight: 600; text-align: center; line-height: 1.1;
+  font-size: 0.72rem; font-weight: 500; text-align: center; line-height: 1.1;
 }
-.verification-tabbar a[aria-current="page"], .verification-tabbar button[aria-expanded="true"] { color: #e9a64b; }
+.verification-tabbar a[aria-current="page"], .verification-tabbar button[aria-expanded="true"] { color: var(--dc-ink); }
 .verification-tabbar span:not(.mobile-more-dots) { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .mobile-more-dots { font-size: 1.5rem; line-height: 20px; letter-spacing: 1px; }
 .mobile-more {
   position: fixed; z-index: 39; left: 12px; right: 12px;
   bottom: calc(72px + env(safe-area-inset-bottom)); max-height: min(70dvh, 520px);
-  overflow-y: auto; padding: 14px; border: 1px solid #62736b; border-radius: 10px;
-  background: #1d2b2d; box-shadow: 0 20px 60px #0008; color: #f3efe4;
+  overflow-y: auto; padding: 14px; border: 1px solid var(--dc-line); border-radius: 28px;
+  background: var(--dc-surface); box-shadow: 0 20px 60px #0008; color: var(--dc-ink);
 }
-.mobile-more-title { margin: 0 10px 8px; color: #e9a64b; font-weight: 700; }
-.mobile-more a { display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 8px 10px; border-top: 1px solid #3c5352; }
-.mobile-more a[aria-current="page"] { color: #e9a64b; }
+.mobile-more-title { margin: 0 10px 8px; color: var(--dc-text3); font-size: 13px; }
+.mobile-more a { display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 8px 10px; border-top: 1px solid var(--dc-line2); }
+.mobile-more a[aria-current="page"] { color: var(--dc-accent); }
 @media (min-width: 64rem) { .mobile-more, .verification-tabbar { display: none; } }
-@media (min-width: 40rem) and (max-width: 63.999rem) {
-  .app-frame:not(:has(.landing)) { --container-app: 720px; --spacing-gutter: clamp(24px, 4vw, 36px); }
-}
-
-.check-intake { border-top: 4px solid #e9a64b !important; padding: clamp(24px, 3vw, 38px) !important; }
-.check-intake h2 { max-width: 11ch; font-size: clamp(2.4rem, 4vw, 4.5rem); line-height: 1.02; }
-.check-intake-actions { padding-top: 16px; border-top: 1px solid #53625b; }
-@media (max-width: 360px) {
-  .check-intake-actions { display: grid; grid-template-columns: repeat(2, 1fr); }
-  .check-intake-actions > :first-child { grid-column: 1 / -1; }
-  .check-intake-actions > :not(:first-child) { width: 100%; border-radius: 5px; }
-}
-.check-reference { padding: 22px 0; border-top: 1px solid #62736b; border-bottom: 1px solid #62736b; }
-.check-reference h2 { color: #e9a64b; font-size: 1rem; }
-.check-reference li + li { border-top: 1px solid #3c5352; padding-top: 10px; }
-.check-pay-link { padding: 14px 18px; border: 1px solid #62736b; border-left: 4px solid #e9a64b; background: #172426; }
-.check-pay-link > span:first-child { border-radius: 3px; color: #e9a64b; }
-.app-frame:not(:has(.landing)) .suggestion { background: #253536; border: 1px solid #62736b; border-left: 4px solid #e9a64b; border-radius: 5px; }
-.app-frame:not(:has(.landing)) .suggestion .bg-black\/\[0\.06\] { background: #394b4b; }
-
-.document-layout { grid-template-columns: minmax(0, 1fr); max-width: 1300px; }
-.document-main { min-width: 0; }
-.document-intake {
-  min-height: 420px; justify-content: space-between; border: 1px solid #62736b;
-  border-top: 4px solid #e9a64b; border-radius: 8px; background: #1d2b2d;
-}
-.document-intake-active { outline: 3px solid #e9a64b; outline-offset: 4px; }
-.document-intake-head { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid #53625b; padding-bottom: 14px; font-size: .82rem; color: #b9c8c5; }
-.document-intake-head span:last-child { font-family: ui-monospace, monospace; color: #e9a64b; }
-.document-empty { gap: 14px; }
-.document-seal { border-radius: 50%; background: #f3efe4; box-shadow: 0 0 0 7px #1d2b2d, 0 0 0 8px #e9a64b; margin: 10px 0 16px; }
-.document-empty p:first-of-type { font-size: clamp(1.25rem, 2.4vw, 1.7rem); }
-.document-file { padding: 28px 0; border-bottom: 1px solid #53625b; }
-.document-file-icon { border: 1px solid #e9a64b; color: #e9a64b; border-radius: 3px; }
-.document-notes { border-top: 1px solid #62736b; }
-.document-note-block { padding: 22px 0; border-bottom: 1px solid #3c5352; }
-.document-note-block h2 { color: #e9a64b; font-size: 1rem; margin-bottom: 10px; }
-.document-note-block p { color: #d2dcd6; font-size: 1rem; line-height: 1.55; }
-@media (min-width: 64rem) { .document-layout { grid-template-columns: minmax(0, 1.45fr) minmax(270px, .75fr); gap: clamp(30px, 5vw, 80px); } }
-
-.learn-specimen { border-top: 4px solid #e9a64b !important; padding: clamp(22px, 2.5vw, 34px) !important; }
-.learn-message { margin: 8px 0 12px; padding: 24px; border: 1px solid #8c978c; border-left: 5px solid #e9a64b; border-radius: 3px; color: #172426; background: #f3efe4; font-family: var(--font-message); font-weight: 500; }
-.learn-patterns { border-top: 1px solid #e9a64b; background: #172426; }
-.learn-patterns li { padding-block: 20px; }
-.learn-patterns li p.rounded-2xl { border-left: 3px solid #f07868; border-radius: 2px; font-family: var(--font-message); }
-.learn-layout .card { border-radius: 3px !important; }
-.learn-layout .card:first-child { border-top: 3px solid #e9a64b !important; background: #253536 !important; }
-.learn-layout .card:nth-child(2) { border: 1px solid #62736b !important; background: transparent !important; }
-
 @media (max-width: 63.999rem) {
-  .app-frame:not(:has(.landing)) .app-shell { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
+  .app-shell { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
 }
-@media (prefers-reduced-motion: reduce) {
-  .app-frame:not(:has(.landing)) *, .verification-tabbar *, .mobile-more * { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
+
+/* The "Report a scam" pill, from Nav.dc.html. */
+.report-pill {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 999px; font-size: 14px; font-weight: 500; white-space: nowrap;
+  background: var(--dc-red-hl); color: var(--dc-red) !important;
 }
+.report-pill[aria-current="page"] { background: var(--dc-red-dot); color: #FFFFFF !important; }
+.report-pill-dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--dc-red-dot); }
+.report-pill[aria-current="page"] .report-pill-dot { background: #FFFFFF; }
+.mobile-more a.report-pill { margin: 4px 0 8px; width: max-content; border-top: 0; min-height: 36px; }

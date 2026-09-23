@@ -1,0 +1,26 @@
+/* Below-desktop behaviour for the Landing design (Landing.dc.html is desktop-only).
+   Inline styles carry the design values, so overrides here need !important. */
+.navLink:hover { color: var(--dc-ink) !important; }
+
+@media (max-width: 63.999rem) {
+  .headerInner { padding: 0 20px !important; gap: 16px !important; }
+  .nav { display: none !important; }
+  .section { padding-left: 20px !important; padding-right: 20px !important; }
+  .hero { padding-top: 56px !important; padding-bottom: 48px !important; }
+  .heroTitle { font-size: 52px !important; }
+  .demo { grid-template-columns: minmax(0, 1fr) !important; padding: 24px !important; border-radius: 32px !important; }
+  .arrow { transform: rotate(90deg); justify-self: center; }
+  .cards { grid-template-columns: minmax(0, 1fr) !important; }
+  .h2 { font-size: 40px !important; }
+  .ext { grid-template-columns: minmax(0, 1fr) !important; padding: 32px !important; gap: 32px !important; }
+  .footerInner { padding: 32px 20px !important; }
+}
+@media (max-width: 39.999rem) {
+  .hideSm { display: none !important; }
+  .heroTitle { font-size: 44px !important; }
+  .heroCtas { flex-direction: column; align-self: stretch; }
+  .heroCtas > * { justify-content: center; }
+  .badge { white-space: normal !important; text-align: left; }
+  .extCtas { flex-direction: column; }
+  .extCtas > * { justify-content: center; }
+}

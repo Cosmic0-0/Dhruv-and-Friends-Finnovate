@@ -1,0 +1,70 @@
+{
+  "eyebrow": "AVANT DE PAYER",
+  "title": "Vérifiez qui vous payez",
+  "lede": "Quel que soit le contact, vérifiez le numéro, le compte ou l'IBAN avant d'envoyer de l'argent. Ceci vérifie l'historique des signalements et si le format est correct — jamais qui en est réellement le titulaire.",
+  "formLabel": "Détails du paiement",
+  "methodLabel": "Comment payez-vous ?",
+  "methods": { "phone": "Juice / téléphone", "bank_account": "Compte bancaire", "iban": "IBAN" },
+  "identifierLabel": { "phone": "Numéro de téléphone", "bank_account": "Numéro de compte", "iban": "IBAN" },
+  "identifierPlaceholder": {
+    "phone": "ex. 5781 2094",
+    "bank_account": "ex. 000123456789",
+    "iban": "ex. MU17BOMM0101101030300200000MUR"
+  },
+  "nameLabel": "Nom qu'on vous a donné",
+  "namePlaceholder": "Facultatif",
+  "amountLabel": "Montant (Rs)",
+  "amountPlaceholder": "0",
+  "reasonLabel": "C'est pour quoi ?",
+  "reasons": {
+    "car": "Voiture / véhicule",
+    "rent_deposit": "Dépôt de loyer",
+    "online_shop": "Achat en ligne",
+    "family": "Famille ou ami",
+    "invoice": "Facture"
+  },
+  "submit": "Vérifier le bénéficiaire",
+  "checking": "Vérification…",
+  "cancel": "Annuler",
+  "idleTitle": "Le résultat s'affichera ici.",
+  "idleBody": "Choisissez comment vous payez et indiquez le numéro, compte ou IBAN, puis vérifiez.",
+  "missingIdentifier": "Entrez d'abord un numéro de téléphone, un compte ou un IBAN.",
+  "invalidAmount": "Le montant doit être un nombre.",
+  "verdict": {
+    "stop": "Arrêtez avant de payer",
+    "caution": "Faites une pause et vérifiez",
+    "clear": "Aucun signalement connu"
+  },
+  "verdictBody": {
+    "stop": "Au moins une vérification sur cet identifiant a échoué. N'envoyez pas d'argent avant de le confirmer autrement.",
+    "caution": "Rien n'est exclu, mais un point mérite un second regard avant l'envoi.",
+    "clear": "Rien ne ressort de notre historique de signalements ni des vérifications de format. Ce n'est pas une garantie."
+  },
+  "findingsTitle": "Ce que nous avons vérifié",
+  "findings": {
+    "REPORTED": "Signalé {count} fois par d'autres utilisateurs de FraudLens.",
+    "NOT_REPORTED": "Non signalé par un utilisateur de FraudLens jusqu'ici.",
+    "IBAN_FORMAT_INVALID": "Cela ne ressemble pas à un IBAN valide.",
+    "IBAN_CHECKSUM_FAILED": "Les chiffres de contrôle de cet IBAN ne correspondent pas — il est peut-être mal saisi.",
+    "IBAN_LENGTH_WRONG": "C'est la mauvaise longueur pour un IBAN {country}.",
+    "IBAN_FOREIGN": "C'est un IBAN {country}, pas mauricien.",
+    "IBAN_VALID": "IBAN {country} correctement formaté.",
+    "PHONE_VALID": "Ressemble à un numéro mobile mauricien valide.",
+    "PHONE_NOT_MU_MOBILE": "Cela ne ressemble pas à un numéro mobile mauricien.",
+    "ACCOUNT_FORMAT_ODD": "Le format de ce numéro de compte semble inhabituel.",
+    "ORGANISATION_ON_PERSONAL_NUMBER": "Vous avez indiqué {organisation}, mais c'est un numéro de téléphone personnel, pas un compte professionnel.",
+    "LARGE_AMOUNT": "Rs {amount} est un montant important à envoyer ainsi — ce type de virement est difficile à annuler."
+  },
+  "caveat": "FraudLens ne peut pas confirmer qui possède ce numéro, ce compte ou cet IBAN — seulement l'historique des signalements et si le format est correct. Vérifiez toujours l'identité par un canal auquel vous faites déjà confiance.",
+  "whatToDo": {
+    "stop": "N'envoyez pas ce paiement.",
+    "caution": "Vérifiez avant d'envoyer.",
+    "clear": "Vérifiez la personne de façon indépendante avant d'envoyer."
+  },
+  "whatToDoBody": {
+    "stop": "Contactez la personne ou l'organisation à un numéro ou une adresse que vous aviez déjà — pas celui qu'on vient de vous donner — avant d'envoyer quoi que ce soit.",
+    "caution": "Confirmez qui vous payez par un canal auquel vous faites déjà confiance, puis n'envoyez que ce qui a été convenu.",
+    "clear": "Une vérification propre n'est pas une preuve d'identité. Confirmez qui vous payez par un canal auquel vous faites déjà confiance."
+  },
+  "checkAnother": "Vérifier un autre bénéficiaire"
+}

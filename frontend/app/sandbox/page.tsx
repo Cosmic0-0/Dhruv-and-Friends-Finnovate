@@ -1,3 +1,12 @@
-import ScamSandbox from "@/components/ScamSandbox";
-export const metadata = { title: "Scam sandbox · FraudLens" };
-export default function SandboxPage() { return <main><ScamSandbox /></main>; }
+import type { Metadata } from "next";
+import SandboxScreen from "@/components/sandbox/SandboxScreen";
+
+export const metadata: Metadata = { title: "Scam sandbox · FraudLens", alternates: { canonical: "/sandbox" } };
+
+export default function SandboxPage() {
+  return (
+    <main>
+      <SandboxScreen />
+    </main>
+  );
+}

@@ -1,5 +1,5 @@
 /**
- * Pure helpers for the document check (components/document/DocumentCheck.tsx)
+ * Pure helpers for the document check (components/document/CheckDocumentScreen.tsx)
  * and the result screen's "Document integrity" panel. They pre-check a file
  * before upload and turn the backend's DOC-* findings and preview numbers
  * into keys the copy can phrase (lib/i18n.ts). No detection happens here:

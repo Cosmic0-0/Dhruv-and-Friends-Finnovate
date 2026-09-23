@@ -1,0 +1,67 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "title": "Paramet",
+  "groups": {
+    "display": "Langaz ek laparans",
+    "privacy": "Konfidansialite",
+    "alerts": "Alert ek extension",
+    "about": "Lor nou"
+  },
+  "language": {
+    "label": "Langaz aplikasion",
+    "desc": "Verifikasion marse dan le trwa langaz, ninport ki ou swazir"
+  },
+  "appearance": {
+    "label": "Laparans",
+    "desc": "Fonse pli dou pou lizie aswar",
+    "light": "Kler",
+    "dark": "Fonse"
+  },
+  "simple": {
+    "label": "Rezilta sinp",
+    "desc": "Montre zis verdik la ek rezon ki pli inportan"
+  },
+  "history": {
+    "label": "Gard mo listwar verifikasion",
+    "desc": "Limen par defo. Sov lor sa aparey la selman, zame lor nou server."
+  },
+  "share": {
+    "label": "Partaz bann egzanp anonim",
+    "desc": "Ed Radar averti lezot. Nou gard enn lanprint eskrokri la, ki li pretann li ete ek so bann lien, zame mesaz la limem."
+  },
+  "extension": {
+    "label": "Extension navigater",
+    "desc": "Averti ou avan ou ouver enn lien eskrokri koni. Limen ouswa tengn li dan extension la limem.",
+    "cta": "Gagn extension la"
+  },
+  "alerts": {
+    "label": "Alert eskrokri",
+    "desc": "Enn notifikasion kan enn kanpagn eskrokri koumans rann lor Radar. Verifie kan FraudLens ouver, ek an ariyer-plan kot ou navigater permet li."
+  },
+  "practice": {
+    "label": "Rapel antrennman sak zour",
+    "desc": "Enn rapel aswar si antrennman Aprann zordi pa fini. Avoye kan FraudLens ouver, ek an ariyer-plan kot ou navigater permet li."
+  },
+  "notif": {
+    "blocked": "Notifikasion bloke pou sa sit la. Permet zot dan paramet ou navigater, apre esey ankor.",
+    "unsupported": "Sa navigater la pa kapav montre notifikasion."
+  },
+  "about": {
+    "privacyLabel": "Ki kit ou aparey",
+    "teamLabel": "Fer par Dhruv & Friends",
+    "teamCta": "Zwenn lekip la"
+  },
+  "delete": {
+    "button": "Efas mo listwar verifikasion",
+    "confirm": "Efas tou verifikasion ki sov lor sa aparey la? Pa kapav defer sa.",
+    "yes": "Efase",
+    "no": "Anile",
+    "done": "Ou listwar verifikasion finn efase."
+  },
+  "notifications": {
+    "alertTitle": "Nouvo eskrokri pe rann: {name}",
+    "alertBody": "Trouve dan {count} verifikasion lor FraudLens. Ouver Radar pou get kouma li ete.",
+    "practiceTitle": "Sink minit antrennman?",
+    "practiceBody": "Bann mesaz Aprann zordi pe atann ou. Kontinie ou seri."
+  }
+}

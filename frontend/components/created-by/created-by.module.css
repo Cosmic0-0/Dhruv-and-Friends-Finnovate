@@ -1,0 +1,14 @@
+/* Below-desktop behaviour for Created By.dc.html (desktop-only design). */
+@media (max-width: 63.999rem) {
+  .team { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .pair { grid-template-columns: minmax(0, 1fr) !important; }
+  .pairPhoto { min-height: 300px !important; }
+  .caption { padding: 28px !important; }
+  .badge { width: 96px !important; height: 96px !important; }
+  .group { border-radius: 28px !important; }
+  .groupImg { aspect-ratio: 4 / 3 !important; }
+}
+@media (max-width: 39.999rem) {
+  .team { grid-template-columns: minmax(0, 1fr) !important; }
+  .figcaption { left: 14px !important; bottom: 14px !important; }
+}

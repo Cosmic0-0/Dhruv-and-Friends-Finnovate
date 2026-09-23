@@ -1,0 +1,159 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "MATRIS ESKALASION",
+  "title": "Rapor enn eskrokri",
+  "lede": "Kisannla pou kontakte depann lor seki finn arive. Swazir sitiasion ki koresponn, ek swiv bann etap dan lord.",
+  "danger": "Ou an danze aster la? Apel 999",
+  "whatHappened": "Ki finn arive?",
+  "level": "Nivo",
+  "levels": {
+    "1": {
+      "urgency": "Kan ou kapav",
+      "title": "Mo finn gagn li me mo pa finn fer nanye",
+      "sub": "Pa finn reponn, pa finn klik, pa finn pey",
+      "headline": "Rapor li pou lezot gagn prevenir.",
+      "steps": [
+        {
+          "who": "CERT-MU",
+          "what": "Rapor mesaz la lor MAUCORS+ avek enn kopi lekran ek nimero ouswa ladres sa dimoun ki finn avoy li.",
+          "actions": "cert"
+        },
+        {
+          "who": "Konpani ki pe kopye",
+          "what": "Avoy li ar vre labank ouswa konpani, avek kontak ki lor zot sit ofisiel.",
+          "actions": "none"
+        },
+        {
+          "who": "Apre, bloke sa dimoun la",
+          "what": "Kan ou finn fini rapor, bloke nimero la ek efas mesaz la.",
+          "actions": "none"
+        }
+      ]
+    },
+    "2": {
+      "urgency": "Dan enn ertan",
+      "title": "Mo finn klik ouswa rant detay",
+      "sub": "Lien ouver, password ouswa kart finn rantre",
+      "headline": "Bloke ou bann kont avan, apre rapor.",
+      "steps": [
+        {
+          "who": "Ou labank",
+          "what": "Si ou finn rant detay kart ouswa labank, apel nimero ki deryer ou kart ek dimann zot bloke li.",
+          "actions": "none"
+        },
+        {
+          "who": "Sanz ou bann password",
+          "what": "Koumans par email ek labank. Servi enn password diferan pou sakenn.",
+          "actions": "none"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Rapor ki ou finn rantre ek lor ki sit.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "3": {
+      "urgency": "Aster la mem",
+      "title": "Mo finn avoy kas ouswa donn enn kod",
+      "sub": "OTP finn donne, transfer ouswa peyman Juice finn fer",
+      "headline": "Apel ou labank aster la. Sak minit konte.",
+      "steps": [
+        {
+          "who": "Ou labank",
+          "what": "Apel nimero ki lor ou kart. Dimann zot zel kont la ek esey rapel peyman la. Not referans ki zot donn ou.",
+          "actions": "none"
+        },
+        {
+          "who": "Cybercrime Unit lapolis",
+          "what": "Rapor sa frod la. Ou kapav osi fer enn deklarasion dan stasion lapolis pli pre.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Fer enn rapor lor MAUCORS+ avek referans labank ek bann kopi lekran.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "4": {
+      "urgency": "Irzans",
+      "title": "Pe menas mwa",
+      "sub": "Santaz, sextortion, enn dimoun an danze",
+      "headline": "Pa pey. Apel lapolis.",
+      "steps": [
+        {
+          "who": "Lapolis",
+          "what": "Si enn dimoun an danze aster la, apel 999 ouswa 112.",
+          "actions": "emergency"
+        },
+        {
+          "who": "Cybercrime Unit lapolis",
+          "what": "Pou santaz ouswa sextortion lor internet. Gard tou mesaz, pa reponn ek pa pey.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Rapor kont la lor MAUCORS+ pou ki zot kapav tir li.",
+          "actions": "cert"
+        }
+      ]
+    }
+  },
+  "matrixTitle": "Matris konple",
+  "matrixSub": "Kisannla okip ki, dapre sitiasion.",
+  "contactFirst": "Kontakte avan",
+  "alsoReport": "Rapor osi",
+  "notNeeded": "Pa bizin",
+  "situation": "Sitiasion",
+  "orgs": [
+    "Ou labank",
+    "Lapolis 999",
+    "Cybercrime Unit",
+    "CERT-MU",
+    "FSC",
+    "Data Protection"
+  ],
+  "situations": [
+    "Mesaz eskrokri, pa finn fer nanye",
+    "Finn klik enn lien ouswa rant detay",
+    "Finn avoy kas ouswa donn enn OTP",
+    "Finn pey enn plan investisman",
+    "Finn donn done personel ouswa kart idantite",
+    "Santaz ouswa sextortion",
+    "Enn dimoun an danze aster la"
+  ],
+  "contactsTitle": "Kontak",
+  "contactNames": {
+    "cert": "CERT-MU / MAUCORS+",
+    "ccu": "Cybercrime Unit lapolis",
+    "emergency": "Irzans lapolis",
+    "bank": "Ou labank",
+    "dpo": "Data Protection Office",
+    "fsc": "Financial Services Commission"
+  },
+  "contactFor": {
+    "cert": "Eskrokri lor internet, phishing, fo kont",
+    "ccu": "Frod kot finn perdi kas, santaz",
+    "emergency": "Nimport ki dimoun an danze aster la",
+    "bank": "Kas finn avoye, kart ouswa kod finn partaze",
+    "dpo": "Finn servi ou done personel mal",
+    "fsc": "Plan investisman san lisans. Zis lor portay an lign"
+  },
+  "bankLine": "Nimero deryer ou kart",
+  "emergencyLine": "999 ouswa 112",
+  "beforeTitle": "Avan ou rapor",
+  "beforeBody": "Gard bann orizinal. Pa efas konversasion la ek pa bloke nimero la avan ou finn sov sa bann la.",
+  "checklist": [
+    "Kopi lekran sak mesaz",
+    "Nimero, email ouswa profil sa dimoun la",
+    "Bann lien, kopye kouma tex",
+    "Referans, montan ek ler peyman",
+    "Referans dosie kot ou labank"
+  ],
+  "sourceNote": "Verifie an septam 2026 kot CERT-MU, MAUCORS, Lapolis ek FSC. Get bann sit ofisiel si enn nimero pa pase.",
+  "actions": {
+    "maucors": "Rapor lor MAUCORS+",
+    "call": "Apel {n}"
+  }
+}

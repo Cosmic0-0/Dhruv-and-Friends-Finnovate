@@ -1,10 +1,8 @@
 /**
- * Theme preference: follow the device, or force light/dark.
- *
- * The design is prefers-color-scheme first (DESIGN.md), so "system" is the
- * default and the only thing a choice does is stamp data-theme on <html>,
- * which globals.css maps to the same tokens. Nothing else in the app knows
- * about themes.
+ * Theme preference: light or dark. Dark is the Claude Design default; a
+ * choice stamps data-theme on <html>, which globals.css maps to the --dc-*
+ * palette. "system" is still accepted from older saved values and follows
+ * the device.
  */
 
 export type ThemeChoice = "system" | "light" | "dark";
@@ -18,9 +16,9 @@ export function isThemeChoice(v: unknown): v is ThemeChoice {
 export function loadTheme(): ThemeChoice {
   try {
     const raw = window.localStorage.getItem(THEME_KEY);
-    return isThemeChoice(raw) ? raw : "system";
+    return isThemeChoice(raw) ? raw : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 
@@ -38,8 +36,9 @@ export function saveTheme(choice: ThemeChoice): void {
  */
 export function applyTheme(choice: ThemeChoice): void {
   const root = document.documentElement;
-  if (choice === "system") root.removeAttribute("data-theme");
-  else root.setAttribute("data-theme", choice);
+  const resolved =
+    choice === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : choice;
+  root.setAttribute("data-theme", resolved);
 
   const dark =
     choice === "dark" ||
@@ -53,7 +52,7 @@ export function applyTheme(choice: ThemeChoice): void {
     meta.setAttribute("data-managed", "");
     document.head.appendChild(meta);
   }
-  meta.content = dark ? "#0C0C0D" : "#F2F2F3";
+  meta.content = dark ? "#000000" : "#F4F4F6";
 }
 
 /**

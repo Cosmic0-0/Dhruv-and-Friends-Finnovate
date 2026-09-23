@@ -15,6 +15,10 @@ export function getFingerprintMatches(fingerprintId) {
   };
 }
 
+function fingerprintIdFor(type, identity) {
+  return identity ? slug(identity) : `${type}-unknown`;
+}
+
 // Counts represent observed checks, never independent community reports or verified campaigns.
 export const recordFingerprint = db.transaction(({ scamType, claimedIdentity, sender, domains = [] }) => {
   const type = normalizeScamType(scamType);
@@ -29,7 +33,7 @@ export const recordFingerprint = db.transaction(({ scamType, claimedIdentity, se
   // claimed identity is the more meaningful "same campaign" signal for the
   // bank/telecom-impersonation scams this taxonomy targets. Falls back to
   // scamType only when no identity was extracted at all.
-  const fingerprintId = identity ? slug(identity) : `${type}-unknown`;
+  const fingerprintId = fingerprintIdFor(type, identity);
   const previous = getFingerprintMatches(fingerprintId);
   db.prepare(`INSERT INTO scam_dna (fingerprint_id, scam_type, claimed_identity, message_count)
     VALUES (?, ?, ?, 1) ON CONFLICT(fingerprint_id) DO UPDATE SET
@@ -45,8 +49,26 @@ export const recordFingerprint = db.transaction(({ scamType, claimedIdentity, se
   return { ...getFingerprintMatches(fingerprintId), previous };
 });
 
-export function attachScamDna(result) {
+/**
+ * @param {object} result pipeline result
+ * @param {{ record?: boolean }} [opts] record: false (the user opted out of
+ *   sharing samples, services/sharing) only looks up an existing campaign and
+ *   writes nothing; with no existing campaign, no scamDna is attached.
+ */
+export function attachScamDna(result, { record = true } = {}) {
   if (result.verdict === "safe" || !result.scamProfile?.type) return result;
+  if (!record) {
+    const type = normalizeScamType(result.scamProfile.type);
+    if (!type) return result;
+    const existing = getFingerprintMatches(fingerprintIdFor(type, clean(result.scamProfile.claimedIdentity) || null));
+    if (existing) {
+      result.scamDna = {
+        fingerprintId: existing.fingerprintId, matchStrength: "matched",
+        relatedReports: existing.messageCount, relatedSenders: existing.senders.length, relatedDomains: existing.domains.length,
+      };
+    }
+    return result;
+  }
   const match = recordFingerprint({
     scamType: result.scamProfile.type, claimedIdentity: result.scamProfile.claimedIdentity,
     sender: result.observedSender,

@@ -53,7 +53,9 @@ assessment**; `analysis.semantic.status` says which.
   "message": "string, required, 1-5000 characters",
   "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
   "pageUrl": "string, optional — the URL of the page `message` was extracted from (e.g. the extension's \"Scan This Page\"). Used ONLY to derive a hostname so links to the scanned page's own site are not flagged as \"not an official domain\" relative to itself (URL-08); never fetched, never treated as a claim about the message, and a malformed value is silently ignored rather than rejected.",
+  "shareSamples": "boolean, optional, default true — false = store nothing derived from this request (see \"Sharing samples\" under /api/analyze)",
   "pageForms": "array, optional, at most 10 — Scan This Page only, ignored without pageUrl: [{ actionHost: string|null (where a password/card form submits; null = the page itself), hasPassword: boolean, hasCard: boolean }]. Field values are never sent. Feeds URL-10. A malformed value is a 400.",
+  "channel": "string, optional — how the user says the message arrived (the web Check screen's \"Received by\"): \"sms\" | \"whatsapp\" | \"email\" | \"facebook\" | \"call\". Context only: passed to the semantic model as a labelled, may-be-wrong hint (prompt semantic-1.3) and echoed as analysis.channel; it never adds a signal or changes the score. Any other value is a 400 (\"channel must be one of: ...\").",
   "paymentContext": {
     "amount": "number >= 0, optional",
     "currency": "string <= 200, optional",
@@ -72,6 +74,27 @@ prose for the LLM): `method` in {gift_card, voucher, crypto,
 money_transfer_service} → `PAY-02`; `recipient` not matching
 `claimedOrganisation` → `PAY-05`; `onCallNow: true` → `PAY-06`. An invalid
 `paymentContext` returns `400` with a field-specific message.
+
+#### Sharing samples (`shareSamples`)
+
+Accepted by `/api/analyze`, `/api/analyze/screenshot`, `/api/analyze/document`
+and `/api/batch-scan` (`backend/src/services/sharing`). By default an analysis
+may add to FraudLens's shared evidence: a community evidence event (message
+fingerprint hashes, normalised sender, claimed brand, lookalike hosts, a
+hashed reporter IP — never the message text), a ScamDNA observation (claimed
+identity, sender, lookalike domains), a batch's summary counts, and, for
+`/api/analyze/document`, the uploaded file's original bytes. The web app's
+Settings → "Share anonymous scam samples" sends `shareSamples: false` when
+turned off; the backend then skips all of those writes. The analysis itself
+is unchanged: existing community evidence and known ScamDNA campaigns are
+still read (a known campaign still returns `scamDna` with `matchStrength:
+"matched"`; an unknown one returns no `scamDna`, and `/api/analyze/document`
+returns `documentId: null`). The only write that remains is
+`risk_audit_log`, and only when OTHER users' community evidence changed this
+verdict: it records the rule and those evidence rows so the adjusted verdict
+stays explainable, and holds nothing from this request. Explicit reports
+(`POST /api/report`) are a separate user action and are not affected. A
+non-boolean value is a `400 { "error": "shareSamples must be a boolean" }`.
 
 ### Response — `200 OK`
 
@@ -105,7 +128,8 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
     "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
     "inputHash": "sha256 of the normalised (already redacted) text",
     "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
-    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.1", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.3", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "channel": "sms | whatsapp | email | facebook | call — optional, only when the request sent `channel`",
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
 }
@@ -401,6 +425,7 @@ explainable reputation lookups only; there is no live retraining.
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
 | `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
 | `400` | `{ "error": "emailContext.<field> ..." }` | invalid `emailContext` (wrong type, unparsable address, too many entries) |
+| `400` | `{ "error": "shareSamples must be a boolean" }` | `shareSamples` present but not a boolean (same on screenshot, document and batch-scan) |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is no longer an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
 | `413` | `{ "error": "request body is too large" }` | the body exceeds the route's JSON limit. This applies to every route and is mapped in `backend/src/services/http-errors`. Malformed JSON is `400 { "error": "invalid JSON body" }`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
@@ -417,7 +442,8 @@ redacts the extracted text server-side, then runs it through the same
 ```json
 {
   "image": "string, required — base64-encoded image bytes, max 5MB decoded. A `data:<mime>;base64,` prefix is accepted and stripped if present.",
-  "language": "string, optional — same free-form hint as /api/analyze"
+  "language": "string, optional — same free-form hint as /api/analyze",
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
 }
 ```
 
@@ -478,6 +504,7 @@ simply `null` in that case.
 {
   "file": "string, required - the file's bytes as base64, or a data URL (the data:...;base64, prefix is stripped). Max 10MB decoded.",
   "fileName": "string, optional - display only; ignored by the backend and never echoed",
+  "shareSamples": "boolean, optional, default true - false: the file's bytes are NOT stored (documentId is null) and nothing else is recorded; see /api/analyze \"Sharing samples\"",
   "language": "string, optional - same free-form hint as /api/analyze"
 }
 ```
@@ -702,7 +729,8 @@ already succeeded and the bytes are safely stored by the time OCR runs, so
 
 ```json
 {
-  "messages": ["string, required — 1-50 items, each 1-5000 characters"]
+  "messages": ["string, required — 1-50 items, each 1-5000 characters"],
+  "shareSamples": "boolean, optional, default true — false: no batch history row and no per-message evidence is stored; see /api/analyze \"Sharing samples\""
 }
 ```
 
@@ -739,6 +767,81 @@ never returns a top-level 5xx.
 
 There is no top-level 5xx for this route — LLM failures are absorbed
 per-message as described above.
+
+## `POST /api/analyze/conversation`
+
+Analyses a whole chat as ONE message: the other party's messages, in order,
+are joined into a single transcript and run through `runPipeline()` once
+(`backend/src/services/conversation`, `analysis.source: "conversation"`).
+That keeps every guarantee of `/api/analyze` — one deterministic verdict and
+score, grounded semantic evidence, the same intervention policy — instead of
+a separate, inconsistent verdict per bubble. The caller's own ("me") messages
+are accepted and echoed back via indices but are never analysed.
+
+### Request
+
+```json
+{
+  "messages": [
+    { "from": "me" | "them", "text": "string, required, 1-5000 characters" }
+  ],
+  "language": "string, optional — same free-form hint as /api/analyze",
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
+}
+```
+
+`messages`: 1-500 items, at least one `"them"` message. Longer chats keep the
+most recent `"them"` text up to 12,000 characters combined; the response says
+where analysis started (`conversation.firstAnalysedIndex`).
+
+### Response — `200 OK`
+
+The full `/api/analyze` response (see above; `verdict`, `signals`,
+`suggestedAction`, `explanation`, `riskScore`, `actions`, `scamProfile`,
+`journey`, `scamDna`, `analysis`, …) plus:
+
+```jsonc
+{
+  "conversation": {
+    "messageCount": 4,          // messages.length, as sent
+    "theirMessageCount": 3,     // how many were from "them"
+    "analysedMessageCount": 3,  // how many of those fit in the 12,000-char budget
+    "truncated": false,         // true when older "them" messages were dropped
+    "firstAnalysedIndex": 0,    // index (into `messages`) analysis started at, or null
+    "flags": [
+      { "index": 3, "code": "SEC-01", "severity": "high", "label": "Requested a one-time code", "evidence": "the OTP you received" }
+    ],
+    "stages": [
+      { "stage": "TRUST_BUILDING", "index": 2 }
+    ]
+  }
+}
+```
+
+`flags`: one entry per signal whose evidence quote is grounded inside one of
+the `"them"` messages (community-sourced signals, which describe the sender
+rather than quote text, are never attached). `label` is the signal's display
+name (`backend/src/services/signals/registry.js`); `evidence` is the exact
+quoted text, already redacted the same way the request was. `stages`: the
+first message index each fixed playbook stage (`backend/src/services/
+playbooks`) was observed at, via a fixed signal-code → stage table
+(`CODE_STAGE` in `backend/src/services/conversation/index.js`); only signal
+codes whose meaning maps onto one stage unambiguously are included.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "messages must be a non-empty array" }` | `messages` missing, not an array, or empty |
+| `400` | `{ "error": "messages exceeds the maximum of 500" }` | `messages.length > 500` |
+| `400` | `{ "error": "every message must be an object" }` | an item is not an object |
+| `400` | `{ "error": "every message needs from: \"me\" or \"them\"" }` | an item's `from` is missing or not `"me"`/`"them"` |
+| `400` | `{ "error": "every message needs non-empty text" }` | an item's `text` is missing, not a string, or empty/whitespace-only |
+| `400` | `{ "error": "every message must be 5000 characters or fewer" }` | an item's `text` exceeds 5000 characters |
+| `400` | `{ "error": "the conversation has no messages from the other person" }` | every message has `from: "me"` |
+| `400` | `{ "error": "shareSamples must be a boolean" }` | `shareSamples` present but not a boolean |
+| `429` | `{ "error": "too many conversation checks, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
+| `500` | `{ "error": "conversation analysis failed" }` | unexpected internal error only — an LLM outage/timeout/invalid JSON is not an error; it returns `200` with `analysis.semantic.status` not `"ok"`, same as `/api/analyze` |
 
 ## `POST /api/check-sender`
 
@@ -818,6 +921,24 @@ assuming the `230` Mauritius country code for 8-digit local numbers. So
 the same underlying count instead of three independent rows. The `sender`
 field in the response is unaffected — it still echoes back the raw string
 exactly as submitted; only the counting behavior changed.
+
+## `POST /api/text-profile`
+
+Describes pasted text for the web Check screen's meta row while the user
+types. Descriptive only: no signal, score, verdict, LLM call or storage. It
+reuses the pipeline's language markers (`services/lexicon`) and link
+extraction (`services/domain-matching`).
+
+Request: `{ "text": "string, required, 0-5000 characters" }`
+
+Response `200`:
+
+```json
+{ "language": "en | fr | kreol | mixed | null (null = too few marker words to tell)", "links": 1, "hosts": ["mcb-secure.top"] }
+```
+
+Errors: `400` when `text` is missing, not a string or over 5000 characters;
+`429` over 600 requests / 15 min per IP.
 
 ## `POST /api/check-url`
 
@@ -1184,6 +1305,35 @@ a public leaderboard, unlike `POST /api/check-sender`'s exact-match lookup —
 it surfaces senders nobody specifically searched for, hence the masking.
 Shares the 120 requests / 15 minutes / IP read limiter used by
 `/check-sender` and `/campaign/:fingerprintId`.
+
+**Optional `?range=7d|30d|12m` (additive).** Adds a `radar` object with
+ranged aggregates for the Radar page; any other `range` value is `400`.
+Without `range` the response is unchanged. Source: `backend/src/services/radar`,
+two daily counter tables (`radar_daily`: day, verdict, scam type, claimed
+institution, user-reported channel, count; `radar_domain_daily`: day,
+lookalike domain, institution it imitates, count). Only `scam`/`suspicious`
+checks are counted; no text, sender, IP or pseudonym is stored; requests with
+`shareSamples: false` record nothing; rows are purged after
+`RADAR_RETENTION_DAYS` (default 730). Days are Mauritius calendar days (UTC+4).
+
+```ts
+radar?: {
+  range: "7d" | "30d" | "12m";
+  unit: "day" | "month";          // bucket size of `series`
+  from: string; to: string;        // YYYY-MM-DD, to exclusive
+  scamsCaught: number;             // checks with verdict "scam" in the range
+  flaggedChecks: number;           // scam + suspicious
+  change: { previous: number; pct: number } | null; // vs the previous equal period; null when it had no scams
+  series: { start: string; scams: number }[];       // 7, 30 or 12 buckets, oldest first
+  topImpersonated: { name: string; checks: number; sharePct: number } | null; // share of flaggedChecks
+  rising: { scamType: string; current: number; previous: number; mainChannel: string | null } | null; // largest growth vs previous period; null if nothing grew
+  topScamTypes: { scamType: string; checks: number; pct: number }[]; // top 5, pct of typed checks
+  fakeLinks: { domain: string; imitates: string | null; times: number }[]; // top 5 lookalike domains
+}
+```
+
+Every value is a sum over stored counters; an empty database returns zeros,
+`null`s and `[]`, which the client renders as an empty state.
 
 ```ts
 {

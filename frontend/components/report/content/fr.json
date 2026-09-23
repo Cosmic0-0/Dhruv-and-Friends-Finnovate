@@ -1,0 +1,158 @@
+{
+  "eyebrow": "MATRICE D’ESCALADE",
+  "title": "Signaler une arnaque",
+  "lede": "Qui contacter dépend de ce qui s’est passé. Choisissez la situation qui correspond et suivez les étapes dans l’ordre.",
+  "danger": "En danger immédiat ? Appelez le 999",
+  "whatHappened": "Que s’est-il passé ?",
+  "level": "Niveau",
+  "levels": {
+    "1": {
+      "urgency": "Dès que possible",
+      "title": "Je l’ai reçu mais je n’ai rien fait",
+      "sub": "Pas de réponse, pas de clic, pas d’argent",
+      "headline": "Signalez-le pour que d’autres soient prévenus.",
+      "steps": [
+        {
+          "who": "CERT-MU",
+          "what": "Signalez le message sur MAUCORS+ avec une capture d’écran et le numéro ou l’adresse de l’expéditeur.",
+          "actions": "cert"
+        },
+        {
+          "who": "L’entreprise imitée",
+          "what": "Transférez-le à la vraie banque ou entreprise, via le contact indiqué sur son site officiel.",
+          "actions": "none"
+        },
+        {
+          "who": "Puis bloquez l’expéditeur",
+          "what": "Une fois le signalement fait, bloquez le numéro et supprimez le message.",
+          "actions": "none"
+        }
+      ]
+    },
+    "2": {
+      "urgency": "Dans l’heure",
+      "title": "J’ai cliqué ou saisi des informations",
+      "sub": "Lien ouvert, mot de passe ou carte saisis",
+      "headline": "Verrouillez d’abord vos comptes, puis signalez.",
+      "steps": [
+        {
+          "who": "Votre banque",
+          "what": "Si vous avez saisi des données de carte ou bancaires, appelez le numéro au dos de votre carte et demandez à la bloquer.",
+          "actions": "none"
+        },
+        {
+          "who": "Changez vos mots de passe",
+          "what": "Commencez par l’e-mail et la banque. Un mot de passe différent pour chacun.",
+          "actions": "none"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Signalez ce que vous avez saisi et sur quel site.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "3": {
+      "urgency": "Maintenant",
+      "title": "J’ai envoyé de l’argent ou partagé un code",
+      "sub": "OTP donné, virement ou paiement Juice effectué",
+      "headline": "Appelez votre banque maintenant. Chaque minute compte.",
+      "steps": [
+        {
+          "who": "Votre banque",
+          "what": "Appelez le numéro sur votre carte. Demandez de geler le compte et de tenter de rappeler le paiement. Notez la référence donnée.",
+          "actions": "none"
+        },
+        {
+          "who": "Cybercrime Unit de la police",
+          "what": "Signalez la fraude. Vous pouvez aussi faire une déposition au poste de police le plus proche.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Faites un signalement sur MAUCORS+ avec la référence bancaire et les captures d’écran.",
+          "actions": "cert"
+        }
+      ]
+    },
+    "4": {
+      "urgency": "Urgence",
+      "title": "On me menace",
+      "sub": "Chantage, sextorsion, quelqu’un en danger",
+      "headline": "Ne payez pas. Appelez la police.",
+      "steps": [
+        {
+          "who": "Police",
+          "what": "Si quelqu’un est en danger immédiat, appelez le 999 ou le 112.",
+          "actions": "emergency"
+        },
+        {
+          "who": "Cybercrime Unit de la police",
+          "what": "Pour le chantage ou la sextorsion en ligne. Gardez tous les messages, ne répondez pas et ne payez pas.",
+          "actions": "ccu"
+        },
+        {
+          "who": "CERT-MU",
+          "what": "Signalez le compte sur MAUCORS+ pour qu’il soit supprimé.",
+          "actions": "cert"
+        }
+      ]
+    }
+  },
+  "matrixTitle": "La matrice complète",
+  "matrixSub": "Qui s’occupe de quoi, selon la situation.",
+  "contactFirst": "Contacter d’abord",
+  "alsoReport": "Signaler aussi",
+  "notNeeded": "Pas nécessaire",
+  "situation": "Situation",
+  "orgs": [
+    "Votre banque",
+    "Police 999",
+    "Cybercrime Unit",
+    "CERT-MU",
+    "FSC",
+    "Protection des données"
+  ],
+  "situations": [
+    "Message d’arnaque, aucune action",
+    "Lien cliqué ou informations saisies",
+    "Argent envoyé ou OTP partagé",
+    "Paiement à un placement douteux",
+    "Données personnelles ou pièce d’identité partagées",
+    "Chantage ou sextorsion",
+    "Quelqu’un en danger immédiat"
+  ],
+  "contactsTitle": "Contacts",
+  "contactNames": {
+    "cert": "CERT-MU / MAUCORS+",
+    "ccu": "Cybercrime Unit de la police",
+    "emergency": "Urgence police",
+    "bank": "Votre banque",
+    "dpo": "Data Protection Office",
+    "fsc": "Financial Services Commission"
+  },
+  "contactFor": {
+    "cert": "Arnaques en ligne, hameçonnage, faux comptes",
+    "ccu": "Fraude avec perte d’argent, chantage",
+    "emergency": "Toute personne en danger immédiat",
+    "bank": "Argent envoyé, carte ou code partagé",
+    "dpo": "Vos données personnelles ont été détournées",
+    "fsc": "Placements sans licence. Uniquement via le portail en ligne"
+  },
+  "bankLine": "Numéro au dos de votre carte",
+  "emergencyLine": "999 ou 112",
+  "beforeTitle": "Avant de signaler",
+  "beforeBody": "Gardez les originaux. Ne supprimez pas la conversation et ne bloquez pas le numéro avant d’avoir sauvegardé ceci.",
+  "checklist": [
+    "Captures d’écran de chaque message",
+    "Numéro, e-mail ou profil de l’expéditeur",
+    "Les liens, copiés en texte",
+    "Référence, montant et heure du paiement",
+    "La référence du dossier à votre banque"
+  ],
+  "sourceNote": "Vérifié en septembre 2026 auprès du CERT-MU, de MAUCORS, de la Police et de la FSC. Consultez les sites officiels si un numéro ne répond pas.",
+  "actions": {
+    "maucors": "Signaler sur MAUCORS+",
+    "call": "Appeler le {n}"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "SANDBOX",
+  "title": "Pratik pou rekonet enn eskrokri",
+  "lede": "Pas par enn konversasion eskrokri fiktif, enn mesaz alafwa. Nanye pa avoy okenn kot personn — se enn seri fix senario ki baze lor bann vre modpas eskrokri.",
+  "scenario": { "label": "Swazir enn senario", "loading": "Pe sarz senario yo…" },
+  "objective": { "title": "Ou lobzektif", "body": "Remark sanzman ant enn introdiksion kredib ek enn demann larzan, kod ouswa kontrol." },
+  "progress": "Progresion simulasion",
+  "reset": "Rekomanse ek swazir enn lot senario",
+  "start": "Kumans simulasion",
+  "continueLabel": "Kontign simulasion",
+  "finish": "Fini simulasion",
+  "preparing": "Pe prepar prosen mesaz…",
+  "cancel": "Anile sa letap la",
+  "scammer": "Eskrok",
+  "simulated": "Mesaz simile",
+  "tactic": "Taktik",
+  "introTitle": "Enn plas sekirize pou rekonet modpas la.",
+  "introBody": "Avanse enn mesaz alafwa. Sak mesaz fiktif vinn avek enn explikasion lor teknik ki pe servi.",
+  "ended": {
+    "title": "Simulasion fini",
+    "headline": "Ou finn trouv modpas la.",
+    "tacticsSeen": "Taktik ou finn zwenn",
+    "advice": "Dan enn vre konversasion, arete avan partaz enn kod ouswa avoy larzan. Verifie par lapli ofisiel labank la ouswa enn nimero ou deza fer konfians.",
+    "another": "Eseye enn lot senario",
+    "check": "Verifie enn vre mesaz"
+  },
+  "reload": "Rasarz senario yo",
+  "fictionNote": "Mesaz fiktif. Okenn mesaz pa avoye kot personn. Pena okenn detay personel neseser.",
+  "sourceLangNote": "Mesaz senario ek explikasion taktik montre dan lang orizinal."
+}

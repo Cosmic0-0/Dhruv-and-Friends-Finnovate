@@ -1,0 +1,136 @@
+{
+  "header": {
+    "home": "Accueil FraudLens",
+    "how": "Comment ça marche",
+    "tools": "Outils",
+    "learn": "Apprendre",
+    "radar": "Radar",
+    "createdBy": "Créé par",
+    "theme": "Basculer entre mode clair et sombre",
+    "getExtension": "Obtenir l'extension",
+    "check": "Vérifier un message",
+    "nav": "Sections"
+  },
+  "hero": {
+    "badge": "Conçu pour Maurice · English, Français, Kreol",
+    "title": "Repérez l'arnaque avant d'agir.",
+    "lede": "Collez un message, un lien ou un document. FraudLens vous dit s'il est authentique ou frauduleux, et vous montre exactement pourquoi.",
+    "primary": "Vérifier un message",
+    "secondary": "Obtenir l'extension navigateur"
+  },
+  "demo": {
+    "label": "Exemple de vérification",
+    "receive": "Vous recevez",
+    "shows": "FraudLens vous montre",
+    "channel": "SMS · 08:14",
+    "verdict": "Arnaque",
+    "confidence": "Confiance élevée",
+    "reasons": [
+      [
+        "mcb-secure.top",
+        " n'est pas la MCB, le vrai site est ",
+        "mcb.mu"
+      ],
+      [
+        "Demande votre code à usage unique, la MCB ne le fait jamais"
+      ],
+      [
+        "Menace de bloquer le compte aujourd'hui"
+      ]
+    ],
+    "action": "Ne répondez pas. Appelez la MCB au numéro inscrit sur votre carte."
+  },
+  "how": {
+    "title": "Des preuves visibles, pas seulement une étiquette.",
+    "cards": [
+      {
+        "n": "01",
+        "title": "Lit comme Maurice écrit",
+        "body": "Anglais, français et kreol morisien, même quand les trois sont dans le même message."
+      },
+      {
+        "n": "02",
+        "title": "Connaît les vrais expéditeurs",
+        "body": "Banques locales, Mauritius Post, MRA et opérateurs mobiles : leurs vraies adresses et ce qu'ils ne demandent jamais."
+      },
+      {
+        "n": "03",
+        "title": "Vérifie aussi les documents",
+        "body": "Repère les signatures collées et les modifications faites après la signature d'un relevé, d'une lettre ou d'une facture."
+      }
+    ]
+  },
+  "extension": {
+    "title": "Vérifiez sans quitter la page.",
+    "body": "L'extension FraudLens vérifie les liens dans Gmail, WhatsApp Web et Facebook avant que vous cliquiez.",
+    "chrome": "Ajouter à Chrome",
+    "other": "Firefox et Edge",
+    "badLink": "Ce lien n'est pas la MCB",
+    "official": "Site officiel"
+  },
+  "footer": {
+    "built": "FraudLens · Conçu à Maurice par ",
+    "team": "Dhruv & Friends",
+    "privacy": "Confidentialité",
+    "report": "Signaler une arnaque",
+    "contact": "Contact"
+  },
+  "extensionPage": {
+    "eyebrow": "EXTENSION NAVIGATEUR",
+    "title": "FraudLens Link Guard",
+    "lede": "L'extension compare le site que vous visitez aux vraies adresses des banques et opérateurs mauriciens, et peut analyser une page ou un message sélectionné à la demande. Elle n'est pas encore dans une boutique d'extensions : vous l'installez depuis le code source du projet.",
+    "chromeTitle": "Chrome et Edge",
+    "chromeNote": "Fonctionne avec Chrome 102 ou plus récent et avec Microsoft Edge.",
+    "steps": [
+      "Téléchargez le code source de FraudLens en zip et décompressez-le.",
+      "Ouvrez chrome://extensions (dans Edge : edge://extensions).",
+      "Activez le mode développeur.",
+      "Cliquez sur « Charger l'extension non empaquetée » et choisissez le dossier extension du projet décompressé."
+    ],
+    "download": "Télécharger le code source (.zip)",
+    "viewSource": "Voir le code de l'extension",
+    "firefoxTitle": "Firefox",
+    "firefoxBody": "Pas encore pris en charge. L'extension est conçue pour les navigateurs Chromium (service worker Manifest V3) et n'a pas été empaquetée ni testée pour Firefox.",
+    "whatTitle": "Ce qu'elle fait",
+    "what": [
+      "Compare l'adresse de chaque site aux vrais domaines des banques et opérateurs mauriciens, et l'indique sur l'icône.",
+      "Analyser cette page : lit le texte visible de la page, jamais les champs de formulaire ni ce que vous avez saisi, et le vérifie.",
+      "Clic droit sur un lien ou un texte sélectionné pour le vérifier.",
+      "Rapport de sécurité : une vérification passive du HTTPS, des en-têtes et des cookies d'un site."
+    ],
+    "privacy": "Lire la politique de confidentialité de l'extension",
+    "back": "Retour à FraudLens",
+    "notSupported": "Non pris en charge",
+    "edgeBody": "Mêmes étapes que pour Chrome, sur edge://extensions."
+  },
+  "privacyPage": {
+    "eyebrow": "CONFIDENTIALITÉ",
+    "title": "Confidentialité",
+    "lede": "Ce que FraudLens fait des messages que vous vérifiez, en termes simples.",
+    "sections": [
+      {
+        "title": "Les messages que vous collez",
+        "body": "Les numéros de téléphone, e-mails et numéros de compte sont retirés dans votre navigateur avant l'envoi d'un message pour analyse. Les liens, domaines et codes sont conservés, car les vérifications en dépendent."
+      },
+      {
+        "title": "Captures d'écran et documents",
+        "body": "Les captures d'écran et documents sont envoyés tels quels à notre serveur. Le serveur lit le texte et retire les numéros de téléphone, e-mails et numéros de compte avant toute analyse."
+      },
+      {
+        "title": "Ce que le serveur conserve",
+        "body": "Le texte envoyé pour analyse sert à produire votre résultat et n'est pas enregistré dans une base de données. Les signalements communautaires font exception : ils sont conservés sous forme d'empreinte à sens unique du texte masqué, jamais le texte lui-même, et supprimés après 90 jours."
+      },
+      {
+        "title": "Ce qui reste sur votre appareil",
+        "body": "Vos vérifications récentes, votre série Apprendre et vos réglages sont enregistrés dans ce navigateur uniquement. Effacer les données du site les supprime."
+      },
+      {
+        "title": "Qui d'autre y a accès",
+        "body": "L'analyse passe par un modèle de langage que nous hébergeons. Un fournisseur hébergé (actuellement Anthropic) n'est utilisé qu'en secours quand le nôtre est indisponible. Nous ne vendons pas de données, n'affichons pas de publicité et n'utilisons pas de traceurs."
+      }
+    ],
+    "extensionPolicy": "Lire la politique de confidentialité complète de l'extension",
+    "contact": "Des questions ? Ouvrez une issue sur le GitHub du projet.",
+    "contactCta": "Nous contacter sur GitHub"
+  }
+}

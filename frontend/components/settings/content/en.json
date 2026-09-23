@@ -1,0 +1,66 @@
+{
+  "title": "Settings",
+  "groups": {
+    "display": "Language & display",
+    "privacy": "Privacy",
+    "alerts": "Alerts & extension",
+    "about": "About"
+  },
+  "language": {
+    "label": "App language",
+    "desc": "Checks work in all three languages whatever you pick"
+  },
+  "appearance": {
+    "label": "Appearance",
+    "desc": "Dark is easier on the eyes at night",
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "simple": {
+    "label": "Simple results",
+    "desc": "Show a result as the verdict and the one reason that matters most"
+  },
+  "history": {
+    "label": "Keep my check history",
+    "desc": "On by default. Saved only on this device, never on our servers."
+  },
+  "share": {
+    "label": "Share anonymous scam samples",
+    "desc": "Helps Radar warn others. We keep a fingerprint of a scam, the sender it claims and its links, never the message itself."
+  },
+  "extension": {
+    "label": "Browser extension",
+    "desc": "Warns you before you open a known scam link. Turn it on or off in the extension itself.",
+    "cta": "Get the extension"
+  },
+  "alerts": {
+    "label": "Scam alerts",
+    "desc": "A notification when a scam campaign starts spreading on Radar. Checked while FraudLens is open, and in the background where your browser allows it."
+  },
+  "practice": {
+    "label": "Daily practice reminder",
+    "desc": "One evening nudge if today's Learn practice isn't done. Sent while FraudLens is open, and in the background where your browser allows it."
+  },
+  "notif": {
+    "blocked": "Notifications are blocked for this site. Allow them in your browser settings, then try again.",
+    "unsupported": "This browser can't show notifications."
+  },
+  "about": {
+    "privacyLabel": "What leaves your device",
+    "teamLabel": "Made by Dhruv & Friends",
+    "teamCta": "Meet the team"
+  },
+  "delete": {
+    "button": "Delete my check history",
+    "confirm": "Delete every check saved on this device? This can't be undone.",
+    "yes": "Delete",
+    "no": "Cancel",
+    "done": "Your check history was deleted."
+  },
+  "notifications": {
+    "alertTitle": "New scam spreading: {name}",
+    "alertBody": "Seen in {count} checks on FraudLens. Open Radar to see what it looks like.",
+    "practiceTitle": "Five minutes of practice?",
+    "practiceBody": "Today's Learn messages are waiting. Keep your streak going."
+  }
+}

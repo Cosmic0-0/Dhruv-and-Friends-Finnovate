@@ -1,0 +1,47 @@
+{
+  "eyebrow": "VÉRIFIER UN DOCUMENT",
+  "whatWeInspectTitle": "Ce que nous examinons",
+  "privacyTitle": "Confidentialité de votre fichier",
+  "dropFileLabel": "Fichier à vérifier",
+  "dropTypesLabel": "PDF / DOCX",
+  "checkAnotherFile": "Vérifier un autre fichier",
+  "pageTag": "Page {n}",
+  "howMadeTitle": "Comment le fichier a été fabriqué",
+  "fileHistoryTitle": "Historique du fichier",
+  "whatItSaysTitle": "Ce qu'il dit",
+  "noSemanticFindings": "Aucun langage d'arnaque trouvé dans le texte du fichier.",
+  "extractedTextTitle": "Texte extrait",
+  "noExtractedText": "Aucun texte lisible n'a été trouvé dans ce fichier.",
+  "verdict": {
+    "safe": "Rien ne ressort du texte",
+    "suspicious": "Quelques signes d'alerte dans le texte",
+    "scam": "Forts signes d'arnaque"
+  },
+  "whatToDo": {
+    "safe": "Confirmez quand même avant d'agir.",
+    "suspicious": "Vérifiez avant d'agir sur ce document.",
+    "scam": "N'agissez pas sur ce document."
+  },
+  "whatToDoBody": {
+    "safe": "Un contrôle propre n'est pas une preuve. Si ce document demande de l'argent ou des identifiants, confirmez-le d'abord de façon indépendante.",
+    "suspicious": "Confirmez ce document auprès de l'organisation dont il prétend provenir, avec des coordonnées que vous trouvez vous-même.",
+    "scam": "Ne payez pas, ne signez pas et ne partagez pas d'identifiants à cause de ce fichier. Confirmez-le auprès de l'organisation dont il prétend provenir, avec des coordonnées que vous trouvez vous-même."
+  },
+  "checkAccountBeforePaying": "Vérifier ce compte avant de payer",
+  "downloadReport": "Télécharger le rapport",
+  "history": {
+    "created": "Créé",
+    "modified": "Dernière modification",
+    "revisions": "Enregistré à nouveau",
+    "signature": "Signature numérique"
+  },
+  "report": {
+    "title": "Rapport de document FraudLens",
+    "generated": "Généré",
+    "file": "Fichier",
+    "verdict": "Verdict",
+    "structural": "Comment le fichier a été fabriqué",
+    "semantic": "Ce qu'il dit",
+    "none": "Aucun trouvé."
+  }
+}

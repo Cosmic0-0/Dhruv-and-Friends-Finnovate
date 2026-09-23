@@ -230,6 +230,30 @@ test("GET /api/trends returns real aggregate counts with phone-shaped senders ma
   assert.ok(!row.sender.includes("5111"), "only the last 4 digits should be visible");
 });
 
+test("GET /api/trends?range= adds real radar aggregates and rejects unknown ranges", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+
+  const bad = await originalFetch(`${base}/trends?range=1y`);
+  assert.equal(bad.status, 400);
+
+  const plain = await (await originalFetch(`${base}/trends`)).json();
+  assert.equal(plain.radar, undefined);
+
+  for (const range of ["7d", "30d", "12m"]) {
+    const body = await (await originalFetch(`${base}/trends?range=${range}`)).json();
+    assert.equal(body.radar.range, range);
+    assert.equal(typeof body.radar.scamsCaught, "number");
+    assert.equal(body.radar.series.length, range === "7d" ? 7 : range === "30d" ? 30 : 12);
+    assert.ok(Array.isArray(body.radar.topScamTypes));
+    assert.ok(Array.isArray(body.radar.fakeLinks));
+    assert.ok(body.totals);
+  }
+});
+
 test("campaign API merges observed checks, preserves graph nodes, and returns 404 for unknown IDs", async (t) => {
   const app = express(); app.use("/api", router);
   const server = app.listen(0);
