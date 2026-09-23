@@ -4,8 +4,24 @@
     {
       "name": "kreol-review-app",
       "runtimeExecutable": "streamlit",
-      "runtimeArgs": ["run", "data/kreol-dataset/review/review_app.py", "--server.headless", "true"],
+      "runtimeArgs": [
+        "run",
+        "data/kreol-dataset/review/review_app.py",
+        "--server.headless",
+        "true"
+      ],
       "port": 8501
+    },
+    {
+      "name": "frontend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
+      "port": 3000
     }
   ]
 }

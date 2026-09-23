@@ -81,8 +81,11 @@ and a legitimate supplier invoice. They use `.example` identities only.
 
 ## Production / VPS deployment
 
-The Office task pane and API must be served over HTTPS. A typical split-host
-deployment uses `https://addin.example.org` for the static bundle and
+The Office task pane and API must be served over HTTPS. Two options:
+
+### Option A: split-host with a real domain
+
+`https://addin.example.org` for the static bundle and
 `https://api.example.org/api` for the API:
 
 ```powershell
@@ -105,6 +108,82 @@ For multiple approved deployments, use an exact comma-separated list. No
 wildcards are accepted. The reverse proxy must terminate TLS and set
 `X-Forwarded-Proto`; the backend redirects forwarded HTTP in production.
 Never point an HTTPS task pane at an HTTP API.
+
+### Option B: single Tailscale hostname (no domain, no CORS)
+
+Serves the addin and API under one origin via a Tailscale node's own
+`*.ts.net` HTTPS hostname (`tailscale serve`, cert auto-issued, trusted CA).
+Reachable by anyone on the tailnet; use `tailscale funnel` instead of
+`serve` to make it public (needs the tailnet's ACL policy to grant the
+`funnel` `nodeAttrs` capability, and the node's public DNS record can take a
+few minutes to propagate after approval).
+
+On the VPS, once the repo is cloned and Node 22 is installed:
+
+```bash
+cd backend
+npm install
+npm rebuild better-sqlite3 --build-from-source   # only if Node was upgraded after the original npm install
+npm i -g pm2
+pm2 start npm --name fraudlens-backend --cwd "$(pwd)" -- run start
+pm2 save && pm2 startup   # run the printed command once, survives reboot
+
+cd ../outlook-addin
+npm install
+VITE_FRAUDLENS_API_URL=/api npm run build
+ADDIN_BASE_URL=https://<node-name>.<tailnet>.ts.net npm run manifest:prod
+```
+
+Then route both under that one hostname:
+
+```bash
+tailscale serve --bg --set-path=/api http://localhost:4000/api
+tailscale serve --bg --set-path=/ ./dist
+tailscale serve status
+```
+
+`--set-path` **strips** the mount prefix before forwarding — the proxy
+target must already include `/api` (`http://localhost:4000/api`, not
+`http://localhost:4000`) or every request 404s as `Cannot POST /analyze`
+once it reaches the backend. Same-origin means `OUTLOOK_ADDIN_ORIGINS` isn't
+load-bearing for browser CORS here, but still set it to the `.ts.net` origin
+for defense in depth.
+
+Grab the rendered manifest for sideloading:
+
+```powershell
+scp <vps-host>:/opt/fraudlens/outlook-addin/dist/manifest.xml .
+```
+
+Known gotchas hit in practice:
+- Upgrading Node after `npm ci`/`npm install` orphans `better-sqlite3`'s
+  native binary (`NODE_MODULE_VERSION` mismatch) — rebuild from source, a
+  plain `npm rebuild` without `--build-from-source` can silently reuse the
+  stale prebuilt binary.
+- `pm2 start` doesn't dedupe by name across separate shell sessions; check
+  `pm2 list` for duplicate processes fighting over the same port before
+  chasing a phantom crash loop.
+- Testing the public hostname with `curl` **from the VPS itself** is
+  unreliable (self-loopback routing/TLS SNI quirks); verify from a genuinely
+  separate machine.
+
+### Sideloading for testers (school/work Microsoft 365 accounts)
+
+School and work M365 tenants commonly block custom add-in sideloading for
+students/staff by default (an admin-center policy, not something fixable
+client-side). If `https://aka.ms/olksideload` shows no **Custom Addins**
+option, either get IT to enable custom add-ins for the account, or sideload
+against a personal `outlook.com` account instead for the demo.
+
+Sideload steps once you have `dist/manifest.xml`:
+
+1. Go to `https://aka.ms/olksideload` — opens Outlook on the web and pops
+   the **Add-Ins for Outlook** dialog.
+2. **My add-ins** → **Custom Addins** → **Add a custom add-in** →
+   **Add from File** → pick `manifest.xml`.
+3. Open a received email (task pane only loads on the Read form) and check
+   the ribbon, including the `...` overflow menu, for **FraudLens** →
+   **Analyse email**.
 
 ## Request shape
 
