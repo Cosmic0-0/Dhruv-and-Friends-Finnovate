@@ -1,0 +1,299 @@
+{
+  "label": "after",
+  "node": "v24.14.1",
+  "fixtures": {
+    "fraudCases": 88,
+    "languageCases": 36,
+    "status": "draft_generated/synthetic_claude - not human reviewed"
+  },
+  "fraud": {
+    "all": {
+      "cases": 88,
+      "casesPassed": 84,
+      "casePassRate": 95.5,
+      "expectedSignalRecall": 97.3,
+      "forbiddenSignalViolations": "1/42",
+      "legitCases": 29,
+      "legitLevelFalsePositiveRate": 3.4
+    },
+    "bySplit": {
+      "dev": {
+        "cases": 54,
+        "casesPassed": 54,
+        "casePassRate": 100,
+        "expectedSignalRecall": 100,
+        "forbiddenSignalViolations": "0/26",
+        "legitCases": 18,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "heldout": {
+        "cases": 34,
+        "casesPassed": 30,
+        "casePassRate": 88.2,
+        "expectedSignalRecall": 92.3,
+        "forbiddenSignalViolations": "1/16",
+        "legitCases": 11,
+        "legitLevelFalsePositiveRate": 9.1
+      }
+    },
+    "kreolSubset": {
+      "cases": 80,
+      "casesPassed": 76,
+      "casePassRate": 95,
+      "expectedSignalRecall": 97.1,
+      "forbiddenSignalViolations": "1/37",
+      "legitCases": 25,
+      "legitLevelFalsePositiveRate": 4
+    },
+    "englishFrenchControls": {
+      "cases": 8,
+      "casesPassed": 8,
+      "casePassRate": 100,
+      "expectedSignalRecall": 100,
+      "forbiddenSignalViolations": "0/5",
+      "legitCases": 4,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "byFamily": {
+      "scam_request": {
+        "cases": 24,
+        "casesPassed": 22,
+        "casePassRate": 91.7,
+        "expectedSignalRecall": 95.6,
+        "forbiddenSignalViolations": "0/0",
+        "legitCases": 0,
+        "legitLevelFalsePositiveRate": null
+      },
+      "legitimate_warning": {
+        "cases": 12,
+        "casesPassed": 11,
+        "casePassRate": 91.7,
+        "expectedSignalRecall": null,
+        "forbiddenSignalViolations": "1/17",
+        "legitCases": 12,
+        "legitLevelFalsePositiveRate": 8.3
+      },
+      "legitimate_notice": {
+        "cases": 6,
+        "casesPassed": 6,
+        "casePassRate": 100,
+        "expectedSignalRecall": null,
+        "forbiddenSignalViolations": "0/12",
+        "legitCases": 6,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "negation": {
+        "cases": 10,
+        "casesPassed": 10,
+        "casePassRate": 100,
+        "expectedSignalRecall": 100,
+        "forbiddenSignalViolations": "0/6",
+        "legitCases": 6,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "conditional_threat": {
+        "cases": 8,
+        "casesPassed": 7,
+        "casePassRate": 87.5,
+        "expectedSignalRecall": 92.9,
+        "forbiddenSignalViolations": "0/0",
+        "legitCases": 0,
+        "legitLevelFalsePositiveRate": null
+      },
+      "code_switch": {
+        "cases": 10,
+        "casesPassed": 10,
+        "casePassRate": 100,
+        "expectedSignalRecall": 100,
+        "forbiddenSignalViolations": "0/5",
+        "legitCases": 3,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "orthographic_variant": {
+        "cases": 18,
+        "casesPassed": 18,
+        "casePassRate": 100,
+        "expectedSignalRecall": 100,
+        "forbiddenSignalViolations": "0/2",
+        "legitCases": 2,
+        "legitLevelFalsePositiveRate": 0
+      }
+    },
+    "negation": {
+      "cases": 10,
+      "casesPassed": 10,
+      "casePassRate": 100,
+      "expectedSignalRecall": 100,
+      "forbiddenSignalViolations": "0/6",
+      "legitCases": 6,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "conditionalThreat": {
+      "cases": 8,
+      "casesPassed": 7,
+      "casePassRate": 87.5,
+      "expectedSignalRecall": 92.9,
+      "forbiddenSignalViolations": "0/0",
+      "legitCases": 0,
+      "legitLevelFalsePositiveRate": null
+    },
+    "codeSwitch": {
+      "cases": 10,
+      "casesPassed": 10,
+      "casePassRate": 100,
+      "expectedSignalRecall": 100,
+      "forbiddenSignalViolations": "0/5",
+      "legitCases": 3,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "orthographicVariantGroups": {
+      "groups": 6,
+      "consistent": 6,
+      "consistentAndCorrect": 6,
+      "detail": [
+        {
+          "group": "var-01",
+          "split": "dev",
+          "members": 4,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-02",
+          "split": "dev",
+          "members": 3,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-03",
+          "split": "dev",
+          "members": 3,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-04",
+          "split": "heldout",
+          "members": 4,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-05",
+          "split": "heldout",
+          "members": 2,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-06",
+          "split": "heldout",
+          "members": 2,
+          "consistent": true,
+          "allPass": true
+        }
+      ]
+    }
+  },
+  "languageClassification": {
+    "all": {
+      "cases": 36,
+      "primaryAccuracy": 97.2,
+      "mixedDetectionAccuracy": 100,
+      "languageSetAccuracy": 100,
+      "kreolRecall": 100
+    },
+    "dev": {
+      "cases": 22,
+      "primaryAccuracy": 100,
+      "mixedDetectionAccuracy": 100,
+      "languageSetAccuracy": 100,
+      "kreolRecall": 100
+    },
+    "heldout": {
+      "cases": 14,
+      "primaryAccuracy": 92.9,
+      "mixedDetectionAccuracy": 100,
+      "languageSetAccuracy": 100,
+      "kreolRecall": 100
+    }
+  },
+  "entityPreservation": {
+    "entitiesExpected": 9,
+    "entitiesProtected": 9,
+    "protectedPct": 100,
+    "roundTripExact": "4/4",
+    "alteredEntityRejected": "9/9"
+  },
+  "failures": [
+    {
+      "id": "KE-S17",
+      "split": "heldout",
+      "family": "scam_request",
+      "message": "Sef, mo dan enn problem. Kapav ou avoy mwa Rs 4,000 lor sa nimero la? Pa dir mo fami.",
+      "missing": [
+        "SOC-03"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-S21",
+      "split": "heldout",
+      "family": "scam_request",
+      "message": "Dernie avertisman: ou pou pey enn penalite si ou pa reponn.",
+      "missing": [
+        "SOC-01"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-L18",
+      "split": "heldout",
+      "family": "legitimate_warning",
+      "message": "Eskrok pou dir ou partaz ou kod. Pa fer sa.",
+      "missing": [],
+      "forbidden": [
+        "SEC-01"
+      ],
+      "level": "elevated"
+    },
+    {
+      "id": "KE-C06",
+      "split": "heldout",
+      "family": "conditional_threat",
+      "message": "Si ou pa reponn, nou pou fer aksion legal kont ou.",
+      "missing": [
+        "SOC-02"
+      ],
+      "forbidden": [],
+      "level": "low"
+    }
+  ],
+  "languageMisses": [
+    {
+      "id": "KL-32",
+      "text": "Ou compte inn bloké. Envoyez mwa ou code de vérification.",
+      "expected": [
+        "mfe",
+        true
+      ],
+      "got": {
+        "primary": "fr",
+        "languages": [
+          "fr",
+          "mfe"
+        ],
+        "mixed": true,
+        "scores": {
+          "mfe": 3,
+          "en": 0,
+          "fr": 4.5
+        },
+        "kreolStrong": 2
+      }
+    }
+  ]
+}

@@ -94,7 +94,7 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
     "rulesetVersion": "rs-1.3",
     "source": "pasted_text" | "screenshot" | "batch" | "email",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.1", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0" },
+    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.1", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0" },
     "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.1", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
