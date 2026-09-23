@@ -1,0 +1,36 @@
+/* Learn quiz's "Scam or genuine?" buttons (Learn.dc.html): rectangular, not
+   pill-shaped, with a tone-tinted hover the base dc Pill doesn't support. */
+.btn {
+  height: 64px;
+  border-radius: 20px;
+  border: 1px solid var(--dc-line-strong);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--dc-ink);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.btn:disabled {
+  cursor: default;
+}
+.scam:hover:not(:disabled) {
+  background: var(--dc-red-hl);
+}
+.genuine:hover:not(:disabled) {
+  background: var(--dc-green-hl);
+}
+.scamChosen {
+  background: var(--dc-red-hl);
+}
+.genuineChosen {
+  background: var(--dc-green-hl);
+}
+.dimmed {
+  opacity: 0.4;
+}

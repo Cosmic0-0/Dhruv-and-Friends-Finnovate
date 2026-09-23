@@ -1,7 +1,7 @@
 {
-  "eyebrow": "BEFORE YOU PAY",
-  "title": "Check who you're paying",
-  "lede": "However they got in touch, check the number, account or IBAN before you send money. This looks at report history and whether it's correctly formatted — never at who really owns it.",
+  "eyebrow": "TOOL · BEFORE PAYING",
+  "title": "Check before you pay",
+  "lede": "About to send money to someone new? Enter who you're paying and we'll check them against reported fraud and the details they gave you.",
   "formLabel": "Payment details",
   "methodLabel": "How are you paying?",
   "methods": { "phone": "Juice / phone", "bank_account": "Bank account", "iban": "IBAN" },
@@ -13,8 +13,18 @@
   },
   "nameLabel": "Name they gave you",
   "namePlaceholder": "Optional",
-  "amountLabel": "Amount (Rs)",
+  "amountLabel": "Amount",
   "amountPlaceholder": "0",
+  "amountPrefix": "Rs",
+  "idleCard": {
+    "title": "What this check does",
+    "items": [
+      "Report history for this number or account",
+      "Whether the number, account or IBAN is correctly formatted",
+      "Guidance based on the purpose and amount you enter"
+    ],
+    "note": "We never move money or contact the person you're paying."
+  },
   "reasonLabel": "What is it for?",
   "reasons": {
     "car": "Car / vehicle",

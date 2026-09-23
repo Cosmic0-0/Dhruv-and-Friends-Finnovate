@@ -17,10 +17,11 @@ import { DAILY_GOAL, recordAnswer, visibleStreak, weekHistory, type Mistake, typ
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
-import { ChartIcon, CheckIcon, PersonIcon, WarningIcon } from "../icons";
+import { CheckIcon } from "../icons";
 import Celebration from "./Celebration";
 import StreakCards from "./StreakCards";
 import { learnCopy, fill, type LearnCopy } from "./content";
+import styles from "./AnswerButtons.module.css";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
@@ -46,10 +47,12 @@ function senderLabel(item: QuizItem, genuineLabel: string): string {
 }
 
 /**
- * Learn tab, restyled to the Claude Design system (components/dc). Fully
- * client-side over build-time corpus data: no API call. A round is exactly
- * DAILY_GOAL (5) questions, so the quiz card's own position counter and the
- * daily-goal bar always agree.
+ * Learn tab, styled to Learn.dc.html: header with title + 3 stat tiles,
+ * a 1.6fr/1fr split (quiz card | "This week" + "Rule of thumb"), then a
+ * full-width "Common scam patterns" section. Fully client-side over
+ * build-time corpus data: no API call. A round is exactly DAILY_GOAL (5)
+ * questions, so the quiz card's own position counter and the daily-goal
+ * bar always agree.
  */
 export default function LearnScreen({ items, trends }: { items: QuizItem[]; trends: TrendCard[] }) {
   const { lang, copy, ready } = useLanguage();
@@ -71,38 +74,19 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
   const done = state ? Math.min(state.today.answered, DAILY_GOAL) : 0;
-  const week = state ? weekHistory(state, today) : [];
 
   return (
     <>
-      <DcPage label="learn" maxWidth={1180} gap={36}>
-        <PageHeader eyebrow={t.eyebrow} title={t.title} lede={t.lede} titleSize={48} />
+      <DcPage label="learn" gap={56}>
+        <PageHeader
+          eyebrow={t.eyebrow}
+          title={t.title}
+          lede={t.lede}
+          titleSize={60}
+          aside={ready && state ? <StreakCards state={state} t={t} /> : undefined}
+        />
 
-        {ready && state && <StreakCards state={state} today={today} t={t} />}
-
-        {ready && state && (
-          <div style={{ ...card(28), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 10 }} data-fx>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--dc-ink)" }}>{t.goal.title}</span>
-              <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>
-                {done >= DAILY_GOAL ? t.goal.done : fill(t.goal.more, { n: DAILY_GOAL - done })}
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: 6 }}>
-              {Array.from({ length: DAILY_GOAL }, (_, i) => (
-                <span
-                  key={i}
-                  aria-hidden="true"
-                  style={{ height: 6, flex: 1, borderRadius: 3, background: i < done ? "var(--dc-accent)" : "var(--dc-line2)" }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {ready && state && <WeekStrip week={week} t={t} />}
-
-        <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.15fr) minmax(0,0.85fr)", gap: 20, alignItems: "start" }}>
+        <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 20, alignItems: "start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
             {!ready ? (
               <div style={{ ...card(32), minHeight: 320 }} aria-hidden="true" />
@@ -144,15 +128,15 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
               </>
             )}
             <p style={{ padding: "0 4px", fontSize: 13, color: "var(--dc-text3)" }}>{copy.learn.syntheticNote}</p>
-
-            <div style={{ ...card(28), padding: 24, display: "flex", flexDirection: "column", gap: 10 }} data-fx>
-              <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t.rule.title}</h2>
-              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.55, color: "var(--dc-text2)" }}>{t.rule.body}</p>
-            </div>
           </div>
 
-          <Patterns trends={trends} copy={copy} t={t} />
+          <div className="dc-sticky" style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 92 }}>
+            {ready && state && <WeekCard state={state} today={today} t={t} />}
+            <RuleCard t={t} />
+          </div>
         </div>
+
+        <PatternsSection trends={trends} items={items} copy={copy} t={t} />
 
         {process.env.NODE_ENV === "development" && (
           <DevTools
@@ -174,38 +158,66 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
   );
 }
 
-function WeekStrip({ week, t }: { week: ReturnType<typeof weekHistory>; t: LearnCopy }) {
+/** "This week" card (Learn.dc.html aside): 7 day squares + the daily-goal bar. */
+function WeekCard({ state, today, t }: { state: StreakState; today: string; t: LearnCopy }) {
   const WD = ["S", "M", "T", "W", "T", "F", "S"];
+  const week = weekHistory(state, today);
+  const streak = visibleStreak(state, today);
+  const done = Math.min(state.today.answered, DAILY_GOAL);
+  const pct = Math.min(100, Math.round((done / DAILY_GOAL) * 100));
+
   return (
-    <div style={{ ...card(28), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }} data-fx>
-      <span style={{ fontSize: 14, fontWeight: 600, color: "var(--dc-ink)" }}>{t.week.title}</span>
-      <div style={{ display: "flex", gap: 10 }}>
+    <div style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 22 }} data-fx>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t.week.title}</h2>
+        <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{streak > 0 ? fill(t.week.streakLine, { n: streak }) : t.stats.noStreak}</span>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
         {week.map((d) => {
           const dow = new Date(`${d.day}T00:00:00`).getDay();
+          const isToday = d.day === today;
           return (
             <div key={d.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
               <div
                 aria-hidden="true"
                 style={{
-                  width: "100%",
+                  width: 36,
                   height: 36,
-                  borderRadius: 10,
+                  borderRadius: 12,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  background: d.goalMet ? "var(--dc-accent)" : d.answered > 0 ? "var(--dc-accent-soft)" : "var(--dc-hover)",
-                  color: d.goalMet ? "var(--dc-surface)" : "var(--dc-text3)",
-                  fontSize: 12,
-                  fontWeight: 600,
+                  background: d.goalMet ? "var(--dc-accent)" : "var(--dc-hover)",
+                  color: "#fff",
+                  outline: isToday ? "1.5px solid var(--dc-accent)" : "none",
+                  outlineOffset: isToday ? 2 : 0,
                 }}
               >
-                {d.answered > 0 ? d.answered : ""}
+                {d.goalMet && <CheckIcon className="size-4" strokeWidth={2.5} />}
               </div>
-              <span style={{ fontSize: 11, color: "var(--dc-text3)" }}>{WD[dow]}</span>
+              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{WD[dow]}</span>
             </div>
           );
         })}
       </div>
+      <div style={{ borderTop: "1px solid var(--dc-line2)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <span style={{ fontSize: 14, color: "var(--dc-text2)" }}>{t.week.dailyGoal}</span>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>{done}/{DAILY_GOAL}</span>
+        </div>
+        <div style={{ height: 8, borderRadius: 4, background: "var(--dc-hover)" }}>
+          <div style={{ height: 8, borderRadius: 4, width: `${pct}%`, background: "var(--dc-accent)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RuleCard({ t }: { t: LearnCopy }) {
+  return (
+    <div style={{ background: "var(--dc-accent-soft)", borderRadius: 32, padding: 28, display: "flex", flexDirection: "column", gap: 10 }} data-fx>
+      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--dc-accent)" }}>{t.rule.title}</span>
+      <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}>{t.rule.body}</span>
     </div>
   );
 }
@@ -300,7 +312,7 @@ function Quiz({
   if (finished) {
     const doneForToday = !goalMet; // this round is the one that met (or re-confirms) today's goal
     return (
-      <section ref={cardRef} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 14 }} aria-live="polite">
+      <section ref={cardRef} style={{ ...card(32, true), padding: "36px 40px 40px", display: "flex", flexDirection: "column", gap: 14 }} aria-live="polite">
         <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{doneForToday ? t.doneToday : L.scoreLabel}</p>
         <p className="dc-mono" style={{ margin: 0, fontFamily: MONO, fontSize: 44, fontWeight: 700, lineHeight: 1, color: "var(--dc-ink)" }}>
           {score} <span style={{ fontSize: 18, fontWeight: 500, color: "var(--dc-text3)" }}>/ {round.length}</span>
@@ -348,52 +360,91 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 16 }} aria-labelledby="quiz-label">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span id="quiz-label" className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-accent)", letterSpacing: "0.04em" }}>
-            {`MESSAGE ${index + 1} OF ${round.length}`.toUpperCase()}
-          </span>
-        </div>
+    <section ref={cardRef} style={{ ...card(32, true), padding: "36px 40px 40px", display: "flex", flexDirection: "column", gap: 28 }} aria-labelledby="quiz-label">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <span id="quiz-label" className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-accent)", letterSpacing: "0.04em" }}>
+          {`MESSAGE ${index + 1} OF ${round.length}`.toUpperCase()}
+        </span>
         <div style={{ display: "flex", gap: 6 }} aria-hidden="true">
           {Array.from({ length: round.length }, (_, i) => (
-            <span key={i} style={{ height: 5, flex: 1, borderRadius: 3, background: i <= index ? "var(--dc-accent)" : "var(--dc-line2)" }} />
+            <span
+              key={i}
+              style={{
+                width: 28,
+                height: 6,
+                borderRadius: 999,
+                background: i < index ? "var(--dc-accent)" : i === index ? "var(--dc-ink)" : "var(--dc-line-strong)",
+              }}
+            />
           ))}
         </div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, padding: "4px 10px", borderRadius: 999, background: "var(--dc-hover)", color: "var(--dc-text2)" }}>
-          {senderLabel(item, t.senderGenuine)}
-        </span>
-        {item.languageMix !== lang && item.languageMix !== "en" && (
-          <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{item.languageMix}</span>
-        )}
+      <div style={{ background: "var(--dc-bg)", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "var(--dc-line-strong)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "var(--dc-ink)",
+              flexShrink: 0,
+            }}
+          >
+            {senderLabel(item, t.senderGenuine).charAt(0).toUpperCase()}
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 500 }}>{senderLabel(item, t.senderGenuine)}</span>
+            {item.languageMix !== lang && item.languageMix !== "en" && (
+              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{item.languageMix}</span>
+            )}
+          </div>
+        </div>
+
+        <blockquote
+          key={item.id}
+          lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
+          style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: "6px 22px 22px 22px", padding: "16px 20px", fontSize: 18, lineHeight: 1.5, fontWeight: 500, maxWidth: 540, overflowWrap: "anywhere" }}
+        >
+          &ldquo;{item.text}&rdquo;
+        </blockquote>
       </div>
 
-      <blockquote
-        key={item.id}
-        lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: 20, padding: "16px 18px", fontSize: 17, lineHeight: 1.5, fontWeight: 500, overflowWrap: "anywhere" }}
-      >
-        &ldquo;{item.text}&rdquo;
-      </blockquote>
+      {!answer && <span style={{ fontSize: 22, fontWeight: 600 }}>{t.question}</span>}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {([true, false] as const).map((isScamButton) => {
           const chosen = answer?.choseScam === isScamButton;
+          const cls = [
+            styles.btn,
+            isScamButton ? styles.scam : styles.genuine,
+            chosen ? (isScamButton ? styles.scamChosen : styles.genuineChosen) : "",
+            answer && !chosen ? styles.dimmed : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           return (
-            <Pill
+            <button
               key={String(isScamButton)}
               type="button"
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
-              variant={isScamButton ? "ink" : "outline"}
-              height={52}
-              style={{ width: "100%", opacity: answer && !chosen ? 0.4 : 1, boxShadow: chosen ? "0 0 0 2px var(--dc-accent)" : "none" }}
+              className={cls}
+              style={{ width: "100%", boxShadow: chosen ? "0 0 0 2px var(--dc-accent)" : "none" }}
             >
+              <span
+                aria-hidden="true"
+                style={{ width: 8, height: 8, borderRadius: "50%", background: isScamButton ? TONE.red.dot : TONE.green.dot }}
+              />
               {isScamButton ? L.scam : L.genuine}
-            </Pill>
+            </button>
           );
         })}
       </div>
@@ -419,25 +470,30 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
   const tone = item.isScam ? TONE.red : TONE.green;
 
   return (
-    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 10, background: tone.hl, borderRadius: 18, padding: 16 }}>
-      <p style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>
-        <span style={{ color: answer.correct ? "var(--dc-green)" : "var(--dc-red)" }}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
-        {item.isScam ? L.isScam : L.isGenuine}
-      </p>
+    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 16, background: tone.hl, borderRadius: 24, padding: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <span
+          aria-hidden="true"
+          style={{ width: 48, height: 48, borderRadius: 16, background: "var(--dc-surface)", color: tone.fg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, flexShrink: 0 }}
+        >
+          {item.isScam ? "✕" : "✓"}
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontSize: 22, fontWeight: 600, color: tone.fg }}>{item.isScam ? L.isScam : L.isGenuine}</span>
+          <span style={{ fontSize: 15, color: "var(--dc-text2)" }}>{answer.correct ? L.correct : L.incorrect}</span>
+        </div>
+      </div>
       {reasons.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text3)" }}>{L.whyLabel}</p>
-          <ul style={{ display: "flex", flexDirection: "column", gap: 6, margin: 0, padding: 0, listStyle: "none" }}>
-            {reasons.map((r) => (
-              <li key={r} style={{ display: "flex", alignItems: "flex-start", gap: 10, fontSize: 14, lineHeight: 1.4 }}>
-                {item.isScam ? (
-                  <span aria-hidden="true" style={{ marginTop: 6, width: 6, height: 6, borderRadius: "50%", background: "var(--dc-red)", flexShrink: 0 }} />
-                ) : (
-                  <span aria-hidden="true" style={{ marginTop: 2, color: "var(--dc-green)", display: "inline-flex", flexShrink: 0 }}>
-                    <CheckIcon className="size-4" strokeWidth={2.5} />
-                  </span>
-                )}
-                {r}
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--dc-text3)" }}>{L.whyLabel}</p>
+          <ul style={{ display: "flex", flexDirection: "column", margin: 0, padding: 0, listStyle: "none" }}>
+            {reasons.map((r, i) => (
+              <li
+                key={r}
+                style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 8, fontSize: 16, lineHeight: 1.4, padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--dc-line2)" }}
+              >
+                <span className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-text3)" }}>{String(i + 1).padStart(2, "0")}</span>
+                <span>{r}</span>
               </li>
             ))}
           </ul>
@@ -452,45 +508,65 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
   );
 }
 
-const TAG_TONE: Record<TrendCard["category"], { tone: typeof TONE.red; Icon: typeof WarningIcon }> = {
-  parcel_fee: { tone: TONE.amber, Icon: WarningIcon },
-  fake_relative: { tone: TONE.red, Icon: PersonIcon },
-  investment: { tone: TONE.green, Icon: ChartIcon },
+const TAG_TONE: Record<TrendCard["category"], typeof TONE.red> = {
+  parcel_fee: TONE.amber,
+  fake_relative: TONE.red,
+  investment: TONE.green,
 };
 
-/** "Common scam patterns": each row's example is a real corpus row, its language tag the item's own languageMix. */
-function Patterns({ trends, copy, t }: { trends: TrendCard[]; copy: Copy; t: LearnCopy }) {
+/**
+ * "Common scam patterns" (Learn.dc.html): a full-width section below the
+ * quiz, 3 real corpus examples (loaded server-side by /learn). Bullet lines
+ * are the real copy sentence-split, never padded with invented facts.
+ */
+function PatternsSection({ trends, items, copy, t }: { trends: TrendCard[]; items: QuizItem[]; copy: Copy; t: LearnCopy }) {
   const L = copy.learn;
   return (
-    <section className="dc-sticky" style={{ ...card(32), padding: 24, display: "flex", flexDirection: "column", gap: 18, position: "sticky", top: 92 }} data-fx>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{t.patterns.title}</h2>
+    <section data-fx>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h2 style={{ margin: 0, fontSize: 36, fontWeight: 600, letterSpacing: "-0.03em" }}>{t.patterns.title}</h2>
+          <p style={{ margin: 0, fontSize: 16, color: "var(--dc-text2)" }}>{t.patterns.sub}</p>
+        </div>
+        <Pill href="/trends" variant="ghost" height={36} pad={0}>
+          {t.patterns.seeAll} →
+        </Pill>
       </div>
-      <ul style={{ display: "flex", flexDirection: "column", gap: 16, margin: 0, padding: 0, listStyle: "none" }}>
+      <div className="dc-cols-1" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 20 }}>
         {trends.map((tr) => {
-          const tone = TAG_TONE[tr.category].tone;
-          const Icon = TAG_TONE[tr.category].Icon;
+          const tone = TAG_TONE[tr.category];
+          const sourceItem = tr.example ? items.find((i) => i.id === tr.example!.id) : undefined;
+          const bullets = L.trends[tr.category].body.split(/(?<=[.!?])\s+/).filter(Boolean);
           return (
-            <li key={tr.category} style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 4, borderTop: "1px solid var(--dc-line2)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 12 }}>
-                <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: "50%", background: tone.hl, color: tone.fg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <Icon className="size-[15px]" strokeWidth={2} />
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 500 }}>{L.trends[tr.category].tag}</span>
+            <div key={tr.category} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 16 }} data-fx>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ fontSize: 22, fontWeight: 600 }}>{L.trends[tr.category].tag}</span>
+                {sourceItem && (
+                  <span
+                    className="dc-mono"
+                    style={{ fontFamily: MONO, fontSize: 11, color: "var(--dc-text3)", background: "var(--dc-hover)", padding: "4px 8px", borderRadius: 999, flexShrink: 0 }}
+                  >
+                    {sourceItem.languageMix.toUpperCase()}
+                  </span>
+                )}
               </div>
               {tr.example && (
-                <p style={{ margin: 0, background: "var(--dc-hover)", borderRadius: 14, padding: "10px 14px", fontSize: 13, lineHeight: 1.5, color: "var(--dc-text2)", overflowWrap: "anywhere" }}>
+                <p style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: 14, padding: "12px 16px", fontSize: 15, lineHeight: 1.5, overflowWrap: "anywhere" }}>
                   &ldquo;{tr.example.text}&rdquo;
                 </p>
               )}
-              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--dc-text3)" }}>{L.trends[tr.category].body}</p>
-            </li>
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {bullets.map((b) => (
+                  <li key={b} style={{ display: "flex", gap: 8, fontSize: 14, lineHeight: 1.5, color: "var(--dc-text2)" }}>
+                    <span aria-hidden="true" style={{ color: tone.fg }}>•</span>
+                    {b}
+                  </li>
+                ))}
+              </ul>
+            </div>
           );
         })}
-      </ul>
-      <Pill href="/trends" variant="outline" height={44} style={{ width: "100%" }}>
-        {t.patterns.seeAll}
-      </Pill>
+      </div>
     </section>
   );
 }

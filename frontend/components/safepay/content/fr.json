@@ -1,7 +1,7 @@
 {
-  "eyebrow": "AVANT DE PAYER",
-  "title": "Vérifiez qui vous payez",
-  "lede": "Quel que soit le contact, vérifiez le numéro, le compte ou l'IBAN avant d'envoyer de l'argent. Ceci vérifie l'historique des signalements et si le format est correct — jamais qui en est réellement le titulaire.",
+  "eyebrow": "OUTIL · AVANT DE PAYER",
+  "title": "Vérifiez avant de payer",
+  "lede": "Vous vous apprêtez à envoyer de l'argent à quelqu'un de nouveau ? Indiquez qui vous payez et nous le vérifierons par rapport aux signalements de fraude et aux détails qu'on vous a donnés.",
   "formLabel": "Détails du paiement",
   "methodLabel": "Comment payez-vous ?",
   "methods": { "phone": "Juice / téléphone", "bank_account": "Compte bancaire", "iban": "IBAN" },
@@ -13,8 +13,18 @@
   },
   "nameLabel": "Nom qu'on vous a donné",
   "namePlaceholder": "Facultatif",
-  "amountLabel": "Montant (Rs)",
+  "amountLabel": "Montant",
   "amountPlaceholder": "0",
+  "amountPrefix": "Rs",
+  "idleCard": {
+    "title": "Ce que cette vérification fait",
+    "items": [
+      "L'historique des signalements pour ce numéro ou ce compte",
+      "Si le numéro, le compte ou l'IBAN est correctement formaté",
+      "Des conseils selon le motif et le montant que vous indiquez"
+    ],
+    "note": "Nous ne déplaçons jamais d'argent et ne contactons jamais la personne que vous payez."
+  },
   "reasonLabel": "C'est pour quoi ?",
   "reasons": {
     "car": "Voiture / véhicule",

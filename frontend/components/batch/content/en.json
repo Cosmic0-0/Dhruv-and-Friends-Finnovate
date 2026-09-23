@@ -1,7 +1,7 @@
 {
-  "eyebrow": "BATCH SCAN",
-  "title": "Check several messages at once",
-  "lede": "Paste a handful of texts or upload screenshots, and scan them together. Each one gets the same real analysis as a single check.",
+  "eyebrow": "TOOL · BATCH SCAN",
+  "title": "Batch scan",
+  "lede": "Paste several messages, one per line, or upload screenshots. Each gets its own verdict.",
   "modes": { "paste": "Paste messages", "screenshots": "Upload screenshots" },
   "paste": {
     "label": "Messages to scan",
@@ -25,7 +25,7 @@
     "genuine": "Genuine",
     "unanalysed": "{n} of these could not be analysed and should be treated with caution."
   },
-  "results": { "title": "Results", "filtered": "filtered", "clear": "Clear filter" },
+  "results": { "title": "Results", "filtered": "filtered", "clear": "Clear filter", "placeholder": "Your results will appear here, one row per message." },
   "row": { "screenshot": "Screenshot {n}", "line": "Line {n}", "open": "Open full result" },
   "empty": { "title": "Nothing scanned yet.", "body": "Paste a few messages or upload screenshots above, then scan them together." },
   "errors": {

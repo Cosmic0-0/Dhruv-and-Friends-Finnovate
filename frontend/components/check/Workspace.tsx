@@ -7,7 +7,7 @@ import { redact } from "@/lib/redact";
 import { addRecentCheck, saveResult, type StoredResult } from "@/lib/storage";
 import { MAX_MESSAGE_LENGTH, type Channel, type CheckUrlResponse } from "@/lib/types";
 import { useLanguage } from "../LanguageProvider";
-import { card, chipStyle, IdlePanel, MONO, Pill, Seg } from "../dc";
+import { card, chipStyle, MONO, Pill } from "../dc";
 import { ScreenshotRow, useScreenshot } from "../ScreenshotUpload";
 import { SUCCESS_DELAY_MS, useWaitStage, WaitFill } from "../WaitProgress";
 import { fill, type CheckCopy } from "./content";
@@ -162,6 +162,20 @@ export default function Workspace({
     .filter(Boolean)
     .join(" · ");
 
+  const TABS: { id: Mode | "document"; label: string }[] = [
+    { id: "message", label: t.work.modes.message },
+    { id: "link", label: t.work.modes.link },
+    { id: "screenshot", label: t.work.modes.screenshot },
+    { id: "document", label: t.work.modes.document },
+  ];
+
+  const anyLoading = loading || linkStatus === "loading";
+  const primaryLabel =
+    mode === "link" ? (linkStatus === "loading" ? `${t.work.checkLink}…` : t.work.checkLink) : loading ? `${t.work.check}…` : t.work.check;
+  const primaryDisabled =
+    mode === "link" ? !linkText.trim() || linkStatus === "loading" : mode === "screenshot" ? shot.state.phase !== "done" || loading : !text.trim() || loading;
+  const primaryOnClick = mode === "link" ? () => void submitLink() : mode === "screenshot" ? () => void submitMessage(screenshotText) : () => void submitMessage();
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
       <button
@@ -172,164 +186,180 @@ export default function Workspace({
         {t.work.back}
       </button>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 680 }}>
-        <h1 className="dc-h1" style={{ margin: 0, fontSize: 44, lineHeight: 1.02, fontWeight: 600, letterSpacing: "-0.04em" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 680 }}>
+        <h1 className="dc-h1" style={{ margin: 0, fontSize: 68, lineHeight: 1, fontWeight: 600, letterSpacing: "-0.04em" }}>
           {t.work.titleA}
-          <em style={{ fontStyle: "normal", color: "var(--dc-accent)" }}>{t.work.titleB}</em>
+          <span style={{ color: "var(--dc-text3)" }}>{t.work.titleB}</span>
           {t.work.titleC}
         </h1>
-        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.6, color: "var(--dc-text2)" }}>{t.work.lede}</p>
+        <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: "var(--dc-text2)" }}>{t.work.lede}</p>
       </div>
 
-      <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 20, alignItems: "start" }}>
-        {/* Input card */}
-        <section style={{ ...card(32, true), padding: 28, display: "flex", flexDirection: "column", gap: 18 }} data-fx>
-          <Seg
-            options={[
-              { id: "message", label: t.work.modes.message },
-              { id: "link", label: t.work.modes.link },
-              { id: "screenshot", label: t.work.modes.screenshot },
-              { id: "document", label: t.work.modes.document },
-            ]}
-            value={mode === "message" ? "message" : mode === "link" ? "link" : "screenshot"}
-            onChange={(v) => (v === "document" ? router.push("/document") : setMode(v as Mode))}
-          />
+      <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.15fr)", gap: 48, alignItems: "start" }}>
+        {/* LEFT: input card + controls, sticky */}
+        <div className="dc-sticky" style={{ position: "sticky", top: 108, display: "flex", flexDirection: "column", gap: 20 }}>
+          <section style={{ ...card(28, true), overflow: "hidden" }} data-fx>
+            <div style={{ display: "flex", gap: 24, padding: "18px 28px 0", borderBottom: "1px solid var(--dc-line2)" }}>
+              {TABS.map((tab) => {
+                const active = tab.id === mode;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => (tab.id === "document" ? router.push("/document") : setMode(tab.id as Mode))}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: 14,
+                      padding: "0 0 14px",
+                      marginBottom: -1,
+                      color: active ? "var(--dc-ink)" : "var(--dc-text3)",
+                      borderBottom: active ? "1.5px solid var(--dc-ink)" : "1.5px solid transparent",
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
 
-          {mode === "message" && (
-            <>
-              <textarea
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={t.work.placeholder}
-                rows={7}
-                style={{
-                  resize: "vertical",
-                  border: "1px solid var(--dc-line)",
-                  borderRadius: 20,
-                  padding: 16,
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  background: "var(--dc-hover)",
-                  color: "var(--dc-ink)",
-                  outline: "none",
-                  fontFamily: "inherit",
-                }}
-              />
-              {metaText && <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{metaText}</span>}
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{t.work.receivedBy}</span>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {CHANNELS.map((c) => (
-                    <button key={c} type="button" style={chipStyle(channel === c)} onClick={() => setChannel(channel === c ? null : c)}>
-                      {t.work.channels[c]}
-                    </button>
-                  ))}
+            {mode === "message" && (
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <textarea
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={t.work.placeholder}
+                  rows={7}
+                  style={{
+                    resize: "none",
+                    border: "none",
+                    outline: "none",
+                    padding: "28px 28px 20px",
+                    fontSize: 20,
+                    lineHeight: 1.55,
+                    background: "transparent",
+                    color: "var(--dc-ink)",
+                    fontFamily: "inherit",
+                    width: "100%",
+                  }}
+                />
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0 28px 20px" }}>
+                  <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{metaText || " "}</span>
+                  <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text4)" }}>{fill(t.work.meta.chars, { n: text.length })}</span>
                 </div>
               </div>
+            )}
 
-              {status === "error" && error && <ErrorNote message={error.message} />}
-
-              <div style={{ display: "flex", gap: 10 }}>
-                <Pill variant="ink" height={52} onClick={() => void submitMessage()} disabled={!text.trim() || loading} style={{ flex: 1 }}>
-                  {loading ? `${t.work.check}…` : t.work.check}
-                </Pill>
-                <Pill variant="outline" height={52} onClick={clearAll} disabled={loading}>
-                  {t.work.clear}
-                </Pill>
+            {mode === "link" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "24px 28px 24px" }}>
+                <input
+                  value={linkText}
+                  onChange={(e) => setLinkText(e.target.value)}
+                  placeholder={t.work.linkPlaceholder}
+                  style={{
+                    border: "none",
+                    outline: "none",
+                    padding: 0,
+                    fontSize: 20,
+                    lineHeight: 1.55,
+                    background: "transparent",
+                    color: "var(--dc-ink)",
+                    fontFamily: MONO,
+                    width: "100%",
+                  }}
+                />
+                <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.linkHint}</p>
               </div>
-              {loading && (
-                <LoadingRow label={t.work.loadingTitle} stage={stage} onCancel={cancel} progressLabel={copy.wait.progressLabel} cancelLabel={copy.wait.cancel} />
-              )}
+            )}
 
-              <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.privacy}</p>
-              <button
-                type="button"
-                onClick={() => router.push("/document")}
-                style={{ alignSelf: "flex-start", background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--dc-text2)", textDecoration: "underline", padding: 0 }}
-              >
-                {t.work.docInstead}
-              </button>
-            </>
-          )}
+            {mode === "screenshot" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: "24px 28px 24px" }}>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = "";
+                    if (file) void shot.pick(file);
+                  }}
+                />
+                <Pill variant="outline" height={48} onClick={() => fileRef.current?.click()} disabled={shot.busy} style={{ alignSelf: "flex-start" }}>
+                  {t.work.shotChoose}
+                </Pill>
+                <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.shotHint}</p>
+                <ScreenshotRow state={shot.state} copy={copy} onRemove={shot.remove} onRetry={shot.retry} onTypeInstead={() => setMode("message")} />
+                {shot.state.phase === "done" && <p style={{ margin: 0, fontSize: 13, color: "var(--dc-accent)" }}>{t.work.shotReady}</p>}
+              </div>
+            )}
+          </section>
 
-          {mode === "link" && (
-            <>
-              <input
-                value={linkText}
-                onChange={(e) => setLinkText(e.target.value)}
-                placeholder={t.work.linkPlaceholder}
-                style={{
-                  height: 52,
-                  border: "1px solid var(--dc-line)",
-                  borderRadius: 16,
-                  padding: "0 16px",
-                  fontSize: 15,
-                  background: "var(--dc-hover)",
-                  color: "var(--dc-ink)",
-                  outline: "none",
-                  fontFamily: MONO,
-                }}
-              />
-              <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.linkHint}</p>
-              {linkStatus === "error" && linkError && <ErrorNote message={linkError.message} />}
-              <Pill variant="ink" height={52} onClick={() => void submitLink()} disabled={!linkText.trim() || linkStatus === "loading"}>
-                {linkStatus === "loading" ? `${t.work.checkLink}…` : t.work.checkLink}
-              </Pill>
-              {linkStatus === "loading" && (
-                <LoadingRow label={t.work.loadingLink} stage={stage} onCancel={cancel} progressLabel={copy.wait.progressLabel} cancelLabel={copy.wait.cancel} />
-              )}
-            </>
-          )}
-
-          {mode === "screenshot" && (
-            <>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  e.target.value = "";
-                  if (file) void shot.pick(file);
-                }}
-              />
-              <Pill variant="outline" height={52} onClick={() => fileRef.current?.click()} disabled={shot.busy}>
-                {t.work.shotChoose}
-              </Pill>
-              <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.shotHint}</p>
-              <ScreenshotRow state={shot.state} copy={copy} onRemove={shot.remove} onRetry={shot.retry} onTypeInstead={() => setMode("message")} />
-              {shot.state.phase === "done" && (
-                <>
-                  <p style={{ margin: 0, fontSize: 13, color: "var(--dc-accent)" }}>{t.work.shotReady}</p>
-                  {status === "error" && error && <ErrorNote message={error.message} />}
-                  <Pill variant="ink" height={52} onClick={() => void submitMessage(screenshotText)} disabled={loading}>
-                    {loading ? `${t.work.check}…` : t.work.check}
-                  </Pill>
-                  {loading && (
-                    <LoadingRow label={t.work.loadingTitle} stage={stage} onCancel={cancel} progressLabel={copy.wait.progressLabel} cancelLabel={copy.wait.cancel} />
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </section>
-
-        {/* Right column: idle / loading / result */}
-        <div className="dc-sticky" style={{ position: "sticky", top: 92 }}>
-          {result ? (
-            <div style={{ ...card(32, true), padding: 32 }}>
-              <ResultArticle result={result} t={t} oldCopy={copy} lang={lang} />
+          {mode === "message" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{t.work.receivedBy}</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {CHANNELS.map((c) => (
+                  <button key={c} type="button" style={chipStyle(channel === c, 36)} onClick={() => setChannel(channel === c ? null : c)}>
+                    {t.work.channels[c]}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
+
+          {mode === "message" && status === "error" && error && <ErrorNote message={error.message} />}
+          {mode === "link" && linkStatus === "error" && linkError && <ErrorNote message={linkError.message} />}
+          {mode === "screenshot" && status === "error" && error && <ErrorNote message={error.message} />}
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <Pill variant="ink" height={56} onClick={primaryOnClick} disabled={primaryDisabled} style={{ flex: 1 }}>
+              {primaryLabel}
+            </Pill>
+            <Pill variant="outline" height={56} onClick={clearAll} disabled={anyLoading}>
+              {t.work.clear}
+            </Pill>
+          </div>
+
+          {((mode === "link" && linkStatus === "loading") || (mode !== "link" && loading)) && (
+            <LoadingRow
+              label={mode === "link" ? t.work.loadingLink : t.work.loadingTitle}
+              stage={stage}
+              onCancel={cancel}
+              progressLabel={copy.wait.progressLabel}
+              cancelLabel={copy.wait.cancel}
+            />
+          )}
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{t.work.privacy}</span>
+            <button
+              type="button"
+              onClick={() => router.push("/document")}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 13, color: "var(--dc-text2)", textDecoration: "underline", textDecorationColor: "var(--dc-underline)", textUnderlineOffset: 3, padding: 0 }}
+            >
+              {t.work.docInstead}
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT: idle / loading / result */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          {result ? (
+            <ResultArticle result={result} t={t} oldCopy={copy} lang={lang} />
           ) : mode === "link" && linkResult ? (
-            <div style={{ ...card(32, true), padding: 32 }}>
+            <div style={{ ...card(28, true), padding: 32, overflow: "hidden" }}>
               <LinkResult data={linkResult} t={t} />
             </div>
-          ) : loading || linkStatus === "loading" ? (
-            <IdlePanel title={mode === "link" ? t.work.loadingLink : t.work.loadingTitle} />
           ) : (
-            <IdlePanel title={t.work.idleTitle} body={t.work.idleBody} />
+            <div style={{ border: "1px solid var(--dc-line)", borderRadius: 28, minHeight: 520, display: "flex", flexDirection: "column", justifyContent: "flex-end", padding: 36, gap: 10 }}>
+              <span style={{ fontSize: 36, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.1 }}>
+                {anyLoading ? (mode === "link" ? t.work.loadingLink : t.work.loadingTitle) : t.work.idleTitle}
+              </span>
+              {!anyLoading && <span style={{ fontSize: 15, color: "var(--dc-text3)" }}>{t.work.idleBody}</span>}
+            </div>
           )}
         </div>
       </div>

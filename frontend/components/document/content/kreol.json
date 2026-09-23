@@ -1,16 +1,28 @@
 {
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
-  "eyebrow": "VERIFIE ENN DOKIMAN",
+  "eyebrow": "OUTIL · DOKIMAN",
+  "title": "Verifie enn dokiman",
+  "lede": "Relve labank, let ek fakti kouma PDF ouswa Word. Nou verifie kouma fisie-la finn fabrike ek ki li dir, kouma de rapor separe.",
+  "aside": {
+    "file": { "title": "Check fisie", "body": "Striktir, siyati, sanzman" },
+    "text": { "title": "Check tex", "body": "Langaz eskrokri, demann peyman" }
+  },
   "whatWeInspectTitle": "Kisannla nou examine",
   "privacyTitle": "Konfidansialite ou dokiman",
   "dropFileLabel": "Dokiman pou verifye",
   "dropTypesLabel": "PDF / DOCX",
+  "checkingFile": "Pe verifie fisie-la…",
+  "steps": { "reading": "Pe lir fisie-la", "uploading": "Pe avoy fisie-la", "analysing": "Pe verifie striktir ek tex" },
   "checkAnotherFile": "Verifie enn lot fisie",
   "pageTag": "Paz {n}",
   "howMadeTitle": "Kouma sa fisie-la finn fabrike",
   "fileHistoryTitle": "Istorik fisie",
   "whatItSaysTitle": "Ki li dir",
   "noSemanticFindings": "Pena langaz eskrokri dan tex sa fisie-la.",
+  "summary": {
+    "clean": "Nanye pa resorti dan fason fisie-la finn fabrike ouswa dan so tex.",
+    "counts": "{structural} zafer dan fason fisie-la finn fabrike, {semantic} dan so tex."
+  },
   "extractedTextTitle": "Tex ki finn ekstrait",
   "noExtractedText": "Pena tex lisib dan sa fisie-la.",
   "verdict": {

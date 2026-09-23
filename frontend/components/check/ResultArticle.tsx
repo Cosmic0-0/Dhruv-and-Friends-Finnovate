@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { restore } from "@/lib/redact";
 import type { StoredResult } from "@/lib/storage";
-import { Mark, TONE, WhatToDoPanel } from "../dc";
+import { Pill, TONE, WhatToDoPanel } from "../dc";
 import { fill, type CheckCopy } from "./content";
 import { confidenceAndSignalsLine, numberedSignals, signalDescription, signalTitle, summaryLine, verdictTone, whatToDoSteps } from "./helpers";
 import { highlightSegments, type EvidenceMark } from "@/lib/highlight";
@@ -51,23 +51,26 @@ export default function ResultArticle({
   const aiOk = response.analysis?.semantic.status === "ok";
 
   return (
-    <article data-nofx style={{ display: "flex", flexDirection: "column", gap: 22 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <Mark tone={tone} glyph={response.verdict === "safe" ? "✓" : response.verdict === "scam" ? "✕" : "!"} size={40} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{metaLine}</span>
-          {channel && <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{fill(t.result.receivedBy, { channel: t.work.channels[channel] })}</span>}
+    <article data-nofx style={{ background: "var(--dc-surface)", border: "1px solid var(--dc-line)", borderRadius: 28, boxShadow: "var(--dc-shadow)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "40px 40px 36px", display: "flex", flexDirection: "column", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <span className="dc-mono" style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.04em", color: TONE[tone].fg, display: "inline-flex", alignItems: "center", gap: 8 }}>
+            <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: TONE[tone].dot }} />
+            {t.result.verdict}
+          </span>
+          <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{metaLine}</span>
         </div>
+
+        <h2 style={{ margin: 0, fontSize: 96, lineHeight: 0.9, fontWeight: 600, letterSpacing: "-0.045em", color: TONE[tone].fg }}>
+          {t.result.words[response.verdict]}
+        </h2>
+        <p style={{ margin: 0, fontSize: 20, lineHeight: 1.5, color: "var(--dc-text2)" }}>{explanation}</p>
+        {channel && <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{fill(t.result.receivedBy, { channel: t.work.channels[channel] })}</span>}
       </div>
 
-      <h2 style={{ margin: 0, fontSize: 56, lineHeight: 0.98, fontWeight: 600, letterSpacing: "-0.045em", color: TONE[tone].fg }}>
-        {t.result.words[response.verdict]}
-      </h2>
-      <p style={{ margin: 0, fontSize: 17, lineHeight: 1.6, color: "var(--dc-text2)" }}>{explanation}</p>
-
-      <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <section style={{ margin: "0 40px", borderTop: "1px solid var(--dc-line2)", padding: "28px 0", display: "flex", flexDirection: "column", gap: 10 }}>
         <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{t.result.theMessage}</span>
-        <p style={{ margin: 0, fontSize: 16, lineHeight: 1.7, color: "var(--dc-ink)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
+        <p style={{ margin: 0, fontSize: 18, lineHeight: 1.9, color: "var(--dc-text-body)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
           {segments.map((s, i) => {
             if (!s.severity) return <span key={i}>{s.text}</span>;
             const idx = s.id ? Number(s.id.replace("sig-", "")) : undefined;
@@ -80,24 +83,24 @@ export default function ResultArticle({
                 style={{ background: st?.hl ?? "transparent", color: st?.fg ?? "inherit", borderBottom: `2px solid ${st?.fg ?? "var(--dc-line-strong)"}`, padding: "0 1px" }}
               >
                 {s.text}
-                {num && <sup style={{ fontSize: 11, marginLeft: 1 }}>{num}</sup>}
+                {num && <sup className="dc-mono" style={{ fontSize: 11, marginLeft: 1, color: st?.fg }}>{num}</sup>}
               </mark>
             );
           })}
         </p>
       </section>
 
-      <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <section style={{ margin: "0 40px", borderTop: "1px solid var(--dc-line2)", padding: "28px 0", display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 13, color: "var(--dc-text3)", marginBottom: 6 }}>{t.result.why}</span>
         {numbered.length === 0 ? (
           <p style={{ margin: 0, fontSize: 15, color: "var(--dc-text3)" }}>{t.result.noSignals}</p>
         ) : (
           <ol style={{ display: "flex", flexDirection: "column", margin: 0, padding: 0, listStyle: "none" }}>
             {numbered.map((s) => (
-              <li key={s.n} id={`sig-${s._idx}`} style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 12, padding: "12px 0", borderTop: "1px solid var(--dc-line2)" }}>
-                <span className="dc-mono" style={{ fontSize: 13, color: "var(--dc-text3)" }}>{String(s.n).padStart(2, "0")}</span>
+              <li key={s.n} id={`sig-${s._idx}`} style={{ display: "grid", gridTemplateColumns: "36px 1fr", gap: 12, padding: "14px 0", borderTop: "1px solid var(--dc-line2)" }}>
+                <span className="dc-mono" style={{ fontSize: 14, color: TONE[tone].fg }}>{String(s.n).padStart(2, "0")}</span>
                 <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.01em" }}>{signalTitle(s.type, oldCopy, lang)}</span>
+                  <span style={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.01em" }}>{signalTitle(s.type, oldCopy, lang)}</span>
                   <span style={{ fontSize: 14, color: "var(--dc-text2)", lineHeight: 1.5 }}>{signalDescription(s, oldCopy, show)}</span>
                 </div>
               </li>
@@ -107,7 +110,7 @@ export default function ResultArticle({
       </section>
 
       {(prose || steps.length > 0) && (
-        <WhatToDoPanel label={t.result.whatToDo} headline={prose ?? steps[0]}>
+        <WhatToDoPanel label={t.result.whatToDo} headline={prose ?? steps[0]} radius={0} size={32}>
           {steps.length > (prose ? 0 : 1) && (
             <ol style={{ display: "flex", flexDirection: "column", gap: 8, margin: 0, padding: 0, listStyle: "none", width: "100%" }}>
               {(prose ? steps : steps.slice(1)).map((s, i) => (
@@ -118,32 +121,25 @@ export default function ResultArticle({
               ))}
             </ol>
           )}
+          <Pill href="/report" variant="light">{t.result.report}</Pill>
+          <ShareButton result={result} t={t} explanation={explanation} numbered={numbered} oldCopy={oldCopy} lang={lang} show={show} />
         </WhatToDoPanel>
       )}
 
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 10 }}>
-        <Link
-          href="/report"
-          style={{ height: 48, padding: "0 22px", borderRadius: 999, background: "var(--dc-red-hl)", color: "var(--dc-red)", fontSize: 15, fontWeight: 500, display: "inline-flex", alignItems: "center" }}
-        >
-          {t.result.report}
-        </Link>
-        <ShareButton result={result} t={t} explanation={explanation} numbered={numbered} oldCopy={oldCopy} lang={lang} show={show} />
+      <div style={{ padding: "20px 40px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16, borderTop: "1px solid var(--dc-line2)" }}>
+        <span className="dc-mono" style={{ fontSize: 11, color: "var(--dc-text3)" }}>{aiOk ? t.result.ai.ok : t.result.ai.off}</span>
         {fullEvidenceLink && (
           <Link href="/result" style={{ marginLeft: "auto", fontSize: 14, color: "var(--dc-text2)", textDecoration: "underline", textUnderlineOffset: 3 }}>
             {t.result.fullEvidence} →
           </Link>
         )}
+        <p style={{ margin: 0, width: "100%", fontSize: 13, color: "var(--dc-text3)" }}>
+          {t.result.acted}{" "}
+          <Link href="/report" style={{ color: "var(--dc-ink)", textDecoration: "underline", textDecorationColor: "var(--dc-underline)", textUnderlineOffset: 3 }}>
+            {t.result.actedLink}
+          </Link>
+        </p>
       </div>
-
-      <span className="dc-mono" style={{ fontSize: 11, color: "var(--dc-text3)" }}>{aiOk ? t.result.ai.ok : t.result.ai.off}</span>
-
-      <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", borderTop: "1px solid var(--dc-line2)", paddingTop: 16 }}>
-        {t.result.acted}{" "}
-        <Link href="/report" style={{ color: "var(--dc-ink)", textDecoration: "underline", textUnderlineOffset: 3 }}>
-          {t.result.actedLink}
-        </Link>
-      </p>
     </article>
   );
 }
@@ -199,7 +195,7 @@ function ShareButton({
     <button
       type="button"
       onClick={() => void share()}
-      style={{ height: 48, padding: "0 22px", borderRadius: 999, background: "transparent", border: "1px solid var(--dc-line-strong)", color: "var(--dc-ink)", fontSize: 15, cursor: "pointer" }}
+      style={{ height: 48, padding: "0 22px", borderRadius: 999, background: "transparent", border: "1px solid currentColor", opacity: 0.9, color: "inherit", fontSize: 15, cursor: "pointer" }}
     >
       {copied ? t.result.copied : t.result.share}
     </button>

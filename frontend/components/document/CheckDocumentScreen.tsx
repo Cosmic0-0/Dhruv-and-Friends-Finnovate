@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { card, DcPage, Mark, PageHeader, Pill, WhatToDoPanel, type Tone } from "@/components/dc";
+import { card, DcPage, Mark, PageHeader, Pill, TONE, WhatToDoPanel, type Tone } from "@/components/dc";
 import { dcCopy } from "@/components/dc/content";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useWaitStage, WaitFill } from "@/components/WaitProgress";
@@ -85,9 +85,9 @@ const CHECKERBOARD: CSSProperties = {
 
 function InfoTile({ title, body }: { title: string; body: string }) {
   return (
-    <div style={{ ...card(28), padding: 24, display: "flex", flexDirection: "column", gap: 8 }}>
-      <span style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.02em" }}>{title}</span>
-      <span style={{ fontSize: 14, lineHeight: 1.55, color: "var(--dc-text2)" }}>{body}</span>
+    <div style={{ ...card(20), padding: "16px 20px", minWidth: 170, display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em" }}>{title}</span>
+      <span style={{ fontSize: 13, lineHeight: 1.4, color: "var(--dc-text3)" }}>{body}</span>
     </div>
   );
 }
@@ -177,21 +177,25 @@ function ResultView({
     [t.history.signature, doc.fileType === "pdf" || doc.metadata.signed ? (doc.metadata.signed ? p.signed : p.notSigned) : ""],
   ].filter(([, v]) => v !== "") as [string, string][];
 
+  const summary =
+    structural.length === 0 && semantic.length === 0
+      ? t.summary.clean
+      : t.summary.counts.replace("{structural}", String(structural.length)).replace("{semantic}", String(semantic.length));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }} data-nofx>
-      <div style={{ ...card(32), padding: 28, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
-          <Mark tone={VERDICT_TONE[data.verdict]} glyph={VERDICT_GLYPH[data.verdict]} size={64} />
-          <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0 }}>
-            <span style={{ fontSize: 13, color: "var(--dc-text3)", overflowWrap: "anywhere" }}>{file.name}</span>
-            <span style={{ fontSize: 26, fontWeight: 600, letterSpacing: "-0.04em" }}>{t.verdict[data.verdict]}</span>
-          </div>
+      <div style={{ ...card(32, true), padding: "36px 40px", display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 24 }}>
+        <Mark tone={VERDICT_TONE[data.verdict]} glyph={VERDICT_GLYPH[data.verdict]} size={72} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
+          <span style={{ fontSize: 13, color: "var(--dc-text3)", overflowWrap: "anywhere" }}>{`${nav.common.verdict} · ${file.name}`}</span>
+          <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05, color: TONE[VERDICT_TONE[data.verdict]].fg }}>{t.verdict[data.verdict]}</span>
+          <span style={{ fontSize: 17, lineHeight: 1.5, color: "var(--dc-text2)" }}>{summary}</span>
         </div>
         <Pill variant="outline" onClick={onCheckAnother}>{t.checkAnotherFile}</Pill>
       </div>
 
-      <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 20, alignItems: "start" }}>
-        <section style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 24 }}>
+      <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,0.9fr) minmax(0,1.1fr)", gap: 20, alignItems: "start" }}>
+        <section className="dc-sticky" style={{ ...card(32), position: "sticky", top: 108, padding: 28, display: "flex", flexDirection: "column", gap: 24 }}>
           {doc.previews.length > 0 && (
             <div>
               <span style={sectionLabel}>{p.previewsTitle}</span>
@@ -303,6 +307,13 @@ export default function CheckDocumentScreen() {
   const abortRef = useRef<AbortController | null>(null);
   const busy = phase.kind === "reading" || phase.kind === "uploading" || phase.kind === "analysing";
   const stage = useWaitStage(phase.kind === "analysing");
+  const stepOrder = ["reading", "uploading", "analysing"] as const;
+  const currentStepIdx = phase.kind === "reading" ? 0 : phase.kind === "uploading" ? 1 : phase.kind === "analysing" ? 2 : -1;
+  const stepLabel = (step: (typeof stepOrder)[number]): string => {
+    if (step === "uploading") return d.status.uploading(phase.kind === "uploading" ? phase.percent : null);
+    if (step === "analysing") return d.status.analysing;
+    return d.status.reading;
+  };
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -361,7 +372,7 @@ export default function CheckDocumentScreen() {
   if (phase.kind === "done") {
     return (
       <DcPage label="Check a document">
-        <PageHeader eyebrow={t.eyebrow} title={d.title} lede={d.subtitle} />
+        <PageHeader eyebrow={t.eyebrow} title={t.title} lede={t.lede} />
         <ResultView file={phase.file} data={phase.data} onCheckAnother={() => setPhase({ kind: "idle" })} />
       </DcPage>
     );
@@ -369,12 +380,17 @@ export default function CheckDocumentScreen() {
 
   return (
     <DcPage label="Check a document">
-      <PageHeader eyebrow={t.eyebrow} title={d.title} lede={d.subtitle} />
-
-      <div className="dc-cols-1" style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 20 }}>
-        <InfoTile title={t.whatWeInspectTitle} body={d.intro} />
-        <InfoTile title={t.privacyTitle} body={d.privacy} />
-      </div>
+      <PageHeader
+        eyebrow={t.eyebrow}
+        title={t.title}
+        lede={t.lede}
+        aside={
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <InfoTile title={t.aside.file.title} body={t.aside.file.body} />
+            <InfoTile title={t.aside.text.title} body={t.aside.text.body} />
+          </div>
+        }
+      />
 
       <input
         ref={inputRef}
@@ -388,85 +404,115 @@ export default function CheckDocumentScreen() {
         }}
       />
 
-      <section
-        aria-label={d.title}
-        onDragOver={(e) => { if (busy) return; e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files?.[0]); }}
-        style={{
-          border: `1.5px dashed ${dragging ? "var(--dc-accent)" : "var(--dc-line-strong)"}`,
-          borderRadius: 32,
-          padding: 40,
-          display: "flex",
-          flexDirection: "column",
-          gap: 20,
-          background: dragging ? "var(--dc-hover)" : "transparent",
-        }}
-      >
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--dc-text3)", letterSpacing: "0.04em" }}>
-          <span>{t.dropFileLabel}</span>
-          <span>{t.dropTypesLabel}</span>
-        </div>
-
-        {file ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <span style={{ width: 44, height: 44, borderRadius: 15, background: "var(--dc-hover)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <DocumentIcon className="size-5" strokeWidth={1.9} />
-            </span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <p style={{ margin: 0, fontSize: 17, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</p>
-              <p style={{ margin: 0, fontSize: 14, color: "var(--dc-text3)" }}>{formatFileSize(file.size, lang === "fr" ? "fr" : "en")}</p>
-            </div>
-            {!busy && (
-              <button type="button" onClick={() => setPhase({ kind: "idle" })} aria-label={d.remove} title={d.remove} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--dc-text3)", display: "flex" }}>
-                <XIcon className="size-5" strokeWidth={2} />
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "24px 0", textAlign: "center" }}>
-            <span style={{ width: 56, height: 56, borderRadius: 20, background: "var(--dc-hover)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
-              <DocumentIcon className="size-6" strokeWidth={1.6} />
-            </span>
-            <p style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{dragging ? d.dropActive : d.drop}</p>
-            <p style={{ margin: 0, fontSize: 14, color: "var(--dc-text3)" }}>{d.types}</p>
-          </div>
-        )}
-
-        {busy ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
-            <p style={{ margin: 0, fontSize: 14, color: "var(--dc-ink)" }}>
-              {phase.kind === "reading" ? d.status.reading : phase.kind === "uploading" ? d.status.uploading(phase.percent) : d.status.analysing}
-            </p>
-            <span style={{ position: "relative", display: "block", height: 4, borderRadius: 999, overflow: "hidden", background: "var(--dc-line)" }}>
-              {phase.kind === "uploading" && phase.percent !== null ? (
-                <span style={{ position: "absolute", inset: "0 auto 0 0", display: "block", width: `${phase.percent}%`, background: "var(--dc-ink)", transition: "width .2s" }} />
-              ) : phase.kind === "analysing" ? (
-                <WaitFill phase="running" stage={stage} className="bg-[var(--dc-ink)]" />
-              ) : null}
-            </span>
-            {phase.kind === "analysing" && <p style={{ margin: 0, fontSize: 12.5, color: "var(--dc-text3)" }}>{d.status.analysingNote}</p>}
-            <button type="button" onClick={cancel} style={{ alignSelf: "center", background: "none", border: "none", color: "var(--dc-text3)", fontSize: 13, cursor: "pointer" }}>
+      {busy ? (
+        <div style={{ ...card(32), minHeight: 420, padding: 56, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "center" }} aria-live="polite">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+            <span className="dc-mono" style={{ fontSize: 13, color: "var(--dc-text3)", overflowWrap: "anywhere" }}>{file?.name}</span>
+            <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05 }}>{t.checkingFile}</span>
+            <button type="button" onClick={cancel} style={{ alignSelf: "flex-start", marginTop: 8, background: "none", border: "none", color: "var(--dc-text3)", fontSize: 13, cursor: "pointer" }}>
               {d.cancel}
             </button>
           </div>
-        ) : file && (phase.kind === "selected" || !failure?.isInput) ? (
-          <Pill variant="ink" height={52} onClick={() => void check(file)} style={{ width: "100%" }}>
-            {phase.kind === "error" ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 22 }}>
+            {stepOrder.map((step, i) => {
+              const state = i < currentStepIdx ? "done" : i === currentStepIdx ? "current" : "pending";
+              const label = stepLabel(step);
+              const dotColor = state === "done" ? "var(--dc-green)" : state === "current" ? "var(--dc-accent)" : "var(--dc-line-strong)";
+              return (
+                <div key={step} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: 999,
+                      background: dotColor,
+                      boxShadow: state === "current" ? "0 0 0 6px var(--dc-accent-soft)" : "none",
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ fontSize: 15, color: state === "pending" ? "var(--dc-text3)" : "var(--dc-ink)" }}>{label}</span>
+                </div>
+              );
+            })}
+            {phase.kind === "analysing" && (
               <>
-                <RetryIcon className="size-4" strokeWidth={2} />
-                {copy.retry}
+                <span style={{ position: "relative", display: "block", height: 4, borderRadius: 999, overflow: "hidden", background: "var(--dc-line)" }}>
+                  <WaitFill phase="running" stage={stage} className="bg-[var(--dc-ink)]" />
+                </span>
+                <span style={{ fontSize: 12.5, color: "var(--dc-text3)" }}>{d.status.analysingNote}</span>
               </>
-            ) : (
-              d.check
             )}
-          </Pill>
-        ) : (
-          <Pill variant="ink" height={52} onClick={() => inputRef.current?.click()} style={{ width: "100%" }}>
-            {d.choose}
-          </Pill>
-        )}
-      </section>
+          </div>
+        </div>
+      ) : (
+        <section
+          aria-label={d.title}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files?.[0]); }}
+          style={{
+            border: `1.5px dashed ${dragging ? "var(--dc-accent)" : "var(--dc-line-strong)"}`,
+            borderRadius: 32,
+            minHeight: 420,
+            padding: 40,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 24,
+            background: dragging ? "var(--dc-hover)" : "var(--dc-surface)",
+          }}
+        >
+          {file ? (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20, textAlign: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, maxWidth: 420 }}>
+                <span style={{ width: 44, height: 44, borderRadius: 15, background: "var(--dc-hover)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <DocumentIcon className="size-5" strokeWidth={1.9} />
+                </span>
+                <div style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+                  <p style={{ margin: 0, fontSize: 17, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</p>
+                  <p style={{ margin: 0, fontSize: 14, color: "var(--dc-text3)" }}>{formatFileSize(file.size, lang === "fr" ? "fr" : "en")}</p>
+                </div>
+                <button type="button" onClick={() => setPhase({ kind: "idle" })} aria-label={d.remove} title={d.remove} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--dc-text3)", display: "flex" }}>
+                  <XIcon className="size-5" strokeWidth={2} />
+                </button>
+              </div>
+              {phase.kind === "selected" || !failure?.isInput ? (
+                <Pill variant="ink" height={52} onClick={() => void check(file)} style={{ width: "100%", maxWidth: 320 }}>
+                  {phase.kind === "error" ? (
+                    <>
+                      <RetryIcon className="size-4" strokeWidth={2} />
+                      {copy.retry}
+                    </>
+                  ) : (
+                    d.check
+                  )}
+                </Pill>
+              ) : (
+                <Pill variant="ink" height={52} onClick={() => inputRef.current?.click()} style={{ width: "100%", maxWidth: 320 }}>
+                  {d.choose}
+                </Pill>
+              )}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, textAlign: "center" }}>
+              <span aria-hidden="true" style={{ width: 72, height: 72, borderRadius: 24, background: "var(--dc-accent-soft)", color: "var(--dc-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, marginBottom: 8 }}>
+                ↑
+              </span>
+              <p style={{ margin: 0, fontSize: 26, fontWeight: 600, letterSpacing: "-0.03em" }}>{dragging ? d.dropActive : d.drop}</p>
+              <p style={{ margin: "4px 0 0", fontSize: 15, color: "var(--dc-text3)", maxWidth: 420 }}>{d.types}</p>
+              <p style={{ margin: 0, fontSize: 15, color: "var(--dc-text3)", maxWidth: 420 }}>{d.privacy}</p>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)", border: "1px solid var(--dc-line-strong)", borderRadius: 999, padding: "4px 12px" }}>.pdf</span>
+                <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)", border: "1px solid var(--dc-line-strong)", borderRadius: 999, padding: "4px 12px" }}>.docx</span>
+              </div>
+              <Pill variant="ink" height={52} onClick={() => inputRef.current?.click()} style={{ marginTop: 16 }}>
+                {d.choose}
+              </Pill>
+            </div>
+          )}
+        </section>
+      )}
 
       {failure && (
         <div role="alert" style={{ ...card(28), padding: 24, display: "flex", flexDirection: "column", gap: 8, borderColor: failure.isInput ? "var(--dc-amber)" : "var(--dc-red)" }}>

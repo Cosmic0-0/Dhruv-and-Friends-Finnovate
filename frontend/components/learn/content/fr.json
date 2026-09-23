@@ -1,18 +1,22 @@
 {
   "eyebrow": "APPRENDRE",
-  "title": "Apprendre",
-  "lede": "Cinq vrais messages vérifiés par jour. Entraînez-vous à repérer une arnaque avant qu'elle ne vous arrive pour de vrai.",
+  "title": "Apprenez à les repérer",
+  "lede": "Cinq messages inspirés de vrais cas chaque jour. Décidez si chacun est une arnaque, puis découvrez ce qui l'a trahi.",
+  "question": "Arnaque ou authentique ?",
   "stats": {
     "today": "Aujourd’hui",
     "todayCount": "{done} sur {goal}",
     "streak": "Série",
+    "unit": "jours",
     "days": "Série de {n} jours",
     "noStreak": "Pas encore de série",
     "accuracy": "Précision",
     "accuracyEmpty": "Pas encore"
   },
   "week": {
-    "title": "Cette semaine"
+    "title": "Cette semaine",
+    "streakLine": "{n} jours d’affilée",
+    "dailyGoal": "Objectif du jour"
   },
   "goal": {
     "title": "Objectif du jour",
@@ -21,11 +25,12 @@
   },
   "rule": {
     "title": "Règle de base",
-    "body": "Une vraie banque, un vrai transporteur ou un vrai service public ne vous demande jamais de payer des frais, de partager un code OTP, ou de transférer de l’argent en urgence par SMS, WhatsApp ou appel. Si un message vous pousse à agir vite et à rester discret, arrêtez-vous et vérifiez avec le numéro du site officiel — jamais celui du message."
+    "body": "Aucune banque, aucun transporteur ni aucun service public à Maurice ne vous demandera votre code à usage unique."
   },
   "patterns": {
     "title": "Schémas d’arnaque courants",
-    "seeAll": "Voir les données en direct sur Radar"
+    "sub": "À quoi ça ressemble à Maurice en ce moment.",
+    "seeAll": "Voir les tendances sur Radar"
   },
   "senderGenuine": "Message authentique",
   "doneToday": "Terminé pour aujourd’hui",

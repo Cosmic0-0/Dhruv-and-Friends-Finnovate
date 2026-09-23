@@ -1,8 +1,8 @@
 {
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
-  "eyebrow": "SCAN AN GRUP",
-  "title": "Verifie plizir mesaz an mem tan",
-  "lede": "Kopi plizir mesaz ouswa met kopi lekran, ek scan zot ansam. Sakenn gagn mem verifikasion reel ki enn sel check.",
+  "eyebrow": "LOUTI · SCAN AN GRUP",
+  "title": "Scan an grup",
+  "lede": "Kopi plizir mesaz, enn par lign, ouswa met kopi lekran. Sakenn gagn so prop verdik.",
   "modes": { "paste": "Kopi mesaz", "screenshots": "Met kopi lekran" },
   "paste": {
     "label": "Mesaz pou scan",
@@ -26,7 +26,7 @@
     "genuine": "Bon",
     "unanalysed": "{n} ladan pa finn kapav verifie ek bizin trate avek prudans."
   },
-  "results": { "title": "Rezilta", "filtered": "filtre", "clear": "Efas filtre" },
+  "results": { "title": "Rezilta", "filtered": "filtre", "clear": "Efas filtre", "placeholder": "Ou bann rezilta pou aparet isi, enn lign par mesaz." },
   "row": { "screenshot": "Kopi lekran {n}", "line": "Lign {n}", "open": "Get rezilta complet" },
   "empty": { "title": "Pankor ena nanye scan.", "body": "Kopi kek mesaz ouswa met kopi lekran anho, apre scan zot ansam." },
   "errors": {

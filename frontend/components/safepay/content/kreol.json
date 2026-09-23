@@ -1,8 +1,8 @@
 {
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
-  "eyebrow": "AVAN OU PEY",
-  "title": "Verifie kisannla ou pe pey",
-  "lede": "Kelksoi kouma li'nn kontakte ou, verifie nimero, kont ouswa IBAN la avan ou avoy kas. Sa check-la gete si dimoun finn deza rapport li ek si so format korek — li pa kapav dir ou kisannla vremem ki proprieter kont-la.",
+  "eyebrow": "OUTIL · AVAN OU PEY",
+  "title": "Verifie avan ou pey",
+  "lede": "Pe pou avoy kas ar enn dimoun nouvo? Rant kisannla ou pe pey ek nou pou verifie li kont rapport eskrokri ek detay li'nn donn ou.",
   "formLabel": "Detay peyman",
   "methodLabel": "Kouma ou pe pey?",
   "methods": { "phone": "Juice / telefonn", "bank_account": "Kont labank", "iban": "IBAN" },
@@ -14,8 +14,18 @@
   },
   "nameLabel": "Non ki li'nn done ou",
   "namePlaceholder": "Fakiltatif",
-  "amountLabel": "Montan (Rs)",
+  "amountLabel": "Montan",
   "amountPlaceholder": "0",
+  "amountPrefix": "Rs",
+  "idleCard": {
+    "title": "Kisannla sa verifikasion-la fer",
+    "items": [
+      "Istorik rapport pou sa nimero ouswa kont-la",
+      "Si nimero, kont ouswa IBAN-la byen formate",
+      "Konsey selon rezon ek montan ou'nn rant"
+    ],
+    "note": "Nou pa zamais deplas kas ouswa kontakte dimoun ou pe pey."
+  },
   "reasonLabel": "Pou ki sa?",
   "reasons": {
     "car": "Loto / veikil",

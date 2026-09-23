@@ -1,7 +1,7 @@
 {
-  "eyebrow": "SCAN GROUPÉ",
-  "title": "Vérifier plusieurs messages à la fois",
-  "lede": "Collez plusieurs textes ou importez des captures d'écran, et scannez-les ensemble. Chacun reçoit la même analyse réelle qu'une vérification simple.",
+  "eyebrow": "OUTIL · SCAN GROUPÉ",
+  "title": "Scan groupé",
+  "lede": "Collez plusieurs messages, un par ligne, ou importez des captures d'écran. Chacun reçoit son propre verdict.",
   "modes": { "paste": "Coller des messages", "screenshots": "Importer des captures" },
   "paste": {
     "label": "Messages à scanner",
@@ -25,7 +25,7 @@
     "genuine": "Authentique",
     "unanalysed": "{n} d'entre eux n'ont pas pu être analysés et doivent être traités avec prudence."
   },
-  "results": { "title": "Résultats", "filtered": "filtré", "clear": "Effacer le filtre" },
+  "results": { "title": "Résultats", "filtered": "filtré", "clear": "Effacer le filtre", "placeholder": "Vos résultats apparaîtront ici, une ligne par message." },
   "row": { "screenshot": "Capture {n}", "line": "Ligne {n}", "open": "Voir le résultat complet" },
   "empty": { "title": "Rien de scanné pour l'instant.", "body": "Collez quelques messages ou importez des captures ci-dessus, puis scannez-les ensemble." },
   "errors": {

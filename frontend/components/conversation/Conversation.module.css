@@ -1,0 +1,25 @@
+/* Page-specific hover/pseudo-element styling the shared dc primitives and
+   inline styles can't express (see components/dc for the shared tokens). */
+
+.dayChip {
+  align-self: center;
+  font-size: 12px;
+  color: var(--dc-text3);
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.dayChip:hover {
+  background: var(--dc-hover);
+}
+
+.dropZone {
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dropZone.active {
+  border-color: var(--dc-line-strong) !important;
+  background: var(--dc-hover);
+}

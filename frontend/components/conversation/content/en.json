@@ -1,7 +1,7 @@
 {
-  "eyebrow": "CONVERSATION",
-  "title": "Analyse a whole conversation",
-  "lede": "Upload a WhatsApp chat export (or a Messenger JSON export). We read who said what and when, and run one real analysis across the whole thing.",
+  "eyebrow": "TOOL · WHOLE CONVERSATION",
+  "title": "Check a whole conversation",
+  "lede": "Export a WhatsApp or Messenger chat and upload it. We read it start to finish and mark the moments that matter.",
   "upload": {
     "label": "Upload a chat export",
     "hint": "WhatsApp: open the chat, Export chat, Without media (.txt). Messenger: Download your information, a conversation, as JSON.",
@@ -9,11 +9,24 @@
     "invalid": "That file doesn't look like a WhatsApp or Messenger export.",
     "empty": "We couldn't find any messages in that export."
   },
+  "howTo": {
+    "title": "How to export",
+    "whatsapp": {
+      "label": "WhatsApp",
+      "android": "Android: open the chat, tap ⋮ → More → Export chat → Without media.",
+      "iphone": "iPhone: open the chat, tap the contact name → Export Chat → Without Media."
+    },
+    "messenger": {
+      "label": "Messenger",
+      "steps": "Meta Accounts Centre → Your information and permissions → Download your information → pick the conversation, format JSON."
+    }
+  },
+  "lookFor": { "title": "What the analysis looks for" },
   "who": { "title": "Which participant are you?", "hint": "Only the other person's messages are analysed; yours are shown for context." },
   "submit": "Analyse conversation",
   "analysing": "Analysing…",
   "another": "Upload a different export",
-  "header": { "with": "Conversation with {name}", "range": "{from} – {to}", "messages": "{n} messages", "truncated": "Only the most recent messages were analysed; this export was longer than one check covers." },
+  "header": { "with": "Conversation with {name}", "range": "{from} – {to}", "messages": "{n} messages", "days": "{n} days", "truncated": "Only the most recent messages were analysed; this export was longer than one check covers." },
   "story": { "title": "How the story changed", "empty": "No playbook stage was detected in this conversation." },
   "thread": { "title": "Conversation", "me": "You", "flag": "{n} warning sign", "flags": "{n} warning signs" },
   "todo": { "label": "What to do now" },

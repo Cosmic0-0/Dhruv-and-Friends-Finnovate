@@ -1,19 +1,23 @@
 {
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
   "eyebrow": "APRANN",
-  "title": "Aprann",
-  "lede": "Sink vre mesaz verifie sak zour. Pratik pou rekonet enn eskrokri avan li arive ar ou pou vre.",
+  "title": "Aprann rekonet zot",
+  "lede": "Sink mesaz style vre chak zour. Deside si sakenn enn eskrokri, apre gete kisannla ki trai li.",
+  "question": "Eskrokri ouswa vre?",
   "stats": {
     "today": "Zordi",
     "todayCount": "{done} lor {goal}",
     "streak": "Serie",
+    "unit": "zour",
     "days": "Serie {n} zour",
     "noStreak": "Pena serie ankor",
     "accuracy": "Presizion",
     "accuracyEmpty": "Pankor"
   },
   "week": {
-    "title": "Sa semenn la"
+    "title": "Sa semenn la",
+    "streakLine": "{n} zour dan lord",
+    "dailyGoal": "Bi chak zour"
   },
   "goal": {
     "title": "Bi zordi",
@@ -22,11 +26,12 @@
   },
   "rule": {
     "title": "Regle debaz",
-    "body": "Enn vre labank, transporter ouswa biro gouvernman pa zame demann ou pey enn fre, partaz enn kod OTP, ouswa avoy larzan an irzans par SMS, WhatsApp ouswa apel. Kan enn mesaz pouse ou azir vit ek res dan silans, arete ek verifie ar nimero lor sit ofisiel — zame sa enn ki dan mesaz la."
+    "body": "Okenn labank, transporter ouswa biro gouvernman Moris pa pou zame demann ou kod OTP."
   },
   "patterns": {
     "title": "Bann model eskrokri ki plis arive",
-    "seeAll": "Get done an direk lor Radar"
+    "sub": "Kouma zot paret Moris aster la.",
+    "seeAll": "Get sa ki pe tandans lor Radar"
   },
   "senderGenuine": "Vre mesaz",
   "doneToday": "Fini pou zordi",

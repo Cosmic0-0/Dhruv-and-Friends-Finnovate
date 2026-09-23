@@ -1,7 +1,7 @@
 {
-  "eyebrow": "CONVERSATION",
-  "title": "Analyser toute une conversation",
-  "lede": "Importez un export de discussion WhatsApp (ou un export JSON Messenger). Nous lisons qui a dit quoi et quand, et effectuons une seule analyse réelle sur l'ensemble.",
+  "eyebrow": "OUTIL · CONVERSATION ENTIÈRE",
+  "title": "Vérifier une conversation entière",
+  "lede": "Exportez une discussion WhatsApp ou Messenger et importez-la. Nous la lisons du début à la fin et signalons les moments qui comptent.",
   "upload": {
     "label": "Importer un export de discussion",
     "hint": "WhatsApp : ouvrez la discussion, Exporter la discussion, Sans les médias (.txt). Messenger : Télécharger vos informations, une conversation, au format JSON.",
@@ -9,11 +9,24 @@
     "invalid": "Ce fichier ne ressemble pas à un export WhatsApp ou Messenger.",
     "empty": "Aucun message trouvé dans cet export."
   },
+  "howTo": {
+    "title": "Comment exporter",
+    "whatsapp": {
+      "label": "WhatsApp",
+      "android": "Android : ouvrez la discussion, appuyez sur ⋮ → Plus → Exporter la discussion → Sans les médias.",
+      "iphone": "iPhone : ouvrez la discussion, appuyez sur le nom du contact → Exporter la discussion → Sans les médias."
+    },
+    "messenger": {
+      "label": "Messenger",
+      "steps": "Centre de comptes Meta → Vos informations et autorisations → Télécharger vos informations → choisissez la conversation, format JSON."
+    }
+  },
+  "lookFor": { "title": "Ce que l'analyse recherche" },
   "who": { "title": "Quel participant êtes-vous ?", "hint": "Seuls les messages de l'autre personne sont analysés ; les vôtres sont affichés pour le contexte." },
   "submit": "Analyser la conversation",
   "analysing": "Analyse en cours…",
   "another": "Importer un autre export",
-  "header": { "with": "Conversation avec {name}", "range": "{from} – {to}", "messages": "{n} messages", "truncated": "Seuls les messages les plus récents ont été analysés ; cet export était plus long qu'une seule analyse ne peut couvrir." },
+  "header": { "with": "Conversation avec {name}", "range": "{from} – {to}", "messages": "{n} messages", "days": "{n} jours", "truncated": "Seuls les messages les plus récents ont été analysés ; cet export était plus long qu'une seule analyse ne peut couvrir." },
   "story": { "title": "Comment l'histoire a évolué", "empty": "Aucune étape du scénario n'a été détectée dans cette conversation." },
   "thread": { "title": "Conversation", "me": "Vous", "flag": "{n} signal d'alerte", "flags": "{n} signaux d'alerte" },
   "todo": { "label": "Que faire maintenant" },

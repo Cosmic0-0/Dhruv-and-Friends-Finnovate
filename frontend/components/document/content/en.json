@@ -1,15 +1,27 @@
 {
-  "eyebrow": "CHECK A DOCUMENT",
+  "eyebrow": "TOOL · DOCUMENT",
+  "title": "Check a document",
+  "lede": "Bank statements, letters and invoices as PDF or Word. We check how the file was made and what it says, as two separate reports.",
+  "aside": {
+    "file": { "title": "File check", "body": "Structure, signatures, edits" },
+    "text": { "title": "Text check", "body": "Scam wording, payment asks" }
+  },
   "whatWeInspectTitle": "What we inspect",
   "privacyTitle": "Your file's privacy",
   "dropFileLabel": "File for verification",
   "dropTypesLabel": "PDF / DOCX",
+  "checkingFile": "Checking the file…",
+  "steps": { "reading": "Reading the file", "uploading": "Sending the file", "analysing": "Checking structure and text" },
   "checkAnotherFile": "Check another file",
   "pageTag": "Page {n}",
   "howMadeTitle": "How the file was made",
   "fileHistoryTitle": "File history",
   "whatItSaysTitle": "What it says",
   "noSemanticFindings": "No scam language found in the file's text.",
+  "summary": {
+    "clean": "Nothing stood out in how the file was made or in what it says.",
+    "counts": "{structural} thing(s) found in how the file was made, {semantic} in what it says."
+  },
   "extractedTextTitle": "Extracted text",
   "noExtractedText": "No readable text was found in this file.",
   "verdict": {
