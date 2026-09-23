@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Instrument_Sans } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import SideNav from "@/components/SideNav";
@@ -6,10 +7,24 @@ import TabBar from "@/components/TabBar";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
 
-// No webfont. The design is an iPhone app (frontend/design/DESIGN.md), so the
-// type is the Apple system font via the stack in globals.css: it is already on
-// the device, renders French and Kreol diacritics natively, and removes three
-// Google Font downloads from a PWA that has to work offline.
+/**
+ * One webfont, for the app's own voice.
+ *
+ * Instrument Sans is a humanist grotesque: enough personality to stop the UI
+ * reading as a default system-font utility, and clean diacritics for Kreol and
+ * French. next/font self-hosts it, so the PWA still works offline and nothing
+ * is fetched from Google at runtime.
+ *
+ * The message bubble deliberately does NOT use it. A received SMS is rendered
+ * in the system font, because that is the face it actually arrived in on the
+ * user's phone. The app never sets the scammer's words in its own type.
+ */
+const instrument = Instrument_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ui",
+  display: "swap",
+});
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 const TITLE = "FraudLens AI: check a message before you pay";
@@ -66,7 +81,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={instrument.variable}>
       <head>
         {/* Applies a saved light/dark choice before first paint. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />

@@ -171,13 +171,16 @@ export default function ResultView() {
                 </div>
 
                 <div className="flex flex-col gap-4">
+                  {/* The annotated message first: it is the answer. The cards
+                      under it explain the marks, they do not replace them. */}
+                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
+
                   {documentPanel}
+
                   <div className="grid grid-cols-12 items-stretch gap-3.5">
                     <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
                     <LinkCard response={response} copy={copy} />
                   </div>
-
-                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
                 </div>
 
                 <div className="flex flex-col gap-4">
