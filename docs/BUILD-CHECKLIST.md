@@ -1,60 +1,44 @@
 # Build Checklist (ordered by rubric weighting)
 
-> Add a reliability stress test for the local LLM path around hour 55-60 of the
-> 72-hour window. If Tailscale/laptop inference proves flaky under demo-like
-> conditions, switch to fallback-only for the submission and keep local inference
-> as an architecture talking point rather than a live dependency.
->
-> **2026-09-22 update: this turned out backwards.** Local (Ollama) is the
-> RELIABLE path once `think:false` is set (see below) - the free-tier
-> OpenRouter fallback is the flaky one, because its reasoning mode is
-> mandatory and can't be disabled. If Tailscale/laptop inference is
-> reachable on demo day, prefer it; treat the fallback as the thing that
-> needs a backup plan, not the other way around.
+Local Ollama over Tailscale is the primary LLM path for the demo; with
+thinking disabled it is the fast, reliable one. The free-tier hosted fallback
+is the flaky backup, because its model's reasoning mode cannot be turned off.
+Check `GET /health/llm` and run `npm run test:fallback` on the demo machine
+shortly before presenting, and remember that the deterministic verdict still
+works when both are down.
 
 See [`JURY-EVALUATION.md`](./JURY-EVALUATION.md) for the full rubric these groups
 are weighted against.
 
 ## Implementation & Functionality — 35 marks
-- [x] Core message analysis working end-to-end (`POST /api/analyze`) —
-      verified 2026-09-22 live in a real browser through BOTH LLM paths:
-      the fallback (see below) and, after fixing `think:true` in
-      `callOllama()` (`backend/src/services/analysis/llmClient.js`), the
-      real local Ollama model on actual GPU hardware — 12.2s end-to-end
-      for the full pipeline (was 48.6s with thinking mode on), correct
-      verdict, all structured signals present.
-- [ ] Fallback provider tested under simulated Tailscale/laptop failure —
-      tested 2026-09-22, and it's WORKING but NOT reliable: `npm run
-      test:fallback` against the real analyze prompt took 19.5s/27.4s/
-      38.8s/43.8s across runs, and one run didn't finish inside 35s.
-      `LLM_TIMEOUT_MS` raised 15000→60000 (see `backend/.env.example`) to
-      stop it failing outright, but the free-tier model's reasoning
-      overhead is inherently unbounded and can't be disabled the way
-      Ollama's could — do not check this box until either a faster/
-      non-reasoning fallback model is found or the demo plan explicitly
-      accepts "up to ~60s per check if Ollama is down." The local path is
-      now the fast, reliable one (see above) — treat this as the backup
-      plan's own backup plan, not the primary safety net.
-- [x] Batch scan functional (`POST /api/batch-scan`) — verified 2026-09-22
-      live through the real local model (4-message batch: 2 scam/1
-      suspicious/1 safe, correct verdicts and summary counts, 0
-      unanalyzed, ~30s total at concurrency 4). Also surfaced and fixed a
-      real bug in the process: `summarizeBatch()` was silently dropping
-      `riskScore`/`sender`/`senderReports` from every result (pre-existing,
-      unrelated to today's other changes) — see `docs/API-CONTRACT.md`
-      Known Gaps. Batch results now carry full parity with `/api/analyze`
-      (`riskCategories`, `IDENTITY_MISMATCH`, everything).
+- [x] Core message analysis working end-to-end (`POST /api/analyze`).
+      Last verified live 2026-09-22 in a real browser through both LLM
+      paths: the hosted fallback, and the local Ollama model on GPU hardware
+      with thinking disabled in `callOllama()`
+      (`backend/src/services/analysis/llmClient.js`), about 12s end to end
+      with the correct verdict and all structured signals.
+- [ ] Fallback provider tested under simulated Tailscale/laptop failure.
+      It works but is not reliable: on 2026-09-22 `npm run test:fallback`
+      against the real analyze prompt took 19.5s to 43.8s, and one run did
+      not finish inside 35s. `LLM_TIMEOUT_MS` is 60000 in
+      `backend/.env.example` so it does not fail outright. Leave this
+      unchecked until a faster, non-reasoning fallback model is found or
+      the demo plan accepts up to about 60s per check when Ollama is down.
+- [x] Batch scan functional (`POST /api/batch-scan`). Each result carries
+      the full `/api/analyze` response. Last verified live 2026-09-22
+      through the local model: a 4-message batch gave the correct verdicts
+      and summary counts with 0 unanalysed, in about 30s.
 - [x] OCR ingestion functional (screenshot upload → extracted text →
-      analysis) — backend verified live 2026-09-22 (real ImageMagick PNG
-      → `/api/analyze/screenshot` → correct OCR text → correct verdict,
-      through the real local model, ~9s). Frontend upload button is now
-      wired up (`f2b375a`, `frontend/components/ScreenshotUpload.tsx` +
-      `CheckForm.tsx`): picks a file, compresses it client-side, posts to
-      `/api/analyze/screenshot`, and drops the extracted text into the
-      editable textarea for the user to review before `/api/analyze` runs
-      on it — a user can exercise the full flow through the actual app UI.
+      analysis). `frontend/components/ScreenshotUpload.tsx` and
+      `CheckForm.tsx` compress the image client-side and post it to
+      `/api/analyze/screenshot`. The OCR text is kept in memory, not shown;
+      the thumbnail is the visible input, and the text is sent to
+      `/api/analyze` when the user presses Check. The backend path was last
+      verified live on 2026-09-22 with a generated PNG and the local model
+      (about 9s); the hidden-text UI flow has not been re-verified live
+      since it changed.
 - [x] Document forensics (`POST /api/analyze/document`, `/document` in the
-      web app). Verified 2026-09-23:
+      web app). Last verified 2026-09-23:
       - Backend tests cover every DOC detector, each demo fixture end to end
         through the real worker, the route's error states, a worker timeout,
         the busy cap and an LLM outage.
@@ -75,33 +59,30 @@ are weighted against.
       waits for the LLM timeout (about 60s) before the deterministic verdict
       appears.
 - [x] No crashes on malformed input (empty message, non-text upload,
-      oversized batch) — verified 2026-09-22: empty/missing `message`,
+      oversized batch). Last verified 2026-09-22: empty/missing `message`,
       6000-char oversized `message`, malformed JSON body, 60-item
       oversized batch, empty batch array, and a non-image upload to
       `/api/analyze/screenshot` all returned clean 400s with no crash;
       `/health` stayed green throughout.
 
 ## Innovation & Technical Excellence — 25 marks
-- [x] Kreol dataset integrated and demonstrably working — the corpus is
-      wired into the LLM prompt as grounding (`backend/src/services/
-      analysis/kreolGrounding.js`), unit-tested with a mocked LLM, AND
-      verified 2026-09-22 against the real local model: a mfe+en
+- [x] Kreol dataset integrated and demonstrably working. Reviewed corpus
+      entries are retrieved as prompt grounding
+      (`backend/src/services/analysis/kreolGrounding.js`) and unit-tested
+      with a mocked LLM. Last verified live 2026-09-22: a mfe+en
       code-switched message ("Ou kont pou bloke azordi. Klik lor
-      mcb-secure.top...") through the real pipeline correctly returned
-      verdict scam, riskScore 95, all six signals including the new
-      IDENTITY_MISMATCH check. Not yet spot-checked: whether the
-      grounding block measurably changes output quality vs. without it
-      (no A/B run) — only that the grounded path itself works.
+      mcb-secure.top...") returned a scam verdict with the identity-mismatch
+      check. Not checked: whether grounding measurably improves output
+      compared with no grounding (no A/B run).
 - [x] Structured signal breakdown visible in UI output (not a single
-      score) — verified 2026-09-22 live: a real scam check rendered 5
-      distinct, titled, severity-tagged signal cards plus a separate Link
-      Check panel, never a bare score.
-- [x] Domain matching catching real lookalike examples in test payloads —
-      verified 2026-09-22 by an automated test
-      (`backend/src/services/domain-matching/test-payloads.test.js`)
-      cross-checking `checkUrls()` against all 40 of Caellum's en/fr QA
-      payloads in both directions (every expected `lookalike_url` fires,
-      no false positives on payloads that don't expect one).
+      score). Last verified live 2026-09-22: a scam check rendered separate,
+      titled, severity-tagged signal cards and a Link Check panel.
+- [x] Domain matching catching real lookalike examples in test payloads.
+      `backend/src/services/domain-matching/test-payloads.test.js`
+      cross-checks `checkUrls()` against all 40 of the QA owner's en/fr
+      payloads in both directions (every expected `lookalike_url` fires, and
+      none fires on payloads that don't expect one). Passing on
+      2026-09-23.
 
 ## Impact & Problem Solving — 25 marks
 - [x] Vulnerable-user protection mode implemented as the result screen's
