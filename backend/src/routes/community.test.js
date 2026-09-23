@@ -57,32 +57,29 @@ test.beforeEach(() => {
   db.exec("DELETE FROM report_events; DELETE FROM risk_audit_log; DELETE FROM reports;");
 });
 
-test("POST /api/analyze attaches an audited community_wave signal once 5 distinct people reported the pattern", async (t) => {
+test("POST /api/analyze scores an audited REP-02 wave signal once 5 distinct people reported the pattern", async (t) => {
   for (let i = 0; i < 5; i++) recordUserReport({ sender: "57891234", message: SCAM, ip: `10.0.0.${i}` });
-  mockLlm({
-    verdict: "suspicious",
-    riskScore: 55,
-    signals: [{ type: "urgency_language", description: "Pressure to act", severity: "medium" }],
-    suggestedAction: "verify_official_channel",
-    explanation: "Looks pressuring.",
-  });
+  mockLlm({ signals: [{ code: "SOC-01", evidence: "Urgent", confidence: 0.7 }], scamType: null, stage: null });
   const post = await startServer(t);
 
   const res = await post("/analyze", { message: SCAM });
   assert.equal(res.status, 200);
   const body = await res.json();
 
-  const community = body.signals.find((s) => s.source === "community_reports");
+  const community = body.signals.find((s) => s.sourceType === "community");
+  assert.equal(community.code, "REP-02");
   assert.equal(community.type, "community_wave");
   assert.equal(community.communityEvidence.distinctReporters, 5);
-  assert.equal(body.riskScore, 55);
-  assert.equal(body.adjustedRiskScore, 75);
-  // lookalike_url (deterministic, high) + CW-2 wave -> suspicious escalates to scam
+  // REP-02 + deterministic lookalike (mcb-secure.top) -> critical floor.
+  assert.equal(body.risk.level, "critical");
   assert.equal(body.verdict, "scam");
-  assert.equal(body.riskAdjustments[0].verdictFrom, "suspicious");
+  assert.ok(body.trace.some((t) => t.id === "FLOOR-REP02-TECHNICAL"));
+  assert.equal(body.riskAdjustments[0].signalCode, "REP-02");
+  assert.equal(body.riskAdjustments[0].levelTo, "critical");
+  assert.equal("adjustedRiskScore" in body, false);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM risk_audit_log").get().n, 1);
-  // riskCategories describe message content only - computed before community evidence
-  assert.ok(body.riskCategories);
+  // riskCategories describe message content only - community evidence excluded
+  assert.equal(body.riskCategories.verification_risk, "LOW");
 });
 
 test("POST /api/report records a privacy-minimised evidence event and keeps its response shape", async (t) => {
@@ -107,16 +104,12 @@ test("POST /api/report with an oversized message still succeeds, without fingerp
 
 test("senderReports is not attached for a redacted placeholder or an official identity", async (t) => {
   const post = await startServer(t);
-  for (const sender of ["[phone 1]", "MCB"]) {
-    mockLlm({
-      verdict: "scam",
-      signals: [],
-      suggestedAction: "block_sender",
-      explanation: "Scam.",
-      sender,
-    });
-    const body = await (await post("/analyze", { message: "Call [phone 1] now to unlock your account" })).json();
-    assert.equal(body.sender, sender);
-    assert.equal(body.senderReports, undefined, `no senderReports for ${sender}`);
-  }
+  mockLlm({ signals: [] });
+  const placeholder = await (await post("/analyze", { message: "From: [phone 1]\nCall now to unlock your account" })).json();
+  assert.equal(placeholder.sender, "[phone 1]");
+  assert.equal(placeholder.senderReports, undefined);
+
+  const official = await (await post("/analyze", { message: "MCB: call now to unlock your account" })).json();
+  assert.equal(official.sender, "MCB");
+  assert.equal(official.senderReports, undefined);
 });

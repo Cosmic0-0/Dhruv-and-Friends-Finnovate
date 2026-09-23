@@ -3,7 +3,7 @@
  * redaction can't happen client-side: screenshot ingestion. The raw image
  * has to reach the server for OCR, so there's no way to redact before the
  * text exists - this runs on the OCR-extracted text, before it's handed to
- * analyzeMessage(), so the LLM (and the client, in the response) never sees
+ * runPipeline(), so the LLM (and the client, in the response) never sees
  * the raw identifiers, matching the guarantee the text-paste flow makes by
  * redacting in the browser before send.
  *

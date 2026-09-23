@@ -1,0 +1,195 @@
+// The single FraudLens analysis pipeline, shared by /api/analyze,
+// /api/analyze/screenshot and /api/batch-scan:
+//
+//   normalise -> deterministic entity extraction
+//     -> [ deterministic detectors | intelligence/community | bounded semantic model ]
+//     -> signal registry -> dedupe/validation -> deterministic risk engine
+//     -> decision policy -> intervention policy -> response
+//
+// Code verifies facts. AI interprets language. The deterministic engine
+// decides. The semantic model is optional enrichment: when it times out,
+// fails or returns garbage, runPipeline still returns a full deterministic
+// assessment (analysis.semantic.status tells you which).
+//
+// Demo note: run a lookalike-link message with LLM_MODE=local and Ollama
+// stopped - the risk level is unchanged, only the "inferred" signals vanish.
+
+import { normalizeText, inputHash } from "../normalize/index.js";
+import { findClaimedInstitution, REGISTRY_VERSION } from "../institutions/index.js";
+import { checkUrls, checkLinkHygiene, DETECTOR_VERSION as URL_DETECTOR_VERSION } from "../domain-matching/index.js";
+import { attachDomainAges } from "../domain-age/index.js";
+import { checkIdentityConsistency } from "../identity-consistency/index.js";
+import { detectLexicon, detectInjection, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
+import { evaluatePaymentContext } from "../payment-context/index.js";
+import { analyzeSemantics, SEMANTIC_PROMPT_VERSION } from "../analysis/index.js";
+import { evaluateCommunitySignal, recordCommunityOutcome, communitySenderKey } from "../community-signals/index.js";
+import { ACTIVE_RULES as WAVE_RULES } from "../community-signals/wave.js";
+import { score, verdictForLevel } from "../risk-engine/index.js";
+import { planInterventions, buildExplanation, POLICY_VERSION } from "../interventions/index.js";
+import { computeRiskCategories } from "../risk-categories/index.js";
+import { getLikelyNextStages } from "../playbooks/index.js";
+import { attachScamDna } from "../scam-dna/index.js";
+import { makeSignal } from "../signals/registry.js";
+import { getReportCount } from "../../db/index.js";
+
+export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch"]);
+
+// A sender reported this many times (legacy per-sender counter) becomes a
+// REP-03 signal.
+const SENDER_REPORT_THRESHOLD = 3;
+const SEMANTIC_TIMEOUT_MS = Number(process.env.SEMANTIC_TIMEOUT_MS) || undefined;
+
+// "From: X" / "Sender: X" line; X ends at the line end or a sentence break.
+const OBSERVED_SENDER_RE = /^(?:from|sender|de|exp[ée]diteur)\s*:\s*([^\n]{1,60}?)(?:\.\s|\n|$)/im;
+
+function extractObservedSender(text) {
+  const m = OBSERVED_SENDER_RE.exec(text);
+  if (!m) return null;
+  const value = m[1].trim().replace(/[.,;]+$/, "");
+  return value || null;
+}
+
+// Stage implied by deterministic findings, used when the semantic model
+// gives none (or is down) so interventions still know where the victim is.
+function derivedStage(codes) {
+  if (codes.has("SEC-01")) return "OTP_REQUEST";
+  if (codes.has("SEC-02")) return "CREDENTIAL_REQUEST";
+  if (["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-07"].some((c) => codes.has(c))) return "PAYMENT_REQUEST";
+  return null;
+}
+
+function explanationLanguage(language, text) {
+  if (language === "en" || language === "fr") return language;
+  if (language === "kreol") return "kreol";
+  return detectLanguage(text);
+}
+
+/**
+ * Marks which signal carries each finding's score and which ones only
+ * corroborate it - one fact, one scored finding (review H3).
+ */
+function annotateSignals(findings) {
+  const out = [];
+  for (const f of findings) {
+    out.push({ ...f.primary, scored: true, ...(f.corroboratedBy.length ? { corroboratedBy: f.corroboratedBy } : {}) });
+    for (const m of f.members) {
+      if (m !== f.primary) out.push({ ...m, scored: false, mergedInto: f.code });
+    }
+  }
+  return out;
+}
+
+function senderReputation(sender) {
+  if (communitySenderKey(sender) === null) return { reports: undefined, signals: [] };
+  const reports = getReportCount(sender);
+  const signals =
+    reports >= SENDER_REPORT_THRESHOLD
+      ? [makeSignal("REP-03", { sourceType: "community", evidence: sender, description: `This sender has been reported ${reports} times by FraudLens users.`, metadata: { reports } })]
+      : [];
+  return { reports, signals };
+}
+
+/**
+ * @param {string} rawText the (already redacted) message text
+ * @param {{ source?: string, language?: string, paymentContext?: object|null, emailContext?: object|null,
+ *   ip?: string, now?: number, ocrQuality?: "low"|"ok", semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
+ *   emailContext is accepted for a future email/Outlook client and not yet evaluated.
+ */
+export async function runPipeline(rawText, context = {}) {
+  const { source = "pasted_text", language, paymentContext = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
+  const text = normalizeText(rawText);
+
+  // Semantic analysis runs in parallel with the deterministic detectors.
+  const semanticPromise =
+    semanticOpts.enabled === false
+      ? Promise.resolve({ status: "skipped", signals: [], rejected: [], scamType: null, stage: null, observedSender: null })
+      : analyzeSemantics(text, { language, timeoutMs: semanticOpts.timeoutMs ?? SEMANTIC_TIMEOUT_MS, llm: semanticOpts.llm });
+
+  const claim = findClaimedInstitution(text) ?? (paymentContext?.claimedOrganisation ? findClaimedInstitution(paymentContext.claimedOrganisation) : null);
+  const claimedInstitution = claim?.institution ?? null;
+
+  const urlSignals = checkUrls(text);
+  const attachAges = attachDomainAges(urlSignals, urlSignals.map((s) => s.metadata.host));
+  const deterministic = [
+    ...urlSignals,
+    ...checkLinkHygiene(text),
+    ...checkIdentityConsistency(text),
+    ...detectLexicon(text),
+    ...detectInjection(text),
+    ...evaluatePaymentContext(paymentContext),
+  ];
+
+  const semantic = await semanticPromise;
+  attachAges();
+
+  const observedSender = extractObservedSender(text) ?? semantic.observedSender ?? null;
+  const sender = observedSender ?? claimedInstitution?.display_name ?? null;
+  const reputation = senderReputation(sender);
+  const community = evaluateCommunitySignal(text, { sender: observedSender, now });
+
+  const withoutCommunity = [...deterministic, ...semantic.signals, ...reputation.signals];
+  const signals = community.signal ? [...withoutCommunity, community.signal] : withoutCommunity;
+  const engineContext = { semanticStatus: semantic.status, claimedInstitution, ocrQuality };
+  const decision = score(signals, engineContext);
+  const levelWithoutCommunity = community.signal ? score(withoutCommunity, engineContext).level : decision.level;
+  const { riskAdjustment } = recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now });
+
+  const codes = new Set(decision.findings.map((f) => f.code));
+  const stage = semantic.stage ?? derivedStage(codes);
+  const scamType = semantic.scamType;
+  const interventions = planInterventions({ level: decision.level, codes, scamType, stage });
+  const inferredCount = decision.findings.filter((f) => f.sourceTypes.every((s) => s === "semantic_model")).length;
+
+  const result = {
+    verdict: verdictForLevel(decision.level),
+    riskScore: decision.score,
+    risk: { score: decision.score, level: decision.level, confidence: decision.confidence },
+    decision: decision.decision,
+    signals: annotateSignals(decision.findings),
+    trace: decision.trace,
+    actions: interventions.actions,
+    reduceConcern: interventions.reduceConcern,
+    suggestedAction: interventions.suggestedAction,
+    explanation: buildExplanation(
+      { level: decision.level, score: decision.score, findingCount: decision.findings.length, inferredCount, semanticStatus: semantic.status },
+      explanationLanguage(language, text)
+    ),
+    // Describes message content only - community evidence is excluded.
+    riskCategories: computeRiskCategories(withoutCommunity),
+    analysis: {
+      rulesetVersion: decision.rulesetVersion,
+      source: SOURCES.includes(source) ? source : "pasted_text",
+      inputHash: inputHash(text),
+      detectorVersions: {
+        url: URL_DETECTOR_VERSION,
+        lexicon: LEXICON_VERSION,
+        institutions: REGISTRY_VERSION,
+        community: WAVE_RULES.version,
+        interventions: POLICY_VERSION,
+      },
+      semantic: {
+        status: semantic.status,
+        ...(semantic.model ? { model: semantic.model } : {}),
+        ...(semantic.provider ? { provider: semantic.provider } : {}),
+        promptVersion: SEMANTIC_PROMPT_VERSION,
+        rejectedSignals: semantic.rejected.length,
+        ...(semantic.error ? { error: semantic.error } : {}),
+      },
+    },
+  };
+  if (sender) result.sender = sender;
+  if (observedSender) result.observedSender = observedSender;
+  if (reputation.reports !== undefined) result.senderReports = reputation.reports;
+  if (riskAdjustment) result.riskAdjustments = [riskAdjustment];
+  if (stage) {
+    result.scamProfile = { type: scamType, stage, claimedIdentity: claimedInstitution?.display_name ?? null };
+    result.journey = { currentStage: stage, likelyNextStages: getLikelyNextStages(scamType, stage) };
+  }
+
+  try {
+    attachScamDna(result);
+  } catch (err) {
+    console.error(`[scam-dna] skipped: ${err.message}`);
+  }
+  return result;
+}

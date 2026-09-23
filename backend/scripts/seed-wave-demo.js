@@ -13,9 +13,10 @@
 //   2. Analyze a VARIANT of the seeded message (different amount/number), e.g.
 //      "MCB: Your account is suspended. Verify now at https://mcb-secure.top/verify
 //       or call 5251 2345 within 24h. Rs 7,500 fee."
-//      -> result shows a community_wave signal: "reported by 8 different
-//         people ... Nx the usual rate", adjustedRiskScore, riskAdjustments
-//         with an auditRef.
+//      -> result shows a REP-02 community_wave signal: "reported by 8
+//         different people ... Nx the usual rate"; the trace shows REP-02's
+//         points and FLOOR-REP02-TECHNICAL lifting the level to critical,
+//         and riskAdjustments carries the auditRef.
 //   3. Analyze a GENUINE message linking only mcb.mu -> no community boost,
 //      however often it is reported (anti-poisoning guard).
 //   4. npm run seed:wave -- --clear

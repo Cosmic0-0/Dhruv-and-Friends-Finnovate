@@ -47,3 +47,89 @@ test("checkUrls still flags a brand token that is its own hostname label", () =>
   assert.equal(signals[0].type, "lookalike_url");
   assert.match(signals[0].description, /absa/);
 });
+
+// ---- Regression: official subdomains, short-domain collisions, link tricks
+// (docs/ARCHITECTURE-REVIEW.md C1/C2). ----
+import { isOfficialHost, checkLinkHygiene, maxEditDistance, splitHost } from "./index.js";
+
+test("isOfficialHost accepts the apex and any subdomain, never a suffix lookalike", () => {
+  assert.equal(isOfficialHost("mcb.mu", "mcb.mu"), true);
+  assert.equal(isOfficialHost("internet.mcb.mu", "mcb.mu"), true);
+  assert.equal(isOfficialHost("secure.login.mcb.mu", "mcb.mu"), true);
+  assert.equal(isOfficialHost("notmcb.mu", "mcb.mu"), false);
+  assert.equal(isOfficialHost("mcb.mu.evil.top", "mcb.mu"), false);
+});
+
+test("official subdomains never produce a lookalike signal", () => {
+  for (const host of ["mcb.mu", "internet.mcb.mu", "secure.mcb.mu", "login.mcb.mu", "www.sbmgroup.mu"]) {
+    assert.deepEqual(checkUrls(`Log in at https://${host}/account`), [], host);
+  }
+});
+
+test("every official domain of a multi-domain institution is accepted", () => {
+  assert.deepEqual(checkUrls("File at https://mra.gov.mu/efiling today"), []);
+  assert.deepEqual(checkUrls("File at mra.mu before the deadline"), []);
+});
+
+test("short labels do not collide by edit distance (mra.mu is not an mcb.mu lookalike)", () => {
+  assert.equal(maxEditDistance(3), 0);
+  assert.deepEqual(checkUrls("See mrb.mu for details"), []);
+  assert.deepEqual(checkUrls("See xyz.mu for details"), []);
+});
+
+test("longer official labels still catch one-character typosquats", () => {
+  const [s] = checkUrls("Verify at sbmgrop.mu/login");
+  assert.equal(s.code, "URL-01");
+  assert.equal(s.officialDomain, "sbmgroup.mu");
+});
+
+test("registrable label is computed under multi-label public suffixes", () => {
+  assert.equal(splitHost("efiling.mra.gov.mu").registrable, "mra");
+  assert.equal(splitHost("shop.example.co.uk").registrable, "example");
+});
+
+test("brand in the subdomain or path of an unrelated host fires URL-03", () => {
+  assert.equal(checkUrls("Go to https://mcb.secure-verify.top/login")[0].code, "URL-03");
+  assert.equal(checkUrls("Go to https://evil.example/mcb/login")[0].code, "URL-03");
+});
+
+test("brand token as the registrable label fires URL-02 with the institution's official domain", () => {
+  const [s] = checkUrls("Verify at mcb-secure-verify.top now");
+  assert.equal(s.code, "URL-02");
+  assert.equal(s.officialDomain, "mcb.mu");
+  assert.equal(s.evidence, "mcb-secure-verify.top");
+});
+
+test("homoglyph host imitating an official domain fires URL-04", () => {
+  const signals = checkUrls("Verify at https://mсb.mu/login"); // Cyrillic с
+  const s = signals.find((x) => x.code === "URL-04");
+  assert.ok(s, "expected URL-04");
+  assert.equal(s.officialDomain, "mcb.mu");
+});
+
+test("userinfo trick uses the real host, and fires URL-07", () => {
+  const msg = "Open https://mcb.mu@mcb-login.top/verify";
+  assert.equal(checkUrls(msg)[0].domain, "mcb-login.top");
+  assert.ok(checkLinkHygiene(msg).some((s) => s.code === "URL-07"));
+});
+
+test("shorteners are a weak URL-05 signal, never a lookalike", () => {
+  const msg = "MCB: see https://mcb.mu/help and bit.ly/mcbhelp";
+  assert.deepEqual(checkUrls(msg), []);
+  const hygiene = checkLinkHygiene(msg);
+  assert.equal(hygiene.length, 1);
+  assert.equal(hygiene[0].code, "URL-05");
+  assert.equal(hygiene[0].severity, "low");
+});
+
+test("raw IP links fire URL-06; a bare version number does not", () => {
+  assert.ok(checkLinkHygiene("Login: http://192.168.4.20/mcb").some((s) => s.code === "URL-06"));
+  assert.deepEqual(checkLinkHygiene("Update to version 1.2.3.4 today"), []);
+});
+
+test("URL-08: a verify/log-in call to action through an unofficial link, never through an official one", () => {
+  const s = checkLinkHygiene("Klik lor oceanbank-verify-secure.test deswit pou verifye ou kont").find((x) => x.code === "URL-08");
+  assert.ok(s, "expected URL-08");
+  assert.equal(s.metadata.host, "oceanbank-verify-secure.test");
+  assert.deepEqual(checkLinkHygiene("Log in at https://internet.mcb.mu to verify your statement"), []);
+});

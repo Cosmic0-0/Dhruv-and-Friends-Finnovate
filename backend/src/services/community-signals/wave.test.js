@@ -6,8 +6,8 @@ import {
   computeMetrics,
   selectTier,
   evaluateCommunityEvidence,
-  escalateVerdict,
-  buildAdjustment,
+  buildCommunitySignal,
+  hasDeterministicHighSignal,
 } from "./wave.js";
 
 const NOW = Date.parse("2026-09-23T12:00:00.000Z");
@@ -134,40 +134,34 @@ test("evaluateCommunityEvidence ignores non-matching events", () => {
   assert.equal(evaluateCommunityEvidence(CANDIDATE, unrelated, NOW), null);
 });
 
-test("escalateVerdict policy", () => {
-  assert.equal(escalateVerdict("safe", RULES.wave, true), "suspicious");
-  assert.equal(escalateVerdict("safe", RULES.cluster, false), "suspicious");
-  assert.equal(escalateVerdict("suspicious", RULES.wave, true), "scam");
-  assert.equal(escalateVerdict("suspicious", RULES.wave, false), "suspicious");
-  assert.equal(escalateVerdict("suspicious", RULES.cluster, true), "suspicious");
-  assert.equal(escalateVerdict("scam", RULES.cluster, false), "scam");
-});
-
-test("buildAdjustment emits an evidence-backed signal and a ledger entry, and caps the score at 100", () => {
+test("buildCommunitySignal emits registry-code fields and evidence, with no score arithmetic", () => {
   const events = [1, 2, 3, 4, 5].map((i) => event({ ageMs: i * HOUR, reporter: `r${i}` }));
   const evaluation = evaluateCommunityEvidence(CANDIDATE, events, NOW);
-  const result = {
-    verdict: "suspicious",
-    riskScore: 90,
-    signals: [{ type: "lookalike_url", severity: "high", source: "url_parser" }],
-  };
-  const { signal, adjustment, verdictTo, adjustedRiskScore } = buildAdjustment(result, evaluation);
+  const built = buildCommunitySignal(evaluation);
 
-  assert.equal(signal.type, "community_wave");
-  assert.equal(signal.source, "community_reports");
-  assert.equal(signal.communityEvidence.ruleId, "CW-2");
-  assert.equal(signal.communityEvidence.rulesVersion, "wave-rules-v1");
-  assert.equal(signal.communityEvidence.distinctReporters, 5);
-  assert.deepEqual(signal.communityEvidence.matchedBy, { template: 5 });
-  assert.equal(adjustment.riskDelta, 20);
-  assert.equal(adjustment.evidenceEventIds.length, 5);
-  assert.equal(verdictTo, "scam");
-  assert.equal(adjustedRiskScore, 100);
+  assert.equal(built.code, "REP-02");
+  assert.equal(built.communityEvidence.ruleId, "CW-2");
+  assert.equal(built.communityEvidence.rulesVersion, "wave-rules-v2");
+  assert.equal(built.communityEvidence.distinctReporters, 5);
+  assert.deepEqual(built.communityEvidence.matchedBy, { template: 5 });
+  assert.equal(built.evidenceEventIds.length, 5);
+  assert.equal("riskDelta" in built, false);
+  assert.equal("adjustedRiskScore" in built, false);
 });
 
-test("buildAdjustment omits adjustedRiskScore when the LLM gave no riskScore", () => {
-  const events = [1, 2, 3].map((i) => event({ ageMs: i * HOUR, reporter: `r${i}` }));
+test("a cluster (not a wave) maps to REP-01", () => {
+  const events = [1, 2, 3].map((i) => event({ ageMs: i * DAY, reporter: `r${i}` }));
   const evaluation = evaluateCommunityEvidence(CANDIDATE, events, NOW);
-  const { adjustedRiskScore } = buildAdjustment({ verdict: "scam", signals: [] }, evaluation);
-  assert.equal(adjustedRiskScore, undefined);
+  assert.equal(buildCommunitySignal(evaluation).code, "REP-01");
+});
+
+test("wave-rules-v1 is kept unchanged so old audit rows stay explainable", () => {
+  assert.equal(RULES.version, "wave-rules-v1");
+  assert.equal(RULES.wave.riskDelta, 20);
+});
+
+test("only rule-sourced impersonation findings count as deterministic corroboration", () => {
+  assert.equal(hasDeterministicHighSignal([{ code: "URL-02", sourceType: "rule" }]), true);
+  assert.equal(hasDeterministicHighSignal([{ code: "ID-04", sourceType: "semantic_model" }]), false);
+  assert.equal(hasDeterministicHighSignal([{ code: "SEC-01", sourceType: "lexicon" }]), false);
 });

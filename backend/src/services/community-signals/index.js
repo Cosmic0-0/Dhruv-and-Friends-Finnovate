@@ -1,18 +1,21 @@
 // Community cluster/wave evidence: records scam reports as timestamped,
 // privacy-minimised events and, on each analysis, checks whether the
 // message belongs to a pattern that many distinct people have reported
-// recently. If so, it adds ONE structured, evidence-backed signal and a
-// bounded, audited risk adjustment. See README.md in this directory for the
-// full rule set, the verdict-escalation policy, and the compliance controls.
+// recently. If so, it emits ONE structured, evidence-backed REP-01/REP-02
+// signal; the deterministic risk engine decides what it is worth, and the
+// contribution is written to the audit log. See README.md in this directory
+// for the full rule set and the compliance controls.
 //
 // Reliability (root CLAUDE.md "Judging Priorities"): everything here is
-// best-effort enrichment. applyCommunityEvidence() never throws - on any
-// failure it logs and returns the result unchanged, so a DB problem can
-// never fail /api/analyze.
+// best-effort enrichment. evaluateCommunitySignal() and
+// recordCommunityOutcome() never throw - on any failure they log and return
+// "no community evidence", so a DB problem can never fail /api/analyze.
 
 import { createHmac, randomBytes, randomUUID } from "node:crypto";
 import { redact } from "../redact/index.js";
-import { BRAND_TOKENS, LEGIT_DOMAINS, extractHostnames, extractLookalikeHosts } from "../domain-matching/index.js";
+import { BRAND_TOKENS, extractHostnames, extractLookalikeHosts } from "../domain-matching/index.js";
+import { institutionForHost } from "../institutions/index.js";
+import { makeSignal } from "../signals/registry.js";
 import {
   normalizeSender,
   insertReportEvent,
@@ -21,7 +24,7 @@ import {
   purgeCommunityData,
 } from "../../db/index.js";
 import { fingerprintMessage } from "./fingerprint.js";
-import { ACTIVE_RULES, evaluateCommunityEvidence, buildAdjustment, hasDeterministicHighSignal } from "./wave.js";
+import { ACTIVE_RULES, evaluateCommunityEvidence, buildCommunitySignal, hasDeterministicHighSignal } from "./wave.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EVENT_RETENTION_DAYS = Number(process.env.COMMUNITY_EVENT_RETENTION_DAYS) || 90;
@@ -87,7 +90,7 @@ function buildCandidate(redactedText, sender) {
 // genuine institution message being mass-reported, not of a scam.
 function linksOnlyOfficialDomains(text) {
   const hosts = extractHostnames(text);
-  return hosts.length > 0 && hosts.every((h) => LEGIT_DOMAINS.includes(h));
+  return hosts.length > 0 && hosts.every((h) => institutionForHost(h) !== null);
 }
 
 /**
@@ -110,8 +113,8 @@ export function recordUserReport({ sender, message, ip, now = Date.now(), channe
   });
 }
 
-function recordAutoEvent(result, candidate, ip, now) {
-  const identitySignal = result.signals.find((s) => s.type === "IDENTITY_MISMATCH");
+function recordAutoEvent(signals, candidate, ip, now) {
+  const identitySignal = signals.find((s) => s.code === "ID-01" || s.code === "ID-02");
   insertReportEvent({
     createdAt: new Date(now).toISOString(),
     origin: "auto_high_confidence",
@@ -119,56 +122,90 @@ function recordAutoEvent(result, candidate, ip, now) {
     brandClaimed: identitySignal?.claimedIdentity?.toLowerCase() ?? null,
     reporterHash: reporterHash(ip),
     evidence: {
-      verdict: result.verdict,
-      deterministicSignals: result.signals
-        .filter((s) => s.severity === "high" && (s.source === "url_parser" || s.source === "identity_check"))
-        .map((s) => s.type),
+      deterministicSignals: signals.filter((s) => s.sourceType === "rule").map((s) => s.code),
     },
   });
 }
 
-function applyAdjustment(result, evaluation, now) {
-  const { signal, adjustment, verdictTo, adjustedRiskScore, metrics } = buildAdjustment(result, evaluation);
-  const auditRef = randomUUID();
-  const { evidenceIds, ...auditMetrics } = metrics;
-  insertRiskAudit({ id: auditRef, createdAt: new Date(now).toISOString(), ...adjustment, metrics: auditMetrics });
-
-  result.signals.push(signal);
-  result.verdict = verdictTo;
-  if (adjustedRiskScore !== undefined) result.adjustedRiskScore = adjustedRiskScore;
-  const { evidenceEventIds, ...publicAdjustment } = adjustment;
-  result.riskAdjustments = [{ ...publicAdjustment, evidenceCount: evidenceEventIds.length, auditRef }];
+/**
+ * Read-only evaluation of community cluster/wave evidence for a message.
+ * Returns a REP-01/REP-02 registry signal when a tier fires - the risk
+ * engine decides its points; nothing here touches a score or a verdict.
+ * Never throws: any failure degrades to "no community signal".
+ * @returns {{ signal: object|null, candidate: object|null, evaluation?: object, evidenceEventIds?: number[] }}
+ */
+export function evaluateCommunitySignal(message, { sender, now = Date.now() } = {}) {
+  try {
+    const text = redact(message).redacted;
+    const candidate = buildCandidate(text, sender);
+    // A message whose every link is an official domain is never boosted by
+    // crowd evidence: that's a genuine institution message being
+    // mass-reported, not a scam.
+    if (linksOnlyOfficialDomains(text)) return { signal: null, candidate };
+    const events = getReportEventsSince(new Date(now - FETCH_WINDOW_MS).toISOString());
+    const evaluation = evaluateCommunityEvidence(candidate, events, now);
+    if (!evaluation) return { signal: null, candidate };
+    const built = buildCommunitySignal(evaluation);
+    const signal = makeSignal(built.code, {
+      sourceType: "community",
+      description: built.description,
+      metadata: { ruleId: evaluation.tier.ruleId, rulesVersion: evaluation.rulesVersion, evidenceCount: built.evidenceEventIds.length },
+      extra: { communityEvidence: built.communityEvidence },
+    });
+    return { signal, candidate, evaluation, evidenceEventIds: built.evidenceEventIds };
+  } catch (err) {
+    console.error(`[community-signals] skipped: ${err.message}`);
+    return { signal: null, candidate: null };
+  }
 }
 
 /**
- * Evaluates community evidence for an analyzed message and, when a rule
- * fires, adds the community signal + audited adjustment to `result`. Also
- * records this analysis as a (half-weight) evidence event when its scam
- * verdict is corroborated by a deterministic high-severity check.
- * Order matters: evaluate BEFORE recording, so a message never counts as
- * evidence for itself.
- * @param {object} result analysis result (mutated, matching routes/index.js)
- * @param {string} message the text that was analyzed
- * @param {{ ip?: string, now?: number }} [context]
+ * After the deterministic decision: writes the audit row for a community
+ * contribution (rule, versions, evidence ids, level with and without it)
+ * and, when a HIGH/CRITICAL decision is corroborated by a deterministic
+ * impersonation finding, records this analysis as half-weight machine
+ * evidence. Order matters: the caller evaluates BEFORE this runs, so a
+ * message is never evidence for itself. Never throws.
+ * @returns {{ riskAdjustment?: object }}
  */
-export function applyCommunityEvidence(result, message, { ip, now = Date.now() } = {}) {
-  if (!result || !Array.isArray(result.signals) || result.verdict === "unknown") return result;
+export function recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now = Date.now() }) {
+  const out = {};
   try {
-    const text = redact(message).redacted;
-    const candidate = buildCandidate(text, result.observedSender ?? result.sender);
-    const verdictBeforeCommunity = result.verdict;
-    const corroborated = verdictBeforeCommunity === "scam" && hasDeterministicHighSignal(result.signals);
-
-    if (!linksOnlyOfficialDomains(text)) {
-      const events = getReportEventsSince(new Date(now - FETCH_WINDOW_MS).toISOString());
-      const evaluation = evaluateCommunityEvidence(candidate, events, now);
-      if (evaluation) applyAdjustment(result, evaluation, now);
+    if (community?.signal && community.evaluation) {
+      const { evaluation, signal, evidenceEventIds } = community;
+      const auditRef = randomUUID();
+      const points = decision.trace.find((t) => t.id === signal.code)?.points ?? 0;
+      const { evidenceIds, ...metrics } = evaluation.metrics;
+      insertRiskAudit({
+        id: auditRef,
+        createdAt: new Date(now).toISOString(),
+        ruleId: evaluation.tier.ruleId,
+        rulesVersion: `${evaluation.rulesVersion}+${decision.rulesetVersion}`,
+        riskDelta: points,
+        verdictFrom: levelWithoutCommunity,
+        verdictTo: decision.level,
+        evidenceEventIds,
+        metrics,
+      });
+      out.riskAdjustment = {
+        ruleId: evaluation.tier.ruleId,
+        rulesVersion: evaluation.rulesVersion,
+        signalCode: signal.code,
+        points,
+        levelFrom: levelWithoutCommunity,
+        levelTo: decision.level,
+        evidenceCount: evidenceEventIds.length,
+        auditRef,
+      };
     }
-    if (corroborated) recordAutoEvent({ ...result, verdict: verdictBeforeCommunity }, candidate, ip, now);
+    const decisive = decision.level === "high" || decision.level === "critical";
+    if (community?.candidate && decisive && hasDeterministicHighSignal(signals)) {
+      recordAutoEvent(signals, community.candidate, ip, now);
+    }
   } catch (err) {
-    console.error(`[community-signals] skipped: ${err.message}`);
+    console.error(`[community-signals] outcome not recorded: ${err.message}`);
   }
-  return result;
+  return out;
 }
 
 export function purgeExpiredCommunityData(now = Date.now()) {

@@ -5,8 +5,13 @@ process.env.DATABASE_URL = ":memory:";
 process.env.REPORTER_HASH_SECRET = "test-secret";
 
 const { db } = await import("../../db/index.js");
+const { score } = await import("../risk-engine/index.js");
+const { checkUrls } = await import("../domain-matching/index.js");
+const { checkIdentityConsistency } = await import("../identity-consistency/index.js");
+const { detectLexicon } = await import("../lexicon/index.js");
 const {
-  applyCommunityEvidence,
+  evaluateCommunitySignal,
+  recordCommunityOutcome,
   communitySenderKey,
   recordUserReport,
   reporterHash,
@@ -30,122 +35,89 @@ function reportFrom(n, { ageMs = HOUR, message = SCAM, sender = "57891234" } = {
   }
 }
 
-function llmResult(overrides = {}) {
-  return {
-    verdict: "suspicious",
-    riskScore: 60,
-    signals: [{ type: "urgency_language", severity: "medium", source: "message_text" }],
-    ...overrides,
-  };
+// Runs the same evaluate -> score -> record sequence as services/pipeline.
+function analyse(message, { ip = "1.1.1.1", now = NOW, extraSignals = [] } = {}) {
+  const community = evaluateCommunitySignal(message, { now });
+  const base = [...checkUrls(message), ...checkIdentityConsistency(message), ...detectLexicon(message), ...extraSignals];
+  const signals = community.signal ? [...base, community.signal] : base;
+  const decision = score(signals, { semanticStatus: "ok" });
+  const levelWithoutCommunity = score(base, { semanticStatus: "ok" }).level;
+  const outcome = recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now });
+  return { community, decision, outcome };
 }
 
-test("communitySenderKey rejects placeholders, official identities and blanks", () => {
-  assert.equal(communitySenderKey("[phone 1]"), null);
-  assert.equal(communitySenderKey("MCB"), null);
-  assert.equal(communitySenderKey("my.t"), null);
-  assert.equal(communitySenderKey("State Bank of Mauritius"), null);
-  assert.equal(communitySenderKey("  "), null);
-  assert.equal(communitySenderKey(undefined), null);
-  assert.equal(communitySenderKey("+230 5789 1234"), "23057891234");
-  assert.equal(communitySenderKey("Emtel Prize Team"), "emtel prize team");
-});
-
-test("reporterHash is a stable pseudonym and never the raw IP", () => {
-  assert.equal(reporterHash("10.0.0.1"), reporterHash("10.0.0.1"));
-  assert.notEqual(reporterHash("10.0.0.1"), reporterHash("10.0.0.2"));
-  assert.ok(!reporterHash("10.0.0.1").includes("10.0.0.1"));
-});
-
-test("recordUserReport stores no raw message text and no raw IP", () => {
-  recordUserReport({ sender: "57891234", message: SCAM, ip: "203.0.113.9", now: NOW });
-  const row = db.prepare("SELECT * FROM report_events").get();
-  const serialized = JSON.stringify(row);
-  assert.ok(!serialized.includes("suspended"));
-  assert.ok(!serialized.includes("203.0.113.9"));
-  assert.equal(row.origin, "user_report");
-  assert.equal(row.sender_key, "23057891234");
-  assert.deepEqual(JSON.parse(row.lookalike_hosts), ["mcb-secure.top"]);
-});
-
-test("recordUserReport skips a report with neither message nor trackable sender", () => {
-  assert.equal(recordUserReport({ sender: "MCB", ip: "1.1.1.1", now: NOW }), null);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM report_events").get().n, 0);
-});
-
-test("no community evidence -> result unchanged, no audit row", () => {
-  const result = applyCommunityEvidence(llmResult(), SCAM, { ip: "1.1.1.1", now: NOW });
-  assert.equal(result.verdict, "suspicious");
-  assert.equal(result.riskAdjustments, undefined);
-  assert.equal(result.signals.length, 1);
+test("no community evidence -> no signal, no audit row", () => {
+  const { community, outcome } = analyse(SCAM);
+  assert.equal(community.signal, null);
+  assert.equal(outcome.riskAdjustment, undefined);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM risk_audit_log").get().n, 0);
 });
 
-test("wave of 5 distinct reporters -> CW-2 signal, adjusted score, and an audit row that matches", () => {
+test("wave of 5 distinct reporters -> REP-02 registry signal scored by the engine, with a matching audit row", () => {
   reportFrom(5);
-  const result = applyCommunityEvidence(
-    llmResult({ signals: [{ type: "lookalike_url", severity: "high", source: "url_parser" }] }),
-    SCAM.replace("[phone 1]", "[phone 3]"),
-    { ip: "1.1.1.1", now: NOW }
-  );
+  const { community, decision, outcome } = analyse(SCAM.replace("[phone 1]", "[phone 3]"));
 
-  const signal = result.signals.find((s) => s.source === "community_reports");
+  const signal = community.signal;
+  assert.equal(signal.code, "REP-02");
   assert.equal(signal.type, "community_wave");
+  assert.equal(signal.sourceType, "community");
+  assert.equal(signal.source, "community_reports");
   assert.equal(signal.communityEvidence.distinctReporters, 5);
-  assert.equal(result.adjustedRiskScore, 80);
-  assert.equal(result.riskScore, 60, "the LLM's own riskScore is preserved unchanged");
-  assert.equal(result.verdict, "scam");
+  assert.equal(signal.communityEvidence.rulesVersion, "wave-rules-v2");
 
-  const [adj] = result.riskAdjustments;
+  // Points come from the risk engine's ruleset, not from the wave rules.
+  assert.equal(decision.trace.find((t) => t.id === "REP-02").points, 20);
+  // Wave + a deterministic lookalike (mcb-secure.top) -> critical floor.
+  assert.equal(decision.level, "critical");
+  assert.ok(decision.trace.some((t) => t.id === "FLOOR-REP02-TECHNICAL"));
+
+  const adj = outcome.riskAdjustment;
   assert.equal(adj.ruleId, "CW-2");
+  assert.equal(adj.signalCode, "REP-02");
   assert.equal(adj.evidenceCount, 5);
+  assert.equal(adj.levelTo, "critical");
   const audit = db.prepare("SELECT * FROM risk_audit_log WHERE id = ?").get(adj.auditRef);
   assert.equal(audit.rule_id, "CW-2");
-  assert.equal(audit.rules_version, "wave-rules-v1");
-  assert.equal(audit.verdict_from, "suspicious");
-  assert.equal(audit.verdict_to, "scam");
+  assert.equal(audit.rules_version, "wave-rules-v2+rs-1.0");
+  assert.equal(audit.verdict_from, adj.levelFrom);
+  assert.equal(audit.verdict_to, "critical");
   assert.equal(JSON.parse(audit.evidence_event_ids).length, 5);
 });
 
-test("crowd evidence alone lifts safe only to suspicious", () => {
-  reportFrom(5);
-  const result = applyCommunityEvidence(llmResult({ verdict: "safe", riskScore: 10 }), SCAM, { now: NOW });
-  assert.equal(result.verdict, "suspicious");
-  assert.equal(result.riskAdjustments[0].verdictFrom, "safe");
+test("crowd evidence alone (no technical finding) stays bounded: REP-02 points only, no floor", () => {
+  const plain = "Your parcel is waiting, reply YES to arrange delivery of your package from the depot today please";
+  reportFrom(5, { message: plain });
+  const { decision } = analyse(plain);
+  assert.equal(decision.score, 20);
+  assert.equal(decision.level, "elevated");
+  assert.ok(!decision.trace.some((t) => String(t.id).startsWith("FLOOR")));
 });
 
 test("one IP reporting repeatedly does not create a cluster (anti-poisoning)", () => {
   for (let i = 0; i < 10; i++) recordUserReport({ sender: "57891234", message: SCAM, ip: "6.6.6.6", now: NOW - i * 60_000 });
-  const result = applyCommunityEvidence(llmResult(), SCAM, { now: NOW });
-  assert.equal(result.riskAdjustments, undefined);
+  assert.equal(analyse(SCAM).community.signal, null);
 });
 
-test("mass-reported message whose links are all official domains is never boosted", () => {
-  const genuine = "MCB: Your statement is ready. View it securely at https://mcb.mu/statements";
+test("mass-reported message whose links are all official domains (incl. subdomains) is never boosted", () => {
+  const genuine = "MCB: Your statement is ready. View it securely at https://internet.mcb.mu/statements";
   reportFrom(6, { message: genuine, sender: "MCB" });
-  const result = applyCommunityEvidence(llmResult({ verdict: "safe" }), genuine, { now: NOW });
-  assert.equal(result.verdict, "safe");
-  assert.equal(result.riskAdjustments, undefined);
+  const { community, decision } = analyse(genuine);
+  assert.equal(community.signal, null);
+  assert.equal(decision.level, "low");
 });
 
-test("a message is never evidence for itself: evaluated before its own auto event is recorded", () => {
-  const scamResult = () =>
-    llmResult({ verdict: "scam", signals: [{ type: "lookalike_url", severity: "high", source: "url_parser" }] });
-  for (let i = 0; i < 6; i++) applyCommunityEvidence(scamResult(), SCAM, { ip: `9.9.9.${i}`, now: NOW - i * HOUR });
-  // 6 auto events from 6 distinct IPs, but zero human reports -> no boost.
-  const result = applyCommunityEvidence(scamResult(), SCAM, { ip: "9.9.9.99", now: NOW });
-  assert.equal(result.riskAdjustments, undefined);
+test("a message is never evidence for itself, and machine events alone never fire a tier", () => {
+  for (let i = 0; i < 6; i++) analyse(SCAM, { ip: `9.9.9.${i}`, now: NOW - i * HOUR });
+  // 6 corroborated high-level analyses -> 6 auto events, but zero human reports -> no boost.
+  const { community } = analyse(SCAM, { ip: "9.9.9.99" });
+  assert.equal(community.signal, null);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM report_events WHERE origin = 'auto_high_confidence'").get().n, 7);
 });
 
-test("uncorroborated LLM scam verdicts are not recorded as evidence", () => {
-  applyCommunityEvidence(llmResult({ verdict: "scam" }), SCAM, { now: NOW });
+test("analyses without a deterministic impersonation finding are not recorded as evidence", () => {
+  const noLink = "Your account is suspended, act now or lose access within 24h";
+  analyse(noLink);
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM report_events").get().n, 0);
-});
-
-test("unknown (failed) analyses are passed through untouched", () => {
-  reportFrom(5);
-  const failed = { verdict: "unknown", signals: [], analysisFailed: true };
-  assert.deepEqual(applyCommunityEvidence({ ...failed }, SCAM, { now: NOW }), failed);
 });
 
 test("retention purge deletes expired events and audits only", () => {

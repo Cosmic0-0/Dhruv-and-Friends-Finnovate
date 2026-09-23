@@ -15,11 +15,12 @@ const { router } = await import("./index.js");
 
 const originalFetch = globalThis.fetch;
 
+// Semantic-model contract (services/analysis): enum codes + exact quotes
+// only - no verdict, score or action.
 const MOCK_LLM_RESULT = {
-  verdict: "scam",
-  signals: [{ type: "urgency_language", description: "Act now or lose your account", severity: "high" }],
-  suggestedAction: "block_sender",
-  explanation: "This message pressures immediate action, a common scam tactic.",
+  signals: [{ code: "SOC-01", evidence: "Urgent", confidence: 0.8 }],
+  scamType: null,
+  stage: null,
 };
 
 // Routes every outbound call by host: the RDAP domain-age lookup is forced
@@ -62,10 +63,21 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   assert.equal(res.status, 200);
   const body = await res.json();
 
-  assert.equal(body.verdict, "scam");
+  // URL-02 (30, rule) + SOC-01 (6, lexicon, corroborated by the model) = 36
+  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.0, not the LLM.
+  assert.equal(body.riskScore, 36);
+  assert.deepEqual(body.risk, { score: 36, level: "elevated", confidence: "high" });
+  assert.equal(body.verdict, "suspicious");
+  assert.equal(body.decision, "verify_first");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.0");
+  assert.equal(body.analysis.semantic.status, "ok");
   assert.ok(Array.isArray(body.signals) && body.signals.length > 0);
   assert.equal(typeof body.suggestedAction, "string");
   assert.equal(typeof body.explanation, "string");
+  assert.ok(Array.isArray(body.actions) && body.actions.length > 0);
+  assert.ok(body.trace.some((t) => t.id === "URL-02" && t.points === 30));
+  const urgency = body.signals.find((s) => s.code === "SOC-01" && s.scored);
+  assert.deepEqual(urgency.corroboratedBy, ["semantic_model"]);
 
   // checkUrls() ran and flagged the lookalike link regardless of the RDAP
   // outage, but domainAgeDays must be entirely absent - never null, never 0,

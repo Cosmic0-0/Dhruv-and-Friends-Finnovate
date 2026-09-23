@@ -53,7 +53,19 @@ export const WAVE_RULES_V1 = Object.freeze({
   }),
 });
 
-export const ACTIVE_RULES = WAVE_RULES_V1;
+// v2: identical thresholds, but a tier no longer carries a riskDelta that was
+// added to the LLM's score. It emits a registry signal (REP-01 / REP-02) and
+// the deterministic risk engine (services/risk-engine, ruleset rs-1.0)
+// decides its points. v1 stays so audit rows written under it remain
+// explainable against the exact rules that produced them.
+export const WAVE_RULES_V2 = Object.freeze({
+  ...WAVE_RULES_V1,
+  version: "wave-rules-v2",
+  cluster: Object.freeze({ ruleId: "CW-1", signalCode: "REP-01", type: "community_cluster", minDistinctReporters: 3, minHumanReports: 1, minDecayedWeight: 2 }),
+  wave: Object.freeze({ ruleId: "CW-2", signalCode: "REP-02", type: "community_wave", minDistinctReporters24h: 5, minBurstRatio: 3 }),
+});
+
+export const ACTIVE_RULES = WAVE_RULES_V2;
 
 /**
  * Why (if at all) a stored event belongs to the same campaign as the message
@@ -159,26 +171,12 @@ export function evaluateCommunityEvidence(candidate, events, now, rules = ACTIVE
   return { tier, metrics, matchedBy: reasonCounts, rulesVersion: rules.version };
 }
 
-// Signals from checks that don't involve the LLM at all (domain matching,
-// identity consistency). Only these may corroborate a crowd-driven
-// escalation to "scam" - crowd evidence plus LLM opinion alone is not enough.
+// Deterministic, non-LLM impersonation findings (rule-sourced URL/identity
+// checks). Only these may corroborate a message as machine evidence for
+// future cluster detection - an LLM opinion never can.
+const CORROBORATING_CODES = new Set(["URL-01", "URL-02", "URL-03", "URL-04", "ID-01", "ID-02"]);
 export function hasDeterministicHighSignal(signals) {
-  return (signals || []).some(
-    (s) => s.severity === "high" && (s.source === "url_parser" || s.source === "identity_check")
-  );
-}
-
-/**
- * Verdict escalation policy (see services/community-signals/README.md):
- *   - crowd evidence alone can raise "safe" to "suspicious", never further;
- *   - "suspicious" -> "scam" only on a CW-2 wave AND a deterministic
- *     high-severity signal on this same message;
- *   - never lowers a verdict, never touches "unknown".
- */
-export function escalateVerdict(verdict, tier, deterministicHigh, rules = ACTIVE_RULES) {
-  if (verdict === "safe") return "suspicious";
-  if (verdict === "suspicious" && tier.ruleId === rules.wave.ruleId && deterministicHigh) return "scam";
-  return verdict;
+  return (signals || []).some((s) => s.sourceType === "rule" && CORROBORATING_CODES.has(s.code));
 }
 
 function describe(tier, m, rules) {
@@ -190,20 +188,14 @@ function describe(tier, m, rules) {
 }
 
 /**
- * Turns an evaluation into the additive response pieces: one signals[] item
- * with a full evidence object, and one riskAdjustments[] ledger entry.
- * Pure - the caller persists the audit row and attaches `auditRef`.
+ * Turns an evaluation into the fields of one REP-01/REP-02 signal. Pure -
+ * no score arithmetic here; the risk engine owns points and levels.
  */
-export function buildAdjustment(result, evaluation, rules = ACTIVE_RULES) {
+export function buildCommunitySignal(evaluation, rules = ACTIVE_RULES) {
   const { tier, metrics, matchedBy, rulesVersion } = evaluation;
-  const deterministicHigh = hasDeterministicHighSignal(result.signals);
-  const verdictTo = escalateVerdict(result.verdict, tier, deterministicHigh, rules);
-
-  const signal = {
-    type: tier.type,
+  return {
+    code: tier.signalCode,
     description: describe(tier, metrics, rules),
-    severity: tier.severity,
-    source: "community_reports",
     communityEvidence: {
       ruleId: tier.ruleId,
       rulesVersion,
@@ -216,19 +208,6 @@ export function buildAdjustment(result, evaluation, rules = ACTIVE_RULES) {
       firstSeen: metrics.firstSeen,
       lastSeen: metrics.lastSeen,
     },
-  };
-
-  const adjustment = {
-    ruleId: tier.ruleId,
-    rulesVersion,
-    riskDelta: tier.riskDelta,
-    verdictFrom: result.verdict,
-    verdictTo,
     evidenceEventIds: metrics.evidenceIds,
   };
-
-  const adjustedRiskScore =
-    typeof result.riskScore === "number" ? Math.min(100, result.riskScore + tier.riskDelta) : undefined;
-
-  return { signal, adjustment, verdictTo, adjustedRiskScore, metrics };
 }

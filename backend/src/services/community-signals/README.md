@@ -15,7 +15,7 @@ on its own, apart from the LLM call path, as root `CLAUDE.md` requires.
 | File | Role |
 |---|---|
 | `fingerprint.js` | Pure. Normalized template hash + 64-bit SimHash of redacted text. |
-| `wave.js` | Pure. Versioned rules (`WAVE_RULES_V1`), matching, metrics, tier selection, verdict policy. |
+| `wave.js` | Pure. Versioned rules (`WAVE_RULES_V1`, active `WAVE_RULES_V2`), matching, metrics, tier selection, REP-01/REP-02 signal builder. No score arithmetic. |
 | `index.js` | Orchestration: DB reads/writes, reporter pseudonyms, audit log, retention purge. Never throws into `/api/analyze`. |
 | `../../../scripts/seed-wave-demo.js` | Synthetic demo wave (`npm run seed:wave`), clearly tagged and removable. |
 
@@ -24,27 +24,28 @@ on its own, apart from the LLM call path, as root `CLAUDE.md` requires.
 ```
 POST /api/report ─► recordUserReport ─► report_events (origin=user_report, weight 1)
 
-POST /api/analyze ─► LLM + deterministic checks ─► riskCategories
-                 ─► withSenderReports ─► applyCommunityEvidence
-                        1. redact + fingerprint the analyzed text
-                        2. load last 22 days of events, match (template | near-dup | host | sender)
-                        3. metrics → tier (CW-1 / CW-2 / none)
-                        4. if tier: add community_* signal, adjustedRiskScore,
-                           riskAdjustments[auditRef], write risk_audit_log row
-                        5. if verdict was scam AND a deterministic high signal fired:
-                           record report_events (origin=auto_high_confidence, weight 0.5)
+POST /api/analyze ─► runPipeline (services/pipeline)
+                        1. evaluateCommunitySignal: redact + fingerprint, load last 22 days
+                           of events, match (template | near-dup | host | sender),
+                           metrics → tier (CW-1 / CW-2 / none) → REP-01 / REP-02 signal
+                        2. risk engine (rs-1.0) scores all signals, incl. REP-01/02
+                        3. recordCommunityOutcome: if a tier fired, write risk_audit_log
+                           (rule, versions, points, level without/with, evidence ids);
+                           if the decision is HIGH/CRITICAL AND a rule-sourced URL/ID
+                           impersonation finding fired: record report_events
+                           (origin=auto_high_confidence, weight 0.5)
 ```
 
-Step 5 runs **after** step 2–4, so a message never counts as evidence for itself.
+Step 3 runs **after** step 1, so a message never counts as evidence for itself.
 
-## Rules (`wave-rules-v1`)
+## Rules (`wave-rules-v2`, same thresholds as v1)
 
-| Rule | Condition (all must hold) | Signal | Δ riskScore |
+| Rule | Condition (all must hold) | Signal | Points (risk engine rs-1.0) |
 |---|---|---|---|
-| CW-1 `community_cluster` | ≥3 distinct reporters in 7d, ≥1 explicit user report, decayed weight ≥2 (7-day half-life) | medium | +10 |
-| CW-2 `community_wave` | CW-1 **and** ≥5 distinct reporters in 24h **and** 24h weight ≥3× the 14-day daily baseline (floor 0.5/day) | high | +20 |
+| CW-1 `community_cluster` | ≥3 distinct reporters in 7d, ≥1 explicit user report, decayed weight ≥2 (7-day half-life) | REP-01 | 10 |
+| CW-2 `community_wave` | CW-1 **and** ≥5 distinct reporters in 24h **and** 24h weight ≥3× the 14-day daily baseline (floor 0.5/day) | REP-02 | 20 |
 
-Tiers are exclusive, so the delta never stacks. Matching:
+Tiers are exclusive, so the points never stack. Matching:
 - exact template hash;
 - SimHash Hamming ≤6 (both templates must have ≥8 tokens);
 - a shared lookalike host;
@@ -55,13 +56,12 @@ The SimHash threshold was measured on SMS-length variants:
 - the same template aimed at a different bank scores about 11;
 - unrelated scams score 28 or more.
 
-**Verdict policy:**
-- Crowd evidence alone lifts `safe` to `suspicious`, and never further.
-- `suspicious` becomes `scam` only on CW-2 **plus** a `url_parser` or `identity_check` high-severity signal on the same message.
-- A verdict is never lowered.
-- The LLM's `riskScore` is kept. The adjusted value goes in `adjustedRiskScore`.
+**Decision policy** (owned by the risk engine, not this module):
+- Crowd evidence alone is worth 10 (cluster) or 20 (wave) points, so it can reach `elevated` at most.
+- Only `FLOOR-REP02-TECHNICAL` (a wave **plus** a rule-sourced URL/identity impersonation finding on the same message) lifts the level to `critical`.
+- There is no LLM score to adjust any more; `adjustedRiskScore` is gone.
 
-Thresholds never change in place. Add `WAVE_RULES_V2` and switch `ACTIVE_RULES`, so every past audit row stays explainable against the rules that produced it.
+Thresholds never change in place. v2 exists because v1's per-tier `riskDelta` was added to the LLM score; v2 emits a signal instead. v1 stays so every past audit row remains explainable against the rules that produced it.
 
 ## Compliance controls
 
@@ -70,11 +70,11 @@ Thresholds never change in place. Add `WAVE_RULES_V2` and switch `ACTIVE_RULES`,
 | **Data minimisation** | No raw message text is stored, only a one-way template hash, a SimHash and lookalike hostnames, all computed after server-side `redact()`. No raw IP is stored, only `HMAC-SHA256(REPORTER_HASH_SECRET, ip)`. |
 | **Storage limitation** | Evidence events are deleted after 90 days (`COMMUNITY_EVENT_RETENTION_DAYS`) and audit rows after 180 (`COMMUNITY_AUDIT_RETENTION_DAYS`). Purges run on boot and every 6h. |
 | **Explainability** | The signal carries the rule ID, rule version, what matched and the counts behind it. It's never a bare score change. |
-| **Auditability** | Every adjustment writes a `risk_audit_log` row: rule, version, delta, verdict before and after, evidence event IDs and metrics. `riskAdjustments[].auditRef` points to it. |
+| **Auditability** | Every community contribution writes a `risk_audit_log` row: rule, versions (`wave-rules-v2+rs-1.0`), points, risk level without and with it (in the legacy `verdict_from`/`verdict_to` columns), evidence event IDs and metrics. `riskAdjustments[].auditRef` points to it. |
 | **Reproducibility** | `wave.js` is pure over `(events, now, rules)`, so any decision can be recomputed. |
 | **Integrity / anti-poisoning** | Only distinct reporters count. Explicit `/api/report` stays capped at 5 per hour per IP. Official identities (`MCB`, `my.t`, ...) and redaction placeholders are never used as sender keys. Messages whose links are all official domains are never boosted. |
-| **No self-reinforcing AI** | Machine events count half and can never meet `minHumanReports`, so past LLM verdicts can't raise future ones. Machine events are only recorded when a check that doesn't use the LLM backs up the scam verdict. |
-| **Proportionality** | The boost is bounded (+10 or +20) and escalation is capped as described above. |
+| **No self-reinforcing AI** | Machine events count half and can never meet `minHumanReports`. They are only recorded for HIGH/CRITICAL decisions backed by a rule-sourced URL/identity finding, never on the strength of model output. |
+| **Proportionality** | Crowd evidence is bounded (10 or 20 points) and only reaches `critical` together with a technical impersonation finding. |
 | **Honest demo data** | Seeded rows are tagged `evidence.channel = "demo_seed"` and `npm run seed:wave -- --clear` removes only them. |
 
 This is a pragmatic reading of data-protection principles (for example
@@ -88,7 +88,7 @@ storage limitation). It hasn't been through a legal review.
 
 ## Known gaps / follow-ups
 
-- **Frontend:** show `community_*` signals, `adjustedRiskScore` and `riskAdjustments`. When a verdict is escalated, `explanation` and `suggestedAction` are still the LLM's, so the UI should show the community signal's `description` next to them.
+- **Frontend:** show the REP-01/REP-02 signal (`communityEvidence`) and `riskAdjustments`; the `trace` already lists its points.
 - **Frontend:** send the real sender alongside `/api/analyze` (for example as a hash), so a message's sender key matches the key its reports are stored under. Today the two only line up when the sender survives redaction.
 - **Demo risk:** `REPORTER_HASH_SECRET` should be set in the demo deployment, or distinct-reporter counts reset on every restart.
 - The `description` is English-only. The Kreol and French copy belongs in the frontend `i18n`.
@@ -97,7 +97,7 @@ storage limitation). It hasn't been through a legal review.
 
 See the header of `backend/scripts/seed-wave-demo.js`. In short:
 1. Seed the wave.
-2. Analyze a variant of the seeded message. The CW-2 signal appears with its evidence.
+2. Analyze a variant of the seeded message. The REP-02 signal appears with its evidence, and the trace shows FLOOR-REP02-TECHNICAL.
 3. Analyze a genuine `mcb.mu` message. It gets no boost.
 4. Clear the seeded rows.
 
