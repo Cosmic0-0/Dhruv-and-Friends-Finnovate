@@ -26,6 +26,7 @@ export const SIGNAL_DEFS = Object.freeze({
   "ID-02": { category: "identity", severity: "high", legacyType: "IDENTITY_MISMATCH", label: "Claims to be an institution but payment goes to someone else" },
   "ID-03": { category: "identity", severity: "medium", legacyType: "sender_mismatch", label: "Sender identity does not fit the claimed institution" },
   "ID-04": { category: "identity", severity: "medium", legacyType: "spoofed_identity", label: "Language impersonates an authority" },
+  "ID-05": { category: "identity", severity: "high", legacyType: "TEMPLATE_ARTIFACT", label: "Unrendered mail-merge/template placeholder syntax" },
 
   "SOC-01": { category: "social", severity: "low", legacyType: "urgency_language", label: "Artificial urgency" },
   "SOC-02": { category: "social", severity: "medium", legacyType: "threat_language", label: "Threat of suspension, penalty or legal action" },
@@ -45,6 +46,7 @@ export const SIGNAL_DEFS = Object.freeze({
 
   "SEC-01": { category: "credential", severity: "high", legacyType: "credential_request", label: "Asks you to share an OTP, PIN, password or CVV" },
   "SEC-02": { category: "credential", severity: "high", legacyType: "credential_request", label: "Asks you to install remote-access software" },
+  "SEC-03": { category: "credential", severity: "high", legacyType: "credential_request", label: "Asks you to log in and enter your password via a link" },
 
   "REP-01": { category: "reputation", severity: "medium", legacyType: "community_cluster", label: "Matches a pattern several people reported" },
   "REP-02": { category: "reputation", severity: "high", legacyType: "community_wave", label: "Matches a pattern being reported right now" },

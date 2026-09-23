@@ -19,7 +19,7 @@ import { findClaimedInstitution, REGISTRY_VERSION } from "../institutions/index.
 import { checkUrls, checkLinkHygiene, DETECTOR_VERSION as URL_DETECTOR_VERSION } from "../domain-matching/index.js";
 import { attachDomainAges } from "../domain-age/index.js";
 import { checkIdentityConsistency } from "../identity-consistency/index.js";
-import { detectLexicon, detectInjection, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
+import { detectLexicon, detectInjection, detectTemplateArtifacts, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
 import { evaluatePaymentContext } from "../payment-context/index.js";
 import { analyzeSemantics, SEMANTIC_PROMPT_VERSION } from "../analysis/index.js";
 import { evaluateCommunitySignal, recordCommunityOutcome, communitySenderKey } from "../community-signals/index.js";
@@ -116,6 +116,7 @@ export async function runPipeline(rawText, context = {}) {
     ...checkIdentityConsistency(text),
     ...detectLexicon(text),
     ...detectInjection(text),
+    ...detectTemplateArtifacts(text),
     ...evaluatePaymentContext(paymentContext),
   ];
 

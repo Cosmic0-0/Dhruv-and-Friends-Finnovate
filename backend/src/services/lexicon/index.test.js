@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { detectLexicon, detectInjection, detectLanguage } from "./index.js";
+import { detectLexicon, detectInjection, detectTemplateArtifacts, detectLanguage } from "./index.js";
 
 const codes = (text) => detectLexicon(text).map((s) => s.code).sort();
 
@@ -68,4 +68,46 @@ test("coarse language detection for explanation templates", () => {
   assert.equal(detectLanguage("Ou kont pou bloke zordi si ou pa fer verification"), "kreol");
   assert.equal(detectLanguage("Votre compte sera suspendu dans les 24 heures"), "fr");
   assert.equal(detectLanguage("Your account will be suspended"), "en");
+});
+
+test("'log in ... with your password' fires SEC-03 even with a system name in between (no URL needed)", () => {
+  const text =
+    "You can do this by logging into the new ParkEase system with your work email and password.";
+  assert.ok(codes(text).includes("SEC-03"));
+});
+
+test("SEC-03 still fires when OCR line-wrap splits 'logging into' and 'password' across a \\n", () => {
+  // services/ocr's cleanExtractedText() joins wrapped screenshot lines with
+  // exactly one \n - reproduces a real screenshot where this split occurred.
+  const text =
+    "If you want to switch to another parking\nspace or cancel your parking agreement, you can do this by logging into\nthe new ParkEase system with your work email and password.";
+  assert.ok(codes(text).includes("SEC-03"));
+});
+
+test("SEC-03 fires in French and Kreol too", () => {
+  assert.ok(codes("Connectez-vous à notre portail sécurisé avec votre mot de passe habituel.").includes("SEC-03"));
+  assert.ok(codes("Konekte lor sa portal-la ek ou modpas.").includes("SEC-03"));
+});
+
+test("SEC-01 and SEC-03 are distinct: sharing a code in-chat is not the same as logging in via a link", () => {
+  assert.deepEqual(codes("Send me the OTP you just received."), ["SEC-01"]);
+  assert.deepEqual(codes("Log in with your password to confirm."), ["SEC-03"]);
+});
+
+test("detectTemplateArtifacts flags Go-template/GoPhish-style placeholders", () => {
+  const signals = detectTemplateArtifacts("Dear {{.FirstName}}, your parking space is ready. {{.Tracker}}");
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0].code, "ID-05");
+  assert.equal(signals[0].sourceType, "rule");
+  assert.equal(signals[0].evidence, "{{.FirstName}}");
+});
+
+test("detectTemplateArtifacts flags Jinja2/Django and Mailchimp-style placeholders too", () => {
+  assert.equal(detectTemplateArtifacts("Hello {% first_name %}, please confirm.")[0].code, "ID-05");
+  assert.equal(detectTemplateArtifacts("Hi %%FIRST_NAME%%, confirm your account now.")[0].code, "ID-05");
+});
+
+test("detectTemplateArtifacts does not flag ordinary messages or plain curly braces", () => {
+  assert.deepEqual(detectTemplateArtifacts("Dear John, your parking space is ready."), []);
+  assert.deepEqual(detectTemplateArtifacts("Use the {curly brace} key on your keyboard."), []);
 });

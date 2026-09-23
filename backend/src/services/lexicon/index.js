@@ -35,6 +35,33 @@ const RULES = [
   { code: "SEC-01", lang: "mixed", negatable: true, re: new RegExp(`\\b${SHARE_VERB}\\b[^.!?\\n]{0,30}?\\b${CREDENTIAL_NOUN}`, "iu") },
   { code: "SEC-01", lang: "en", negatable: true, re: /\bwhat (?:is|was) (?:the |your )?(?:otp|pin|password|code)\b/iu },
 
+  // SEC-03 - asks you to log in via a link and enter your password. Distinct
+  // from SEC-01 (which catches "share/confirm/verify your OTP/password" -
+  // disclosing a credential directly in-chat): here the credential is
+  // entered into a linked page, so SHARE_VERB's tight 30-char window misses
+  // it - "logging into the new ParkEase system with your work email and
+  // password" has ~50 chars of system-name filler between "log in" and
+  // "password" that a phishing template routinely inserts. A wider window
+  // is safe here because "log in" + "password" co-occurring is itself the
+  // signal, independent of any URL being present in the text - this is
+  // what catches a screenshot whose hyperlink target isn't visible as
+  // OCR'd text at all (no href renders as pixels).
+  //
+  // "logging" is log+ging (not log+ing), and "log into"/"logging into"
+  // need "into" as an alternative to a bare "in" ("in" alone isn't a \b
+  // match inside "into") - verified directly against both surface forms.
+  //
+  // Unlike the other rules here, the window tolerates a single embedded
+  // \n rather than excluding it: services/ocr's cleanExtractedText() joins
+  // every wrapped screenshot line with exactly one \n (no blank-line
+  // paragraph breaks survive it), so on OCR'd text every \n is a mid-
+  // sentence line-wrap artifact, not a real sentence boundary - verified
+  // live against a real screenshot where "logging into" and "password"
+  // landed on either side of exactly this kind of wrap.
+  { code: "SEC-03", lang: "en", re: /\b(?:log|sign)(?:s|ged|ging|ed|ing)?[- ]?(?:in|into)\b[^.!?]{0,100}?\b(?:password|passcode)\b/iu },
+  { code: "SEC-03", lang: "fr", re: /\b(?:connectez|identifiez)[- ]?vous\b[^.!?]{0,100}?\bmot de passe\b/iu },
+  { code: "SEC-03", lang: "mfe", re: /\bkonekte\b[^.!?]{0,100}?\bmodpas\b/iu },
+
   // SEC-02 - remote access software
   { code: "SEC-02", lang: "mixed", re: /\b(?:anydesk|teamviewer|quick ?support|rustdesk|ultraviewer|remote (?:access|desktop|control|support) (?:app|application|software|tool)|screen[- ]?shar(?:e|ing) (?:app|application))\b/iu },
 
@@ -164,6 +191,45 @@ export function detectInjection(text) {
       metadata: { detector: LEXICON_VERSION },
     }),
   ];
+}
+
+// ID-05: unrendered mail-merge/template placeholder syntax ("{{.FirstName}}",
+// "{% tracker %}", "%%FIRST_NAME%%"). Real one-to-one correspondence never
+// contains this - it's an artifact of a templating engine (Go templates/
+// GoPhish, Jinja2, Mustache, Mailchimp merge tags) that failed to
+// substitute a value, and is near-conclusive evidence of a mass-produced
+// phishing template or simulation regardless of how calm the rest of the
+// message reads. Added as a lexicon/rule signal deliberately, not a
+// semantic one: a semantic-only pass can miss it entirely when the rest of
+// the message reads as calm, plausible prose (verified live against a real
+// HR/parking-space phishing template whose semantic-only score was 8/100).
+//
+// Deliberately conservative: only matches placeholder-shaped interiors
+// (identifier/dotted-path characters, optionally with a leading template
+// sigil), not arbitrary bracketed prose, to keep the false-positive rate
+// near zero on genuine messages.
+const TEMPLATE_ARTIFACT_PATTERNS = [
+  /\{\{\s*[.#/]?[\w.]+\s*\}\}/gu, // {{.FirstName}}, {{ user.email }}, {{#if x}} - Go templates/GoPhish/Mustache
+  /\{%\s*[.#/]?[\w. ]+\s*%\}/gu, // {% tracker %} - Jinja2/Django
+  /%%[\w.]+%%/gu, // %%FIRST_NAME%% - Mailchimp-style merge tags
+];
+
+/** ID-05: unrendered mail-merge/template placeholder syntax, see above. */
+export function detectTemplateArtifacts(text) {
+  for (const pattern of TEMPLATE_ARTIFACT_PATTERNS) {
+    const m = pattern.exec(text);
+    if (m) {
+      return [
+        makeSignal("ID-05", {
+          sourceType: "rule",
+          evidence: m[0],
+          span: [m.index, m.index + m[0].length],
+          metadata: { detector: LEXICON_VERSION },
+        }),
+      ];
+    }
+  }
+  return [];
 }
 
 const KREOL_MARKERS = /\b(?:ou|mo|to|nou|pou|lor|finn|inn|pe|bizin|zordi|deswit|avoy|ena|pena|kav|ek|sa|bann|enn|dimounn|kont|larzan|zis|gagn)\b/giu;

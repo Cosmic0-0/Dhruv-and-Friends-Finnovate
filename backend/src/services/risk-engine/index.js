@@ -17,12 +17,22 @@ export const RULESET_RS_1_0 = Object.freeze({
   weights: Object.freeze({
     "URL-01": 30, "URL-02": 30, "URL-03": 25, "URL-04": 25, "URL-05": 5, "URL-06": 20, "URL-07": 25, "URL-08": 10,
     "ID-01": 30, "ID-02": 25, "ID-03": 20, "ID-04": 12,
+    // ID-05: unrendered mail-merge/template placeholder syntax. Near-zero
+    // false-positive rate (only matches placeholder-shaped interiors, see
+    // services/lexicon), so weighted the same as ID-01 (claimed institution
+    // linking to a different domain) - both are near-conclusive forgery facts.
+    "ID-05": 30,
     "SOC-01": { lexicon: 6, semantic_model: 8, default: 6 },
     "SOC-02": 10,
     "SOC-03": { lexicon: 15, semantic_model: 12, default: 15 },
     "SOC-04": 8, "SOC-05": 8, "SOC-06": 12, "SOC-07": 25,
     "PAY-01": 8, "PAY-02": 25, "PAY-03": 35, "PAY-04": 15, "PAY-05": 25, "PAY-06": 30, "PAY-07": 20,
     "SEC-01": 30, "SEC-02": 30,
+    // SEC-03: asks you to log in via a link and enter your password -
+    // functionally the same credential-harvesting outcome as SEC-01 (a
+    // shared credential), just entered into a linked page instead of typed
+    // in-chat, so weighted the same.
+    "SEC-03": 30,
     "REP-01": 10, "REP-02": 20, "REP-03": 10, "REP-04": 40, "REP-05": 45,
   }),
   caps: Object.freeze({
