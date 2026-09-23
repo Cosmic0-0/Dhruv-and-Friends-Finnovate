@@ -16,9 +16,8 @@ import { useLanguage } from "./LanguageProvider";
  * away rather than in view. This rail says what is in the app without changing
  * a single phone pixel.
  *
- * Same NAV_TABS and same active-route logic as the tab bar, so the two can't
- * disagree about where you are. The tools underneath are the routes that have
- * no tab of their own.
+ * The primary destinations use NAV_TABS. Document and the other specialised
+ * checks sit below a divider; each route has one active destination.
  */
 export default function SideNav() {
   const pathname = usePathname() ?? "/";
@@ -41,7 +40,7 @@ export default function SideNav() {
       // Its own surface against the page, with a hairline edge: the standard
       // desktop-app chrome, and it keeps the rail from floating in the
       // background colour the cards also sit on.
-      className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 border-r border-card-border bg-card px-4 py-8 lg:flex"
+      className="verification-sidenav sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 border-r border-card-border bg-card px-4 py-8 lg:flex"
       style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
     >
       <div className="flex items-center gap-2.5 px-3">
@@ -51,7 +50,7 @@ export default function SideNav() {
           alt={copy.settings.teamLogoAlt}
           width={40}
           height={40}
-          className="size-10 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
+          className="size-10 shrink-0 rounded-full bg-white"
         />
         <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
       </div>
@@ -82,7 +81,6 @@ export default function SideNav() {
       </ul>
 
       <div className="flex flex-col gap-0.5 border-t border-card-border pt-4">
-        <p className="micro-sm px-3 pb-1 text-ink-muted">{copy.tools.title}</p>
         {tools.map(({ href, Icon, label }) => {
           const active = pathname.startsWith(href);
           return (

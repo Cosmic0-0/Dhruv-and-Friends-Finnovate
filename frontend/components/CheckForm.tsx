@@ -93,7 +93,7 @@ export default function CheckForm({
       setScreenshotText(extracted);
       if (status === "error") setStatus("idle");
       // Bring the screenshot row into view without focusing (a phone keyboard would cover it).
-      requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
+      requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }));
     },
   });
 

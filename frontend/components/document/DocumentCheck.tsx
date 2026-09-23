@@ -156,8 +156,8 @@ export default function DocumentCheck() {
     <div>
       <ScreenTitle title={d.title} subtitle={d.subtitle} back={{ href: "/app", label: copy.tabs.check }} />
 
-      <div className="gutter flex max-w-3xl flex-col gap-4 pt-5 pb-10">
-        <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{d.intro}</p>
+      <div className="gutter document-layout grid gap-6 pt-5 pb-10">
+        <div className="document-main">
 
         <input
           ref={inputRef}
@@ -184,11 +184,15 @@ export default function DocumentCheck() {
             setDragging(false);
             pick(e.dataTransfer.files?.[0]);
           }}
-          className={`sheet flex flex-col gap-4 px-5 py-6 transition-colors ${dragging ? "outline-2 outline-offset-2 outline-accent" : ""}`}
+          className={`document-intake flex flex-col gap-5 px-5 py-6 transition-colors ${dragging ? "document-intake-active" : ""}`}
         >
+          <div className="document-intake-head">
+            <span>{lang === "fr" ? "Pièce à vérifier" : lang === "kreol" ? "Dokiman pou verifye" : "File for verification"}</span>
+            <span>PDF / DOCX</span>
+          </div>
           {file ? (
-            <div className="flex items-center gap-3">
-              <span className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-muted-surface text-ink">
+            <div className="document-file flex items-center gap-3">
+              <span className="document-file-icon flex size-[42px] shrink-0 items-center justify-center text-ink">
                 <DocumentIcon className="size-[21px]" strokeWidth={1.9} />
               </span>
               <div className="min-w-0 flex-1">
@@ -208,8 +212,9 @@ export default function DocumentCheck() {
               )}
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2 py-4 text-center">
-              <DocumentIcon className="size-9 text-ink-muted" strokeWidth={1.5} />
+            <div className="document-empty flex flex-col items-center gap-2 py-4 text-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/dhruv-and-friends.png" alt="" width={88} height={88} className="document-seal" />
               <p className="text-[1.0625rem] font-semibold text-ink">{dragging ? d.dropActive : d.drop}</p>
               <p className="text-[0.9375rem] text-ink-muted">{d.types}</p>
             </div>
@@ -260,7 +265,17 @@ export default function DocumentCheck() {
           </div>
         )}
 
-        <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{d.privacy}</p>
+        </div>
+        <aside className="document-notes">
+          <div className="document-note-block">
+            <h2>{lang === "fr" ? "Ce que nous examinons" : lang === "kreol" ? "Ki nou examine" : "What we inspect"}</h2>
+            <p>{d.intro}</p>
+          </div>
+          <div className="document-note-block">
+            <h2>{lang === "fr" ? "Confidentialité du dossier" : lang === "kreol" ? "Konfidansialite ou dokiman" : "Your file's privacy"}</h2>
+            <p>{d.privacy}</p>
+          </div>
+        </aside>
       </div>
     </div>
   );

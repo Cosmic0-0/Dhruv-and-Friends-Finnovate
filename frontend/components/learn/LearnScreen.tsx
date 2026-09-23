@@ -60,7 +60,7 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
         * today's progress and the reference list on the right, so the width
         * carries a second column instead of stretching the question.
         */}
-      <div className="gutter screen-grid flex flex-col gap-4 pt-4 lg:grid">
+      <div className="gutter screen-grid learn-layout flex flex-col gap-4 pt-4 lg:grid">
         <div className="flex flex-col gap-4">
 
       {/* Wait for the saved language so a wrong-language question never flashes. */}
@@ -235,12 +235,12 @@ function Quiz({
   useEffect(() => {
     if (!answer) return;
     nextRef.current?.focus({ preventScroll: true });
-    nextRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    nextRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [answer]);
 
   useEffect(() => {
     if (!moved.current) return; // not on first render
-    cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    cardRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (finished) playAgainRef.current?.focus({ preventScroll: true });
   }, [index, finished]);
 
@@ -297,7 +297,7 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
+    <section ref={cardRef} className="hero learn-specimen flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
       <div className="flex items-center justify-between gap-3">
         <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
           {L.quizLabel}
@@ -312,7 +312,7 @@ function Quiz({
       <blockquote
         key={item.id}
         lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        className="mt-1 text-[1.375rem] leading-[1.8125rem] font-semibold text-white [overflow-wrap:anywhere]"
+        className="learn-message mt-1 text-[1.375rem] leading-[1.8125rem] font-semibold [overflow-wrap:anywhere]"
       >
         &ldquo;{item.text}&rdquo;
       </blockquote>
@@ -416,7 +416,7 @@ const TAG_TONE: Record<TrendCard["category"], { chip: string; Icon: typeof Warni
 function Trends({ trends, copy }: { trends: TrendCard[]; copy: Copy }) {
   const L = copy.learn;
   return (
-    <section className="sheet" aria-labelledby="trends-label">
+    <section className="learn-patterns" aria-labelledby="trends-label">
       <div className="px-5 pt-4 pb-1">
         <h2 id="trends-label" className="micro text-ink-muted">
           {L.trendsTitle}

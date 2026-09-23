@@ -1,15 +1,9 @@
 import { ChartIcon, GridIcon, HomeIcon, PersonIcon } from "@/components/icons";
 
 /**
- * The five slots of the floating tab bar (frontend/design/mockup/Main.html):
- * Check, Learn, a centre primary button, Radar, Settings. The centre button is
- * not a tab — it opens Check with the input ready — so it lives in TabBar
- * itself; this list is the four real destinations, in bar order.
- *
- * `match` decides which tab is current. Check owns every screen reached from a
- * check (result, replay, safepay, conversation, network, batch, sandbox,
- * document), so a
- * user is never left with no tab lit.
+ * Desktop rail destinations. `match` decides which primary destination owns
+ * related routes. Document has its own rail entry and mobile tab, so it does
+ * not also highlight Check.
  */
 export const NAV_TABS = [
   {
@@ -24,8 +18,7 @@ export const NAV_TABS = [
       p.startsWith("/conversation") ||
       p.startsWith("/sandbox") ||
       p.startsWith("/network") ||
-      p.startsWith("/batch") ||
-      p.startsWith("/document"),
+      p.startsWith("/batch"),
   },
   { href: "/learn", key: "learn", Icon: GridIcon, match: (p: string) => p.startsWith("/learn") },
   { href: "/trends", key: "trends", Icon: ChartIcon, match: (p: string) => p.startsWith("/trends") },

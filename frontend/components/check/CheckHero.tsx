@@ -33,12 +33,12 @@ export default function CheckHero({
   const heroRef = useParallax<HTMLElement>();
 
   return (
-    <section ref={heroRef} className="hero parallax flex flex-col gap-3 px-[22px] pt-[22px] pb-5">
+    <section ref={heroRef} className="hero check-intake flex flex-col gap-3 px-[22px] pt-[22px] pb-5">
       <p className="text-[0.9375rem] font-semibold text-white/70">{greeting}</p>
       <h2 className="text-[2.625rem] leading-[2.875rem] font-bold tracking-[-0.02em] text-white">{c.question}</h2>
       <p className="text-[1.0625rem] leading-[1.4375rem] text-white/[0.72]">{c.heroLine}</p>
 
-      <div className="mt-1.5 flex gap-2.5">
+      <div className="check-intake-actions mt-1.5 flex gap-2.5">
         <button type="button" onClick={onPaste} className="btn pressable grow bg-white text-[#111113]">
           <ClipboardIcon className="size-[19px]" />
           {c.paste}

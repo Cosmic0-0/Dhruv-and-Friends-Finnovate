@@ -15,7 +15,7 @@ import { CheckIcon } from "../icons";
 export default function IntroCard({ copy }: { copy: Copy }) {
   const c = copy.check.intro;
   return (
-    <section className="card flex flex-col gap-3" aria-labelledby="intro-title">
+    <section className="check-reference flex flex-col gap-3" aria-labelledby="intro-title">
       <h2 id="intro-title" className="micro text-ink-muted">
         {c.title}
       </h2>
