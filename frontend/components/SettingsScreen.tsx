@@ -3,6 +3,7 @@
 import { useLanguage } from "./LanguageProvider";
 import LanguageSwitch from "./LanguageSwitch";
 import ScreenTitle from "./ScreenTitle";
+import ThemeSwitch from "./ThemeSwitch";
 
 /**
  * Settings: the language switch, a short privacy note, and an about section
@@ -21,6 +22,14 @@ export default function SettingsScreen() {
       <ScreenTitle title={s.title} />
 
       <div className="gutter flex flex-col gap-4 pt-4">
+        <section className="card flex flex-col gap-3" aria-labelledby="set-theme">
+          <h2 id="set-theme" className="micro text-ink-muted">
+            {s.theme.title}
+          </h2>
+          <ThemeSwitch />
+          <p className="text-[0.9375rem] leading-5 text-ink-muted">{s.theme.note}</p>
+        </section>
+
         <section className="card flex flex-col gap-3" aria-labelledby="set-lang">
           <h2 id="set-lang" className="micro text-ink-muted">
             {s.languageTitle}

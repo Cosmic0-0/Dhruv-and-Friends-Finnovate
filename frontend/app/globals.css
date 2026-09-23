@@ -171,51 +171,136 @@
     --tabbar-height: 6.125rem;
   }
 
-  /* Dark (DESIGN.md "Tokens (dark, prefers-color-scheme)"). Only the --c-*
-     values change; every utility above follows automatically. */
+  /*
+   * Dark palette (DESIGN.md "Tokens (dark, prefers-color-scheme)").
+   *
+   * The values live here once, as --d-*. Two selectors below map them onto the
+   * --c-* tokens everything else reads: the media query for people who have
+   * expressed no preference in the app, and [data-theme="dark"] for people who
+   * picked dark in Settings. Plain CSS cannot share one declaration block
+   * between a media query and an attribute selector, so the MAPPING is
+   * duplicated — but the colours are not, which is what would otherwise drift.
+   */
+  :root {
+    --d-page: #0c0c0d;
+    --d-card: #1c1c1e;
+    --d-card-gradient: linear-gradient(180deg, #1f1f21 0%, #1a1a1c 100%);
+    --d-card-edge: rgb(255 255 255 / 6%);
+    --d-muted: rgb(255 255 255 / 8%);
+    --d-suggestion: #1f1f21;
+    --d-surface-dark: #1c1c1e;
+    --d-surface-dark-2: #2c2c2e;
+    --d-primary: #f5f5f7;
+    --d-on-primary: #111113;
+    --d-hero: linear-gradient(180deg, #3a3a3c 0%, #232325 100%);
+    --d-hero-edge: rgb(255 255 255 / 8%);
+    --d-skeleton: #2c2c2e;
+    --d-track: #3a3a3c;
+    --d-ink: #f5f5f7;
+    --d-ink-soft: #c7c7cc;
+    --d-ink-muted: #98989f;
+    --d-on-ink: #ffffff;
+    --d-icon-idle: #8e8e93;
+    --d-hairline: rgb(84 84 88 / 45%);
+    --d-line-strong: rgb(84 84 88 / 65%);
+    --d-red: #ff6961;
+    --d-red-ink: #ff6961;
+    --d-red-tint: #3a1512;
+    --d-green: #4cd964;
+    --d-green-ink: #4cd964;
+    --d-green-tint: #10301a;
+    --d-orange: #ffb340;
+    --d-orange-ink: #ffb340;
+    --d-orange-tint: #3a2610;
+    --d-mark-ink: #ffb4ae;
+    --d-tabbar: rgb(30 30 32 / 82%);
+    --d-tabbar-edge: rgb(255 255 255 / 10%);
+    --d-scrim: rgb(0 0 0 / 60%);
+  }
+
+  /* System preference, unless Settings has explicitly chosen light. */
   @media (prefers-color-scheme: dark) {
-    :root {
-      --c-page: #0c0c0d;
-      --c-card: #1c1c1e;
-      --c-card-gradient: linear-gradient(180deg, #1f1f21 0%, #1a1a1c 100%);
-      --c-card-edge: rgb(255 255 255 / 6%);
-      --c-muted: rgb(255 255 255 / 8%);
-      --c-suggestion: #1f1f21;
-      --c-surface-dark: #1c1c1e;
-      --c-surface-dark-2: #2c2c2e;
-      --c-primary: #f5f5f7;
-      --c-on-primary: #111113;
-      --c-hero: linear-gradient(180deg, #3a3a3c 0%, #232325 100%);
-      --c-hero-edge: rgb(255 255 255 / 8%);
-      --c-skeleton: #2c2c2e;
-      --c-track: #3a3a3c;
-
-      --c-ink: #f5f5f7;
-      --c-ink-soft: #c7c7cc;
-      --c-ink-muted: #98989f;
-      --c-on-ink: #ffffff;
-      --c-icon-idle: #8e8e93;
-
-      --c-hairline: rgb(84 84 88 / 45%);
-      --c-line-strong: rgb(84 84 88 / 65%);
-
-      --c-red: #ff6961;
-      --c-red-ink: #ff6961;
-      --c-red-tint: #3a1512;
-      --c-green: #4cd964;
-      --c-green-ink: #4cd964;
-      --c-green-tint: #10301a;
-      --c-orange: #ffb340;
-      --c-orange-ink: #ffb340;
-      --c-orange-tint: #3a2610;
-
-      --c-mark-ink: #ffb4ae;
-
-      --c-tabbar: rgb(30 30 32 / 82%);
-      --c-tabbar-edge: rgb(255 255 255 / 10%);
-
-      --c-scrim: rgb(0 0 0 / 60%);
+    :root:not([data-theme="light"]) {
+      --c-page: var(--d-page);
+      --c-card: var(--d-card);
+      --c-card-gradient: var(--d-card-gradient);
+      --c-card-edge: var(--d-card-edge);
+      --c-muted: var(--d-muted);
+      --c-suggestion: var(--d-suggestion);
+      --c-surface-dark: var(--d-surface-dark);
+      --c-surface-dark-2: var(--d-surface-dark-2);
+      --c-primary: var(--d-primary);
+      --c-on-primary: var(--d-on-primary);
+      --c-hero: var(--d-hero);
+      --c-hero-edge: var(--d-hero-edge);
+      --c-skeleton: var(--d-skeleton);
+      --c-track: var(--d-track);
+      --c-ink: var(--d-ink);
+      --c-ink-soft: var(--d-ink-soft);
+      --c-ink-muted: var(--d-ink-muted);
+      --c-on-ink: var(--d-on-ink);
+      --c-icon-idle: var(--d-icon-idle);
+      --c-hairline: var(--d-hairline);
+      --c-line-strong: var(--d-line-strong);
+      --c-red: var(--d-red);
+      --c-red-ink: var(--d-red-ink);
+      --c-red-tint: var(--d-red-tint);
+      --c-green: var(--d-green);
+      --c-green-ink: var(--d-green-ink);
+      --c-green-tint: var(--d-green-tint);
+      --c-orange: var(--d-orange);
+      --c-orange-ink: var(--d-orange-ink);
+      --c-orange-tint: var(--d-orange-tint);
+      --c-mark-ink: var(--d-mark-ink);
+      --c-tabbar: var(--d-tabbar);
+      --c-tabbar-edge: var(--d-tabbar-edge);
+      --c-scrim: var(--d-scrim);
     }
+  }
+
+  /* Explicit choice in Settings; wins over the system preference either way. */
+  /* An explicit choice also drives color-scheme, so native form controls,
+     scrollbars and the tap highlight follow it rather than the OS. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+      --c-page: var(--d-page);
+      --c-card: var(--d-card);
+      --c-card-gradient: var(--d-card-gradient);
+      --c-card-edge: var(--d-card-edge);
+      --c-muted: var(--d-muted);
+      --c-suggestion: var(--d-suggestion);
+      --c-surface-dark: var(--d-surface-dark);
+      --c-surface-dark-2: var(--d-surface-dark-2);
+      --c-primary: var(--d-primary);
+      --c-on-primary: var(--d-on-primary);
+      --c-hero: var(--d-hero);
+      --c-hero-edge: var(--d-hero-edge);
+      --c-skeleton: var(--d-skeleton);
+      --c-track: var(--d-track);
+      --c-ink: var(--d-ink);
+      --c-ink-soft: var(--d-ink-soft);
+      --c-ink-muted: var(--d-ink-muted);
+      --c-on-ink: var(--d-on-ink);
+      --c-icon-idle: var(--d-icon-idle);
+      --c-hairline: var(--d-hairline);
+      --c-line-strong: var(--d-line-strong);
+      --c-red: var(--d-red);
+      --c-red-ink: var(--d-red-ink);
+      --c-red-tint: var(--d-red-tint);
+      --c-green: var(--d-green);
+      --c-green-ink: var(--d-green-ink);
+      --c-green-tint: var(--d-green-tint);
+      --c-orange: var(--d-orange);
+      --c-orange-ink: var(--d-orange-ink);
+      --c-orange-tint: var(--d-orange-tint);
+      --c-mark-ink: var(--d-mark-ink);
+      --c-tabbar: var(--d-tabbar);
+      --c-tabbar-edge: var(--d-tabbar-edge);
+      --c-scrim: var(--d-scrim);
   }
 
   html {

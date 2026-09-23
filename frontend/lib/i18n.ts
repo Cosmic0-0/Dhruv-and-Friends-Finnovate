@@ -118,6 +118,8 @@ export interface Copy {
   /** Settings screen: the language switch, the privacy note and an about section. */
   settings: {
     title: string;
+    /** Appearance: follow the device, or force light/dark. */
+    theme: { title: string; system: string; light: string; dark: string; note: string };
     languageTitle: string;
     languageNote: string;
     privacyTitle: string;
@@ -815,6 +817,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     settings: {
       title: "Settings",
+      theme: {
+        title: "Appearance",
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+        note: "System follows your phone's own light or dark setting.",
+      },
       languageTitle: "Language",
       languageNote: "Changes every screen, and tells the analysis which language to answer in.",
       privacyTitle: "Privacy",
@@ -998,6 +1007,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     settings: {
       title: "Réglages",
+      theme: {
+        title: "Apparence",
+        system: "Système",
+        light: "Clair",
+        dark: "Sombre",
+        note: "Système suit le réglage clair ou sombre de votre téléphone.",
+      },
       languageTitle: "Langue",
       languageNote: "Change tous les écrans, et indique à l'analyse dans quelle langue répondre.",
       privacyTitle: "Confidentialité",
@@ -1420,6 +1436,13 @@ export const COPY: Record<UiLanguage, Copy> = {
     }),
     settings: TODO_KREOL({
       title: "Settings",
+      theme: {
+        title: "Appearance",
+        system: "System",
+        light: "Light",
+        dark: "Dark",
+        note: "System follows your phone's own light or dark setting.",
+      },
       languageTitle: "Language",
       languageNote: "Changes every screen, and tells the analysis which language to answer in.",
       privacyTitle: "Privacy",
