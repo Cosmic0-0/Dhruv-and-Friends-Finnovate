@@ -39,6 +39,23 @@ export const FORM_LINES = Object.freeze([
   "Customer signature:",
 ]);
 
+/**
+ * The genuine scan's text. It is deliberately NOT the forged form's
+ * transfer request: with the live language model on, a "please transfer MUR
+ * ..." text raises any document (ID-04/PAY-* semantic reads), which would hide
+ * the point of the demo - the genuine scan has no structural warning signs.
+ */
+export const LEGIT_FORM_LINES = Object.freeze([
+  "SAMPLE - FICTIONAL TEST DOCUMENT - NOT ISSUED BY MCB",
+  "MCB Ltd - Change of Address Form",
+  "Customer: A. Sample",
+  "Reference: FL-TEST-0002",
+  "Please update the postal address on my account to:",
+  "12 Sample Street, Port Louis",
+  "Date: 01/09/2026",
+  "Customer signature:",
+]);
+
 export const STATEMENT_LINES = Object.freeze([
   "SAMPLE - FICTIONAL TEST DOCUMENT",
   "Northbridge Savings Bank (fictional)",
@@ -161,7 +178,7 @@ export function appendInfoUpdate(bytes, { producer, creator = producer, created 
 /** 1. Genuine scan: signature is part of the scanned image; OCR text layer; scanner producer. Expect LOW. */
 export async function buildLegitScanPdf() {
   const doc = await newDoc({ producer: SCANNER });
-  await scannedPage(doc, FORM_LINES, { signature: true });
+  await scannedPage(doc, LEGIT_FORM_LINES, { signature: true });
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
 

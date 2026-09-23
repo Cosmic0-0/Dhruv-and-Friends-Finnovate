@@ -65,12 +65,15 @@ are weighted against.
         `middlewareClientMaxBodySize` is set to 15mb in
         `frontend/next.config.ts`.
 - [ ] Document demo rehearsal: upload `forged-signature.pdf` (expect HIGH, the
-      pasted-signature preview and "iLovePDF"), then `legit-scan.pdf` (same
+      pasted-signature preview and "iLovePDF"), then `legit-scan.pdf` (a genuine
       form, LOW). Also run the `edited-amount.pdf`, a renamed `.txt` and
       `encrypted.pdf` error states in the real browser in EN/FR/Kreol.
       Kreol document copy is an unreviewed English fallback (`TODO_KREOL`).
-      With Ollama down, each document waits for the LLM timeout (about 60s)
-      before the deterministic verdict appears.
+      With the tailnet Ollama reachable (qwen3:8b), a document took 3-10s
+      end to end on 2026-09-23. If the backend cannot reach Ollama (check that
+      `OLLAMA_URL` points at the tailnet host, not `localhost`), each document
+      waits for the LLM timeout (about 60s) before the deterministic verdict
+      appears.
 - [x] No crashes on malformed input (empty message, non-text upload,
       oversized batch) — verified 2026-09-22: empty/missing `message`,
       6000-char oversized `message`, malformed JSON body, 60-item

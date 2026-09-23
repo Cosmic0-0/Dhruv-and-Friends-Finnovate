@@ -23,12 +23,14 @@ forged-institution rule needs a registry institution to be claimed. The
 
 The verdicts below come from the deterministic score (ruleset `rs-1.4`) with
 the AI language pass off. When the AI pass is on, it can add inferred signals
-and move a verdict up. For example, the forged form can show CRITICAL.
+and move a verdict up. Checked live on 2026-09-23 with qwen3:8b: the forged
+form showed CRITICAL (100), while the genuine scan and the edited statement
+kept LOW (0) and ELEVATED (20).
 
 | File | What it is | Expected findings | Expected verdict |
 |---|---|---|---|
-| `legit-scan.pdf` | A scanned MCB funds-transfer form. The signature is part of the scan, there is an invisible OCR text layer, and the producer is a scanner. | none (PAY-01 from the text only) | LOW (8) |
-| `forged-signature.pdf` | The same form scanned **without** a signature. A 116x44 px PNG signature with a hard-edged transparent background is stretched to 2.4 x 0.9 in on top: about 48 dpi on a 150 dpi scan, 3.1x lower. It was then re-saved as one incremental update by "iLovePDF". | DOC-04 `transparent_overlay` (with preview), DOC-01 iLovePDF, DOC-02 `incremental_update`, PAY-01, DX-1 | HIGH (66), `do_not_pay` |
+| `legit-scan.pdf` | A scanned MCB change-of-address form. The signature is part of the scan, there is an invisible OCR text layer, and the producer is a scanner. It makes no payment request: a transfer-request text would be flagged by the AI language pass whatever the file looks like, which would hide the point of this fixture. | none | LOW (0) |
+| `forged-signature.pdf` | An MCB funds-transfer request form, scanned **without** a signature. A 116x44 px PNG signature with a hard-edged transparent background is stretched to 2.4 x 0.9 in on top: about 48 dpi on a 150 dpi scan, 3.1x lower. It was then re-saved as one incremental update by "iLovePDF". | DOC-04 `transparent_overlay` (with preview), DOC-01 iLovePDF, DOC-02 `incremental_update`, PAY-01, DX-1 | HIGH (66), `do_not_pay` |
 | `edited-amount.pdf` | A scanned Northbridge statement. A box was painted over the closing balance, and "MUR 125,000.00" was typed on top in Helvetica. | DOC-05 (evidence: `MUR 125,000.00`) | ELEVATED (20) |
 | `clean-native.pdf` | An ordinary text statement from a word processor, with consistent metadata and compressed object streams. | none | LOW (0) |
 | `macro.docx` | A Word letter (macro-enabled content type) with a `vbaProject.bin` part. The part holds placeholder bytes, not real code. | DOC-07 `macro` | ELEVATED (30) |
