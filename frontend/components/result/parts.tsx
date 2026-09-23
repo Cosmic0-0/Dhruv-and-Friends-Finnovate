@@ -6,7 +6,7 @@ import type { AnalyzeResponse, Verdict } from "@/lib/types";
 import { getRiskDisplay, getVerdictBandIndex, getVerdictDisplay, VERDICT_BANDS } from "@/lib/verdict";
 import ScreenTitle from "../ScreenTitle";
 
-/** Small uppercase section label used across the result screen. */
+/** Small secondary section label used across the result screen. */
 export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
     <h2 id={id} className="micro text-ink-muted">
@@ -228,7 +228,7 @@ export function SentPanel({
         <p className="data mt-3 rounded-2xl bg-muted-surface px-3.5 py-3 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
           {redacted}
         </p>
-        <p className="micro mt-3 text-ink-muted">
+        <p className="micro-sm mt-3 text-ink-muted">
           {copy.result.aiSource.label}: {aiSourceLabel(analysis?.semantic, copy)}
         </p>
       </div>
