@@ -1,0 +1,74 @@
+[
+  {
+    "sender": "+230 5900 0012",
+    "reportCount": 14,
+    "scamType": "family_impersonation",
+    "relatedPayloads": ["EN-09", "FR-09"],
+    "demoLanguage": "en",
+    "demoMessage": "Mum it's me, I lost my phone so this is my new number: 5900 0012. I'm in a bit of trouble and need Rs 5,000 urgently, please send it here and don't tell Dad.",
+    "note": "Main demo number: the 'new number' family scam, the highest-volume pattern on the Learn screen."
+  },
+  {
+    "sender": "+230 5900 0021",
+    "reportCount": 6,
+    "scamType": "family_impersonation",
+    "relatedPayloads": ["FL-KM-0012"],
+    "demoLanguage": "mfe",
+    "demoMessage": "Ma, mo finn sanz numero. Mo dan enn problem, mo bizin Rs 2,000 deswit. Pa dir personn, avoy lor sa numero-la: 5900 0021.",
+    "note": "Kreol demo. Text is corpus row FL-KM-0012 with the number appended."
+  },
+  {
+    "sender": "+230 5900 0034",
+    "reportCount": 23,
+    "scamType": "parcel_customs",
+    "relatedPayloads": ["EN-08", "FR-08", "FL-KM-0015"],
+    "demoLanguage": "fr",
+    "demoMessage": "Votre colis est retenu en douane. Payez Rs 450 de frais de dédouanement par mobile money au 5900 0034 sous 24 heures, sinon il sera renvoyé à l'expéditeur.",
+    "note": "Most-reported number, so it tops the Radar leaderboard."
+  },
+  {
+    "sender": "+230 5900 0047",
+    "reportCount": 9,
+    "scamType": "investment",
+    "relatedPayloads": ["EN-10", "FR-10", "EN-20", "FL-KM-0017"],
+    "demoLanguage": "en",
+    "demoMessage": "Join my private FX trading group - guaranteed 25% weekly returns, zero risk. Send your Rs 8,000 deposit by mobile money to 5900 0047 and I'll add you today.",
+    "note": "Investment scam contact number."
+  },
+  {
+    "sender": "+230 5900 0058",
+    "reportCount": 17,
+    "scamType": "payment_request",
+    "relatedPayloads": ["EN-06", "FR-06"],
+    "demoLanguage": "en",
+    "demoMessage": "Hi, I just sent Rs 3,500 to your mobile money account by mistake. Please send it back urgently to 5900 0058, my child needs medicine tonight.",
+    "note": "Also the Before-You-Pay demo: enter 5900 0058 as the recipient to show the warning before paying."
+  },
+  {
+    "sender": "+230 5900 0063",
+    "reportCount": 4,
+    "scamType": "job_scam",
+    "relatedPayloads": ["EN-11", "FR-11", "EN-19", "FR-19"],
+    "demoLanguage": "fr",
+    "demoMessage": "Travail à domicile, gagnez Rs 7 000 par semaine sans expérience. Envoyez Rs 500 de frais d'inscription remboursables au 5900 0063 aujourd'hui pour réserver votre place.",
+    "note": "Job scam registration-fee number."
+  },
+  {
+    "sender": "+230 5900 0079",
+    "reportCount": 11,
+    "scamType": "prize_lottery",
+    "relatedPayloads": ["EN-05", "FR-05"],
+    "demoLanguage": "en",
+    "demoMessage": "Congratulations! Your number has won Rs 75,000 in our anniversary draw. To claim, send the Rs 500 processing fee to 5900 0079 before midnight.",
+    "note": "No telecom brand in the text on purpose, so the AI picks out the number rather than a real company name."
+  },
+  {
+    "sender": "+230 5900 0085",
+    "reportCount": 1,
+    "scamType": "parcel_customs",
+    "relatedPayloads": ["EN-08", "FR-08"],
+    "demoLanguage": "en",
+    "demoMessage": "Your parcel could not be delivered. Pay the Rs 380 customs fee by mobile money to 5900 0085 within 24 hours to release it.",
+    "note": "Reported only once, to show a low count reads differently from a high one."
+  }
+]
