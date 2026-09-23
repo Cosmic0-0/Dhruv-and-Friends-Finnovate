@@ -6,6 +6,7 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "qwen3:8b";
 const FALLBACK_PROVIDER = process.env.FALLBACK_PROVIDER || "anthropic";
 const FALLBACK_API_KEY = process.env.FALLBACK_API_KEY || "";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "liquid/lfm-2.5-2.6b:free";
+const FALLBACK_MODELS = { anthropic: "claude-haiku-4-5-20251001", openai: "gpt-4o-mini", openrouter: OPENROUTER_MODEL };
 // 15s was measured to be unsafe, and this is NOT a one-off: liquid/lfm-2.5-
 // 2.6b:free has MANDATORY reasoning (OpenRouter rejects
 // `reasoning: {enabled: false}` for it with "Reasoning is mandatory for this
@@ -66,7 +67,7 @@ async function callAnthropic(prompt, signal) {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: "claude-haiku-4-5-20251001",
+      model: FALLBACK_MODELS.anthropic,
       max_tokens: 1024,
       messages: [{ role: "user", content: prompt }],
     }),
@@ -82,7 +83,7 @@ async function callOpenAI(prompt, signal) {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${FALLBACK_API_KEY}` },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: FALLBACK_MODELS.openai,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     }),
@@ -111,12 +112,17 @@ async function callOpenRouter(prompt, signal) {
 
 const FALLBACK_CALLERS = { anthropic: callAnthropic, openai: callOpenAI, openrouter: callOpenRouter };
 
-export async function callLLM(prompt) {
+/**
+ * @param {string} prompt
+ * @param {{ timeoutMs?: number }} [opts] per-call timeout (defaults to LLM_TIMEOUT_MS)
+ * @returns {Promise<{ text: string, provider: string, model: string }>}
+ */
+export async function callLLM(prompt, { timeoutMs = LLM_TIMEOUT_MS } = {}) {
   if (LLM_MODE !== "fallback") {
     try {
-      const text = await withTimeout((signal) => callOllama(prompt, signal), LLM_TIMEOUT_MS);
+      const text = await withTimeout((signal) => callOllama(prompt, signal), timeoutMs);
       console.log("[llm] served by ollama");
-      return { text, provider: "ollama" };
+      return { text, provider: "ollama", model: OLLAMA_MODEL };
     } catch (err) {
       console.log(`[llm] ollama unavailable (${err.message})`);
       if (LLM_MODE !== "auto") throw err;
@@ -126,9 +132,9 @@ export async function callLLM(prompt) {
   if (!FALLBACK_CONFIGURED) throw new Error("LLM unreachable and no fallback provider configured");
   const caller = FALLBACK_CALLERS[FALLBACK_PROVIDER];
   if (!caller) throw new Error(`Unknown fallback provider: ${FALLBACK_PROVIDER}`);
-  const text = await withTimeout((signal) => caller(prompt, signal), LLM_TIMEOUT_MS);
+  const text = await withTimeout((signal) => caller(prompt, signal), timeoutMs);
   console.log(`[llm] served by fallback:${FALLBACK_PROVIDER}`);
-  return { text, provider: FALLBACK_PROVIDER };
+  return { text, provider: FALLBACK_PROVIDER, model: FALLBACK_MODELS[FALLBACK_PROVIDER] ?? FALLBACK_PROVIDER };
 }
 
 export async function checkOllamaHealth() {

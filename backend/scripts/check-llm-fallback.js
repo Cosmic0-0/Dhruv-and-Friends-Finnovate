@@ -2,6 +2,11 @@
 // fallback provider when Ollama is unreachable, instead of just assuming the
 // LLM_MODE=auto wiring in llmClient.js works.
 //
+// Since the decision refactor the LLM is optional enrichment: if this check
+// FAILS, /api/analyze still returns a deterministic risk assessment (see
+// services/pipeline) - but the "inferred" signals and the semantic recall
+// are lost, so it is still worth a green run before the demo.
+//
 // Run with: npm run test:fallback (from backend/)
 //
 // llmClient.js reads OLLAMA_URL into a module-level const at import time, so
@@ -45,7 +50,7 @@ async function main() {
   process.env.LLM_MODE = "auto"; // ensure failover is actually attempted for this run
   console.log(`OLLAMA_URL overridden in-process: ${originalOllamaUrl || "(unset)"} -> ${UNREACHABLE_OLLAMA_URL}`);
 
-  const { analyzeMessage } = await import("../src/services/analysis/index.js");
+  const { analyzeSemantics } = await import("../src/services/analysis/index.js");
   const { llmStatus } = await import("../src/services/analysis/llmClient.js");
 
   const status = llmStatus();
@@ -58,7 +63,7 @@ async function main() {
     return;
   }
 
-  logSection("Step 3: fire a request through analyzeMessage() (same path as POST /api/analyze)");
+  logSection("Step 3: fire a request through analyzeSemantics() (the semantic step of POST /api/analyze)");
   const capturedLogs = [];
   const originalLog = console.log;
   console.log = (...args) => {
@@ -71,7 +76,7 @@ async function main() {
   let result;
   let error;
   try {
-    result = await analyzeMessage(TEST_MESSAGE, "en");
+    result = await analyzeSemantics(TEST_MESSAGE, { language: "en" });
   } catch (err) {
     error = err;
   } finally {
@@ -90,16 +95,11 @@ async function main() {
   const failedOver = Boolean(servedLine && servedLine.includes("served by fallback:"));
   const provider = servedLine ? servedLine.replace("[llm] served by ", "") : "unknown";
 
-  // analyzeMessage() already throws if the shape doesn't match the schema
-  // (verdict enum, signals array, suggestedAction/explanation strings), so
-  // reaching here without an error means the shape is already validated —
-  // this just restates it for visibility in the summary.
-  const shapeOk =
-    Boolean(result) &&
-    ["safe", "suspicious", "scam"].includes(result.verdict) &&
-    Array.isArray(result.signals) &&
-    typeof result.suggestedAction === "string" &&
-    typeof result.explanation === "string";
+  // analyzeSemantics() never throws: status "ok" means the model answered
+  // with valid, schema-conformant JSON; "unavailable"/"invalid" mean the
+  // pipeline would have carried on deterministically without it.
+  if (result.status !== "ok") console.log(`Semantic status: ${result.status} (${result.error ?? "no detail"})`);
+  const shapeOk = Boolean(result) && result.status === "ok" && Array.isArray(result.signals);
 
   printSummary({ failedOver, elapsedMs, shapeOk, provider, timeoutMs, signalCount: result?.signals.length });
 

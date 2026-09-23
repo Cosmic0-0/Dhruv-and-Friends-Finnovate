@@ -1,15 +1,12 @@
 import { nextSandboxTurn, MAX_SANDBOX_TURNS } from "../services/sandbox/index.js";
 import { PLAYBOOKS, normalizeScamType, normalizeStage } from "../services/playbooks/index.js";
-import { attachScamDna, getFingerprintMatches } from "../services/scam-dna/index.js";
+import { getFingerprintMatches } from "../services/scam-dna/index.js";
+import { recordUserReport } from "../services/community-signals/index.js";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
-import { analyzeMessage } from "../services/analysis/index.js";
-import { checkUrls, extractLookalikeHosts } from "../services/domain-matching/index.js";
-import { attachDomainAges } from "../services/domain-age/index.js";
-import { checkIdentityConsistency } from "../services/identity-consistency/index.js";
-import { checkTemplateArtifacts } from "../services/template-artifacts/index.js";
-import { reconcileVerdict } from "../services/verdict-escalation/index.js";
-import { computeRiskCategories } from "../services/risk-categories/index.js";
+import { checkUrls } from "../services/domain-matching/index.js";
+import { runPipeline } from "../services/pipeline/index.js";
+import { validatePaymentContext } from "../services/payment-context/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { redact } from "../services/redact/index.js";
@@ -83,17 +80,10 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-// Looks up the crowdsourced report count for the LLM-extracted `sender`
-// (see services/analysis/index.js). Only attached when a sender was
-// identified - senderReports is meaningless without a sender to key on.
-function withSenderReports(result) {
-  attachScamDna(result);
-  if (typeof result.sender === "string") {
-    result.senderReports = getReportCount(result.sender);
-  }
-  return result;
-}
-
+// Every analysis goes through runPipeline() (services/pipeline): the risk
+// level, score, verdict and actions are computed by the deterministic
+// engine, and the LLM is optional enrichment - an LLM timeout/outage still
+// returns 200 with a deterministic assessment (analysis.semantic.status).
 router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
   const { message, language } = req.body;
   if (!isNonEmptyString(message)) {
@@ -102,29 +92,13 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   if (message.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: `message exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
+  const payment = validatePaymentContext(req.body.paymentContext);
+  if (payment.error) return res.status(400).json({ error: payment.error });
   try {
-    const urlSignals = checkUrls(message);
-    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(message));
-
-    const result = await analyzeMessage(message, language);
-    attachAges();
-    // All non-LLM, deterministic checks are additive on top of the LLM's
-    // own signals, not a replacement (see services/domain-matching,
-    // services/identity-consistency, services/template-artifacts).
-    result.signals.push(...urlSignals);
-    result.signals.push(...checkIdentityConsistency(message));
-    result.signals.push(...checkTemplateArtifacts(message));
-    // Revisits `verdict`/`riskScore` against the deterministic signals just
-    // added - see services/verdict-escalation for why this can't happen
-    // inside analyzeMessage() itself (those signals don't exist yet then).
-    Object.assign(result, reconcileVerdict(result));
-    // Structured risk-category breakdown, derived from the full signal set
-    // above. Additive alongside `riskScore` — see docs/API-CONTRACT.md.
-    result.riskCategories = computeRiskCategories(result.signals);
-    res.json(withSenderReports(result));
+    res.json(await runPipeline(message, { source: "pasted_text", language, paymentContext: payment.value, ip: req.ip }));
   } catch (err) {
     console.error(err);
-    res.status(502).json({ error: "analysis failed, try again shortly" });
+    res.status(500).json({ error: "analysis failed, try again shortly" });
   }
 });
 
@@ -171,22 +145,11 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   }
 
   try {
-    const urlSignals = checkUrls(redactedText);
-    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(redactedText));
-
-    const result = await analyzeMessage(redactedText, language);
-    attachAges();
-    // Same additive, non-LLM checks as /api/analyze and /api/batch-scan -
-    // see the comment on /api/analyze above.
-    result.signals.push(...urlSignals);
-    result.signals.push(...checkIdentityConsistency(redactedText));
-    result.signals.push(...checkTemplateArtifacts(redactedText));
-    Object.assign(result, reconcileVerdict(result));
-    result.riskCategories = computeRiskCategories(result.signals);
-    res.json({ extractedText: redactedText, ...withSenderReports(result) });
+    const result = await runPipeline(redactedText, { source: "screenshot", language, ip: req.ip });
+    res.json({ extractedText: redactedText, ...result });
   } catch (err) {
     console.error(err);
-    res.status(502).json({ error: "analysis failed, try again shortly" });
+    res.status(500).json({ error: "analysis failed, try again shortly" });
   }
 });
 
@@ -206,47 +169,22 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   }
 
   // Never throws: a single message's analysis failure must not fail the
-  // whole batch (see docs/API-CONTRACT.md — no top-level 5xx for this route).
-  //
-  // checkUrls() is computed BEFORE the try so it's still included on the
-  // failure path — it's pure, deterministic, and needs no LLM, so an LLM
-  // outage shouldn't discard a confirmed lookalike-URL signal (see
-  // data/test-payloads/FINDINGS.md #7). The failure branch uses a dedicated
-  // "unknown" verdict (not one of the three real safe/suspicious/scam
-  // outcomes) so a failed analysis can't inflate suspiciousCount in the
-  // summary — buildSummary() (services/batch/index.js) only tallies the
-  // three real verdicts, so "unknown" results are automatically excluded
-  // and counted solely via analysisFailed/unanalyzedCount (see FINDINGS.md
-  // #6).
+  // whole batch (see docs/API-CONTRACT.md — no top-level 5xx for this
+  // route). runPipeline() already survives an LLM outage on its own (the
+  // deterministic assessment still counts as analysed), so "unknown" /
+  // analysisFailed is now reserved for an unexpected pipeline error; the
+  // summary never counts it as scam/suspicious/safe (FINDINGS.md #6).
   const analyze = async (message) => {
-    const urlSignals = checkUrls(message);
-    const attachAges = attachDomainAges(urlSignals, extractLookalikeHosts(message));
     try {
-      const result = await analyzeMessage(message);
-      attachAges();
-      // Same additive, non-LLM checks as /api/analyze - see the comment
-      // there. Previously batch-scan skipped these; now matches.
-      result.signals.push(...urlSignals);
-      result.signals.push(...checkIdentityConsistency(message));
-      result.signals.push(...checkTemplateArtifacts(message));
-      Object.assign(result, reconcileVerdict(result));
-      result.riskCategories = computeRiskCategories(result.signals);
-      return withSenderReports(result);
+      return await runPipeline(message, { source: "batch", ip: req.ip });
     } catch (err) {
-      // Same rationale as urlSignals above: identity-consistency,
-      // template-artifact detection, and the risk-category rollup are all
-      // deterministic and don't depend on the LLM call that just failed,
-      // so they still run on the failure path rather than being silently
-      // dropped.
-      attachAges();
-      const signals = [...urlSignals, ...checkIdentityConsistency(message), ...checkTemplateArtifacts(message)];
+      console.error(err);
       return {
         verdict: "unknown",
-        signals,
+        signals: [],
         suggestedAction: "verify_official_channel",
-        explanation: `Analysis failed: ${err.message}`,
+        explanation: "Analysis failed for this message.",
         analysisFailed: true,
-        riskCategories: computeRiskCategories(signals),
       };
     }
   };
@@ -258,7 +196,7 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
 
 // Non-LLM, synchronous domain check for the browser extension (see
 // extension/README.md) — the extension must reuse this logic via the API,
-// never reimplement it locally. Deliberately skips analyzeMessage(): a bare
+// never reimplement it locally. Deliberately skips runPipeline(): a bare
 // URL isn't a scam "message" to classify, and the extension needs a fast,
 // deterministic per-navigation check, not an LLM round trip.
 router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) => {
@@ -290,6 +228,21 @@ router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {
     return res.status(400).json({ error: "sender is required and must be a non-empty string" });
   }
   const reportCount = reportSender(sender);
+  // Also recorded as a timestamped evidence event for cluster/wave
+  // detection (services/community-signals). Best-effort: the response
+  // shape and the legacy count above don't depend on it. An oversized or
+  // non-string `message` is simply not fingerprinted, rather than turning
+  // a previously-valid report into a 400.
+  const { message } = req.body;
+  try {
+    recordUserReport({
+      sender,
+      message: typeof message === "string" && message.length <= MAX_MESSAGE_LENGTH ? message : undefined,
+      ip: req.ip,
+    });
+  } catch (err) {
+    console.error(`[community-signals] report event not recorded: ${err.message}`);
+  }
   res.json({ sender, reportCount, recorded: true });
 });
 

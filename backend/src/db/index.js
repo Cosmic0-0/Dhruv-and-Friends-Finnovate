@@ -31,6 +31,39 @@ db.exec(`
     registered_at TEXT NOT NULL,
     fetched_at TEXT NOT NULL
   );
+  -- Timestamped evidence events for community cluster/wave detection
+  -- (services/community-signals). Holds NO raw message text and NO raw IP:
+  -- only one-way fingerprints of the redacted text and an HMAC pseudonym
+  -- of the reporter. Purged after COMMUNITY_EVENT_RETENTION_DAYS.
+  CREATE TABLE IF NOT EXISTS report_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    origin TEXT NOT NULL CHECK (origin IN ('user_report', 'auto_high_confidence')),
+    sender_key TEXT,
+    template_hash TEXT NOT NULL,
+    simhash TEXT NOT NULL,
+    token_count INTEGER NOT NULL,
+    brand_claimed TEXT,
+    lookalike_hosts TEXT NOT NULL DEFAULT '[]',
+    reporter_hash TEXT NOT NULL,
+    evidence TEXT NOT NULL DEFAULT '{}'
+  );
+  CREATE INDEX IF NOT EXISTS idx_report_events_created_at ON report_events (created_at);
+  -- One row per risk adjustment made from community evidence: which rule,
+  -- which threshold version, which evidence rows, what changed. Lets any
+  -- adjusted verdict be re-derived and explained after the fact.
+  CREATE TABLE IF NOT EXISTS risk_audit_log (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    rule_id TEXT NOT NULL,
+    rules_version TEXT NOT NULL,
+    risk_delta INTEGER NOT NULL,
+    verdict_from TEXT NOT NULL,
+    verdict_to TEXT NOT NULL,
+    evidence_event_ids TEXT NOT NULL,
+    metrics TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_risk_audit_log_created_at ON risk_audit_log (created_at);
 `);
 
 const DOMAIN_AGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -60,7 +93,7 @@ export function cacheDomainRegistration(domain, registeredAtIso) {
 // "57891234") dedupes to one row instead of three (see
 // data/test-payloads/FINDINGS.md #4). This is purely an internal DB key —
 // the API still echoes back the raw string the client submitted.
-function normalizeSender(raw) {
+export function normalizeSender(raw) {
   const digits = raw.replace(/\D/g, "");
   if (digits.length === 0) {
     // Not phone-number-shaped at all - a brand/identity name like "MCB" or
@@ -91,6 +124,75 @@ export function getReportCount(sender) {
   const key = normalizeSender(sender);
   const row = db.prepare("SELECT report_count FROM reports WHERE sender = ?").get(key);
   return row ? row.report_count : 0;
+}
+
+export function insertReportEvent(event) {
+  const info = db
+    .prepare(
+      `INSERT INTO report_events
+        (created_at, origin, sender_key, template_hash, simhash, token_count, brand_claimed, lookalike_hosts, reporter_hash, evidence)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(
+      event.createdAt,
+      event.origin,
+      event.senderKey ?? null,
+      event.templateHash,
+      event.simhash,
+      event.tokenCount,
+      event.brandClaimed ?? null,
+      JSON.stringify(event.lookalikeHosts ?? []),
+      event.reporterHash,
+      JSON.stringify(event.evidence ?? {})
+    );
+  return Number(info.lastInsertRowid);
+}
+
+// Bounded read: the wave rules only ever look back lookbackDays +
+// baselineDays + 1, and the LIMIT keeps a flood of events from turning one
+// /api/analyze call into an unbounded scan.
+export function getReportEventsSince(sinceIso, limit = 5000) {
+  return db
+    .prepare(
+      `SELECT id, created_at, origin, sender_key, template_hash, simhash, token_count, lookalike_hosts, reporter_hash
+       FROM report_events WHERE created_at >= ? ORDER BY created_at DESC LIMIT ?`
+    )
+    .all(sinceIso, limit)
+    .map((r) => ({
+      id: r.id,
+      createdAt: r.created_at,
+      origin: r.origin,
+      senderKey: r.sender_key,
+      templateHash: r.template_hash,
+      simhash: r.simhash,
+      tokenCount: r.token_count,
+      lookalikeHosts: JSON.parse(r.lookalike_hosts),
+      reporterHash: r.reporter_hash,
+    }));
+}
+
+export function insertRiskAudit(entry) {
+  db.prepare(
+    `INSERT INTO risk_audit_log
+      (id, created_at, rule_id, rules_version, risk_delta, verdict_from, verdict_to, evidence_event_ids, metrics)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    entry.id,
+    entry.createdAt,
+    entry.ruleId,
+    entry.rulesVersion,
+    entry.riskDelta,
+    entry.verdictFrom,
+    entry.verdictTo,
+    JSON.stringify(entry.evidenceEventIds),
+    JSON.stringify(entry.metrics)
+  );
+}
+
+export function purgeCommunityData(eventCutoffIso, auditCutoffIso) {
+  const events = db.prepare("DELETE FROM report_events WHERE created_at < ?").run(eventCutoffIso).changes;
+  const audits = db.prepare("DELETE FROM risk_audit_log WHERE created_at < ?").run(auditCutoffIso).changes;
+  return { events, audits };
 }
 
 export function saveBatchHistory(summary) {

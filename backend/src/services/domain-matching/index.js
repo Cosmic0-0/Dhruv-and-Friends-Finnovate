@@ -1,37 +1,55 @@
 // Non-LLM, deterministic — must stay unit-testable independent of the LLM call path.
+//
+// Institution data (official domains, brand tokens) lives in
+// data/institution-registry.json via services/institutions; this module only
+// parses links and compares them against it. Every official-domain check goes
+// through isOfficialHost(), so a subdomain of an official domain
+// (internet.mcb.mu) is always official - never a lookalike.
 
-// Single source of truth for known-legit Mauritius bank/telecom/government
-// domains, keyed by the brand token used to spot them mentioned in message
-// text. Exported as a map (rather than two parallel arrays) so other
-// deterministic checks — e.g. services/identity-consistency — can look up
-// "what domain should this claimed identity's link point to" without
-// duplicating this knowledge.
-export const BRAND_DOMAIN_MAP = {
-  mcb: "mcb.mu",
-  sbm: "sbmgroup.mu",
-  absa: "absa.mu",
-  bankone: "bankone.mu",
-  myt: "myt.mu",
-  emtel: "emtel.com",
-  mra: "mra.gov.mu",
+import {
+  BRAND_DOMAIN_MAP,
+  BRAND_TOKENS,
+  INSTITUTIONS,
+  OFFICIAL_DOMAINS,
+  institutionForHost,
+  institutionForToken,
+  isOfficialHost,
+  normalizeHost,
+} from "../institutions/index.js";
+import { makeSignal } from "../signals/registry.js";
+
+export { BRAND_DOMAIN_MAP, BRAND_TOKENS, isOfficialHost };
+export const LEGIT_DOMAINS = OFFICIAL_DOMAINS;
+export const DETECTOR_VERSION = "url-2.0";
+
+// Explicit-scheme URLs are parsed with URL() so the real host is used
+// (https://mcb.mu@evil.top has host evil.top, not mcb.mu).
+const SCHEME_URL_RE = /\bhttps?:\/\/[^\s<>"'()]+/gi;
+// Scheme-less links: require a final all-alpha "TLD-like" label of 2-10
+// chars so prose like "Rs.5000" / "e.g." doesn't match (FINDINGS.md #2).
+const BARE_URL_RE = /(?<![@\w.-])(?:www\.)?(?:[a-z0-9-]+\.)+[a-z]{2,10}(?:\/[^\s<>"'()]*)?/gi;
+// Hosts containing non-ASCII letters (homoglyph attacks) that the ASCII
+// patterns above can't see at all.
+const UNICODE_HOST_RE = /(?:https?:\/\/)?((?:[\p{L}\p{N}-]+\.)+\p{L}{2,10})(?:\/[^\s<>"'()]*)?/giu;
+const IP_URL_RE = /\b(?:https?:\/\/)?((?:\d{1,3}\.){3}\d{1,3})(?::\d+)?(?:\/[^\s<>"'()]*)?/g;
+
+export const SHORTENER_HOSTS = Object.freeze([
+  "bit.ly", "tinyurl.com", "t.ly", "cutt.ly", "is.gd", "rb.gy", "ow.ly", "t.co", "goo.gl", "shorturl.at", "tiny.cc", "s.id",
+]);
+
+// Public suffixes with two labels, so the registrable label of
+// mra.gov.mu is "mra" and of shop.co.uk is "shop".
+const MULTI_LABEL_SUFFIXES = new Set([
+  "gov.mu", "com.mu", "org.mu", "net.mu", "ac.mu", "co.mu", "co.uk", "org.uk", "ac.uk", "gov.uk",
+  "co.za", "com.au", "co.in", "com.br", "co.nz",
+]);
+
+// Small confusable map (Cyrillic/Greek letters that render like Latin) used
+// only to compute a "skeleton" of a non-ASCII host for comparison.
+const CONFUSABLES = {
+  "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y", "і": "i", "ј": "j", "ѕ": "s", "һ": "h", "ԁ": "d", "ӏ": "l",
+  "α": "a", "ο": "o", "ρ": "p", "ε": "e", "ι": "i", "κ": "k", "ν": "v", "τ": "t", "υ": "u",
 };
-
-export const LEGIT_DOMAINS = Object.values(BRAND_DOMAIN_MAP);
-
-// Brand tokens checked against whole hostname labels (split on "." and
-// "-"), independent of the Levenshtein distance check below — catches
-// prefix/suffix phishing patterns like mcb-secure.top that a distance-2
-// threshold misses (see data/test-payloads/FINDINGS.md #3). Matching must
-// be label-exact, not `host.includes(token)`: a raw substring check flags
-// unrelated domains that merely contain a token's letters in sequence,
-// e.g. mythology-store.com ("myt"), absalom-books.com ("absa"), and
-// sbmarketing.co.uk ("sbm") (see FINDINGS.md #10).
-export const BRAND_TOKENS = Object.keys(BRAND_DOMAIN_MAP);
-
-// Requires a final all-alpha "TLD-like" label of 2-10 chars so scheme-less
-// matches don't fire on ordinary prose (e.g. "Rs.5000", "e.g.") while still
-// catching real scheme-less links like "mcb.nu/verify" (see FINDINGS.md #2).
-const URL_PATTERN = /(?:https?:\/\/)?(?:www\.)?(?:[a-z0-9-]+\.)+[a-z]{2,10}(?:\/[^\s]*)?/gi;
 
 function levenshtein(a, b) {
   const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
@@ -39,83 +57,245 @@ function levenshtein(a, b) {
   for (let j = 0; j <= b.length; j++) dp[0][j] = j;
   for (let i = 1; i <= a.length; i++) {
     for (let j = 1; j <= b.length; j++) {
-      dp[i][j] = a[i - 1] === b[j - 1]
-        ? dp[i - 1][j - 1]
-        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
     }
   }
   return dp[a.length][b.length];
 }
 
-// Extracts hostnames from any URL-shaped substrings in the message — legit
-// or not, unfiltered. Exported so other deterministic (non-LLM) checks —
-// e.g. services/identity-consistency, which needs to compare a claimed
-// identity's expected domain against ANY linked host, not just lookalikes —
-// can reuse this exact extraction instead of reimplementing URL parsing.
-export function extractHostnames(message) {
-  const urls = message.match(URL_PATTERN) || [];
-  const hostnames = [];
-  for (const url of urls) {
-    const withScheme = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+/**
+ * Edit distance allowed between a host's registrable label and an official
+ * label, scaled by the official label's length. Short labels (mcb, mra, sbm)
+ * allow 0: with 3 letters, distance 1-2 is "any other short word" (mra vs
+ * mcb, FINDINGS.md #11). Exact brand labels on the wrong domain are caught
+ * separately by the brand-token rule.
+ */
+export function maxEditDistance(labelLength) {
+  if (labelLength <= 4) return 0;
+  if (labelLength <= 8) return 1;
+  return 2;
+}
+
+export function splitHost(host) {
+  const labels = normalizeHost(host).split(".");
+  const lastTwo = labels.slice(-2).join(".");
+  const suffixLen = labels.length >= 3 && MULTI_LABEL_SUFFIXES.has(lastTwo) ? 2 : 1;
+  const registrableIndex = labels.length - suffixLen - 1;
+  return {
+    labels,
+    registrable: labels[registrableIndex] ?? labels[0],
+    subdomains: labels.slice(0, Math.max(0, registrableIndex)),
+    suffix: labels.slice(-suffixLen).join("."),
+  };
+}
+
+function isShortener(host) {
+  return SHORTENER_HOSTS.includes(normalizeHost(host));
+}
+
+/**
+ * Every link in the text, with its real host, as { url, host, username,
+ * path, span }. Explicit-scheme URLs are parsed first and masked out so the
+ * bare-domain pass can't re-read their userinfo (mcb.mu@evil.top) as a host.
+ */
+export function extractLinks(message) {
+  const links = [];
+  let masked = message;
+  for (const m of message.matchAll(SCHEME_URL_RE)) {
+    const url = m[0].replace(/[.,;:!?]+$/, "");
     try {
-      hostnames.push(new URL(withScheme).hostname.replace(/^www\./, "").toLowerCase());
+      const parsed = new URL(url);
+      links.push({
+        url,
+        host: normalizeHost(parsed.hostname),
+        username: parsed.username,
+        path: parsed.pathname,
+        span: [m.index, m.index + url.length],
+        hasScheme: true,
+      });
+    } catch {
+      continue;
+    }
+    masked = masked.slice(0, m.index) + " ".repeat(m[0].length) + masked.slice(m.index + m[0].length);
+  }
+  for (const m of masked.matchAll(BARE_URL_RE)) {
+    const url = m[0].replace(/[.,;:!?]+$/, "");
+    try {
+      const parsed = new URL(`https://${url}`);
+      links.push({ url, host: normalizeHost(parsed.hostname), username: "", path: parsed.pathname, span: [m.index, m.index + url.length], hasScheme: false });
     } catch {
       continue;
     }
   }
-  return hostnames;
+  return links.sort((a, b) => a.span[0] - b.span[0]);
 }
 
-// Shared by checkUrls() and extractLookalikeHosts() so the host used for the
-// (optional, separately-enriched) domainAgeDays lookup can never drift out
-// of sync with which URLs actually got flagged.
-function findLookalikes(message) {
-  const found = [];
-  for (const host of extractHostnames(message)) {
-    if (LEGIT_DOMAINS.includes(host)) continue;
+/** Hostnames of every link, legit or not (reused by identity-consistency and community-signals). */
+export function extractHostnames(message) {
+  return extractLinks(message).map((l) => l.host);
+}
 
-    const closest = LEGIT_DOMAINS.find((d) => levenshtein(host, d) <= 2);
-    const labels = host.split(/[.-]/);
-    const brandToken = BRAND_TOKENS.find((token) => labels.includes(token));
+function brandInLabels(labels) {
+  for (const label of labels) {
+    const parts = label.split("-");
+    const token = BRAND_TOKENS.find((t) => parts.includes(t));
+    if (token) return token;
+  }
+  return null;
+}
 
-    // Either check firing should produce exactly one signal per URL.
-    if (closest) {
-      found.push({
-        host,
-        type: "lookalike_url",
-        description: `${host} closely resembles legitimate domain ${closest}`,
-        severity: "high",
-        source: "url_parser",
-        // officialDomain: the specific legit domain this host was matched
-        // against, so the frontend can render a direct "claims X / actually
-        // points to Y" comparison instead of re-parsing `description`.
-        officialDomain: closest,
-      });
-    } else if (brandToken) {
-      found.push({
-        host,
-        type: "lookalike_url",
-        description: `${host} contains brand token "${brandToken}" but is not a recognized domain for it`,
-        severity: "high",
-        source: "url_parser",
-        officialDomain: BRAND_DOMAIN_MAP[brandToken],
-      });
+function brandInPath(path) {
+  const segments = path.toLowerCase().split(/[/\-_.?=&]+/).filter(Boolean);
+  return BRAND_TOKENS.find((t) => segments.includes(t)) ?? null;
+}
+
+function closestOfficial(registrable) {
+  for (const inst of INSTITUTIONS) {
+    for (const domain of inst.official_domains) {
+      const official = splitHost(domain).registrable;
+      if (levenshtein(registrable, official) <= maxEditDistance(official.length)) return { inst, domain };
     }
   }
-  return found;
+  return null;
 }
 
+function lookalikeSignal(code, link, { official, description, metadata = {} }) {
+  return makeSignal(code, {
+    sourceType: "rule",
+    evidence: link.url,
+    span: link.span,
+    description,
+    metadata: { host: link.host, officialDomain: official, institutionId: institutionForHost(official)?.id ?? null, ...metadata },
+    extra: { domain: link.host, officialDomain: official },
+  });
+}
+
+/** URL-01..URL-03 for one ASCII link, or null. Never fires for an official host. */
+function classifyLink(link) {
+  if (institutionForHost(link.host) || isShortener(link.host)) return null;
+  const { registrable, subdomains } = splitHost(link.host);
+
+  const registrableToken = brandInLabels([registrable]);
+  if (registrableToken) {
+    const official = BRAND_DOMAIN_MAP[registrableToken];
+    return lookalikeSignal("URL-02", link, {
+      official,
+      description: `${link.host} contains brand token "${registrableToken}" but is not a recognized domain for it`,
+      metadata: { brandToken: registrableToken },
+    });
+  }
+
+  const close = closestOfficial(registrable);
+  if (close) {
+    return lookalikeSignal("URL-01", link, {
+      official: close.domain,
+      description: `${link.host} closely resembles legitimate domain ${close.domain}`,
+    });
+  }
+
+  const subToken = brandInLabels(subdomains);
+  const pathToken = subToken ? null : brandInPath(link.path);
+  const token = subToken ?? pathToken;
+  if (token) {
+    const official = BRAND_DOMAIN_MAP[token];
+    return lookalikeSignal("URL-03", link, {
+      official,
+      description: `${link.host} uses "${token}" in its ${subToken ? "subdomain" : "path"} but is not ${institutionForToken(token).display_name}'s domain`,
+      metadata: { brandToken: token, location: subToken ? "subdomain" : "path" },
+    });
+  }
+  return null;
+}
+
+function skeleton(host) {
+  return [...host.toLowerCase()].map((ch) => CONFUSABLES[ch] ?? ch).join("");
+}
+
+/** URL-04: hosts written with non-ASCII look-alike letters, or punycode. */
+function homoglyphSignals(message) {
+  const out = [];
+  for (const m of message.matchAll(UNICODE_HOST_RE)) {
+    const host = m[1].toLowerCase();
+    const isPunycode = host.split(".").some((l) => l.startsWith("xn--"));
+    if (!/[^\x00-\x7f]/.test(host) && !isPunycode) continue;
+    const skel = skeleton(host);
+    const target = institutionForHost(skel) ?? institutionForToken(brandInLabels(splitHost(skel).labels));
+    const official = target?.official_domains[0] ?? null;
+    out.push(
+      makeSignal("URL-04", {
+        sourceType: "rule",
+        evidence: m[0],
+        span: [m.index, m.index + m[0].length],
+        description: official
+          ? `${host} uses look-alike characters to imitate ${official}`
+          : `${host} uses non-standard or look-alike characters`,
+        metadata: { host, skeleton: skel, officialDomain: official },
+        extra: { domain: host, ...(official ? { officialDomain: official } : {}) },
+      })
+    );
+  }
+  return out;
+}
+
+/** Lookalike/brand-abuse signals (URL-01..URL-04), one per offending link. */
 export function checkUrls(message) {
-  // `domain` (the actual, potentially malicious host) is kept on the
-  // signal — additive alongside `officialDomain` above — for the same
-  // "claimed vs actual" comparison; only the internal `host` key itself is
-  // renamed away, nothing is dropped.
-  return findLookalikes(message).map(({ host, ...signal }) => ({ domain: host, ...signal }));
+  const signals = [];
+  for (const link of extractLinks(message)) {
+    const s = classifyLink(link);
+    if (s) signals.push(s);
+  }
+  return [...signals, ...homoglyphSignals(message)];
 }
 
-// Same hosts, same order, as the signals checkUrls() returns for this
-// message - used to zip a best-effort domainAgeDays onto each signal
-// without checkUrls() itself gaining an LLM-adjacent async dependency.
+/** Hosts of checkUrls() signals, same order - zips domainAgeDays onto them. */
 export function extractLookalikeHosts(message) {
-  return findLookalikes(message).map((f) => f.host);
+  return checkUrls(message).map((s) => s.metadata.host);
+}
+
+// Phishing call-to-action: verify / log in / update / claim / pay "here".
+// EN + FR + Kreol ("Klik lor", "verifye", "konfirm").
+const LINK_CTA_RE =
+  /\b(?:verify|confirm|log ?in|sign ?in|update|unlock|reactivate|restore|claim|click|tap|v[ée]rifiez|confirmez|connectez|cliquez|mettez à jour|verifye|konfirm|klik)\b/iu;
+
+/** Weak/structural link signals: URL-05 shortener, URL-06 raw IP, URL-07 userinfo trick, URL-08 action via unofficial link. */
+export function checkLinkHygiene(message) {
+  const out = [];
+  const unofficial = extractLinks(message).filter((l) => !institutionForHost(l.host));
+  const cta = unofficial.length > 0 ? LINK_CTA_RE.exec(message) : null;
+  if (cta) {
+    out.push(
+      makeSignal("URL-08", {
+        sourceType: "rule",
+        evidence: cta[0],
+        span: [cta.index, cta.index + cta[0].length],
+        description: `Asks you to "${cta[0]}" through a link that is not an official domain (${unofficial[0].host}).`,
+        metadata: { host: unofficial[0].host },
+      })
+    );
+  }
+  for (const link of extractLinks(message)) {
+    if (isShortener(link.host)) {
+      out.push(makeSignal("URL-05", { sourceType: "rule", evidence: link.url, span: link.span, metadata: { host: link.host }, extra: { domain: link.host } }));
+    }
+    if (link.username) {
+      out.push(
+        makeSignal("URL-07", {
+          sourceType: "rule",
+          evidence: link.url,
+          span: link.span,
+          description: `The link looks like "${link.username}" but actually opens ${link.host}`,
+          metadata: { host: link.host, disguisedAs: link.username },
+          extra: { domain: link.host },
+        })
+      );
+    }
+  }
+  for (const m of message.matchAll(IP_URL_RE)) {
+    if (!m[1].split(".").every((o) => Number(o) <= 255)) continue;
+    // A bare dotted quad without scheme or path is more likely a version or
+    // reference number than a link.
+    if (!/^https?:\/\//i.test(m[0]) && !m[0].includes("/")) continue;
+    out.push(makeSignal("URL-06", { sourceType: "rule", evidence: m[0], span: [m.index, m.index + m[0].length], metadata: { host: m[1] }, extra: { domain: m[1] } }));
+  }
+  return out;
 }
