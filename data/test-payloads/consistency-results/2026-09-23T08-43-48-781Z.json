@@ -1,0 +1,4243 @@
+{
+  "runAt": "2026-09-23T08:43:48.784Z",
+  "runsPerMessage": 3,
+  "set": "all",
+  "llmMode": "auto",
+  "results": [
+    {
+      "id": "EN-01",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [
+        "THREAT 2/3",
+        "ACCOUNT_TAKEOVER 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL",
+            "THREAT"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 12276
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL",
+            "THREAT"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 6812
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL",
+            "ACCOUNT_TAKEOVER"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 6939
+        }
+      ]
+    },
+    {
+      "id": "EN-02",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "SBM Fraud Prevention",
+          "provider": "ollama",
+          "ms": 5522
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "SBM Fraud Prevention",
+          "provider": "ollama",
+          "ms": 6254
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "SBM Fraud Prevention",
+          "provider": "ollama",
+          "ms": 5999
+        }
+      ]
+    },
+    {
+      "id": "EN-03",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [
+        "MOCK_WEBSITE 1/3",
+        "SENSITIVE_INFO_REQUEST 1/3",
+        "MOBILE_MONEY_FRAUD 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "MOCK_WEBSITE"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 6085
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 6317
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 6403
+        }
+      ]
+    },
+    {
+      "id": "EN-04",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 6034
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 5982
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 5926
+        }
+      ]
+    },
+    {
+      "id": "EN-05",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 6055
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 5996
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 5944
+        }
+      ]
+    },
+    {
+      "id": "EN-06",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 5509
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5352
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5722
+        }
+      ]
+    },
+    {
+      "id": "EN-07",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6427
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6265
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6308
+        }
+      ]
+    },
+    {
+      "id": "EN-08",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [
+        "FAKE_PARCEL 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Customs Authority",
+          "provider": "ollama",
+          "ms": 4470
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "FAKE_PARCEL",
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Customs Authority",
+          "provider": "ollama",
+          "ms": 6338
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Customs",
+          "provider": "ollama",
+          "ms": 4601
+        }
+      ]
+    },
+    {
+      "id": "EN-09",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 5937
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 4835
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 5030
+        }
+      ]
+    },
+    {
+      "id": "EN-10",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [
+        "LIMITED_SPOTS 2/3",
+        "URGENCY 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "LIMITED_SPOTS"
+          ],
+          "sender": "Exclusive FX trading group",
+          "provider": "ollama",
+          "ms": 5788
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "Exclusive FX Trading Group",
+          "provider": "ollama",
+          "ms": 5233
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "LIMITED_SPOTS"
+          ],
+          "sender": "Exclusive FX trading group",
+          "provider": "ollama",
+          "ms": 5796
+        }
+      ]
+    },
+    {
+      "id": "EN-11",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5037
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4802
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4673
+        }
+      ]
+    },
+    {
+      "id": "EN-12",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        65,
+        70
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH"
+          ],
+          "sender": "Company",
+          "provider": "ollama",
+          "ms": 4956
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH"
+          ],
+          "sender": "our company",
+          "provider": "ollama",
+          "ms": 4677
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 65,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH"
+          ],
+          "sender": "our company",
+          "provider": "ollama",
+          "ms": 4901
+        }
+      ]
+    },
+    {
+      "id": "EN-13",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 0,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5590
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5651
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5783
+        }
+      ]
+    },
+    {
+      "id": "EN-14",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        70,
+        85
+      ],
+      "unstableSignals": [
+        "AUTHORITY_CLAIM 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5642
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 6821
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 80,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5580
+        }
+      ]
+    },
+    {
+      "id": "EN-15",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        20,
+        30
+      ],
+      "unstableSignals": [
+        "AUTHORITY_CLAIM 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 30,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 5345
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 30,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 4543
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 3472
+        }
+      ]
+    },
+    {
+      "id": "EN-16",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        0,
+        5
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 0,
+          "signalTypes": [],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 2262
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 2320
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 0,
+          "signalTypes": [],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 2269
+        }
+      ]
+    },
+    {
+      "id": "EN-17",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        10,
+        10
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 4953
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 4478
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 4711
+        }
+      ]
+    },
+    {
+      "id": "EN-18",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        5,
+        5
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "PARCEL_FEE"
+          ],
+          "sender": "Quatre Bornes post office",
+          "provider": "ollama",
+          "ms": 3366
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "PARCEL_FEE"
+          ],
+          "sender": "Quatre Bornes post office",
+          "provider": "ollama",
+          "ms": 3153
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "PARCEL_FEE"
+          ],
+          "sender": "Quatre Bornes post office",
+          "provider": "ollama",
+          "ms": 3188
+        }
+      ]
+    },
+    {
+      "id": "EN-19",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        70,
+        75
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5068
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5617
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 75,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5093
+        }
+      ]
+    },
+    {
+      "id": "EN-20",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        5,
+        20
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Community WhatsApp group member",
+          "provider": "ollama",
+          "ms": 3604
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "community WhatsApp group member",
+          "provider": "ollama",
+          "ms": 3307
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Community WhatsApp group member",
+          "provider": "ollama",
+          "ms": 4369
+        }
+      ]
+    },
+    {
+      "id": "FR-01",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        90,
+        90
+      ],
+      "unstableSignals": [
+        "SENSITIVE_INFO_REQUEST 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 6940
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SENSITIVE_INFO_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 7560
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SENSITIVE_INFO_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 7054
+        }
+      ]
+    },
+    {
+      "id": "FR-02",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [
+        "SENSITIVE_INFO_REQUEST 2/3",
+        "OTP_REQUEST 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 6420
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "OTP_REQUEST"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 6895
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 6366
+        }
+      ]
+    },
+    {
+      "id": "FR-03",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 7592
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 7414
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 7672
+        }
+      ]
+    },
+    {
+      "id": "FR-04",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [
+        "SENSITIVE_INFO_REQUEST 1/3",
+        "SUSPICIOUS_URL 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 5254
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 6543
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Bank One",
+          "provider": "ollama",
+          "ms": 6265
+        }
+      ]
+    },
+    {
+      "id": "FR-05",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 6136
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 6079
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Emtel",
+          "provider": "ollama",
+          "ms": 6292
+        }
+      ]
+    },
+    {
+      "id": "FR-06",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [
+        "PAYMENT_REQUEST 2/3",
+        "OTP_REQUEST 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6899
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6606
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "MOBILE_MONEY_FRAUD",
+            "OTP_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6336
+        }
+      ]
+    },
+    {
+      "id": "FR-07",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [
+        "AUTHORITY_CLAIM 2/3",
+        "AUTHORITY_IMPERSONATION 1/3",
+        "THREAT 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6648
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_IMPERSONATION",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6970
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST",
+            "THREAT"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 8174
+        }
+      ]
+    },
+    {
+      "id": "FR-08",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [
+        "FAKE_PARCEL 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD",
+            "FAKE_PARCEL"
+          ],
+          "sender": "douane",
+          "provider": "ollama",
+          "ms": 8462
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD",
+            "FAKE_PARCEL"
+          ],
+          "sender": "douane",
+          "provider": "ollama",
+          "ms": 7819
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Douane",
+          "provider": "ollama",
+          "ms": 6389
+        }
+      ]
+    },
+    {
+      "id": "FR-09",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "Maman",
+          "provider": "ollama",
+          "ms": 5413
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Maman",
+          "provider": "ollama",
+          "ms": 5352
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Maman",
+          "provider": "ollama",
+          "ms": 6105
+        }
+      ]
+    },
+    {
+      "id": "FR-10",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 1,
+        "suspicious": 2
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "UNVERIFIED_IDENTITY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Groupe de trading exclusif",
+          "provider": "ollama",
+          "ms": 6611
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 7082
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "provider": "ollama",
+          "ms": 7470
+        }
+      ]
+    },
+    {
+      "id": "FR-11",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5762
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5293
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 5367
+        }
+      ]
+    },
+    {
+      "id": "FR-12",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        65,
+        70
+      ],
+      "unstableSignals": [
+        "spoofed_identity 2/3",
+        "urgency_language 2/3",
+        "URGENCY 1/3",
+        "SENSITIVE_INFO_REQUEST 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "spoofed_identity",
+            "urgency_language"
+          ],
+          "sender": "not specified",
+          "provider": "ollama",
+          "ms": 5169
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 65,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "not specified",
+          "provider": "ollama",
+          "ms": 5397
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 70,
+          "signalTypes": [
+            "spoofed_identity",
+            "urgency_language"
+          ],
+          "sender": "notre entreprise",
+          "provider": "ollama",
+          "ms": 4738
+        }
+      ]
+    },
+    {
+      "id": "FR-13",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 0,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5535
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5843
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "OTP_REQUEST"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 4929
+        }
+      ]
+    },
+    {
+      "id": "FR-14",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        75,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 75,
+          "signalTypes": [
+            "URGENCY",
+            "BANK_IMPERSONATION"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 6063
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 80,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5905
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY"
+          ],
+          "sender": "MCB",
+          "provider": "ollama",
+          "ms": 5500
+        }
+      ]
+    },
+    {
+      "id": "FR-15",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        40,
+        45
+      ],
+      "unstableSignals": [
+        "BANK_IMPERSONATION 2/3",
+        "URGENCY_LANGUAGE 2/3",
+        "URGENCY 1/3",
+        "AUTHORITY_CLAIM 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 40,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY_LANGUAGE"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 5533
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 40,
+          "signalTypes": [
+            "BANK_IMPERSONATION",
+            "URGENCY_LANGUAGE"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 5337
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 45,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "SBM",
+          "provider": "ollama",
+          "ms": 5186
+        }
+      ]
+    },
+    {
+      "id": "FR-16",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        5,
+        20
+      ],
+      "unstableSignals": [
+        "URGENCY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 4145
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 2151
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Absa Mauritius",
+          "provider": "ollama",
+          "ms": 4115
+        }
+      ]
+    },
+    {
+      "id": "FR-17",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        20,
+        20
+      ],
+      "unstableSignals": [
+        "AUTHORITY_CLAIM 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 3862
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 5277
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 4496
+        }
+      ]
+    },
+    {
+      "id": "FR-18",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        10,
+        20
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Bureau de poste de Quatre Bornes",
+          "provider": "ollama",
+          "ms": 3733
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 15,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Bureau de poste",
+          "provider": "ollama",
+          "ms": 3248
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Bureau de poste",
+          "provider": "ollama",
+          "ms": 3879
+        }
+      ]
+    },
+    {
+      "id": "FR-19",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        30,
+        40
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 40,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4893
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 30,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 3586
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 40,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4164
+        }
+      ]
+    },
+    {
+      "id": "FR-20",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        5,
+        30
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 20,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 3610
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 3218
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 30,
+          "signalTypes": [
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown (group member)",
+          "provider": "ollama",
+          "ms": 3718
+        }
+      ]
+    },
+    {
+      "id": "KR-01",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 2,
+        "scam": 1
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        90,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 6047
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 5984
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 6091
+        }
+      ]
+    },
+    {
+      "id": "KR-02",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        90,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "IslandTrust Bank",
+          "provider": "ollama",
+          "ms": 6787
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "IslandTrust Bank",
+          "provider": "ollama",
+          "ms": 5572
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 95,
+          "signalTypes": [
+            "OTP_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "IslandTrust Bank",
+          "provider": "ollama",
+          "ms": 6049
+        }
+      ]
+    },
+    {
+      "id": "KR-03",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 2,
+        "scam": 1
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "SunCoast Bank",
+          "provider": "ollama",
+          "ms": 5654
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "SunCoast Bank",
+          "provider": "ollama",
+          "ms": 5411
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "SunCoast Bank",
+          "provider": "ollama",
+          "ms": 6360
+        }
+      ]
+    },
+    {
+      "id": "KR-04",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Meridian Bank",
+          "provider": "ollama",
+          "ms": 6549
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Meridian Bank",
+          "provider": "ollama",
+          "ms": 6064
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "IMPERSONATION",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Meridian Bank",
+          "provider": "ollama",
+          "ms": 6248
+        }
+      ]
+    },
+    {
+      "id": "KR-05",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        90,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 5887
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 5778
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 5356
+        }
+      ]
+    },
+    {
+      "id": "KR-06",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 2,
+        "scam": 1
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "UNEXPECTED_PAYMENT",
+            "SUSPICIOUS_URL",
+            "IMPERSONATION"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 7643
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "UNEXPECTED_PAYMENT",
+            "SUSPICIOUS_URL",
+            "IMPERSONATION"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 7791
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "UNEXPECTED_PAYMENT",
+            "SUSPICIOUS_URL",
+            "IMPERSONATION"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 7849
+        }
+      ]
+    },
+    {
+      "id": "KR-07",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 1,
+        "scam": 2
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "AUTHORITY_PRESSURE 2/3",
+        "AUTHORITY_CLAIM 1/3",
+        "IMPERSONATION 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_PRESSURE",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6638
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 6321
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_PRESSURE",
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "MRA",
+          "provider": "ollama",
+          "ms": 7882
+        }
+      ]
+    },
+    {
+      "id": "KR-08",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        90,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "Ministre Finans/MRA",
+          "provider": "ollama",
+          "ms": 7708
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "Ministre Finans/MRA",
+          "provider": "ollama",
+          "ms": 7177
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST",
+            "IMPERSONATION",
+            "AUTHORITY_PRESSURE"
+          ],
+          "sender": "Ministre Finans/MRA",
+          "provider": "ollama",
+          "ms": 6951
+        }
+      ]
+    },
+    {
+      "id": "KR-09",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 2,
+        "scam": 1
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 5675
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 5299
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 4987
+        }
+      ]
+    },
+    {
+      "id": "KR-10",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "suspicious",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 5946
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 6031
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "CHANGED_PAYMENT_DETAILS",
+            "BENEFICIARY_MISMATCH",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "banque",
+          "provider": "ollama",
+          "ms": 5780
+        }
+      ]
+    },
+    {
+      "id": "KR-11",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "PayIsle",
+          "provider": "ollama",
+          "ms": 5074
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "PayIsle",
+          "provider": "ollama",
+          "ms": 4232
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "PayIsle",
+          "provider": "ollama",
+          "ms": 5094
+        }
+      ]
+    },
+    {
+      "id": "KR-12",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [
+        "NEW_PHONE_NUMBER 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "PAYMENT_REQUEST",
+            "NEW_PHONE_NUMBER"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6751
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "provider": "ollama",
+          "ms": 5163
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 4981
+        }
+      ]
+    },
+    {
+      "id": "KR-13",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        75,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 75,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5848
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "mo mem ca",
+          "provider": "ollama",
+          "ms": 5279
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "IMPERSONATION"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5298
+        }
+      ]
+    },
+    {
+      "id": "KR-14",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 1,
+        "scam": 2
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "IMPERSONATION 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "papa",
+          "provider": "ollama",
+          "ms": 6261
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "IMPERSONATION",
+            "SECRECY"
+          ],
+          "sender": "papa",
+          "provider": "ollama",
+          "ms": 7149
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "papa",
+          "provider": "ollama",
+          "ms": 5677
+        }
+      ]
+    },
+    {
+      "id": "KR-15",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL",
+            "PARCEL_FEE"
+          ],
+          "sender": "Customs Authority",
+          "provider": "ollama",
+          "ms": 7194
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL",
+            "PARCEL_FEE"
+          ],
+          "sender": "douane",
+          "provider": "ollama",
+          "ms": 7000
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL",
+            "PARCEL_FEE"
+          ],
+          "sender": "douane",
+          "provider": "ollama",
+          "ms": 6878
+        }
+      ]
+    },
+    {
+      "id": "KR-16",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "track-parcel-mu.test",
+          "provider": "ollama",
+          "ms": 4761
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Courier or Logistics Service",
+          "provider": "ollama",
+          "ms": 4726
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "track-parcel-mu.test",
+          "provider": "ollama",
+          "ms": 4321
+        }
+      ]
+    },
+    {
+      "id": "KR-17",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "provider": "ollama",
+          "ms": 6199
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "mwa",
+          "provider": "ollama",
+          "ms": 6173
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "mwa",
+          "provider": "ollama",
+          "ms": 6394
+        }
+      ]
+    },
+    {
+      "id": "KR-18",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST"
+          ],
+          "provider": "ollama",
+          "ms": 5978
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST"
+          ],
+          "provider": "ollama",
+          "ms": 5938
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 95,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "CRYPTO_REQUEST",
+            "PAYMENT_REQUEST"
+          ],
+          "provider": "ollama",
+          "ms": 5753
+        }
+      ]
+    },
+    {
+      "id": "KR-19",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [
+        "GUARANTEED_RETURN 2/3",
+        "UNVERIFIED_IDENTITY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5945
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "provider": "ollama",
+          "ms": 5595
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 3321
+        }
+      ]
+    },
+    {
+      "id": "KR-20",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Nou",
+          "provider": "ollama",
+          "ms": 3449
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Nou",
+          "provider": "ollama",
+          "ms": 2768
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Nou",
+          "provider": "ollama",
+          "ms": 2841
+        }
+      ]
+    },
+    {
+      "id": "KR-21",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PRIZE_LURE",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "WhatsApp International",
+          "provider": "ollama",
+          "ms": 5981
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PRIZE_LURE",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "WhatsApp International",
+          "provider": "ollama",
+          "ms": 5734
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PRIZE_LURE",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "WhatsApp International",
+          "provider": "ollama",
+          "ms": 5278
+        }
+      ]
+    },
+    {
+      "id": "KR-22",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        5,
+        10
+      ],
+      "unstableSignals": [
+        "URGENCY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 10,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "labank",
+          "provider": "ollama",
+          "ms": 3673
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [],
+          "sender": "Bank",
+          "provider": "ollama",
+          "ms": 2214
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "OceanBank",
+          "provider": "ollama",
+          "ms": 3271
+        }
+      ]
+    },
+    {
+      "id": "KR-23",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        30,
+        45
+      ],
+      "unstableSignals": [
+        "AUTHORITY_CLAIM 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 45,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Bank",
+          "provider": "ollama",
+          "ms": 3951
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 45,
+          "signalTypes": [
+            "URGENCY",
+            "AUTHORITY_CLAIM"
+          ],
+          "sender": "Bank or service provider",
+          "provider": "ollama",
+          "ms": 4353
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 30,
+          "signalTypes": [
+            "URGENCY"
+          ],
+          "sender": "Bank",
+          "provider": "ollama",
+          "ms": 3641
+        }
+      ]
+    },
+    {
+      "id": "KR-24",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "safe": 3
+      },
+      "topVerdict": "safe",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "safe",
+      "riskScoreRange": [
+        5,
+        5
+      ],
+      "unstableSignals": [
+        "urgency 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "stable": true,
+      "raw": [
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "urgency"
+          ],
+          "sender": "labank",
+          "provider": "ollama",
+          "ms": 3228
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [],
+          "sender": "labank",
+          "provider": "ollama",
+          "ms": 2062
+        },
+        {
+          "verdict": "safe",
+          "riskScore": 5,
+          "signalTypes": [
+            "urgency"
+          ],
+          "sender": "labank",
+          "provider": "ollama",
+          "ms": 3504
+        }
+      ]
+    },
+    {
+      "id": "SEED-0012",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [
+        "PAYMENT_REQUEST 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "NEW_PHONE_NUMBER",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 7279
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "NEW_PHONE_NUMBER",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 7701
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "SECRECY",
+            "NEW_PHONE_NUMBER"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 5838
+        }
+      ]
+    },
+    {
+      "id": "SEED-0021",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        90
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5655
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 90,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 5230
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "SECRECY"
+          ],
+          "sender": "Mum",
+          "provider": "ollama",
+          "ms": 5294
+        }
+      ]
+    },
+    {
+      "id": "SEED-0034",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Douane",
+          "provider": "ollama",
+          "ms": 8335
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Douane",
+          "provider": "ollama",
+          "ms": 7133
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "URGENCY",
+            "PAYMENT_REQUEST",
+            "MOBILE_MONEY_FRAUD"
+          ],
+          "sender": "Douane",
+          "provider": "ollama",
+          "ms": 6930
+        }
+      ]
+    },
+    {
+      "id": "SEED-0047",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 1,
+        "suspicious": 2
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 1,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "UNVERIFIED_IDENTITY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4949
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown individual",
+          "provider": "ollama",
+          "ms": 5812
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "GUARANTEED_RETURN",
+            "PAYMENT_REQUEST",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Unknown individual",
+          "provider": "ollama",
+          "ms": 5702
+        }
+      ]
+    },
+    {
+      "id": "SEED-0058",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 2,
+        "suspicious": 1
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "PAYMENT_REQUEST 1/3",
+        "SENSITIVE_INFO_REQUEST 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY",
+            "PAYMENT_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6165
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY"
+          ],
+          "sender": "my child",
+          "provider": "ollama",
+          "ms": 5171
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "MOBILE_MONEY_FRAUD",
+            "URGENCY",
+            "SENSITIVE_INFO_REQUEST"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 6144
+        }
+      ]
+    },
+    {
+      "id": "SEED-0063",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 3
+      },
+      "topVerdict": "suspicious",
+      "verdictAgreement": 1,
+      "matchesExpected": 0,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        85
+      ],
+      "unstableSignals": [
+        "GUARANTEED_RETURN 2/3",
+        "UNVERIFIED_IDENTITY 1/3",
+        "URGENCY 1/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN",
+            "UNVERIFIED_IDENTITY"
+          ],
+          "sender": "Inconnu",
+          "provider": "ollama",
+          "ms": 7393
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "GUARANTEED_RETURN"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 5148
+        },
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 4551
+        }
+      ]
+    },
+    {
+      "id": "SEED-0079",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "scam": 3
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 1,
+      "matchesExpected": 3,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        95,
+        95
+      ],
+      "unstableSignals": [],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "PAYMENT_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 6019
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "PAYMENT_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "unknown",
+          "provider": "ollama",
+          "ms": 6276
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "TELCO_PRIZE_SCAM",
+            "PAYMENT_REQUEST",
+            "URGENCY"
+          ],
+          "sender": "our anniversary draw",
+          "provider": "ollama",
+          "ms": 6334
+        }
+      ]
+    },
+    {
+      "id": "SEED-0085",
+      "runs": 3,
+      "errors": 0,
+      "verdicts": {
+        "suspicious": 1,
+        "scam": 2
+      },
+      "topVerdict": "scam",
+      "verdictAgreement": 0.6666666666666666,
+      "matchesExpected": 2,
+      "expectedVerdict": "scam",
+      "riskScoreRange": [
+        85,
+        95
+      ],
+      "unstableSignals": [
+        "URGENCY 2/3"
+      ],
+      "providers": [
+        "ollama"
+      ],
+      "senderFound": 0,
+      "stable": false,
+      "raw": [
+        {
+          "verdict": "suspicious",
+          "riskScore": 85,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL",
+            "URGENCY"
+          ],
+          "sender": "Courier Service",
+          "provider": "ollama",
+          "ms": 6322
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5107
+        },
+        {
+          "verdict": "scam",
+          "riskScore": 95,
+          "signalTypes": [
+            "PAYMENT_REQUEST",
+            "SUSPICIOUS_URL",
+            "URGENCY"
+          ],
+          "sender": "Unknown",
+          "provider": "ollama",
+          "ms": 5307
+        }
+      ]
+    }
+  ]
+}
