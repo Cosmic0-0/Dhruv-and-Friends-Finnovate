@@ -4,7 +4,7 @@ import type { Copy } from "@/lib/i18n";
 import { highlightSegments, type EvidenceMark } from "@/lib/highlight";
 import type { AnalyzeResponse, Verdict } from "@/lib/types";
 import { getRiskDisplay, getVerdictBandIndex, getVerdictDisplay, VERDICT_BANDS } from "@/lib/verdict";
-import { ChevronLeftIcon } from "../icons";
+import ScreenTitle from "../ScreenTitle";
 
 /** Small uppercase section label used across the result screen. */
 export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
@@ -15,24 +15,17 @@ export function SectionLabel({ children, id }: { children: React.ReactNode; id?:
   );
 }
 
-/** Matches the home screen's instrument band so the two screens read as one tool. */
+/**
+ * The result screen's header: back to Check, the large title, and the sender
+ * line beneath it (design/mockup/Result-Scam.png).
+ */
 export function ResultHeader({ copy, sender }: { copy: Copy; sender?: string }) {
   return (
-    <header className="bg-surface-dark text-on-ink pt-[env(safe-area-inset-top)]">
-      <div className="gutter flex items-center gap-3 py-3">
-        <Link
-          href="/"
-          aria-label={copy.result.back}
-          className="pressable -ml-2 grid size-10 shrink-0 place-items-center text-on-ink hover:bg-white/10"
-        >
-          <ChevronLeftIcon className="size-5" strokeWidth={2} />
-        </Link>
-        <p className="micro min-w-0 truncate text-on-ink/60">
-          {copy.result.title}
-          {sender && <span className="text-on-ink/40"> · {copy.result.fromSender(sender)}</span>}
-        </p>
-      </div>
-    </header>
+    <ScreenTitle
+      title={copy.result.title}
+      subtitle={sender ? copy.result.fromSender(sender) : undefined}
+      back={{ href: "/", label: copy.tabs.check }}
+    />
   );
 }
 
@@ -168,13 +161,13 @@ export function MessageCard({
 }) {
   const segments = verdict === "safe" ? [{ text }] : highlightSegments(text, marks);
   const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
-  const markClasses = `rounded-[3px] px-0.5 text-ink underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] ${tone}`;
+  const markClasses = `rounded-[3px] px-0.5 underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] text-[var(--c-mark-ink)] ${tone}`;
   const hasHighlights = segments.some((s) => s.severity);
   return (
-    <section className="flex flex-col gap-2.5 px-5 py-5" aria-labelledby="message-label">
+    <section className="card flex flex-col gap-2.5" aria-labelledby="message-label">
       <SectionLabel id="message-label">{copy.result.messageYouSent}</SectionLabel>
       {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
-      <p className="text-[1rem] leading-relaxed whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+      <p className="text-[1.0625rem] leading-[1.6875rem] whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {segments.map((s, i) => {
           if (!s.severity) return <Fragment key={i}>{s.text}</Fragment>;
           // 3px is an inline text-highlight radius, not a surface — intentionally
@@ -199,8 +192,8 @@ export function MessageCard({
 
 export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string; fromScreenshot: boolean; copy: Copy }) {
   return (
-    <details className="group border border-card-border bg-card">
-      <summary className="micro pressable flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-ink-muted hover:text-ink">
+    <details className="sheet group">
+      <summary className="micro pressable flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-ink-muted">
         {copy.result.sentTitle}
         <span aria-hidden="true" className="text-[0.875rem] group-open:hidden">
           +
@@ -209,10 +202,10 @@ export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string
           −
         </span>
       </summary>
-      <div className="border-t border-card-border px-4 py-3.5">
+      <div className="px-5 py-4">
         {/* "Only this version left your phone" is false when the text came from a screenshot. */}
         <p className="text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
-        <p className="data mt-3 bg-muted-surface px-3 py-2.5 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
+        <p className="data mt-3 rounded-2xl bg-muted-surface px-3.5 py-3 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
           {redacted}
         </p>
       </div>
@@ -224,7 +217,7 @@ export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
     <Link
       href="/"
-      className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
+      className="pill pressable w-full bg-primary text-on-primary"
     >
       {copy.result.checkAnother}
     </Link>

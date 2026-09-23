@@ -75,7 +75,7 @@ export default function SafetyCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="pressable micro flex min-h-11 w-fit items-center gap-2 border border-card-border bg-card px-4 text-ink-muted hover:bg-muted-surface hover:text-ink"
+        className="pill-sm pressable w-fit bg-muted-surface font-medium text-ink-muted hover:bg-muted-surface hover:text-ink"
       >
         {copy.card.helpMeExplain}
       </button>
@@ -85,10 +85,10 @@ export default function SafetyCard({
   const canShare = typeof navigator !== "undefined" && Boolean(navigator.share);
 
   return (
-    <div className="sheet max-w-md">
+    <div className="sheet">
       <div className={`px-5 py-4 text-white ${display.classes.bg}`}>
         <p className="micro text-white/70">{copy.card.cardTitle}</p>
-        <h2 className="mt-1.5 text-xl leading-tight font-semibold text-white">⚠ {headline}</h2>
+        <h2 className="mt-1.5 text-[1.375rem] leading-tight font-semibold text-white">{headline}</h2>
       </div>
       <div className="flex flex-col gap-3 px-5 py-5">
         {claimedIdentity && <p className="text-sm leading-relaxed text-ink">{copy.simple.claims(claimedIdentity)}</p>}
@@ -110,11 +110,11 @@ export default function SafetyCard({
             <p className="text-sm leading-relaxed text-ink">{firstStep}</p>
           </div>
         )}
-        <p className="data text-ink-muted">{UI_LANGUAGES.map((l) => l.label).join(" · ")}</p>
+        <p className="data text-ink-muted">{UI_LANGUAGES.map((l) => l.label).join(" / ")}</p>
         <button
           type="button"
           onClick={() => void share()}
-          className="pressable micro flex min-h-11 items-center justify-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
+          className="pill-sm pressable bg-primary text-on-primary"
         >
           {copied ? copy.card.copied : canShare ? copy.card.share : copy.card.copyText}
         </button>

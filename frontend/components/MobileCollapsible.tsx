@@ -32,7 +32,7 @@ export default function MobileCollapsible({
 
   return (
     <details ref={ref} className="group">
-      <summary className="pressable flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-ink hover:bg-muted-surface">
+      <summary className="pressable flex min-h-13 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-[1.0625rem] text-ink hover:bg-muted-surface">
         {summary}
         <span aria-hidden="true" className="micro shrink-0 text-ink-muted group-open:hidden">
           +
