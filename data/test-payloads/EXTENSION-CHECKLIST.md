@@ -1,6 +1,6 @@
 # Browser extension: test checklist
 
-Owner: **Caellum**. Written 2026-09-23 against `main` @ `94781c2` (extension v0.3.0).
+Owner: **Caellum**. Written 2026-09-23 against `main` @ `94781c2` (extension v0.3.0). Updated for round 2 against `caellum` @ `878da43`.
 Problems found in round 1 are findings #19–#30 (`git show 8fa64d8:data/test-payloads/FINDINGS.md`, section "Extension test"), all but #27 confirmed in Chrome.
 
 Tick each box as you go. **Expect** is what should happen. **Known issue**
@@ -82,10 +82,10 @@ The small mark on the toolbar icon. It's set automatically on every page.
 Click the toolbar icon.
 
 - [ ] It shows the site name, a coloured label that matches the badge, a line
-      of text explaining it, "Strongest evidence", four action buttons, "Recent
+      of text explaining it, "Automatic domain check" (renamed from "Strongest evidence" in round 2), four action buttons, "Recent
       checks" and the privacy line at the bottom.
 - [ ] Nothing overflows or gets cut off at the sides.
-- [ ] On a red site, "Strongest evidence" names the fake domain and the real one.
+- [ ] On a red site, "Automatic domain check" names the fake domain and the real one.
 - [ ] **Goes to sleep (#22):** visit `https://mcb-secure-verify.top/login`, wait
       a full minute without touching Chrome, then open the popup. Expected: it
       still says High risk. Known issue: it says "Not checked yet — reload
@@ -102,6 +102,9 @@ you lose the result.
 | `scam.html` | SCAM or SUSPICIOUS, and a red or amber banner across the top of the page |
 | `safe.html` | SAFE, no banner. **Known issue #21:** SAFE, but an amber banner still appears ("will be closed" counts as a threat) |
 | `bank-advice.html` | SAFE, no banner. **Known issue #20:** says SCAM and shows a red banner |
+| `fr-kr.html` | SCAM (French and Kreol scam messages only) |
+| `bank-advice-fr.html` | SAFE, no banner (the bank advice page in French and Kreol; checks #20 outside English) |
+| `empty.html` | "Scan incomplete — could not read this page", grey. Never SAFE |
 
 - [ ] Each page gives the expected result (apart from the known issue).
 - [ ] The banner's **Dismiss** button removes it, and the page underneath still works.
