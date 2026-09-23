@@ -52,8 +52,10 @@ assessment**; `analysis.semantic.status` says which.
     "method": "optional: bank_transfer | mobile_money | card | cash | cheque | gift_card | voucher | crypto | money_transfer_service | other",
     "recipient": "string <= 200, optional — who the money would go to",
     "claimedOrganisation": "string <= 200, optional — who the request claims to be from",
-    "onCallNow": "boolean, optional — is someone on the phone / messaging you while you pay?"
-  }
+    "onCallNow": "boolean, optional — is someone on the phone / messaging you while you pay?",
+    "accountNumber": "string <= 40, optional — account the money would go to; only its last 4 digits are kept (compared with a supplier's account on record, EMAIL-06)"
+  },
+  "emailContext": { /* optional - workplace email metadata, see "Email analysis" below. When present, `message` is the email body and analysis.source is "email". */ }
 }
 ```
 
@@ -91,11 +93,12 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.0",
+    "rulesetVersion": "rs-1.2",
     "source": "pasted_text" | "screenshot" | "batch" | "email",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.0" },
-    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.0", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" }
+    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.1", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0" },
+    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.1", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
 }
 ```
@@ -112,7 +115,7 @@ a `PAY-*` code → `PAYMENT_REQUEST`).
 {
   "code": "URL-02",                     // stable reason code - authoritative
   "type": "lookalike_url",              // legacy name kept for existing UI (mapping in services/signals/registry.js)
-  "category": "technical" | "identity" | "social" | "payment" | "credential" | "reputation",
+  "category": "technical" | "identity" | "social" | "payment" | "credential" | "reputation" | "email_identity" | "email_auth" | "email_attachment" | "email_payment",
   "sourceType": "rule" | "lexicon" | "intel" | "semantic_model" | "community",   // authoritative provenance
   "source": "url_parser" | "identity_check" | "llm_analysis" | "community_reports", // legacy bucket: every non-AI signal maps to url_parser/identity_check
   "tier": "V" | "D" | "L" | "S",        // verified / deterministic / lexicon / semantic
@@ -152,14 +155,29 @@ and never shown or scored.
 | ID-04 | Language impersonates an authority | semantic |
 | SOC-01..06 | Urgency, threat, secrecy, off-platform, prize/refund, relationship/investment manipulation | lexicon (EN/FR/Kreol) and/or semantic |
 | SOC-07 | Instructions aimed at an automated checker (prompt injection) | rule (and semantic) |
+| SOC-08 | Asks to bypass normal approval / verification ("skip the usual sign-off", "no need to call to confirm") | lexicon (EN/FR/Kreol) and/or semantic |
 | PAY-01..04, PAY-07 | Payment request, unusual method, "safe account", advance fee, bank-details change | lexicon and/or semantic |
 | PAY-05, PAY-06 | Recipient mismatch, active coaching | rule (paymentContext) |
 | SEC-01, SEC-02 | Share OTP/PIN/password/CVV (negation-aware), remote-access app | lexicon and/or semantic |
 | REP-01, REP-02 | Community cluster / wave (CW-1 / CW-2) | community |
 | REP-03 | Sender reported ≥ 3 times | community |
 | REP-04, REP-05 | Confirmed scam template / known-malicious URL (reserved for intel feeds; floors exist) | intel |
+| EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.0`)
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.2`)
+
+`rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
+unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
+SOC-07 policy described under "Email analysis". `rs-1.0` stays selectable
+(`score(signals, ctx, "rs-1.0")`). On the 84-case deterministic eval both
+rulesets produce identical results.
+
+`rs-1.2` keeps both published rulesets frozen and adds ORG-01..06. Base
+weights: ORG-01 30; ORG-02 link 25 / Reply-To 20; ORG-03 12; ORG-04 3;
+ORG-05 40; ORG-06 10. OX-1 adds 15 once for organisation impersonation plus
+payment/credential evidence. OX-2 adds 10 once when campaign evidence
+corroborates an independent identity/payment/credential fact. Confirmed
+organisation fraud has a high floor (`FLOOR-ORG05-CONFIRMED`, score 45).
 
 1. **Dedupe:** signals about the same link (URL-01..04, URL-08, ID-01 on one
    host) are one finding; the same code from lexicon + semantic is one
@@ -191,12 +209,154 @@ A matching pattern reported by enough **distinct** pseudonymous reporters
 adds one `REP-01` (cluster, CW-1) or `REP-02` (wave, CW-2) signal with a
 `communityEvidence` object (unchanged fields; `rulesVersion` is now
 `"wave-rules-v2"`). Its points come from the risk engine, and a
-`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.0`),
+`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.2`),
 evidence ids and the level with and without it (`levelFrom`/`levelTo` in
 `riskAdjustments`). The old verdict-escalation logic is gone — crowd
 evidence alone is worth 10/20 points (elevated at most) and only the
 wave + technical-impersonation floor lifts to critical. `riskCategories`
 excludes community signals.
+
+#### Email analysis (`emailContext`, detector `email-1.1`)
+
+Used by the Office.js Outlook task pane in `outlook-addin/`. Same route, same
+`runPipeline()`, same risk engine - no separate email verdict. `message` is
+the trimmed current-message body.
+
+```jsonc
+"emailContext": {                     // every field optional; missing == "not supplied", never suspicious
+  "messageId": "string <= 300, optional (never echoed back)",
+  "from": { "name": "ABC Supplies Accounts", "address": "finance@abc-supplies.example" },   // or a bare address string
+  "replyTo": [ { "name": "...", "address": "..." } ],   // array, or one object/string; <= 10
+  "returnPath": "bounce@abc-supplies.example",
+  "subject": "string <= 500",           // prepended to the analysed text as "Subject: ..."
+  "authentication": { "spf": "pass|fail|softfail|neutral|none|temperror|permerror|unknown", "dkim": "...", "dmarc": "..." },
+                                        // anything else -> "unknown" (never "fail")
+  "attachments": [ { "name": "Invoice-1182.pdf", "contentType": "application/pdf", "size": 124501 } ],  // metadata only, <= 25
+  "urls": [ "https://..." ],            // hrefs extracted by the client; checked by the URL rules, <= 50
+  "threadContext": { "previousSenders": [ "finance@abc-supplies.example" ] }, // enables EMAIL-04
+  "recipient": "employee@demo-company.example", // mailbox owner; pseudonymised before organisation observation storage
+  "senderContext": { "firstSeenAt": "2026-09-01T00:00:00.000Z", "previousMessageCount": 3 }
+}
+```
+
+The current Outlook client supplies `from`, subject, message ID, attachment
+metadata, href targets, recipient, and (where Mailbox 1.8 is supported)
+internet-header evidence. It deliberately sends `threadContext` and
+`senderContext` as `null` because it does not invent mailbox history. If
+headers are unavailable, SPF/DKIM/DMARC remain `unknown` and Reply-To /
+Return-Path remain absent; this never becomes a suspicious finding.
+
+Addresses are validated and normalised in code (lower-case, punycode
+decoded). A malformed field is a `400` naming the field. **None of this
+metadata is sent to the LLM**: the model sees only `Subject:` + body, in the
+same single semantic call as any other message.
+
+Response additions (only when `emailContext` was sent):
+
+```jsonc
+"analysis": {
+  "source": "email",
+  "email": {
+    "status": "analysed",
+    "detector": "email-1.1",
+    "availableEvidence": ["from", "displayName", "replyTo", "returnPath", "subject", "authentication", "attachments", "urls", "threadContext"],  // only what was supplied
+    "checks": {                          // what was actually compared - never implies a check that had no data
+      "supplier": "no_supplier_identified | sender_matches_supplier_record | sender_differs_from_supplier_record",
+      "bankDetails": "not_applicable | no_baseline_on_record | no_account_in_message | compared",
+      "payee": "not_applicable | no_baseline_on_record | no_payee_in_message | compared",
+      "thread": "not_provided | compared",
+      "authentication": "not_provided | evaluated",
+      "directory": "not_applicable | compared"
+    },
+    "referenceData": { "suppliers": "demo-suppliers-1.0", "directory": "demo-directory-1.0", "demo": true }
+  }
+}
+```
+
+`observedSender`/`sender` become `from.address`. Email findings are normal
+entries in `signals[]`.
+
+Reference data is **demonstration data** (`data/demo-supplier-registry.json`,
+`data/demo-organisation-directory.json`, fictional `.example` domains). A
+real deployment replaces them with the organisation's vendor master and
+directory. Ready-made request bodies: `backend/fixtures/email-demo.json`.
+
+| Code | Emitted when (evidence required) | rs-1.2 points |
+|---|---|---|
+| EMAIL-01 | A Reply-To's registrable domain differs from From's (not when both belong to the same known supplier / our org). Return-Path is never a signal. | 8 |
+| EMAIL-02 | Email claims a known supplier (display name, or subject when the sender is external, or a look-alike of its domain) but From is not on the supplier's domains | lookalike 30 / unrelated 20 |
+| EMAIL-03 | Authentication supplied AND DMARC not pass: DMARC fail (on a supplier / org domain: `dmarc_fail_known_domain`), SPF+DKIM fail, or one failing with the other unknown. DMARC pass, SPF fail with DKIM pass (forwarding), or missing data -> nothing. | 15 / 8 / 6 / 3 |
+| EMAIL-04 | `threadContext.previousSenders` supplied AND sender not in it AND domain differs from all previous (look-alike of one, or one other domain) | lookalike 25 / different_domain 8 |
+| EMAIL-05 | Attachment name/type only: double extension (`invoice.pdf.exe`), document name with active content type, or risky type (`.html .htm .svg .iso .img .exe .js .vbs .scr .lnk ...`). A PDF/Office/image is never flagged. Nothing is opened or fetched. | double / mismatch 15, risky 8 |
+| EMAIL-06 | Supplier identified AND it has an account on record AND the message / `paymentContext.accountNumber` gives a different last-4 | 30 |
+| EMAIL-07 | Supplier identified AND it has known payees AND a labelled payee ("Beneficiary: ...") or `paymentContext.recipient` matches none | 30 |
+| EMAIL-08 | Display name contradicts the address: embeds another domain's address, names a registry institution, or a senior title on a personal (freemail) address - only if EMAIL-02/09 did not already report it | 20 / 20 / 12 |
+| EMAIL-09 | External sender whose display name is a directory person (not their address), or a look-alike of our own domain | 30 |
+| EMAIL-10 | A deterministic payment request from an address at a known supplier's domain that is not on record | 8 |
+
+**Dedupe:** EMAIL-02/04/08/09 carry `metadata.host` = the sender domain and
+join the per-host group with any URL finding for that domain (one fact).
+EMAIL-06 absorbs PAY-07, EMAIL-07 absorbs PAY-05/ID-02 (the record-backed
+code scores, the other corroborates). Absorbed codes still count for
+interactions.
+
+**Interactions** (each once; EX-6 / EX-1 / EX-3 share one group, only the first applies):
+EX-6 thread sender changed + payment-detail/payee change +15;
+EX-1 supplier identity mismatch + payment request +15;
+EX-3 colleague/executive impersonation + payment request +15;
+EX-4 Reply-To mismatch + credential request or look-alike link +10;
+EX-5 DMARC fail on a known domain + payment request +10.
+**Floor** `FLOOR-EX2-EMAIL06-IDENTITY`: EMAIL-06 + any of EMAIL-01/02/04/08/09 -> at least `high`.
+
+**SOC-07 policy** (`POLICY-SOC07-SEMANTIC` in `trace`): when a message
+contains instructions aimed at automated checkers, AI-inferred findings stay
+visible but cannot raise the level above what non-semantic evidence (plus
+SOC-07 itself) supports. Applies to every source, not only email.
+
+**False-positive safeguards:** each weak signal alone stays `low` (<20):
+Reply-To 8, auth anomaly <= 15, attachment <= 15, unfamiliar supplier
+address 8, thread newcomer 8; "external sender" is never a signal. All weak
+email signals together reach only `elevated`. `high` needs an identity fact
+plus a payment fact, a record-backed payment change plus an identity
+anomaly, or strong language evidence.
+
+**Passing SPF/DKIM/DMARC never means safe.** A compromised real mailbox
+passes authentication; the payment-change check against the supplier record
+(EMAIL-06/07) and the language checks (SOC-01/03/08, PAY-*) still apply.
+
+**Email-specific actions** (`interventions-1.1`, deterministic):
+`supplier_dont_use_details`, `supplier_contact_known`,
+`supplier_verify_verbally` (EMAIL-06/07, or supplier identity + payment);
+`exec_hold_transfer`, `exec_normal_approval`, `exec_no_email_contacts`
+(EMAIL-09); `phish_no_password`, `phish_open_independently` (email + link /
+credential findings, replacing the SMS wording); `dont_open_attachment`
+(EMAIL-05); `dont_reply_to_address` (EMAIL-01).
+
+#### Organisation intelligence and verification
+
+Email results also include `analysis.organisation` with a pseudonymous
+`observationId`, sender relation, duplicate-safe history/reputation counts,
+and any deterministic campaign matches. `verification` contains matched
+profile workflows (`id`, `owner`, `steps`, `requiredApprovals`,
+`triggeredBy`). These are UI instructions; FraudLens does not contact anyone.
+
+Campaigns require at least three independently flagged observations within
+14 days sharing a concrete indicator: sender/reply domain or pseudonymous
+freemail address, link host, normalized message-template hash, changed
+account last-4, payee key, or risky attachment pattern. They also require
+two recipients, two senders, or a strong account/payee/link indicator.
+Claimed brand/company names are never indicators. The observation key hashes
+Message-ID (when supplied), content fingerprint and recipient pseudonym, so
+re-analysis is a no-op while copies sent to different recipients remain
+distinct.
+
+`GET /api/org/campaigns` lists active campaigns for the configured
+organisation. `POST /api/org/outcomes` accepts `{ observationId, label }`.
+Primary labels are `confirmed_phishing`, `confirmed_bec`,
+`supplier_impersonation`, `false_positive`, `legitimate`, and
+`insufficient_evidence`; `confirmed_fraud` and `suspicious_unconfirmed` are
+retained for compatibility with the partial implementation. Outcomes affect
+explainable reputation lookups only; there is no live retraining.
 
 ### Errors
 
@@ -205,6 +365,7 @@ excludes community signals.
 | `400` | `{ "error": "message is required and must be a non-empty string" }` | `message` missing, not a string, or empty/whitespace-only |
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
 | `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
+| `400` | `{ "error": "emailContext.<field> ..." }` | invalid `emailContext` (wrong type, unparsable address, too many entries) |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is no longer an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
 
@@ -495,6 +656,20 @@ There is no error status for this route — it always resolves 200, with
 
 Flagging these so Oleg/Dhruv/extension know what's stable to build against
 versus what's likely to change before the demo:
+
+- **Email analysis has a read-mode Outlook add-in (`outlook-addin/`).** It
+  analyses only the selected message after the user clicks the task-pane
+  button. Microsoft Graph integration and mailbox polling do not exist.
+  The supplier registry and organisation directory are **demo data**
+  (`data/demo-*.json`) - there is no admin API to load real vendor/directory
+  data yet. The email body shares `/api/analyze`'s 5000-character limit, so
+  the add-in trims long bodies to 4800 characters after removing recognisable
+  quoted history. EMAIL-10 ("new sender") only knows a
+  supplier's addresses on record - there is no per-mailbox sender history.
+  `extension/` and `frontend/` do not render email-specific UI; the Outlook
+  task pane does. Email
+  signals arrive in the normal `signals[]` with legacy `type` values the
+  frontend already maps.
 
 - **`riskCategories` and `IDENTITY_MISMATCH`/`identity_check` evidence are
   now computed on all three analyze routes** (`/api/analyze`,

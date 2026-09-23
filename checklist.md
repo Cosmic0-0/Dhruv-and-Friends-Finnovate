@@ -99,6 +99,10 @@ sender data touches the demo, since the app ingests untrusted user input
       `/api/analyze/screenshot` all reject missing/empty/oversized/
       wrong-type input server-side (`backend/src/routes/index.js`), 400 on
       failure. Recheck if any route's validation logic changes.
+      Rechecked 2026-09-23: `/api/analyze` now also validates the optional
+      `emailContext` (`backend/src/services/email-context`: types, address
+      syntax, list sizes, auth-result enum) and `paymentContext.accountNumber`
+      (kept as last 4 digits only), 400 with a field-specific message.
 - [x] **Escape user content** before rendering it back in the UI (verdict
       display, flagged-signal view, batch results) to prevent stored/reflected
       XSS from a malicious pasted message. Verified 2026-09-22: no
@@ -128,6 +132,11 @@ sender data touches the demo, since the app ingests untrusted user input
       this one couldn't be analyzed" copy (see FINDINGS.md #6), and the
       underlying strings are already short/sanitized
       (`"Ollama request failed: 500"`), never a stack trace or internal path.
+      Rechecked 2026-09-23 for `emailContext`: `messageId`, Return-Path and
+      raw header values are never echoed; the response carries only
+      per-signal evidence (the sender/Reply-To address, masked account
+      last-4) and `analysis.email` (which evidence was supplied, which checks
+      ran). None of the email metadata is sent to the LLM.
 - [x] **Add security headers** (CSP, `X-Content-Type-Options`,
       `X-Frame-Options` / frame-ancestors, `Referrer-Policy`). Implemented
       2026-09-22: `helmet()` mounted in `backend/src/index.js` before the API
@@ -147,6 +156,13 @@ sender data touches the demo, since the app ingests untrusted user input
       `backend`: 0 vulnerabilities (`npm audit --omit=dev`, including the
       newly added `express-rate-limit`/`helmet`). `frontend`: now installed
       and scanned — 0 vulnerabilities (`npm audit --omit=dev`).
+      Rechecked 2026-09-23: `outlook-addin` reports 0 vulnerabilities too;
+      the Office manifest tool's vulnerable transitive `adm-zip` is pinned to
+      its compatible patched 0.6.1 release through an npm override.
+- [x] **Restrict Outlook CORS to explicit origins.** `/api` keeps non-browser
+      clients unchanged, permits only the exact comma-separated HTTPS origins
+      in `OUTLOOK_ADDIN_ORIGINS`, and defaults in development only to
+      `https://localhost:3001`. Unknown preflights receive 403.
 
 ## 2. Production-Credibility Signals ("don't look vibecoded")
 

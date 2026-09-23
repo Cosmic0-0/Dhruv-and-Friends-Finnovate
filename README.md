@@ -28,11 +28,12 @@ can connect repeated observations into privacy-minimised scam campaigns.
 ## Repository layout
 
 ```text
-backend/    Express API, deterministic detectors, LLM transport, OCR, SQLite
-frontend/   Next.js 15 PWA and product UI
-extension/  Chrome extension; calls the backend instead of duplicating detection
-data/       Institution registry, reviewed language data, QA payloads, demo seeds
-docs/       API contract, demo checklist, judging rubric, and team workflow
+backend/       Express API, deterministic detectors, LLM transport, OCR, SQLite
+frontend/      Next.js 15 PWA and product UI
+extension/     Chrome extension; calls the backend instead of duplicating detection
+outlook-addin/ Outlook Office.js read-mode task pane; calls the backend as well
+data/          Institution registry, reviewed language data, QA payloads, demo seeds
+docs/          API contract, demo checklist, judging rubric, and team workflow
 ```
 
 ## Run locally
@@ -44,7 +45,7 @@ test suite relies on Node's native TypeScript execution.
 cd backend
 npm install
 cp .env.example .env
-npm run dev
+npm run dev   # http://localhost:4000/health
 ```
 
 In a second terminal:
@@ -60,6 +61,14 @@ The frontend runs at `http://localhost:3000` and proxies `/api/*` to the backend
 at `http://localhost:4000`. Configure Ollama and the hosted fallback as described
 in [`backend/README.md`](./backend/README.md). The deterministic pipeline still
 returns an assessment when semantic analysis is unavailable.
+
+Optionally, to run the Outlook read-mode task pane against the same backend:
+
+```bash
+cd outlook-addin
+npm install
+npm run dev   # https://localhost:3001
+```
 
 ## Verify
 

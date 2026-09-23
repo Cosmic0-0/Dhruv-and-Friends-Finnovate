@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import { router } from "./routes/index.js";
 import { checkOllamaHealth, llmStatus } from "./services/analysis/llmClient.js";
+import { createApiCors } from "./services/http-cors/index.js";
 
 const app = express();
 
@@ -30,7 +31,7 @@ app.use(helmet());
 // Each route declares its own express.json() limit (see routes/index.js) -
 // text routes stay small, the screenshot route needs room for a base64
 // image - so there's no blanket body-size limit here.
-app.use("/api", router);
+app.use("/api", createApiCors(), router);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
