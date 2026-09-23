@@ -351,7 +351,10 @@ so the setting must match the real topology before production use.
   authentication headers remain unknown rather than being treated as failures.
 - ESLint is not configured. `npm run lint` prompts interactively and is not a CI
   check.
-- The project does not declare/enforce Node 22, although frontend tests require it.
+- Node 22 is declared but not enforced: each Node project's `package.json` has
+  `"engines": { "node": ">=22" }` and the root `.nvmrc` says `22`, but npm only
+  warns on a mismatch. Frontend tests need it because they run TypeScript
+  directly through Node.
 - Accessibility and responsive behavior need a final real-browser pass across the
   result, screenshot, document, batch, conversation, network, and extension flows.
 - Document forensics finds warning signs, not proof. On both paths, metadata
