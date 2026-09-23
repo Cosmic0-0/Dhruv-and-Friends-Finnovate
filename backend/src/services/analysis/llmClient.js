@@ -50,7 +50,15 @@ async function callOllama(prompt, signal) {
     // fallback model, which has thinking mode mandatory) - see
     // backend/src/services/analysis/llmClient.js's LLM_TIMEOUT_MS comment
     // for the fallback-side version of this same reasoning-latency problem.
-    body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, format: "json", think: false }),
+    // temperature: 0 + a fixed seed - this is a structured-extraction task
+    // (fixed codes, evidence must quote the message verbatim), not creative
+    // writing, so we want the same read every time, not a sample from the
+    // distribution. Ollama's default temperature (~0.8) is exactly why the
+    // same Kreol message could get different signals on different runs -
+    // Kreol has the least training data of the three languages, so the
+    // model's distribution over "what code applies here" is flattest there,
+    // and default sampling made that flatness visible as flip-flopping.
+    body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false, format: "json", think: false, options: { temperature: 0, seed: 0 } }),
     signal,
   });
   if (!res.ok) throw new Error(`Ollama request failed: ${res.status}`);
@@ -69,6 +77,7 @@ async function callAnthropic(prompt, signal) {
     body: JSON.stringify({
       model: FALLBACK_MODELS.anthropic,
       max_tokens: 1024,
+      temperature: 0, // deterministic signal extraction, see callOllama's comment
       messages: [{ role: "user", content: prompt }],
     }),
     signal,
@@ -84,6 +93,7 @@ async function callOpenAI(prompt, signal) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${FALLBACK_API_KEY}` },
     body: JSON.stringify({
       model: FALLBACK_MODELS.openai,
+      temperature: 0, // deterministic signal extraction, see callOllama's comment
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     }),
@@ -100,6 +110,7 @@ async function callOpenRouter(prompt, signal) {
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${FALLBACK_API_KEY}` },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,
+      temperature: 0, // deterministic signal extraction, see callOllama's comment
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
     }),

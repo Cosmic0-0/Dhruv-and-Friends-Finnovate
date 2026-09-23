@@ -83,8 +83,13 @@ const RULES = [
   { code: "PAY-07", lang: "fr", re: /\bchangement de banque\b|\bnouveau compte\b|\bnouvelles coordonn[ée]es bancaires\b/iu },
   { code: "PAY-07", lang: "mfe", re: /\bdetail la banque inn sanze\b|\bnouvo (?:compte|kont)\b/iu },
 
-  // PAY-01 - asks to send money
-  { code: "PAY-01", lang: "en", re: /\b(?:pay|send|transfer|deposit|remit|wire)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\s?\d|€\s?\d|\$\s?\d|\bmoney\b|\bfunds?\b|\bamount\b|\bfee\b)|\bmake (?:a|the) payment\b|\bpay (?:now|the (?:fee|amount))\b/iu },
+  // PAY-01 - asks to send money. checkPassive: "A transfer of Rs 2,000 was
+  // made from your account" is a bank narrating a completed transaction, not
+  // asking the reader to send anything - "transfer"/"deposit" double as
+  // nouns, so the bare verb match alone can't tell an imperative demand from
+  // a passive notification (see EN-14 in data/test-payloads, a genuine debit
+  // alert this used to misfire on).
+  { code: "PAY-01", lang: "en", checkPassive: true, re: /\b(?:pay|send|transfer|deposit|remit|wire)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\s?\d|€\s?\d|\$\s?\d|\bmoney\b|\bfunds?\b|\bamount\b|\bfee\b)|\bmake (?:a|the) payment\b|\bpay (?:now|the (?:fee|amount))\b/iu },
   { code: "PAY-01", lang: "fr", re: /\b(?:payez|payer|r[ée]glez|r[ée]gler|envoyez|envoyer|m'envoyer|virez|versez|verser)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\b|€|\bargent\b|\bmontant\b|\bfrais\b)|\beffectuer le paiement\b|\bfaire un virement\b/iu },
   { code: "PAY-01", lang: "mfe", re: /\b(?:pey|peye|avoy(?:e)?|reavoy+|envoye|fer (?:enn )?transfer|depoz(?:e)?|investi)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\blarzan\b|\bkas\b|\bfre\b|\bfrais\b)|\bavoy(?:e)? lor sa (?:numero|nimero)\b|\bbizin rs\.?\s?\d/iu },
 
@@ -98,10 +103,22 @@ const RULES = [
   { code: "SOC-02", lang: "fr", re: /\bsuspendu(?:e)?\b|\bbloqu[ée](?:e)?\b|\bgel[ée]\b|\bd[ée]sactiv[ée]\b|\bpoursuites\b|\bp[ée]nalit[ée]\b|\bamende\b/iu },
   { code: "SOC-02", lang: "mfe", re: /\bbloke\b|\bsispann\b|\bsispandi\b|\bpenalite\b|\bprosekision\b|\blapolis\b/iu },
 
-  // SOC-01 - urgency
-  { code: "SOC-01", lang: "en", re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon|in)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
-  { code: "SOC-01", lang: "fr", re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
-  { code: "SOC-01", lang: "mfe", re: /\bdeswit\b|\btouswit\b|\btousuit\b|\btoutswit\b|\bzordi mem\b|\bvit vit\b|\bavan minwi\b|\bavan \d+\s*h\b|\bdan \d+\s*(?:minit|er|erdtan|zour)\b/iu },
+  // SOC-01 - urgency. checkSafetyContact: "contact MCB immediately" in a
+  // genuine "if this wasn't you" alert is the bank telling the reader to
+  // reach it through a real channel, not the message pressuring the reader -
+  // see EN-14/FR-14 in data/test-payloads, genuine debit alerts this used to
+  // misfire on. Scam urgency aimed at the message's own number/link is
+  // unaffected (no named institution to match).
+  // (?<!expires? ...) - "this code will expire in 5 minutes" is a one-time
+  // code's normal, expected lifetime, not a scam deadline; "verify in 5
+  // minutes or lose access" (no "expire") is unaffected. Bare "expires? in"
+  // (no number) was dropped from the trailing alternative below - it
+  // re-matched the exact "expire in 5 minutes" phrase the lookbehind above
+  // exempts, since "in" alone satisfies \b(?:today|soon|in)\b regardless of
+  // what follows; "in \d+ ..." is already covered by that lookbehind branch.
+  { code: "SOC-01", lang: "en", checkSafetyContact: true, re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|(?<!expires? )\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
+  { code: "SOC-01", lang: "fr", checkSafetyContact: true, re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
+  { code: "SOC-01", lang: "mfe", checkSafetyContact: true, re: /\bdeswit\b|\btouswit\b|\btousuit\b|\btoutswit\b|\bzordi mem\b|\bvit vit\b|\bavan minwi\b|\bavan \d+\s*h\b|\bdan \d+\s*(?:minit|er|erdtan|zour)\b/iu },
 
   // SOC-04 - move to another channel / number
   { code: "SOC-04", lang: "en", re: /\b(?:whatsapp|telegram|viber) (?:me|us)\b|\b(?:contact|message|text|chat with) (?:me|us) (?:on|via) (?:whatsapp|telegram|signal|viber)\b|\bcall (?:this|the following|our) number\b|\breply to this number\b/iu },
@@ -137,13 +154,44 @@ const INJECTION_RE = compile(new RegExp(
 const NEGATION_RE = /\b(?:never|not|don'?t|do not|no one|nobody|ne|jamais|pa|pann|zame|zamai)\b|\bn'/iu;
 const CONDITIONAL_RE = /\b(?:if|unless|si|sinon|otherwise)\b/iu;
 
+/** Text before `start`, back to the start of its clause (sentence or line). */
+function clauseWindowBefore(text, start, maxLen) {
+  const clauseStart = Math.max(text.lastIndexOf(".", start - 1), text.lastIndexOf("!", start - 1), text.lastIndexOf("?", start - 1), text.lastIndexOf("\n", start - 1));
+  return text.slice(Math.max(clauseStart + 1, start - maxLen), start);
+}
+
 /** True when a negation governs the match: same clause, just before it. */
 function isNegated(text, start) {
-  const clauseStart = Math.max(text.lastIndexOf(".", start - 1), text.lastIndexOf("!", start - 1), text.lastIndexOf("?", start - 1), text.lastIndexOf("\n", start - 1));
-  const window = text.slice(Math.max(clauseStart + 1, start - 40), start);
+  const window = clauseWindowBefore(text, start, 40);
   if (!NEGATION_RE.test(window)) return false;
   // "Si ou pa konfirm ou OTP, ou kont pou bloke" is a threat, not a negation.
   return !CONDITIONAL_RE.test(window);
+}
+
+// A named institution reached through a real channel, not the message
+// pushing you toward its own number/link - "call this number now" stays
+// flagged, "contact MCB immediately" (a genuine alert's footer) doesn't.
+const SAFETY_CONTACT_RE = new RegExp(
+  [
+    "\\b(?:call|contact|notify|report to)\\b[^.!?\\n]{0,30}?\\b(?:us|your bank|the bank|customer service|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
+    "\\bcontactez\\b[^.!?\\n]{0,30}?\\b(?:mcb|sbm|absa|bank ?one|emtel|myt|la banque)\\b",
+    "\\b(?:kontakte|apel)\\b[^.!?\\n]{0,30}?\\b(?:labank|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
+  ].join("|"),
+  "iu"
+);
+
+/** True when the match sits right after a "contact <real bank>" phrase, same clause. */
+function isSafetyContact(text, start) {
+  return SAFETY_CONTACT_RE.test(clauseWindowBefore(text, start, 80));
+}
+
+// "A transfer of Rs 2,000 was made ..." / "... has already been processed" -
+// a bank stating a transaction happened, not a request to make one.
+const PASSIVE_NOTIFICATION_RE = /^[^.!?\n]{0,20}?\b(?:was|were|has been|had been|have been)\b[^.!?\n]{0,20}?\b(?:made|completed|done|processed|effected|carried out|received|credited|debited|initiated|authorised|authorized)\b/iu;
+
+/** True when the match sits inside a passive "this already happened" clause, just after it. */
+function isPassiveNotification(text, end) {
+  return PASSIVE_NOTIFICATION_RE.test(text.slice(end, end + 60));
 }
 
 const COMPILED = RULES.map((rule) => ({ ...rule, re: compile(rule.re, "g") }));
@@ -151,6 +199,8 @@ const COMPILED = RULES.map((rule) => ({ ...rule, re: compile(rule.re, "g") }));
 function firstMatch(text, rule) {
   for (const m of text.matchAll(rule.re)) {
     if (rule.negatable && isNegated(text, m.index)) continue;
+    if (rule.checkPassive && isPassiveNotification(text, m.index + m[0].length)) continue;
+    if (rule.checkSafetyContact && isSafetyContact(text, m.index)) continue;
     return m;
   }
   return null;
