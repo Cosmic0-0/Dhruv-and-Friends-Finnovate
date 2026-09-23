@@ -26,9 +26,36 @@
 const MAX_CHARS = 4000; // stays under the backend's 5000-char /api/analyze cap with headroom
 const BANNER_ID = "fraudlens-warning-banner";
 
-function extractPageText() {
-  const raw = (document.body && document.body.innerText) || "";
-  const trimmed = raw.trim();
+// Live repro (see bug report): on a page whose visible content (title,
+// description, a product-info table) is still being client-rendered at the
+// moment "Scan This Page" is clicked, document.body.innerText read
+// synchronously on injection could come back empty or near-empty even
+// though the same content is plainly visible a moment later - a timing
+// race, not a missing-content or wrong-selector problem (document.body
+// itself is always readable; innerText's completeness is what depends on
+// rendering having actually finished). Below this length, poll a short,
+// bounded window rather than trusting the first read; a real empty page
+// still resolves in one read (the loop condition is false immediately).
+const MIN_EXPECTED_CHARS = 40;
+const MAX_EXTRACTION_WAIT_MS = 1200;
+const EXTRACTION_POLL_MS = 150;
+
+function rawVisibleText() {
+  return ((document.body && document.body.innerText) || "").trim();
+}
+
+async function waitForRenderedText() {
+  const start = Date.now();
+  let text = rawVisibleText();
+  while (text.length < MIN_EXPECTED_CHARS && Date.now() - start < MAX_EXTRACTION_WAIT_MS) {
+    await new Promise((resolve) => setTimeout(resolve, EXTRACTION_POLL_MS));
+    text = rawVisibleText();
+  }
+  return text;
+}
+
+async function extractPageText() {
+  const trimmed = await waitForRenderedText();
   const text = trimmed.length > MAX_CHARS ? trimmed.slice(0, MAX_CHARS) : trimmed;
   return {
     text,
@@ -111,9 +138,10 @@ function showBanner({ headline, detail, severity }) {
   document.documentElement.prepend(banner);
 }
 
-// Extraction happens immediately, synchronously, as the completion value of
-// this script — this is the "explicit user click" moment (see header
-// comment). Nothing else here runs until an explicit follow-up message.
+// Extraction starts immediately on injection (still tied to the "explicit
+// user click" moment - see header comment) but may poll briefly before
+// resolving (see waitForRenderedText above). Nothing else here runs until an
+// explicit follow-up message.
 (function fraudlensInit() {
   if (window.__fraudlensContentScriptActive) {
     // Already injected earlier in this tab (e.g. a second "Scan This Page"

@@ -3,7 +3,7 @@
 // only about *labelling an already-received backend result* — it never
 // re-derives a verdict from raw text; that stays entirely server-side.
 
-/** @typedef {"neutral"|"safe"|"suspicious"|"high-risk"|"unreachable"} UiState */
+/** @typedef {"neutral"|"safe"|"suspicious"|"high-risk"|"unreachable"|"inconclusive"} UiState */
 
 const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 
@@ -38,6 +38,10 @@ export function stateFromAnalyze(result) {
 export const BADGE_STYLE = {
   neutral: { text: "", color: "#5b6472" },
   unreachable: { text: "×", color: "#5b6472" },
+  // A failed/empty page-scan extraction (see content.js/background.js
+  // scanActiveTab) MUST resolve to this, never to "safe" — a scan that never
+  // actually ran is not the same fact as a scan that ran and found nothing.
+  inconclusive: { text: "…", color: "#5b6472" },
   safe: { text: "✓", color: "#5980a6" }, // check mark, accent steel blue
   suspicious: { text: "?", color: "#96772f" }, // brass/amber
   "high-risk": { text: "!", color: "#a14a3a" }, // brick red
@@ -47,6 +51,7 @@ export const BADGE_STYLE = {
 export const STATE_LABEL = {
   neutral: "Not checked yet",
   unreachable: "Backend unreachable",
+  inconclusive: "Scan incomplete — could not read this page",
   safe: "No known risk signals",
   suspicious: "Suspicious — review before acting",
   "high-risk": "High risk — strong scam signals found",

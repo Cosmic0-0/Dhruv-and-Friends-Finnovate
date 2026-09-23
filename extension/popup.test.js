@@ -178,6 +178,27 @@ test("popup: Scan This Page finding a signal never contradicts the automatic dom
   assert.equal(els.get("signals-list").children.length, 0);
 });
 
+test("popup: a failed/empty extraction renders the inconclusive state, never Safe", async () => {
+  const els = installFakeDom();
+  installChromeMock({
+    tabStatus: { hostname: "example.com", flagged: false, signals: [] },
+    onMessage: (m) => (m.type === "SCAN_ACTIVE_TAB" ? { ok: false, error: "No readable text found on this page." } : null),
+  });
+  await import(`./popup.js?t=${Date.now()}-d`);
+  await flush();
+
+  await els.get("scan-page-btn").click();
+  await flush();
+
+  assert.equal(els.get("state-pill").dataset.state, "inconclusive");
+  assert.notEqual(els.get("state-pill").dataset.state, "safe");
+  assert.match(els.get("state-text").textContent, /could not read this page/i);
+  assert.equal(els.get("scan-result-section").hidden, false);
+  assert.match(els.get("scan-result").textContent, /no readable text/i);
+  // Never the "Verdict: SAFE" copy a completed clean scan renders.
+  assert.doesNotMatch(els.get("scan-result").textContent, /Verdict:/);
+});
+
 test("popup: Scan This Page running clean does not fabricate a finding in the domain-check section", async () => {
   const els = installFakeDom();
   installChromeMock({
