@@ -43,6 +43,10 @@ export interface Signal {
   actualDomain?: string;
   /** OPTIONAL: the stated payment recipient, when the mismatch is beneficiary-based (IDENTITY_MISMATCH only). */
   beneficiary?: string;
+  /** OPTIONAL: stable reason code, e.g. "DOC-04" (authoritative; `type` is the legacy name). */
+  code?: string;
+  /** OPTIONAL: detector details, e.g. { variant, page } on document findings. Never rendered raw. */
+  metadata?: Record<string, unknown>;
 }
 
 // ---- POST /api/analyze ----
@@ -78,6 +82,10 @@ export interface AnalyzeResponse {
     technical_risk: RiskLevel;
     verification_risk: RiskLevel;
   };
+  /** OPTIONAL: the backend's intervention policy (fixed ids; English text). The web UI localizes known ids. */
+  actions?: { id: string; text: string }[];
+  /** OPTIONAL: only on /api/analyze/document results — the file's structural facts and evidence. */
+  document?: DocumentInfo;
   /** OPTIONAL: pipeline metadata, incl. which AI (if any) served this analysis — see docs/API-CONTRACT.md. */
   analysis?: {
     source: string;
@@ -111,6 +119,57 @@ export interface AnalyzeScreenshotRequest {
 export interface AnalyzeScreenshotResponse extends AnalyzeResponse {
   /** OCR output, already redacted server-side: this is what the server analysed. */
   extractedText: string;
+}
+
+// ---- POST /api/analyze/document ----
+
+export interface AnalyzeDocumentRequest {
+  /** The file's bytes as a data URL or plain base64. PDF or DOCX (checked by content server-side), ≤10MB decoded. */
+  file: string;
+  /** Display only: the backend ignores it and never echoes it. */
+  fileName?: string;
+  language?: LanguageHint | string;
+}
+
+/** A small PNG of an image found pasted onto the document (DOC-04). */
+export interface DocumentPreview {
+  signalCode: string;
+  /** Null for DOCX (no fixed pages). */
+  page: number | null;
+  widthPx: number;
+  heightPx: number;
+  effectiveDpi: number | null;
+  /** The scan's own resolution; null when there is no scan behind it (DOCX). */
+  backgroundDpi: number | null;
+  hasAlpha: boolean;
+  hardEdgeRatio: number | null;
+  /** Always a data:image/png;base64 URL (enforced by lib/api.ts before storing). */
+  dataUrl: string;
+}
+
+export interface DocumentInfo {
+  fileType: "pdf" | "docx";
+  pageCount: number | null;
+  pagesAnalyzed: number | null;
+  textSource: "text_layer" | "ocr" | "none";
+  /** True when only the first part of the text fitted in one analysis. */
+  textTruncated: boolean;
+  metadata: {
+    producer: string | null;
+    creator: string | null;
+    created: string | null;
+    modified: string | null;
+    /** Null for DOCX. */
+    incrementalUpdates: number | null;
+    signed: boolean;
+  };
+  previews: DocumentPreview[];
+}
+
+export interface AnalyzeDocumentResponse extends AnalyzeResponse {
+  /** Redacted text found in the document (what was analysed). */
+  extractedText: string;
+  document: DocumentInfo;
 }
 
 // ---- POST /api/batch-scan ----
@@ -189,3 +248,5 @@ export const MAX_MESSAGE_LENGTH = 5000;
 export const MAX_BATCH_SIZE = 50;
 /** Decoded image size cap for /api/analyze/screenshot; backend also enforces this (backend/src/routes/index.js). */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+/** File size cap for /api/analyze/document; the backend enforces it too. */
+export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;

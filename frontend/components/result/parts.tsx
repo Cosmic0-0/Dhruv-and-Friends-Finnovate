@@ -19,11 +19,11 @@ export function SectionLabel({ children, id }: { children: React.ReactNode; id?:
  * The result screen's header: back to Check, the large title, and the sender
  * line beneath it (design/mockup/Result-Scam.png).
  */
-export function ResultHeader({ copy, sender }: { copy: Copy; sender?: string }) {
+export function ResultHeader({ copy, sender, subtitle }: { copy: Copy; sender?: string; subtitle?: string }) {
   return (
     <ScreenTitle
       title={copy.result.title}
-      subtitle={sender ? copy.result.fromSender(sender) : undefined}
+      subtitle={subtitle ?? (sender ? copy.result.fromSender(sender) : undefined)}
       back={{ href: "/", label: copy.tabs.check }}
     />
   );
@@ -153,11 +153,14 @@ export function MessageCard({
   marks,
   verdict,
   copy,
+  title,
 }: {
   text: string;
   marks: EvidenceMark[];
   verdict: Verdict;
   copy: Copy;
+  /** Card title; defaults to "The message you sent" (a document check passes its own). */
+  title?: string;
 }) {
   const segments = verdict === "safe" ? [{ text }] : highlightSegments(text, marks);
   const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
@@ -165,7 +168,7 @@ export function MessageCard({
   const hasHighlights = segments.some((s) => s.severity);
   return (
     <section className="card flex flex-col gap-2.5" aria-labelledby="message-label">
-      <SectionLabel id="message-label">{copy.result.messageYouSent}</SectionLabel>
+      <SectionLabel id="message-label">{title ?? copy.result.messageYouSent}</SectionLabel>
       {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
       <p className="text-[1.0625rem] leading-[1.6875rem] whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
         {segments.map((s, i) => {
@@ -203,11 +206,14 @@ export function aiSourceLabel(semantic: SemanticInfo | undefined, copy: Copy): s
 export function SentPanel({
   redacted,
   fromScreenshot,
+  fromDocument = false,
   analysis,
   copy,
 }: {
   redacted: string;
   fromScreenshot: boolean;
+  /** The text came from an uploaded document: the file itself went to the server. */
+  fromDocument?: boolean;
   analysis?: AnalyzeResponse["analysis"];
   copy: Copy;
 }) {
@@ -224,7 +230,9 @@ export function SentPanel({
       </summary>
       <div className="px-5 py-4">
         {/* "Only this version left your phone" is false when the text came from a screenshot. */}
-        <p className="text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
+        <p className="text-sm text-ink-muted">
+          {fromDocument ? copy.result.sentBodyDocument : fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}
+        </p>
         <p className="data mt-3 rounded-2xl bg-muted-surface px-3.5 py-3 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
           {redacted}
         </p>

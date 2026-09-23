@@ -70,3 +70,12 @@ test("email: low level never gets warnings, even with weak email findings", () =
   const plan = planInterventions({ level: "low", codes: ["EMAIL-01"], source: "email" });
   assert.deepEqual(ids(plan), ["no_warning_signs"]);
 });
+
+test("documents: forgery artefacts -> confirm with the issuer; active content -> don't enable it", () => {
+  assert.ok(ids(planInterventions({ level: "elevated", codes: ["DOC-05"] })).includes("doc_verify_with_issuer"));
+  assert.ok(ids(planInterventions({ level: "elevated", codes: ["DOC-07"] })).includes("doc_dont_enable_content"));
+  // A plain re-save is not a reason to chase the issuer; a change after signing is.
+  assert.ok(!ids(planInterventions({ level: "elevated", codes: ["DOC-02"], variants: ["DOC-02:incremental_update"] })).includes("doc_verify_with_issuer"));
+  assert.ok(ids(planInterventions({ level: "elevated", codes: ["DOC-02"], variants: ["DOC-02:after_signature"] })).includes("doc_verify_with_issuer"));
+  assert.deepEqual(ids(planInterventions({ level: "low", codes: ["DOC-04"] })), ["no_warning_signs"]);
+});

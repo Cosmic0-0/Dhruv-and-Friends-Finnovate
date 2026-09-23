@@ -48,6 +48,8 @@ const REGISTRY_CATEGORY_MAP = {
   email_auth: "technical_risk",
   email_attachment: "technical_risk",
   email_payment: "payment_risk",
+  // Structural facts about an uploaded file (services/document-forensics).
+  document_integrity: "technical_risk",
 };
 
 function categoryOf(signal) {

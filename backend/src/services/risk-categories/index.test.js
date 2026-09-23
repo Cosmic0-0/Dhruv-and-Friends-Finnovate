@@ -46,3 +46,9 @@ test("computeRiskCategories maps TEMPLATE_ARTIFACT to identity_risk", () => {
   const categories = computeRiskCategories([{ type: "TEMPLATE_ARTIFACT", severity: "high" }]);
   assert.equal(categories.identity_risk, "HIGH");
 });
+
+test("computeRiskCategories maps document-integrity findings to technical_risk", () => {
+  const categories = computeRiskCategories([{ category: "document_integrity", type: "document_pasted_image", severity: "high" }]);
+  assert.equal(categories.technical_risk, "HIGH");
+  assert.equal(categories.identity_risk, "LOW");
+});

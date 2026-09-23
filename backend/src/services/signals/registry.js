@@ -90,6 +90,19 @@ export const SIGNAL_DEFS = Object.freeze({
   "ORG-04": { category: "email_identity", severity: "low", legacyType: "sender_mismatch", label: "First message from this sender" },
   "ORG-05": { category: "reputation", severity: "high", legacyType: "known_scam_template", label: "Previously confirmed as fraud by your organisation" },
   "ORG-06": { category: "reputation", severity: "medium", legacyType: "community_cluster", label: "Part of a campaign targeting your organisation" },
+
+  // Document forensics (services/document-forensics). Deterministic facts
+  // about an uploaded PDF/DOCX file's structure - never the semantic model,
+  // which only ever sees the document's extracted text. Each one is a
+  // warning sign, not proof: legitimate tools can leave some of them too.
+  "DOC-01": { category: "document_integrity", severity: "low", legacyType: "document_editing_tool", label: "Document was produced or saved with a consumer editing tool" },
+  "DOC-02": { category: "document_integrity", severity: "medium", legacyType: "document_edited", label: "Document was changed after it was created" },
+  "DOC-03": { category: "document_integrity", severity: "low", legacyType: "document_metadata_inconsistent", label: "Document metadata is inconsistent" },
+  "DOC-04": { category: "document_integrity", severity: "medium", legacyType: "document_pasted_image", label: "An image was pasted on top of a scanned page" },
+  "DOC-05": { category: "document_integrity", severity: "high", legacyType: "document_inserted_text", label: "Text was typed on top of a scanned page" },
+  "DOC-06": { category: "document_integrity", severity: "medium", legacyType: "document_hidden_text", label: "Document contains hidden text" },
+  "DOC-07": { category: "document_integrity", severity: "high", legacyType: "document_active_content", label: "Document contains active content" },
+  "DOC-08": { category: "document_integrity", severity: "medium", legacyType: "document_font_outlier", label: "An amount, account number or date uses a different font from the rest of the page" },
 });
 
 export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));

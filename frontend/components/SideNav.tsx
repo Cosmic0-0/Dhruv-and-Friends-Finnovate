@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_TABS, NEW_CHECK_HREF } from "@/lib/navTabs";
-import { BookIcon, LayersIcon, PlusIcon, SearchIcon, ShieldIcon } from "./icons";
+import { BookIcon, DocumentIcon, LayersIcon, PlusIcon, SearchIcon, ShieldIcon } from "./icons";
 import { useLanguage } from "./LanguageProvider";
 
 /**
@@ -26,6 +26,7 @@ export default function SideNav() {
 
   const tools = [
     { href: "/safepay", Icon: ShieldIcon, label: copy.home.payCta },
+    { href: "/document", Icon: DocumentIcon, label: copy.tools.document },
     { href: "/batch", Icon: LayersIcon, label: copy.tools.batch },
     { href: "/conversation", Icon: SearchIcon, label: copy.tools.conversation },
     { href: "/sandbox", Icon: BookIcon, label: copy.tools.sandbox },

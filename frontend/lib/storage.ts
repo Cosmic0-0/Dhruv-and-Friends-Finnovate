@@ -46,8 +46,10 @@ export interface StoredResult {
   redactions: Redaction[];
   language: UiLanguage;
   at: number;
-  /** Where the text came from. A screenshot means the image itself was sent to the server. */
-  source?: "typed" | "screenshot";
+  /** Where the text came from. A screenshot or document means the file itself was sent to the server. */
+  source?: "typed" | "screenshot" | "document";
+  /** Display only, for a document check: the name of the file the user picked. Never sent for analysis. */
+  fileName?: string;
   /** Set after a successful POST /api/report, so a reload doesn't offer to report twice. */
   reported?: { sender: string; reportCount: number };
 }
@@ -61,11 +63,14 @@ function read<T>(store: () => Storage, key: string): T | null {
   }
 }
 
-function write(store: () => Storage, key: string, value: unknown): void {
+/** False when storage is unavailable or full (the quota is small: previews count). */
+function write(store: () => Storage, key: string, value: unknown): boolean {
   try {
     store().setItem(key, JSON.stringify(value));
+    return true;
   } catch {
     /* storage unavailable: nothing to persist */
+    return false;
   }
 }
 
@@ -95,8 +100,9 @@ export function addRecentCheck(check: Omit<RecentCheck, "id">): void {
   write(local, RECENT_KEY, [{ id, ...check }, ...getRecentChecks()].slice(0, RECENT_KEEP));
 }
 
-export function saveResult(result: StoredResult): void {
-  write(session, RESULT_KEY, result);
+/** False when the result could not be stored (e.g. a full sessionStorage quota). */
+export function saveResult(result: StoredResult): boolean {
+  return write(session, RESULT_KEY, result);
 }
 
 export function loadResult(): StoredResult | null {

@@ -119,6 +119,28 @@ sender data touches the demo, since the app ingests untrusted user input
       field at all), and the buffer is only ever handed to the tesseract.js
       worker in memory — never written to disk or served back, so there's
       no stored-file execution surface to strip.
+      Extended 2026-09-23 for document uploads (`POST /api/analyze/document`,
+      `backend/src/services/document-forensics`):
+      - The type comes from magic bytes only (`%PDF-`, or a ZIP whose
+        `[Content_Types].xml` declares a Word main document). The
+        client's file name is ignored and never echoed.
+      - Limits are 10MB decoded and a 14MB JSON body. A body over any route's
+        limit gets a generic JSON 413.
+      - Parsing runs only inside a `worker_threads` worker with a 256MB heap
+        limit and a 15s hard timeout. On a timeout, OOM or crash the worker
+        is terminated and the client gets a generic "could not be read".
+        At most 2 documents are analysed at once; a third gets 503.
+      - The ZIP central directory is checked first (at most 500 entries and
+        50MB declared uncompressed). Only named parts are inflated, each
+        under a hard output cap enforced while inflating, so a zip that lies
+        about its sizes still stops (tested).
+      - Nothing is written to disk. Macros and remote templates are only
+        detected, never run or fetched.
+      - pdf.js runs without font eval, system fonts, XFA or network access, and
+        with image size capped. sharp inputs are capped with
+        `limitInputPixels`.
+      - Previews are PNG data URLs of at most 256px. The frontend drops any
+        preview that isn't a small `data:image/png` URL before rendering it.
 - [x] **Trim API responses** — don't leak internal fields (raw LLM prompt,
       stack traces, DB row internals) in `/api/analyze`, `/api/batch-scan`,
       or `/api/report` responses. The malformed-JSON HTML-stack-trace leak
@@ -149,7 +171,10 @@ sender data touches the demo, since the app ingests untrusted user input
       `x-forwarded-proto` (Vercel/Render/Railway/Heroku all do) — reverify
       once the real deployment target is picked.
 - [x] **Scan dependencies** for known vulnerabilities (`npm audit` or
-      equivalent) before the final demo build. Reverified 2026-09-22:
+      equivalent) before the final demo build. Rechecked 2026-09-23 after
+      adding `pdfjs-dist` 6.3.289, `pdf-lib` 1.17.1 and `fflate` 0.8.3
+      (pinned exactly): `backend` `npm audit --omit=dev` reports 0
+      vulnerabilities. Reverified 2026-09-22:
       `backend`: 0 vulnerabilities (`npm audit --omit=dev`, including the
       newly added `express-rate-limit`/`helmet`). `frontend`: now installed
       and scanned — 0 vulnerabilities (`npm audit --omit=dev`).

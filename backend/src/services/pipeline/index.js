@@ -1,5 +1,5 @@
 // The single FraudLens analysis pipeline, shared by /api/analyze,
-// /api/analyze/screenshot and /api/batch-scan:
+// /api/analyze/screenshot, /api/analyze/document and /api/batch-scan:
 //
 //   normalise -> deterministic entity extraction
 //     -> [ deterministic detectors | intelligence/community | bounded semantic model ]
@@ -30,7 +30,7 @@ import { planInterventions, buildExplanation, POLICY_VERSION } from "../interven
 import { computeRiskCategories } from "../risk-categories/index.js";
 import { getLikelyNextStages } from "../playbooks/index.js";
 import { attachScamDna } from "../scam-dna/index.js";
-import { makeSignal } from "../signals/registry.js";
+import { makeSignal, SIGNAL_DEFS } from "../signals/registry.js";
 import { availableEvidence } from "../email-context/index.js";
 import { detectEmailSignals, EMAIL_DETECTOR_VERSION } from "../email-signals/index.js";
 import { detectOrgSignals, ORG_DETECTOR_VERSION } from "../org-identity/index.js";
@@ -39,7 +39,7 @@ import { planVerification, VERIFICATION_POLICY_VERSION } from "../verification-w
 import { DEMO_DIRECTORY, DEMO_ORGANISATION, DEMO_SUPPLIERS } from "../workplace-registry/index.js";
 import { getReportCount } from "../../db/index.js";
 
-export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch"]);
+export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch", "document"]);
 
 // A sender reported this many times (legacy per-sender counter) becomes a
 // REP-03 signal.
@@ -112,6 +112,17 @@ function annotateSignals(findings) {
   return out;
 }
 
+/**
+ * Pre-computed deterministic signals about evidence that is not the text
+ * itself (document forensics). Only registry codes are accepted, and never as
+ * semantic-model evidence: the model's findings come from analyzeSemantics()
+ * alone, where they are grounded and capped.
+ */
+function acceptedExtraSignals(extraSignals) {
+  if (!Array.isArray(extraSignals)) return [];
+  return extraSignals.filter((s) => s && SIGNAL_DEFS[s.code] && s.sourceType !== "semantic_model");
+}
+
 function senderReputation(sender) {
   if (communitySenderKey(sender) === null) return { reports: undefined, signals: [] };
   const reports = getReportCount(sender);
@@ -126,15 +137,21 @@ function senderReputation(sender) {
  * @param {string} rawText the (already redacted) message text
  * @param {{ source?: string, language?: string, paymentContext?: object|null, emailContext?: object|null,
  *   pageHost?: string|null, ip?: string, now?: number, ocrQuality?: "low"|"ok",
+ *   extraSignals?: object[], extraDetectorVersions?: Record<string, string>,
  *   semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
  *   emailContext must already be validated (services/email-context validateEmailContext); when present,
  *   the source is "email" and the EMAIL-* detectors run on it. pageHost is the hostname of the page this
  *   text was scanned from (e.g. the extension's "Scan This Page"), when known - it is never fetched or
  *   trusted as a claim, only used so a page's own domain/subdomains are never flagged as "not an official
- *   domain" relative to themselves (see domain-matching#checkLinkHygiene).
+ *   domain" relative to themselves (see domain-matching#checkLinkHygiene). extraSignals are pre-computed
+ *   deterministic registry signals about evidence other than the text (document forensics) and are scored with
+ *   everything else. extraDetectorVersions are merged into analysis.detectorVersions.
  */
 export async function runPipeline(rawText, context = {}) {
-  const { language, paymentContext = null, emailContext = null, pageHost = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
+  const {
+    language, paymentContext = null, emailContext = null, pageHost = null, ip, now = Date.now(), ocrQuality,
+    extraSignals, extraDetectorVersions = {}, semantic: semanticOpts = {},
+  } = context;
   const source = emailContext ? "email" : context.source ?? "pasted_text";
   const text = analysisText(rawText, emailContext);
 
@@ -174,6 +191,7 @@ export async function runPipeline(rawText, context = {}) {
     ...evaluatePaymentContext(paymentContext),
     ...(email?.signals ?? []),
     ...(organisation?.signals ?? []),
+    ...acceptedExtraSignals(extraSignals),
   ];
 
   const semantic = await semanticPromise;
@@ -224,7 +242,8 @@ export async function runPipeline(rawText, context = {}) {
   const codes = new Set(decision.findings.flatMap((f) => f.members.map((m) => m.code)));
   const stage = semantic.stage ?? derivedStage(codes);
   const scamType = semantic.scamType;
-  const interventions = planInterventions({ level: decision.level, codes, scamType, stage, source });
+  const variants = decision.findings.flatMap((f) => f.members.filter((m) => m.metadata?.variant).map((m) => `${m.code}:${m.metadata.variant}`));
+  const interventions = planInterventions({ level: decision.level, codes, variants, scamType, stage, source });
   const verification = planVerification({
     level: decision.level,
     signals: decision.findings.flatMap((f) => f.members),
@@ -260,6 +279,7 @@ export async function runPipeline(rawText, context = {}) {
         interventions: POLICY_VERSION,
         ...(email ? { email: EMAIL_DETECTOR_VERSION } : {}),
         ...(organisation ? { organisation: ORG_DETECTOR_VERSION, verification: VERIFICATION_POLICY_VERSION } : {}),
+        ...extraDetectorVersions,
       },
       semantic: {
         status: semantic.status,

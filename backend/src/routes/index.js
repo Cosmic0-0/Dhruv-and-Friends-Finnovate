@@ -17,14 +17,20 @@ import { analyzeDocumentForensics } from "../services/document-forensics-client/
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
+import {
+  analyzeDocument, DocumentError, DOCUMENT_DETECTOR_VERSION, MAX_DOCUMENT_BYTES, sniffDocumentType,
+} from "../services/document-forensics/index.js";
 
 export const router = Router();
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB, before base64 overhead
-// Documents (scanned bank statements, letterheads) run larger than a chat
-// screenshot; 15MB decoded covers a multi-page scanned PDF at reasonable DPI.
-const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
+// POST /api/documents' own cap (image forensics: JPEG/PNG/WEBP, plus PDF for
+// its metadata-only checks) - distinct from services/document-forensics'
+// own MAX_DOCUMENT_BYTES (PDF/DOCX structural forensics, imported above),
+// which is smaller since that path also holds parsed pages/previews in
+// memory inside a heap-capped worker.
+const MAX_IMAGE_DOCUMENT_BYTES = 15 * 1024 * 1024;
 
 function rateLimited(message, options) {
   return rateLimit({
@@ -206,15 +212,131 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   }
 });
 
-// Document ingestion: stores the uploaded file's exact bytes (services/
-// document-store), unmodified, and separately reads back those same stored
-// bytes for OCR. This is deliberately a different feature from
-// /analyze/screenshot: that route is for scam *message* text (SMS/email/
-// WhatsApp screenshots), never persisted, redacted and scored for a
-// verdict. This route is for *documents* (bank statements, letterheads,
-// IDs) headed into the forensics pipeline (services/document-forensics),
-// which produces indicators with a confidence label, never a verdict - see
-// that service's module comment.
+// Public document-analysis failures. Messages are fixed strings: the
+// underlying parser error is logged server-side only.
+const DOCUMENT_UNSUPPORTED = "document must be a PDF or Word (.docx) file (checked by content, not the file name)";
+const DOCUMENT_ERRORS = {
+  unsupported: [400, DOCUMENT_UNSUPPORTED],
+  encrypted: [400, "document is password-protected"],
+  // Also a parse that timed out or ran out of memory in the worker.
+  unreadable: [400, "document could not be read"],
+  busy: [503, "document analysis is busy, try again shortly"],
+};
+
+/**
+ * Documents routinely hold more text than one analysis accepts, so - unlike
+ * a screenshot, whose text is rejected when too long - the redacted text is
+ * cut to the cap at a line or word boundary (never inside a redaction
+ * placeholder) and the response says so (`document.textTruncated`). The
+ * structural checks cover the first pages regardless.
+ */
+function capDocumentText(text) {
+  if (text.length <= MAX_MESSAGE_LENGTH) return { text, truncated: false };
+  let cut = text.slice(0, MAX_MESSAGE_LENGTH);
+  if (cut.lastIndexOf("[") > cut.lastIndexOf("]")) cut = cut.slice(0, cut.lastIndexOf("["));
+  const near = MAX_MESSAGE_LENGTH * 0.8;
+  const line = cut.lastIndexOf("\n");
+  const word = cut.lastIndexOf(" ");
+  if (line > near) cut = cut.slice(0, line);
+  else if (word > near) cut = cut.slice(0, word);
+  return { text: cut.trimEnd(), truncated: true };
+}
+
+// Document forensics (services/document-forensics): structural warning signs
+// in a PDF/DOCX plus its text through the same runPipeline(), producing a
+// full verdict - the same "signals feed the deterministic scorer" pattern
+// every other detector in this app already uses. The type is decided by
+// magic bytes only (`fileName` is display-only on the client and ignored
+// here); parsing runs in a heap-capped worker with a hard timeout.
+//
+// The parsed content (text/previews) is never stored, but the exact
+// original bytes are (services/document-store, the same byte-exact
+// ingestion POST /api/documents below also uses) - `documentId` in the
+// response is an internal reference only, never a public retrieval
+// endpoint (see that route's own comment).
+router.post("/analyze/document", analyzeLimiter, json({ limit: "14mb" }), async (req, res) => {
+  const { file, language } = req.body ?? {};
+  if (!isNonEmptyString(file)) {
+    return res.status(400).json({ error: "document is required and must be a base64-encoded string" });
+  }
+  const buffer = Buffer.from(file.replace(/^data:[^;,]*;base64,/, ""), "base64");
+  if (buffer.length === 0) {
+    return res.status(400).json({ error: "document could not be decoded as base64" });
+  }
+  if (buffer.length > MAX_DOCUMENT_BYTES) {
+    return res.status(400).json({ error: `document exceeds maximum size of ${MAX_DOCUMENT_BYTES / (1024 * 1024)}MB` });
+  }
+  if (!sniffDocumentType(buffer)) {
+    return res.status(400).json({ error: DOCUMENT_UNSUPPORTED });
+  }
+
+  let doc;
+  try {
+    doc = await analyzeDocument(buffer);
+  } catch (err) {
+    if (err instanceof DocumentError && DOCUMENT_ERRORS[err.code]) {
+      if (err.code === "unreadable" || err.code === "busy") console.error(`[document] ${err.message}`);
+      const [status, error] = DOCUMENT_ERRORS[err.code];
+      return res.status(status).json({ error });
+    }
+    console.error(err);
+    return res.status(500).json({ error: "analysis failed, try again shortly" });
+  }
+
+  // Storage failing is not a reason to fail an otherwise-successful
+  // analysis - same "enrichment, not a precondition" stance the OCR/
+  // forensics calls on /api/documents below take.
+  let documentId = null;
+  try {
+    const stored = ingestDocument({ buffer, sourceChannel: "web_upload" });
+    if (!stored.error) documentId = stored.id;
+  } catch (err) {
+    console.error(err);
+  }
+
+  // Same server-side redaction as screenshot OCR text: identifiers never
+  // reach the pipeline, the LLM or the response.
+  const { text, truncated } = capDocumentText(redact(doc.text).redacted);
+  try {
+    const result = await runPipeline(text, {
+      source: "document",
+      language,
+      ip: req.ip,
+      extraSignals: doc.signals,
+      extraDetectorVersions: { document: DOCUMENT_DETECTOR_VERSION },
+      ...(doc.ocrQuality ? { ocrQuality: doc.ocrQuality } : {}),
+      // No text at all (unreadable scan): the structural findings still get
+      // a full deterministic verdict; there is nothing for the model to read.
+      ...(text.trim() ? {} : { semantic: { enabled: false } }),
+    });
+    res.json({
+      ...result,
+      documentId,
+      extractedText: text,
+      document: {
+        fileType: doc.fileType,
+        pageCount: doc.pageCount,
+        pagesAnalyzed: doc.pagesAnalyzed,
+        textSource: doc.textSource,
+        textTruncated: truncated,
+        metadata: doc.metadata,
+        previews: doc.previews,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "analysis failed, try again shortly" });
+  }
+});
+
+// Byte-exact document ingestion, focused on images (JPEG/PNG/WEBP) and
+// PDF metadata-only checks - the file types /analyze/document above does
+// NOT cover (it's PDF/DOCX structural forensics with a verdict; this is a
+// photographed document, e.g. a phone photo of a bank statement, plus the
+// local document-forensics ML service (TruFor/Donut - see document-
+// forensics/README.md) for indicators-with-confidence, never a verdict.
+// Complementary to /analyze/document, not a duplicate of it: different
+// file types, different (deliberately verdict-free) output shape.
 router.post("/documents", documentLimiter, json({ limit: "20mb" }), async (req, res) => {
   const { document, filename } = req.body;
   if (!isNonEmptyString(document)) {
@@ -226,8 +348,10 @@ router.post("/documents", documentLimiter, json({ limit: "20mb" }), async (req, 
   if (buffer.length === 0) {
     return res.status(400).json({ error: "document could not be decoded as base64" });
   }
-  if (buffer.length > MAX_DOCUMENT_BYTES) {
-    return res.status(400).json({ error: `document exceeds maximum size of ${MAX_DOCUMENT_BYTES / (1024 * 1024)}MB` });
+  if (buffer.length > MAX_IMAGE_DOCUMENT_BYTES) {
+    return res
+      .status(400)
+      .json({ error: `document exceeds maximum size of ${MAX_IMAGE_DOCUMENT_BYTES / (1024 * 1024)}MB` });
   }
 
   const stored = ingestDocument({

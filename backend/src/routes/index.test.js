@@ -72,12 +72,12 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   const body = await res.json();
 
   // URL-02 (30, rule) + SOC-01 (6, lexicon, corroborated by the model) = 36
-  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.3, not the LLM.
+  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.4, not the LLM.
   assert.equal(body.riskScore, 36);
   assert.deepEqual(body.risk, { score: 36, level: "elevated", confidence: "high" });
   assert.equal(body.verdict, "suspicious");
   assert.equal(body.decision, "verify_first");
-  assert.equal(body.analysis.rulesetVersion, "rs-1.3");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.4");
   assert.equal(body.analysis.semantic.status, "ok");
   assert.ok(Array.isArray(body.signals) && body.signals.length > 0);
   assert.equal(typeof body.suggestedAction, "string");

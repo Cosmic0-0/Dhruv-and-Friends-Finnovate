@@ -53,6 +53,27 @@ are weighted against.
       `/api/analyze/screenshot`, and drops the extracted text into the
       editable textarea for the user to review before `/api/analyze` runs
       on it — a user can exercise the full flow through the actual app UI.
+- [x] Document forensics (`POST /api/analyze/document`, `/document` in the
+      web app). Verified 2026-09-23:
+      - Backend tests cover every DOC detector, each demo fixture end to end
+        through the real worker, the route's error states, a worker timeout,
+        the busy cap and an LLM outage.
+      - Fixtures and expected verdicts are in `data/test-payloads/documents/README.md`.
+        Regenerate them with `npm run fixtures:documents`.
+      - Uploads went through the Next proxy against a live backend. Next's
+        10MB request-body clone limit was truncating uploads, so
+        `middlewareClientMaxBodySize` is set to 15mb in
+        `frontend/next.config.ts`.
+- [ ] Document demo rehearsal: upload `forged-signature.pdf` (expect HIGH, the
+      pasted-signature preview and "iLovePDF"), then `legit-scan.pdf` (a genuine
+      form, LOW). Also run the `edited-amount.pdf`, a renamed `.txt` and
+      `encrypted.pdf` error states in the real browser in EN/FR/Kreol.
+      Kreol document copy is an unreviewed English fallback (`TODO_KREOL`).
+      With the tailnet Ollama reachable (qwen3:8b), a document took 3-10s
+      end to end on 2026-09-23. If the backend cannot reach Ollama (check that
+      `OLLAMA_URL` points at the tailnet host, not `localhost`), each document
+      waits for the LLM timeout (about 60s) before the deterministic verdict
+      appears.
 - [x] No crashes on malformed input (empty message, non-text upload,
       oversized batch) — verified 2026-09-22: empty/missing `message`,
       6000-char oversized `message`, malformed JSON body, 60-item

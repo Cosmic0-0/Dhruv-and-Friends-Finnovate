@@ -26,6 +26,12 @@ const nextConfig: NextConfig = {
     // LLM call. Keep it above lib/api.ts's longest client timeout (batch,
     // 180s) so the client's own timeout is always the one that fires.
     proxyTimeout: 190_000,
+    // Next clones every request body up to this size and silently truncates
+    // anything longer before proxying it (default 10MB), which cut document
+    // uploads short: a 10MB file is ~13.4MB as base64 JSON. Kept just above
+    // the backend's 14MB JSON limit, so an oversized body gets the backend's
+    // clean 413 instead of a dropped connection.
+    middlewareClientMaxBodySize: "15mb",
   },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${BACKEND_URL}/api/:path*` }];
