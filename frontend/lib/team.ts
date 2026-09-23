@@ -2,8 +2,9 @@
 // lines come from each person's commits in this repo.
 //
 // To finish a profile: drop a square photo in public/team/ and set `photo`
-// to its path (e.g. "/team/dhruv.jpg"), and paste the LinkedIn profile URL.
-// A missing photo shows initials; a missing LinkedIn link is simply not shown.
+// to its path (e.g. "/team/dhruv.jpg"), and paste the LinkedIn/Instagram
+// profile URLs. A missing photo shows initials; a missing social link is
+// simply not shown.
 
 export interface TeamMember {
   id: string;
@@ -12,15 +13,13 @@ export interface TeamMember {
   built: string[];
   github: string;
   linkedin: string | null;
+  instagram: string | null;
   photo: string | null;
 }
 
 export const TEAM_NAME = "Dhruv & Friends";
 export const REPO_URL = "https://github.com/Cosmic0-0/Dhruv-and-Friends-Finnovate";
 export const HACKATHON = "Finnovate Web and AI Hackathon 2026";
-
-// Optional group photo for the footer, e.g. "/team/group.jpg".
-export const TEAM_PHOTO: string | null = null;
 
 export const TEAM: TeamMember[] = [
   {
@@ -34,7 +33,8 @@ export const TEAM: TeamMember[] = [
     ],
     github: "https://github.com/dhruvksbisht",
     linkedin: null,
-    photo: null,
+    instagram: null,
+    photo: "/brand/dhruv.jpeg",
   },
   {
     id: "oleg",
@@ -47,7 +47,8 @@ export const TEAM: TeamMember[] = [
     ],
     github: "https://github.com/oleg-nar",
     linkedin: null,
-    photo: null,
+    instagram: null,
+    photo: "/brand/oleg.jpeg",
   },
   {
     id: "joshua",
@@ -60,7 +61,8 @@ export const TEAM: TeamMember[] = [
     ],
     github: "https://github.com/joshwmy",
     linkedin: null,
-    photo: null,
+    instagram: null,
+    photo: "/brand/joshua.jpeg",
   },
   {
     id: "caellum",
@@ -73,7 +75,8 @@ export const TEAM: TeamMember[] = [
     ],
     github: "https://github.com/Cosmic0-0",
     linkedin: null,
-    photo: null,
+    instagram: null,
+    photo: "/brand/caellum.jpeg",
   },
 ];
 

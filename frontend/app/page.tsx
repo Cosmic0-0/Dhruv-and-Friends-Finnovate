@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import LandingHero from "@/components/landing/LandingHero";
 import BadgeDivider from "@/components/landing/BadgeDivider";
-import { ProblemSection, ApproachSection, MauritiusSection, ChecksSection, GetItSection } from "@/components/landing/LandingSections";
+import { ProblemSection, ApproachSection, CandidBreak, MauritiusSection, ChecksSection, GetItSection } from "@/components/landing/LandingSections";
 import TeamSection from "@/components/landing/TeamSection";
 import LandingFooter from "@/components/landing/LandingFooter";
 import "./landing.css";
@@ -24,6 +24,7 @@ export default function LandingPage() {
       <main>
         <ProblemSection />
         <ApproachSection />
+        <CandidBreak />
         <MauritiusSection />
         <ChecksSection />
         <GetItSection />

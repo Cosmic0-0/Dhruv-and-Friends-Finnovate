@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { TEAM, TEAM_NAME, TEAM_PHOTO, HACKATHON, REPO_URL } from "@/lib/team";
-import { Avatar, GitHubIcon } from "@/components/landing/TeamSection";
+import { TEAM_NAME, HACKATHON, REPO_URL } from "@/lib/team";
+import { GitHubIcon } from "@/components/landing/TeamSection";
 
 export default function LandingFooter() {
   return (
@@ -17,25 +17,6 @@ export default function LandingFooter() {
             </p>
           </div>
         </div>
-
-        {TEAM_PHOTO && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={TEAM_PHOTO} alt={`The ${TEAM_NAME} team`} className="landing-footer-photo" />
-        )}
-
-        <ul className="landing-footer-team" aria-label="The team">
-          {TEAM.map((member) => (
-            <li key={member.id}>
-              <a href={member.github} target="_blank" rel="noopener noreferrer" className="landing-footer-person">
-                <Avatar member={member} size="sm" />
-                <span>
-                  <span className="landing-footer-person-name">{member.name}</span>
-                  <span className="landing-footer-person-role">{member.role}</span>
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
 
         <nav className="landing-footer-links" aria-label="Project">
           <Link href="/app">Web app</Link>

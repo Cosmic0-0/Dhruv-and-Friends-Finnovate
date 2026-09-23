@@ -910,13 +910,39 @@
   gap: 18px;
 }
 
+/* ---- Candid break ---- */
+
+.landing-candid {
+  margin: 0;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+}
+
+.landing-candid-photo {
+  display: block;
+  width: auto;
+  max-width: min(420px, 100%);
+  height: auto;
+  border-radius: 20px;
+  transform: rotate(-2deg);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 16px 32px -8px rgb(0 0 0 / 18%), inset 0 0 0 1px var(--c-hairline);
+}
+
+.landing-candid-caption {
+  max-width: 34rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--c-ink-muted);
+  text-wrap: balance;
+}
+
 /* ---- Team ---- */
 
 .landing-group-photo {
   display: block;
   width: 100%;
-  max-height: 420px;
-  object-fit: cover;
+  height: auto;
   border-radius: 28px;
   box-shadow: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 24px rgb(0 0 0 / 5%), inset 0 0 0 1px var(--c-hairline);
   margin-bottom: 32px;
@@ -1119,52 +1145,6 @@
   color: var(--land-on-hero-muted);
 }
 
-.landing-footer-photo {
-  width: 100%;
-  max-height: 460px;
-  object-fit: cover;
-  border-radius: 28px;
-}
-
-.landing-footer-team {
-  margin: 0;
-  padding: 24px 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  border-block: 1px solid var(--land-hero-line);
-}
-
-.landing-footer-person {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  border-radius: 16px;
-  color: var(--land-on-hero);
-  text-decoration: none;
-  transition: background-color 180ms var(--land-ease);
-}
-
-.landing-footer-person:hover { background: rgb(255 255 255 / 7%); }
-
-.landing-footer-person-name {
-  display: block;
-  font-weight: 650;
-}
-
-.landing-footer-person-role {
-  display: block;
-  font-size: 0.8125rem;
-  color: var(--land-on-hero-muted);
-}
-
-.landing-footer .landing-avatar-sm {
-  color: #111;
-  background: #f2f2f4;
-}
-
 .landing-footer-links {
   display: flex;
   flex-wrap: wrap;
@@ -1199,7 +1179,6 @@
 @media (max-width: 1080px) {
   .landing-team { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .landing-checks { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .landing-footer-team { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) {
@@ -1219,8 +1198,7 @@
 
 @media (max-width: 560px) {
   .landing-team,
-  .landing-checks,
-  .landing-footer-team { grid-template-columns: 1fr; }
+  .landing-checks { grid-template-columns: 1fr; }
   .landing-brand-by { display: none; }
   .landing-divider { gap: 12px; }
   .landing-divider-badge { width: 156px; height: 156px; }

@@ -77,8 +77,6 @@ const PRONGS = [
     Icon: SearchIcon,
     body: "Paste an SMS or WhatsApp message, drop a screenshot, or upload a PDF or Word document. FraudLens highlights the exact words and links that give it away, and gives you a short plan for what to do next.",
     extras: ["Screenshot OCR", "Before You Pay", "Document forensics", "Scam practice sandbox"],
-    href: "/app",
-    cta: "Open the web app",
   },
   {
     name: "The Chrome extension",
@@ -86,8 +84,6 @@ const PRONGS = [
     Icon: ShieldIcon,
     body: "Checks every site you visit against the Mauritius institution registry, lookalike rules, phishing and malware lists, domain age and the site's certificate. The Security Report grades a site and tells a badly built one from a hostile one.",
     extras: ["Lookalike domains", "Certificate identity", "Login-form checks", "Line-of-code findings"],
-    href: "#get-it",
-    cta: "Install the extension",
   },
   {
     name: "The Outlook add-in",
@@ -95,8 +91,6 @@ const PRONGS = [
     Icon: DocumentIcon,
     body: "Runs inside the email a business receives and looks for invoice and CEO fraud: supplier lookalike domains, changed bank details, a Reply-To that doesn't match, and payment requests from personal addresses.",
     extras: ["Supplier lookalikes", "Bank-detail changes", "Reply-To mismatch", "CEO fraud"],
-    href: "#get-it",
-    cta: "Add it to Outlook",
   },
 ];
 
@@ -109,7 +103,7 @@ export function ApproachSection() {
         lede="Scams reach people in three places, so FraudLens meets them in all three. Every client calls the same backend; none of them carries its own copy of the detection logic, so a rule fixed once is fixed everywhere."
       />
       <div className="landing-prongs">
-        {PRONGS.map(({ name, where, Icon, body, extras, href, cta }) => (
+        {PRONGS.map(({ name, where, Icon, body, extras }) => (
           <article key={name} className="landing-prong">
             <div className="landing-prong-top">
               <span className="landing-prong-icon">
@@ -124,15 +118,6 @@ export function ApproachSection() {
                 <li key={extra}>{extra}</li>
               ))}
             </ul>
-            {href.startsWith("/") ? (
-              <Link href={href} className="landing-link">
-                {cta}
-              </Link>
-            ) : (
-              <a href={href} className="landing-link">
-                {cta}
-              </a>
-            )}
           </article>
         ))}
       </div>
@@ -160,6 +145,25 @@ export function ApproachSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+// ---------------------------------------------------------------- Candid break
+
+export function CandidBreak() {
+  return (
+    <figure className="landing-candid">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/dhruv&oleg_chinese.jpeg"
+        alt="Dhruv and Oleg in wizard hats and fake beards at a hackathon venue, doing their best sage impression"
+        className="landing-candid-photo"
+        loading="lazy"
+      />
+      <figcaption className="landing-candid-caption">
+        Two of the four of us, mid-hackathon, having found the venue's costume rack. The detection engine was unaffected.
+      </figcaption>
+    </figure>
   );
 }
 

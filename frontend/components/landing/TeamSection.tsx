@@ -16,6 +16,16 @@ export function LinkedInIcon({ className }: { className?: string }) {
   );
 }
 
+export function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" />
+      <circle cx="12" cy="12" r="4.6" />
+      <circle cx="17.35" cy="6.65" r="1.15" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 export function Avatar({ member, size }: { member: TeamMember; size: "lg" | "sm" }) {
   const className = `landing-avatar landing-avatar-${size}`;
   if (member.photo) {
@@ -54,6 +64,12 @@ function ProfileCard({ member }: { member: TeamMember }) {
           <a href={member.linkedin} target="_blank" rel="noopener noreferrer" className="landing-social">
             <LinkedInIcon className="size-4" />
             <span>LinkedIn</span>
+          </a>
+        )}
+        {member.instagram && (
+          <a href={member.instagram} target="_blank" rel="noopener noreferrer" className="landing-social">
+            <InstagramIcon className="size-4" />
+            <span>Instagram</span>
           </a>
         )}
       </div>
