@@ -25,6 +25,24 @@ const CREDENTIAL_NOUN =
 const SHARE_VERB =
   "(?:send|give|share|provide|confirm|reply(?: back)?(?: with)?|tell|read(?: (?:it|them))?(?: back)?|forward|text|verify|envoy(?:ez|er)|donn(?:ez|er)|communiqu(?:ez|er)|transmett(?:ez|re)|confirm(?:ez|er)|indiqu(?:ez|er)|partag(?:ez|er)|r[ée]pond(?:ez|re)(?: avec)?|renvoy(?:ez|er)|dites|avoy(?:e)?|donn|konfirm(?:e)?|dir|partaz|ekrir|reponn(?: avek)?|verifye)";
 
+// Up to 100 characters with no sentence end and no negation word. A "."
+// only ends a sentence when whitespace or the end follows it, so the dot
+// inside a domain ("log in at mcb-secure.top with your password") doesn't.
+// Line breaks are allowed here but then checked by softWrapsOnly in
+// firstMatch(): these regexes are case-insensitive, and under the i flag
+// even \p{Ll} matches capitals, so "the next line starts lowercase" can't be
+// expressed in the pattern itself.
+function sec03Gap(negations) {
+  return String.raw`(?:(?!\b(?:` + negations + String.raw`)\b)(?:[^.!?\n]|\.(?![\s]|$)|\n)){0,100}?`;
+}
+
+// Every line break inside the match continues in lowercase - an OCR soft
+// wrap mid-sentence, not a new line of the page (a menu item, a heading).
+const LOWERCASE_START = /^\s*\p{Ll}/u;
+function onlySoftWraps(matched) {
+  return matched.split("\n").slice(1).every((line) => LOWERCASE_START.test(line));
+}
+
 /**
  * Each rule: code, lang, pattern. `negatable` rules are skipped when a
  * negation ("never", "do not", "ne ... pas", Kreol "pa"/"zame") governs the
@@ -58,9 +76,16 @@ const RULES = [
   // sentence line-wrap artifact, not a real sentence boundary - verified
   // live against a real screenshot where "logging into" and "password"
   // landed on either side of exactly this kind of wrap.
-  { code: "SEC-03", lang: "en", re: /\b(?:log|sign)(?:s|ged|ging|ed|ing)?[- ]?(?:in|into)\b[^.!?]{0,100}?\b(?:password|passcode)\b/iu },
-  { code: "SEC-03", lang: "fr", re: /\b(?:connectez|identifiez)[- ]?vous\b[^.!?]{0,100}?\bmot de passe\b/iu },
-  { code: "SEC-03", lang: "mfe", re: /\bkonekte\b[^.!?]{0,100}?\bmodpas\b/iu },
+  //
+  // The gap between "log in" and "password" (sec03Gap) may NOT contain a
+  // negation ("MCB will never ask for your password") and may only cross a
+  // line break that continues in lowercase - an OCR soft wrap, as above. A
+  // break followed by a capital starts a new line of the page (a menu item,
+  // a heading), so a bank site's "Internet Banking login" menu can no longer
+  // pair with a "never share your password" paragraph further down.
+  { code: "SEC-03", lang: "en", softWrapsOnly: true, re: new RegExp(String.raw`\b(?:log|sign)(?:s|ged|ging|ed|ing)?[- ]?(?:in|into)\b` + sec03Gap("never|not|don'?t|do not|won'?t|will not|no one|nobody") + String.raw`\b(?:password|passcode)\b`, "iu") },
+  { code: "SEC-03", lang: "fr", softWrapsOnly: true, re: new RegExp(String.raw`\b(?:connectez|identifiez)[- ]?vous\b` + sec03Gap("jamais|pas|ne") + String.raw`\bmot de passe\b`, "iu") },
+  { code: "SEC-03", lang: "mfe", softWrapsOnly: true, re: new RegExp(String.raw`\bkonekte\b` + sec03Gap("pa|zame|zamai|pann") + String.raw`\bmodpas\b`, "iu") },
 
   // SEC-02 - remote access software
   { code: "SEC-02", lang: "mixed", re: /\b(?:anydesk|teamviewer|quick ?support|rustdesk|ultraviewer|remote (?:access|desktop|control|support) (?:app|application|software|tool)|screen[- ]?shar(?:e|ing) (?:app|application))\b/iu },
@@ -123,8 +148,8 @@ const RULES = [
   // re-matched the exact "expire in 5 minutes" phrase the lookbehind above
   // exempts, since "in" alone satisfies \b(?:today|soon|in)\b regardless of
   // what follows; "in \d+ ..." is already covered by that lookbehind branch.
-  { code: "SOC-01", lang: "en", checkSafetyContact: true, re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|(?<!expires? )\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
-  { code: "SOC-01", lang: "fr", checkSafetyContact: true, re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
+  { code: "SOC-01", lang: "en", checkSafetyContact: true, checkDisclaimerFooter: true, re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|(?<!expires? )\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
+  { code: "SOC-01", lang: "fr", checkSafetyContact: true, checkDisclaimerFooter: true, re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
   { code: "SOC-01", lang: "mfe", checkSafetyContact: true, re: /\bdeswit\b|\btouswit\b|\btousuit\b|\btoutswit\b|\bzordi mem\b|\bvit vit\b|\bavan minwi\b|\bavan \d+\s*h\b|\bdan \d+\s*(?:minit|er|erdtan|zour)\b/iu },
 
   // SOC-04 - move to another channel / number
@@ -207,6 +232,21 @@ function isSafetyContact(text, start) {
   return SAFETY_CONTACT_RE.test(clauseWindowBefore(text, start, 80));
 }
 
+// Standard "wrong recipient" confidentiality footer, appended to nearly
+// every corporate/institutional email ("If you are not the intended
+// recipient/addressee ..., please delete/cancel it immediately and notify
+// the sender."). Flags SOC-01 on "immediately" purely because that fixed
+// legal boilerplate contains an urgency word - unrelated to the message's
+// actual content. Real scam mail doesn't carry a misdirected-email
+// disclaimer, so this phrase alone is specific enough to carve out (unlike
+// SAFETY_CONTACT_RE, no companion "institution named" requirement needed).
+const DISCLAIMER_FOOTER_RE = /\bnot the intended (?:recipient|addressee)\b|\bpas le destinataire (?:pr[ée]vu|voulu)\b|\bvous n'[êe]tes pas le destinataire\b/iu;
+
+/** True when the match sits inside a "not the intended recipient" disclaimer clause. */
+function isDisclaimerFooter(text, start) {
+  return DISCLAIMER_FOOTER_RE.test(clauseWindowBefore(text, start, 150));
+}
+
 // French/Kreol object pronouns front the verb ("Ne le partagez jamais", "Ne le
 // communiquez à personne") instead of naming the credential again, unlike
 // English ("share it" keeps "it" after the verb, already covered by the
@@ -282,6 +322,8 @@ function firstMatch(text, rule) {
     if (rule.negatable && isNegated(text, m.index)) continue;
     if (rule.checkPassive && isPassiveNotification(text, m.index + m[0].length)) continue;
     if (rule.checkSafetyContact && isSafetyContact(text, m.index)) continue;
+    if (rule.checkDisclaimerFooter && isDisclaimerFooter(text, m.index)) continue;
+    if (rule.softWrapsOnly && !onlySoftWraps(m[0])) continue;
     return m;
   }
   return null;

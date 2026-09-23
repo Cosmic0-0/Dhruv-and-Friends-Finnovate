@@ -264,3 +264,47 @@ product. Judges and casual visitors notice these fast.
       the React Flow campaign page loads 181 kB — no LLM/OCR
       dependency is bundled client-side (`tesseract.js` and the LLM client
       are backend-only, `backend/src/services/`).
+
+## 3. Browser extension — Security Report (`POST /api/analyze-site`)
+
+The Security Report makes this backend send requests to arbitrary
+third-party sites on a user's behalf, so it carries its own abuse and
+honesty requirements on top of section 1.
+
+- [x] **Passive only** — verified 2026-09-23: one GET of the page, a TLS
+      handshake, one GET each of a fixed path list (`.git/HEAD`, `.env`,
+      phpMyAdmin, admin paths, `/.well-known/security.txt`, own source maps).
+      No crafted input, no fuzzing, no wordlists
+      (`backend/src/services/site-security/index.js` header).
+- [x] **SSRF guard on every hop** — `url-safety.js` blocks private/loopback/
+      link-local/CGNAT/reserved ranges and `fetcher.js` re-validates each
+      redirect target, not just the first URL.
+- [ ] **Can't be used as a scanning proxy** — NOT satisfied as of
+      2026-09-23: the per-target budget, result cache, concurrency cap and
+      optional key/Origin gate were built and then removed at the product
+      owner's request, along with the fetch time limit. Only the per-client-IP
+      limit (15/15min) remains, so a script can still make this server send
+      ~12 requests per report to any public site, and a site that never
+      answers keeps a report waiting. Revisit before any public deployment.
+- [x] **Extension permissions minimal and enforced** — `manifest.test.js`
+      fails the build on any extra permission, a broad host permission,
+      `content_scripts`, `web_accessible_resources`, remote or inline scripts,
+      or a CSP weaker than `script-src 'self'; object-src 'none'`.
+- [ ] **Host permission points at the deployed backend** — still
+      `http://localhost:4000/*`. Update `manifest.json` and
+      `config.js#API_BASE_URL` together (the test checks they match).
+- [x] **Vulnerability data has an update path** — `npm run update:retire` in
+      `extension/` regenerates `vendor/retire-js-dataset.js` from upstream
+      Retire.js (29 libraries, fetched 2026-09-23); `npm run check:retire`
+      exits 1 past 120 days, and stale data is disclosed in the report.
+- [x] **Report never claims more than it saw** — findings are "possible"
+      weaknesses, a failed page-side collection degrades to server-only
+      results with a coverage note, areas that weren't checked show "Not
+      checked" rather than "Clean", and every check is listed with pass/fail.
+- [x] **Orchestration is tested** — `extension/security-report.test.js`
+      covers the collector-failure regression, MAIN-world failure, backend
+      failure and report storage (session storage only).
+- [ ] **Live pass in the real extension** — the full-screen report was
+      checked in a browser preview with a real backend report; run
+      `extension/README.md` checklist item 11 in the loaded extension before
+      the demo.

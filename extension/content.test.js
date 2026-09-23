@@ -19,21 +19,27 @@ import { fileURLToPath } from "node:url";
 
 const SOURCE = readFileSync(fileURLToPath(new URL("./content.js", import.meta.url)), "utf8");
 
-function loadContentJs({ initialText = "", appearsAfterMs = null, finalText = "" } = {}) {
-  let bodyText = initialText;
+// Minimal DOM: elements with childNodes, text nodes, and a
+// getComputedStyle stub driven by each element's `display` field.
+const text = (value) => ({ nodeType: 3, nodeValue: value });
+const el = (tagName, children = [], props = {}) => ({ nodeType: 1, tagName, childNodes: children, display: "block", ...props });
+
+function loadContentJs({ initialText = "", appearsAfterMs = null, finalText = "", body = null } = {}) {
+  let currentBody = body ?? el("BODY", initialText ? [text(initialText)] : []);
   if (appearsAfterMs !== null) {
     setTimeout(() => {
-      bodyText = finalText;
+      currentBody = el("BODY", [text(finalText)]);
     }, appearsAfterMs);
   }
   const context = {
     document: {
       get body() {
-        return { get innerText() { return bodyText; } };
+        return currentBody;
       },
       getElementById: () => null,
       documentElement: { prepend: () => {} },
     },
+    getComputedStyle: (node) => ({ display: node.display ?? "block", visibility: node.visibility ?? "visible" }),
     location: { href: "https://example.test/page" },
     window: {},
     chrome: { runtime: { onMessage: { addListener: () => {} } } },
@@ -69,4 +75,43 @@ test("content.js: a genuinely empty page still resolves (bounded wait, not an in
   const result = await ctx.extractPageText();
   assert.equal(result.text, "");
   assert.ok(Date.now() - start < 1500, "must give up within the bounded window, not hang");
+});
+
+test("content.js #28: nothing typed or pre-filled in any form field or editable region is collected", async () => {
+  const body = el("BODY", [
+    el("H1", [text("Sign in")]),
+    el("P", [text("URGENT: Your MCB account will be suspended. Verify at mcb-secure-verify.top.")]),
+    el("P", [text("Username "), el("INPUT", [], { display: "inline-block", value: "CANARY-USERNAME" })]),
+    el("P", [text("Comment box"), el("TEXTAREA", [text("CANARY-TEXTAREA")], { display: "inline-block" })]),
+    el("SELECT", [el("OPTION", [text("CANARY-OPTION")])]),
+    el("DIV", [text("CANARY-TYPED")], { isContentEditable: true }),
+    el("DIV", [el("SPAN", [text("CANARY-NESTED-EDITABLE")], { isContentEditable: true, display: "inline" })]),
+    el("DIV", [text("CANARY-HIDDEN-ATTR")], { hidden: true }),
+    el("DIV", [text("CANARY-DISPLAY-NONE")], { display: "none" }),
+    el("SCRIPT", [text("CANARY-SCRIPT")]),
+    el("DIV", [text("CANARY-BANNER")], { id: "fraudlens-warning-banner" }),
+  ]);
+  const ctx = loadContentJs({ body });
+  const { text: extracted } = await ctx.extractPageText();
+  assert.match(extracted, /Your MCB account will be suspended/);
+  assert.match(extracted, /Username/);
+  assert.doesNotMatch(extracted, /CANARY/, extracted);
+});
+
+test("content.js: block elements become separate lines, inline elements stay on one line", async () => {
+  const body = el("BODY", [
+    el("NAV", [text("Home "), el("A", [text("Login")], { display: "inline" })]),
+    el("H1", [text("Security centre")]),
+    el("P", [text("Line one"), el("BR"), text("line two")]),
+  ]);
+  const ctx = loadContentJs({ body });
+  const { text: extracted } = await ctx.extractPageText();
+  assert.equal(extracted, ["Home Login", "Security centre", "Line one", "line two"].join("\n"));
+});
+
+test("content.js: text inside an open shadow root is collected", async () => {
+  const host = el("MY-WIDGET", [], { shadowRoot: { childNodes: [el("P", [text("Your parcel is held, pay the customs fee now")])] } });
+  const ctx = loadContentJs({ body: el("BODY", [el("P", [text("Tracking page for your delivery status")]), host]) });
+  const { text: extracted } = await ctx.extractPageText();
+  assert.match(extracted, /pay the customs fee/);
 });

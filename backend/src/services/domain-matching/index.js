@@ -199,6 +199,12 @@ function classifyLink(link) {
     });
   }
 
+  // A bank name in the subdomain/path of a big, well-known site
+  // (en.wikipedia.org/wiki/MCB_Group, github.com/absa/...) is a page ABOUT
+  // the bank, not an impersonation of it. Lookalike/brand-in-domain checks
+  // above still apply to every host; only this "brand elsewhere in the URL"
+  // rule defers to the trusted list.
+  if (isTrustedDomain(link.host)) return null;
   const subToken = brandInLabels(subdomains);
   const pathToken = subToken ? null : brandInPath(link.path);
   const token = subToken ?? pathToken;

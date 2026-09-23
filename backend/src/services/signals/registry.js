@@ -21,6 +21,10 @@ export const SIGNAL_DEFS = Object.freeze({
   "URL-06": { category: "technical", severity: "medium", legacyType: "suspicious_link", label: "Link points to a raw IP address" },
   "URL-07": { category: "technical", severity: "high", legacyType: "suspicious_link", label: "Link disguises its real host with an @ sign" },
   "URL-08": { category: "technical", severity: "medium", legacyType: "suspicious_link", label: "Asks you to verify, log in or pay through an unofficial link" },
+  // Emitted only by /api/check-url (services/url-reputation) for the page
+  // being visited. Deliberately has no risk-engine weight: message analysis
+  // never emits it, so no published ruleset changes.
+  "URL-09": { category: "technical", severity: "medium", legacyType: "new_domain", label: "Website domain was registered very recently" },
 
   "ID-01": { category: "identity", severity: "high", legacyType: "IDENTITY_MISMATCH", label: "Claims to be an institution but links to a different domain" },
   "ID-02": { category: "identity", severity: "high", legacyType: "IDENTITY_MISMATCH", label: "Claims to be an institution but payment goes to someone else" },

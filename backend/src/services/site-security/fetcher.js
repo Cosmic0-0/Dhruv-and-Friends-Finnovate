@@ -7,7 +7,11 @@
 
 import { assertPublicHttpUrl } from "./url-safety.js";
 
-const DEFAULT_TIMEOUT_MS = Number(process.env.SITE_SECURITY_TIMEOUT_MS) || 6000;
+// No time limit by default: slow sites (e.g. www.uom.ac.mu, ~6s to first
+// byte) were being cut off and reported as unreachable. Set
+// SITE_SECURITY_TIMEOUT_MS to reinstate one. Without it, a site that never
+// answers keeps its report waiting until the connection itself fails.
+const DEFAULT_TIMEOUT_MS = Number(process.env.SITE_SECURITY_TIMEOUT_MS) || null;
 const MAX_BODY_BYTES = 512 * 1024;
 const MAX_REDIRECTS = 4;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
@@ -59,7 +63,7 @@ export async function fetchOnce(urlString, options = {}) {
 
   for (;;) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
     let response;
     try {
       response = await fetch(current.href, {
@@ -69,7 +73,7 @@ export async function fetchOnce(urlString, options = {}) {
         headers: { "User-Agent": USER_AGENT },
       });
     } finally {
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
     }
 
     const location = REDIRECT_STATUSES.has(response.status) ? response.headers.get("location") : null;

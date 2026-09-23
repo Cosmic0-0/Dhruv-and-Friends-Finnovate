@@ -39,7 +39,7 @@ describe("Outlook request mapping", () => {
       from: { name: "Demo Company Finance", address: "finance@demo-compan1.example" },
       replyTo: [{ name: null, address: "pay@redirect.example" }],
       returnPath: "bounce@demo-compan1.example",
-      recipient: "USER@DEMO-COMPANY.EXAMPLE",
+      recipient: "user@demo-company.example",
       authentication: { spf: "fail", dkim: "fail", dmarc: "fail" },
       attachments: [{ name: "invoice.pdf", size: 1240, contentType: "application/pdf" }],
       urls: ["https://demo-compan1.example/login"],

@@ -9,7 +9,7 @@ test("mapClientSignals returns nothing for missing/malformed input", () => {
   assert.deepEqual(mapClientSignals({}), []);
 });
 
-test("mapClientSignals grades eval/new Function sinks as high, innerHTML-style sinks as medium", () => {
+test("mapClientSignals grades string-to-code sinks as medium, HTML sinks as low, inline handlers as info", () => {
   const findings = mapClientSignals({
     domSinks: [
       { sink: "eval", count: 2 },
@@ -18,9 +18,9 @@ test("mapClientSignals grades eval/new Function sinks as high, innerHTML-style s
     ],
   });
   assert.equal(findings.length, 3);
-  assert.equal(findings.find((f) => f.evidence === "eval").severity, "high");
-  assert.equal(findings.find((f) => f.evidence === "innerHTML").severity, "medium");
-  assert.equal(findings.find((f) => f.evidence === "inlineEventHandler").severity, "low");
+  assert.equal(findings.find((f) => f.evidence === "eval").severity, "medium");
+  assert.equal(findings.find((f) => f.evidence === "innerHTML").severity, "low");
+  assert.equal(findings.find((f) => f.evidence === "inlineEventHandler").severity, "info");
   assert.ok(findings[0].description.includes("2x"));
 });
 

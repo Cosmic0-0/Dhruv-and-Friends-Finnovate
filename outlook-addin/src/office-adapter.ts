@@ -1,4 +1,5 @@
-import { extractUrlsFromHtml, htmlToText, prepareEmailBody } from "./body";
+import { extractCurrentMessageUrls, htmlToText, prepareEmailBody } from "./body";
+import { cleanAddress, cleanName, LIMITS } from "./contract";
 import { parseInternetHeaders } from "./headers";
 import type { AnalyzePayload, ExtractionReport, MailboxAddress } from "./types";
 
@@ -50,13 +51,6 @@ async function bodySnapshot(item: MessageItem): Promise<{ text: string; html: st
   throw new Error("Outlook did not provide a readable message body.");
 }
 
-/** Plain text preferred; HTML is converted to text only as a fallback. */
-export async function getCurrentMessageBody(item?: MessageItem): Promise<{ text: string; format: "text" | "html" }> {
-  const activeItem = item ?? (Office.context.mailbox.item as unknown as MessageItem);
-  const snapshot = await bodySnapshot(activeItem);
-  return { text: prepareEmailBody(snapshot.text).text, format: snapshot.format };
-}
-
 async function internetHeaders(item: MessageItem, supported: boolean): Promise<{ raw: string; available: boolean }> {
   if (!supported || typeof item.getAllInternetHeadersAsync !== "function") return { raw: "", available: false };
   return new Promise((resolve) => {
@@ -66,17 +60,30 @@ async function internetHeaders(item: MessageItem, supported: boolean): Promise<{
   });
 }
 
+// An address the API would reject (e.g. an unresolved Exchange legacy DN) is
+// sent as a display name only: unknown, not suspicious, and not a 400.
 function sender(item: MessageItem): MailboxAddress | null {
-  const address = item.from?.emailAddress?.trim();
-  if (!address) return null;
-  return { name: item.from?.displayName?.trim() || null, address: address.toLowerCase() };
+  const address = cleanAddress(item.from?.emailAddress);
+  const name = cleanName(item.from?.displayName);
+  return address || name ? { name, address } : null;
+}
+
+function attachmentList(item: MessageItem): AnalyzePayload["emailContext"]["attachments"] {
+  return (item.attachments ?? [])
+    .filter((attachment) => !attachment.isInline && attachment.name?.trim())
+    .slice(0, LIMITS.attachments)
+    .map((attachment) => ({
+      name: attachment.name.trim().slice(0, LIMITS.attachmentName),
+      contentType: attachment.contentType?.toLowerCase().slice(0, LIMITS.contentType) || null,
+      size: Number.isFinite(attachment.size) && attachment.size! >= 0 ? attachment.size! : null,
+    }));
 }
 
 function defaultBridge(): OutlookBridge {
   const mailbox = Office.context.mailbox;
   return {
     item: mailbox.item as unknown as MessageItem,
-    recipient: mailbox.userProfile?.emailAddress?.trim().toLowerCase() || null,
+    recipient: mailbox.userProfile?.emailAddress ?? null,
     headersSupported: Office.context.requirements.isSetSupported("Mailbox", "1.8"),
   };
 }
@@ -92,31 +99,26 @@ export async function buildAnalyzePayload(bridge: OutlookBridge = defaultBridge(
 
   const headerResult = await internetHeaders(item, bridge.headersSupported);
   const parsedHeaders = parseInternetHeaders(headerResult.raw);
-  const urls = snapshot.html ? extractUrlsFromHtml(snapshot.html) : [];
-  const attachments = (item.attachments ?? [])
-    .filter((attachment) => !attachment.isInline)
-    .slice(0, 25)
-    .map((attachment) => ({
-      name: attachment.name,
-      contentType: attachment.contentType?.toLowerCase() || null,
-      size: Number.isFinite(attachment.size) ? attachment.size! : null,
-    }));
+  const { urls, omitted: urlsOmitted, shortened: urlsShortened } = snapshot.html ? extractCurrentMessageUrls(snapshot.html) : { urls: [], omitted: 0, shortened: 0 };
+  const subject = item.subject?.trim().slice(0, LIMITS.subject) || null;
+  const messageId = item.internetMessageId?.trim();
+  const from = sender(item);
 
   return {
     payload: {
       source: "email",
       message: prepared.text,
       emailContext: {
-        messageId: item.internetMessageId?.trim() || null,
-        from: sender(item),
+        messageId: messageId && messageId.length <= LIMITS.messageId ? messageId : null,
+        from,
         replyTo: parsedHeaders.replyTo,
         returnPath: parsedHeaders.returnPath,
-        subject: item.subject?.trim() || null,
+        subject,
         authentication: parsedHeaders.authentication,
-        attachments,
+        attachments: attachmentList(item),
         urls,
         threadContext: null,
-        recipient: bridge.recipient,
+        recipient: cleanAddress(bridge.recipient),
         senderContext: null,
       },
     },
@@ -125,11 +127,16 @@ export async function buildAnalyzePayload(bridge: OutlookBridge = defaultBridge(
       bodyTruncated: prepared.truncated,
       quotedContextRemoved: prepared.removedQuotedContent,
       headersAvailable: headerResult.available,
-      unavailable: [
-        ...(!headerResult.available ? ["internet headers, Reply-To and Return-Path"] : []),
-        "conversation sender history",
-        "mailbox-wide sender history",
-      ],
+      urlsOmitted,
+      urlsShortened,
+      subject,
+      fromAddress: from?.address ?? null,
+      // Conversation/mailbox-wide sender history is never available from
+      // this bounded ReadItem-only client (threadContext/senderContext are
+      // always null, see types.ts) - listing it here would repeat the same
+      // two lines on every single result, so it's left out rather than
+      // shown as if it varied.
+      unavailable: [...(!headerResult.available ? ["internet headers, Reply-To and Return-Path"] : [])],
     },
   };
 }

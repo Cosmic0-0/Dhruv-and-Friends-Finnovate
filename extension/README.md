@@ -45,39 +45,58 @@ only the page's own JS context can see) versus what stays server-side.
   (max 15 entries). Stores **domain + timestamp + result state only, never
   message text or page content.**
 - `background.js` — service worker.
-  - Preserves the original per-tab auto-check (14B): on
-    navigate/activate, calls `checkUrl()` for the tab's URL and caches the
-    result per `tabId`; the popup reads the cache instead of re-checking.
-  - Sets one of four badge states via `state.js` (14C): blank/neutral, `✓`
-    steel-blue safe, `?` amber suspicious, `!` red high-risk, `×` grey
-    unreachable — fails open on a backend error, exactly as before.
+  - Per-tab auto-check (14B): on navigate/activate, asks `tab-state.js`
+    for the tab's result. Results live in `chrome.storage.session`, so they
+    survive the service worker being stopped (#22), and a URL checked in the
+    last 10 minutes is reused on every tab switch instead of re-checked (#23).
+    The popup asks for a check on demand if nothing is stored yet.
+  - Badge states via `state.js` (14C): blank/neutral, `✓` steel-blue safe,
+    `?` amber suspicious, `!` red high-risk, `×` grey unreachable, `…` grey
+    "too many checks" — fails open on any backend error.
   - `scanActiveTab(tabId)` (14D): injects `content.js`, sends the extracted
-    text to `/api/analyze`, records a recent-check entry, and — only for a
-    signal whose `source` is `identity_check` or `url_parser` (the
-    deterministic, non-LLM checks) at medium/high severity — asks
-    `content.js` to show a dismissible inline banner (14G).
+    text to `/api/analyze`, records a recent-check entry, and asks
+    `content.js` for a dismissible inline banner only when the page isn't
+    safe AND a code-verified (`sourceType` `rule`) or threat-list
+    (`intel`) signal is medium/high — never for word-list or AI-only
+    signals (#21, `policy.js`).
+  - Accepts messages only from its own extension pages, never from content
+    scripts, so a hostile page can't trigger reports or lookups.
   - Registers the two context menu items (14E/14F) in `onInstalled` and
     handles their clicks: selected text → `/api/analyze`, a right-clicked
     link → `/api/check-url`. Either way the result is written to
     `chrome.storage.local["fraudlens.contextResult"]` and a small
     `result.html` popup window is opened to show it — nothing navigates,
     nothing runs without the click.
-  - `runSecurityReport(tabId)` (Security Report): injects
-    `collect-signals.js` (isolated world) for DOM/text signals, then
-    `fraudlensObserveApiSurface` (MAIN world, injected as a self-contained
-    `func` — see its own comment for why it can't close over anything in
-    this file) to observe the page's real `fetch`/`XMLHttpRequest` calls for
-    a bounded 1.5s window. Runs `detectVulnerableLibraries()`
-    (`vendor/retire-js-scan.js`) over the collected script list, bundles
-    everything into `clientSignals`, and calls `analyzeSite(tab.url,
-    clientSignals)` — the backend does every header/TLS/cookie/exposed-path
-    fetch itself; this file only assembles what the page's own JS context
-    already saw.
+  - Security Report: wires real dependencies into
+    `security-report.js#runSecurityReport` (below).
+- `security-report.js` — Security Report orchestration, unit-tested in
+  `security-report.test.js`. Injects `collect-signals.js` (isolated world)
+  for DOM/text signals, then `fraudlensObserveApiSurface` (MAIN world,
+  injected as a self-contained `func`) to observe the page's real
+  `fetch`/`XMLHttpRequest` calls for a bounded 1.5s window. Runs
+  `detectVulnerableLibraries()` over the collected scripts, sends everything
+  to `POST /api/analyze-site`, and saves the report to
+  `chrome.storage.session` (last 5, gone when the browser closes) so
+  `report.html` can open it. **A failed page-side collection is never
+  fatal:** the report falls back to the server-side checks and the backend
+  adds a coverage note with the reason.
+- `report.html` / `report.js` / `report.css` — the full-screen report,
+  opened from the popup's **Open full report** button. Grade ring, severity
+  counts, per-area coverage, two charts (posture by area; where points were
+  lost), and every finding with evidence and a one-line fix, filterable by
+  severity and searchable. **Export JSON** and **Print / Save PDF** (a light
+  print stylesheet, all findings expanded). Every number comes from the
+  backend's `summary` — the page only draws it. Charts use Chart.js 4.5.1,
+  vendored as `vendor/chart.umd.min.js` (MIT, `vendor/chart.js-LICENSE.md`)
+  because MV3 forbids loading remote code; it doesn't use `eval`, so it runs
+  under the extension's strict CSP.
 - `content.js` — **not** auto-run (see manifest note above). Injected only
-  on explicit user action. On injection it reads `document.body.innerText`
-  (capped at 4000 chars) as its completion value — `innerText` never
-  includes `<input>`/`<textarea>` values, so password and hidden-field
-  content is never read, by construction, not by filtering. Reading is not
+  on explicit user action. On injection it walks the DOM for rendered text
+  (capped at 4000 chars) and returns it as its completion value. It never
+  enters form fields (`input`, `textarea`, `select`), `contenteditable`
+  regions or hidden elements, so nothing the user typed — a password, a
+  draft email, a chat message — is ever sent (#28; `innerText` was not safe
+  here because it includes contenteditable text). Reading is not
   instantaneous: a real page can still be client-rendering its visible
   content (e.g. a product-info table hydrated after load) at the exact
   moment of injection, so `waitForRenderedText()` polls for up to 1.2s
@@ -137,16 +156,75 @@ only the page's own JS context can see) versus what stays server-side.
   enough for Retire.js's URI-based detection); their text is never fetched,
   to avoid depending on third-party CORS headers. Returns everything as its
   completion value — `background.js#runSecurityReport` does the rest.
-- `vendor/retire-js-dataset.js` — a trimmed (16-library) subset of the real
+- `vendor/retire-js-dataset.js` — a trimmed (29-library) subset of the real
   upstream [Retire.js `jsrepository.json`](https://github.com/RetireJS/retire.js/blob/master/repository/jsrepository.json)
-  (Apache-2.0), fetched 2026-09-23. Every regex is copied verbatim from
-  upstream for the libraries kept; see the file's header comment for which
-  ones and why only those.
+  (Apache-2.0). **Generated** by `scripts/update-retire-dataset.mjs` — don't
+  edit by hand. Exports `RETIRE_JS_DATASET_META.fetchedAt`, which is sent
+  with every Security Report so the backend can flag stale data.
 - `vendor/retire-js-scan.js` — matches script src/text against that dataset
-  (`uri`/`filecontent` extractors only — `func`/`hashes` extractors are a
+  (`uri`, `filename` and `filecontent` extractors — `func`/`hashes` are a
   documented scope cut, see the file's header). Pure computation, no page
-  access, so it runs in `background.js`'s normal module context rather than
-  being duplicated into an injected script.
+  access.
+
+## Security Report: what it checks
+
+All passive: one GET of the page, a TLS handshake, and one GET each of a
+short fixed list of well-known paths. Nothing is submitted, fuzzed or
+brute-forced. Detection and scoring live in
+`backend/src/services/site-security/`; the extension only collects what the
+page already rendered.
+
+| Area | Checks |
+|---|---|
+| Transport & TLS | HTTPS served; HTTP→HTTPS redirect; certificate trusted / expired / expiring; TLS 1.0/1.1 |
+| Security headers | CSP presence, report-only, and directive weaknesses (`unsafe-inline` without nonce/hash, `unsafe-eval`, wildcard/scheme script sources, missing `object-src` / `base-uri`); HSTS (and max-age, includeSubDomains); X-Content-Type-Options; Referrer-Policy; Permissions-Policy; COOP; CORS as sent to any caller; security.txt |
+| Clickjacking | CSP `frame-ancestors` **or** X-Frame-Options — either alone is enough; wildcard frame-ancestors and ignored `ALLOW-FROM` are flagged |
+| Cookies | Secure, HttpOnly (weighted up for session/auth-named cookies), SameSite |
+| Exposed files & info | `.git/HEAD`, `.env`, phpMyAdmin, admin paths, source maps of the page's own scripts, server version banners, database/stack-trace error text |
+| Page code | DOM sinks (eval/new Function/string timers → medium, HTML sinks → low, inline handlers → info), reflected URL params (high), vulnerable libraries, third-party scripts without Subresource Integrity |
+| Forms & content | Mixed content, forms posting over HTTP or cross-origin, password fields on an HTTP page |
+| Third parties | Third-party script hosts and API calls observed (informational) |
+
+**Scoring:** starts at 100; each kind of finding costs 25 / 10 / 4 / 0
+(high / medium / low / info), repeats of the same kind count a quarter,
+and one category can cost at most 35. A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40.
+
+**Limits:** only the backend's per-IP rate limit (15 reports per 15
+minutes). There is no per-site limit, result cache, concurrency cap or time
+limit on fetching the target site — removed at the product owner's request,
+so slow sites (5–6s to first byte) are scanned fully instead of being cut off.
+See `checklist.md` section 3 for what that leaves open.
+
+## Keeping vulnerability data current
+
+```bash
+cd extension
+npm run update:retire   # re-download Retire.js signatures, regenerate vendor/retire-js-dataset.js
+npm run check:retire    # exits 1 if the data is older than 120 days (CI-friendly)
+```
+
+Reload the extension afterwards. Reports built from data older than 120 days
+carry an info finding saying so.
+
+## Permissions and hardening
+
+`manifest.test.js` enforces all of this, so a change that breaks it fails `npm test`:
+
+- **Permissions:** exactly `tabs` (read the active tab's URL for the
+  automatic check), `contextMenus`, `storage` (recent checks; reports in
+  session storage), `activeTab` + `scripting` (inject collectors only after
+  a click). No `<all_urls>`, no `content_scripts`, no
+  `web_accessible_resources`, no `externally_connectable`.
+- **Host permissions:** only the backend origin. It must match
+  `config.js#API_BASE_URL` — the test checks this, so update both together
+  for a deployed backend (e.g. `https://api.example.com/*`).
+- **CSP for extension pages:** `script-src 'self'; object-src 'none';
+  base-uri 'none'; form-action 'none'` — only bundled scripts run, and
+  no extension page may use inline scripts or inline event handlers.
+- **Untrusted data:** everything from a scanned site is rendered with
+  `textContent`, never `innerHTML`.
+- `minimum_chrome_version: 102` (needed for MAIN-world injection and
+  `storage.session`).
 
 ## Load it locally
 
@@ -170,23 +248,16 @@ wherever `config.js#FRONTEND_ORIGIN` points).
 | 14H financial-form warning | **Deferred, out of scope for this pass** | Too invasive for the time available, per the task brief — no code for this exists |
 | 14I report this site | Done | `POST /api/report` with the current hostname as `sender` — see limitation below |
 | 14J recent checks | Done | `history.js`, `chrome.storage.local`, 15-entry cap, no text ever stored |
-| 14K web app handoff | Partial, documented limitation below | |
+| 14K web app handoff | Done | "Open in FraudLens" opens the web app with `?scan=<capped text>`, which its check screen pre-fills (`frontend/components/CheckForm.tsx`) |
 | 14L privacy copy | Done | Shown in both `popup.html` and `result.html` |
-| Security Report | Done, code-reviewed only — **not yet run in a real browser** (see below) | `collect-signals.js` + `background.js#runSecurityReport` + `vendor/retire-js-*` + `POST /api/analyze-site` |
+| Security Report | Done — orchestration unit-tested; report page visually checked in a browser preview; **re-run the checklist item below in the real extension** | `collect-signals.js` + `security-report.js` + `report.html` + `vendor/retire-js-*` + `POST /api/analyze-site` |
 
 ### Known limitations
 
-- **Web app handoff (14K).** The frontend's `/result` page only reads its
-  own `sessionStorage` (`frontend/lib/storage.ts` → `loadResult()`), which
-  an extension running on a different origin cannot write into, and there is
-  no query-param entry point into that flow today. Rather than inventing new
-  frontend/backend state from the extension side, "Open in FraudLens" opens
-  `FRONTEND_ORIGIN/?scan=<capped text>` — a short, capped excerpt (see
-  `MAX_HANDOFF_CHARS` in `config.js`) is attached as a query param, but
-  **the frontend does not currently read it**, so today this link just opens
-  the FraudLens home page. Flag to the frontend owner if a `scan` query-param
-  entry point on the home page (prefill + optionally auto-run) is wanted;
-  this file was left untouched per the task's directory-gating rule.
+- **Web app handoff (14K) carries only an excerpt.** "Open in FraudLens"
+  passes at most `MAX_HANDOFF_CHARS` (400) characters in `?scan=`, because
+  it travels in a URL. The web app pre-fills its check screen with it; for a
+  longer page, paste the rest in by hand.
 - **`/api/report`'s `sender` field.** The contract's `/api/report` only
   ever stores a single free-form `sender` string plus a count
   (`backend/src/db/index.js`); there's no dedicated "domain report" shape.
@@ -205,7 +276,7 @@ wherever `config.js#FRONTEND_ORIGIN` points).
 - **Security Report API-surface capture is partial.** The MAIN-world
   `fetch`/`XMLHttpRequest` observer only starts once "Security Report" is
   clicked and only watches for ~1.5s (`API_SURFACE_WINDOW_MS` in
-  `background.js`) — the same "never auto-run on page load" constraint
+  `security-report.js`) — the same "never auto-run on page load" constraint
   `content.js` already follows (see above). Calls the page already made
   before the click (e.g. its initial page load) are not visible; only calls
   made during that short window are. This is disclosed in the report's
@@ -219,7 +290,7 @@ wherever `config.js#FRONTEND_ORIGIN` points).
   third-party CORS headers and content-script fetch-attribution ambiguity
   under MV3 — see `collect-signals.js`'s header comment.
 - **Retire.js matching is real but reduced.** `vendor/retire-js-scan.js`
-  implements upstream Retire.js's own `uri`/`filecontent` regex extractors
+  implements upstream Retire.js's own `uri`/`filename`/`filecontent` regex extractors
   (regexes copied verbatim from the real dataset) but not its `func`
   extractors (reading a global like `window.jQuery.fn.jquery`, which needs
   MAIN-world execution per candidate library) or `hashes` extractors (exact
@@ -246,7 +317,9 @@ plans to show it. Before the demo, a human should walk through:
    `backend/src/services/domain-matching/index.js`'s test fixtures (should
    badge `!` red / `?` amber depending on severity). Stop the backend and
    navigate again — badge should show grey `×`, popup text should say
-   "Backend unreachable", and the page must not be blocked (fail-open).
+   FraudLens can't be reached, and the page must not be blocked (fail-open).
+   Hit the link-check limit (see data/test-payloads EXTENSION-FIX-CHECKS.md)
+   and the popup should say there have been too many checks instead.
 3. **Popup layout (14A)**: open the popup on a couple of sites, confirm the
    ~380px width, section layout, state pill, and privacy line all render
    and don't overflow.
@@ -273,9 +346,8 @@ plans to show it. Before the demo, a human should walk through:
    the popup's "Recent checks" list shows domain + relative time + a state
    dot for each, oldest entries drop off past 15.
 10. **Open in FraudLens (14K)**: click the link after a page scan or a
-    context-menu check; confirm it opens `FRONTEND_ORIGIN` with a `scan=`
-    query param (frontend doesn't consume it yet — this is the documented
-    limitation above, not a bug).
+    context-menu check; confirm it opens `FRONTEND_ORIGIN` with the scanned
+    text pre-filled on the check screen (from the `scan=` query param).
 11. **Security Report — the newest feature here, and the one this pass has
     the *least* real-world confidence in (see the callout below).** Click
     "Security Report" in the popup on a real site (try a well-known site
@@ -301,6 +373,16 @@ plans to show it. Before the demo, a human should walk through:
     - Confirm the popup never hangs indefinitely — a slow/unreachable site
       should still resolve to *some* report (grade `N/A`) within a few
       seconds, per `services/site-security`'s own timeouts.
+    - Click **Open full report**: a new tab opens with the grade ring, severity
+      counts, coverage, both charts and every finding. Try the severity chips
+      and search, expand a finding (evidence + "How to fix"), **Export JSON**,
+      and **Print / Save PDF** (light layout, charts readable, all findings
+      expanded).
+    - On a page where the extension can't read the content (e.g. the Chrome
+      Web Store), the report should still arrive with server-side results and
+      a "Page-content checks were skipped" note — never a bare error.
+    - Scan the same site twice within 10 minutes: the second report shows a
+      **Cached result** tag and the backend makes no new requests to the site.
 12. **Permissions sanity**: in `chrome://extensions` → Details → confirm the
     permissions list matches `manifest.json` (`tabs`, `contextMenus`,
     `storage`, `activeTab`, `scripting`, plus the `localhost:4000` host

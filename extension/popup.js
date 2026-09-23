@@ -1,6 +1,8 @@
 import { FRONTEND_ORIGIN, MAX_HANDOFF_CHARS } from "./config.js";
 import { getRecentChecks } from "./history.js";
-import { stateFromCheckUrl, STATE_LABEL } from "./state.js";
+import { stateFromCheckUrl, STATE_LABEL, describeFailure } from "./state.js";
+import { isWebUrl } from "./tab-state.js";
+import { claimedIdentityLine, isReportableHost } from "./policy.js";
 
 const els = {
   hostname: document.getElementById("hostname"),
@@ -24,10 +26,23 @@ const els = {
   securitySummary: document.getElementById("security-summary"),
   securityFindingsList: document.getElementById("security-findings-list"),
   securityFindingsEmpty: document.getElementById("security-findings-empty"),
+  openReportBtn: document.getElementById("open-report-btn"),
 };
 
+// The popup shows only the strongest few findings; the rest (plus charts,
+// evidence and fixes) are in the full-screen report.html.
+const POPUP_MAX_SECURITY_FINDINGS = 5;
+let lastReportId = null;
+
 let currentHostname = null;
+let domainState = "neutral"; // what the automatic domain check said for this tab
 let lastScanText = ""; // capped scan text, used only for the FraudLens handoff link
+
+// When two checks disagree, the pill shows the more serious one - a clean
+// page scan must never turn a red lookalike-domain warning into "Safe", and
+// a failed scan must never turn it grey (#1).
+const SEVERITY_ORDER = ["neutral", "inconclusive", "unreachable", "limited", "safe", "suspicious", "high-risk"];
+const worseState = (a, b) => (SEVERITY_ORDER.indexOf(b) > SEVERITY_ORDER.indexOf(a) ? b : a);
 
 function setStatePill(state) {
   els.statePill.dataset.state = state;
@@ -36,6 +51,11 @@ function setStatePill(state) {
 
 function capitalize(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function setStatus(text, kind = "") {
+  els.actionStatus.className = kind ? `status-msg ${kind}` : "status-msg";
+  els.actionStatus.textContent = text;
 }
 
 function renderSignals(signals) {
@@ -67,27 +87,59 @@ function renderSignals(signals) {
   }
 }
 
+// The web app's check screen reads ?scan= and pre-fills the message box
+// with it (frontend/components/CheckForm.tsx), so this opens FraudLens with
+// a short, capped excerpt of the scanned text ready to analyse in full.
 function updateOpenLink(scanText) {
   const url = new URL(FRONTEND_ORIGIN + "/");
-  if (scanText) {
-    // Known limitation (see README "Web app handoff"): the frontend's
-    // /result page only reads its own sessionStorage
-    // (frontend/lib/storage.ts loadResult()), which an external extension
-    // origin cannot write into. Absent a shared handoff mechanism, this
-    // passes a short, capped excerpt of the scanned text as a query param
-    // instead — the frontend does not currently read this param, so today
-    // this link just opens the FraudLens home page; a person can paste the
-    // text themselves. Flagged to the frontend owner as a follow-up rather
-    // than inventing new backend/frontend state from the extension side.
-    url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
-  }
+  if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
   els.openLink.href = url.toString();
+}
+
+/** Browser pages (chrome://, new tab, file://): nothing to check or report (#26). */
+function setWebActionsEnabled(enabled) {
+  els.scanBtn.disabled = !enabled;
+  els.reportBtn.disabled = !enabled;
+  els.securityReportBtn.disabled = !enabled;
+}
+
+/** The facts behind the automatic check, in plain words - not just a label. */
+function domainCheckText(result, state) {
+  const parts = [];
+  if (result.officialInstitution) parts.push(`Official ${result.officialInstitution} website — this address belongs to ${result.officialInstitution}.`);
+  else parts.push(STATE_LABEL[state]);
+  if (result.reportCount > 0) parts.push(`Reported by FraudLens users ${result.reportCount} time${result.reportCount === 1 ? "" : "s"}.`);
+  if (typeof result.domainAgeDays === "number" && result.domainAgeDays < 365) {
+    parts.push(`Domain registered ${result.domainAgeDays} day${result.domainAgeDays === 1 ? "" : "s"} ago.`);
+  }
+  return parts.join(" ");
 }
 
 async function renderTabStatus() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab) {
-    els.hostname.textContent = "No active tab";
+  if (!tab || !isWebUrl(tab.url)) {
+    els.hostname.textContent = tab ? "Browser page" : "No active tab";
+    domainState = "neutral";
+    setStatePill("neutral");
+    els.stateText.textContent = describeFailure({ errorKind: "not_web_page" }).message;
+    renderSignals([]);
+    setWebActionsEnabled(false);
+    updateOpenLink("");
+    return;
+  }
+
+  currentHostname = safeHostnameFromUrl(tab.url);
+  els.hostname.textContent = currentHostname || "—";
+  setWebActionsEnabled(true);
+  // e.g. localhost or a bare IP: scannable, but not something to report.
+  els.reportBtn.disabled = !isReportableHost(currentHostname);
+
+  // The background checks on demand if nothing is stored yet, so this never
+  // ends at "reload the page".
+  const result = await chrome.runtime.sendMessage({ type: "GET_TAB_STATUS", tabId: tab.id });
+
+  if (!result || result.notWebPage) {
+    domainState = "neutral";
     setStatePill("neutral");
     els.stateText.textContent = STATE_LABEL.neutral;
     renderSignals([]);
@@ -95,32 +147,24 @@ async function renderTabStatus() {
     return;
   }
 
-  const result = await chrome.runtime.sendMessage({ type: "GET_TAB_STATUS", tabId: tab.id });
-
-  if (!result) {
-    currentHostname = safeHostnameFromUrl(tab.url);
-    els.hostname.textContent = currentHostname || "Not checked yet";
-    setStatePill("neutral");
-    els.stateText.textContent = "Not checked yet — reload the page.";
-    renderSignals([]);
-    updateOpenLink("");
-    return;
+  if (result.hostname) {
+    currentHostname = result.hostname;
+    els.hostname.textContent = result.hostname;
   }
-
-  currentHostname = result.hostname;
-  els.hostname.textContent = result.hostname || "—";
 
   if (result.error) {
-    setStatePill("unreachable");
-    els.stateText.textContent = `Backend unreachable: ${result.error}. Browsing was not blocked.`;
+    const { state, message } = describeFailure(result);
+    domainState = state;
+    setStatePill(state);
+    els.stateText.textContent = message;
     renderSignals([]);
     updateOpenLink("");
     return;
   }
 
-  const state = stateFromCheckUrl(result);
-  setStatePill(state);
-  els.stateText.textContent = STATE_LABEL[state];
+  domainState = stateFromCheckUrl(result);
+  setStatePill(domainState);
+  els.stateText.textContent = domainCheckText(result, domainState);
   renderSignals(result.signals);
   updateOpenLink("");
 }
@@ -133,38 +177,33 @@ function safeHostnameFromUrl(url) {
   }
 }
 
+function paragraph(text, className = "state-text") {
+  const p = document.createElement("p");
+  p.className = className;
+  p.textContent = text;
+  return p;
+}
+
 function renderScanResult(data) {
   const { analysis, extracted, state, hostname } = data;
   els.scanSection.hidden = false;
   els.scanResult.innerHTML = "";
 
-  const verdictLine = document.createElement("p");
-  verdictLine.className = "state-text";
-  verdictLine.textContent = `Verdict: ${analysis.verdict.toUpperCase()}${
-    typeof analysis.riskScore === "number" ? ` (risk score ${analysis.riskScore}/100)` : ""
-  }`;
-  els.scanResult.appendChild(verdictLine);
+  els.scanResult.appendChild(
+    paragraph(`Verdict: ${analysis.verdict.toUpperCase()}${typeof analysis.riskScore === "number" ? ` (risk score ${analysis.riskScore}/100)` : ""}`)
+  );
 
-  if (analysis.sender) {
-    const senderLine = document.createElement("p");
-    senderLine.className = "state-text";
-    senderLine.textContent = `Claimed identity: ${analysis.sender}${
-      typeof analysis.senderReports === "number" ? ` (reported ${analysis.senderReports}x)` : ""
-    }`;
-    els.scanResult.appendChild(senderLine);
-  }
+  // Only a registry institution, never a free-text guess such as a page
+  // heading, and never "(reported 0x)" (#30).
+  const identity = claimedIdentityLine(analysis);
+  if (identity) els.scanResult.appendChild(paragraph(identity));
 
-  if (analysis.explanation) {
-    const expl = document.createElement("p");
-    expl.className = "state-text";
-    expl.textContent = analysis.explanation;
-    els.scanResult.appendChild(expl);
-  }
+  if (analysis.explanation) els.scanResult.appendChild(paragraph(analysis.explanation));
 
   const signalsUl = document.createElement("ul");
   signalsUl.className = "signals-list";
   const rank = { high: 3, medium: 2, low: 1 };
-  const sorted = [...(analysis.signals ?? [])].sort((a, b) => (rank[b.severity] || 0) - (rank[a.severity] || 0));
+  const sorted = [...(analysis.signals ?? [])].filter((s) => s.scored !== false).sort((a, b) => (rank[b.severity] || 0) - (rank[a.severity] || 0));
   for (const signal of sorted.slice(0, 5)) {
     const li = document.createElement("li");
     li.className = "signal-item";
@@ -181,14 +220,13 @@ function renderScanResult(data) {
   els.scanResult.appendChild(signalsUl);
 
   if (extracted?.truncated) {
-    const note = document.createElement("p");
-    note.className = "empty-note";
-    note.textContent = `Page text was truncated to ${extracted.text.length} characters before analysis.`;
-    els.scanResult.appendChild(note);
+    els.scanResult.appendChild(paragraph(`Page text was truncated to ${extracted.text.length} characters before analysis.`, "empty-note"));
   }
 
-  setStatePill(state);
-  els.stateText.textContent = `${STATE_LABEL[state]} (from full-page scan)`;
+  const shown = worseState(domainState, state);
+  setStatePill(shown);
+  els.stateText.textContent =
+    shown === state ? `${STATE_LABEL[state]} (from full-page scan)` : `${STATE_LABEL[shown]} (from the automatic domain check — the page text itself looked ${state === "safe" ? "clean" : state})`;
   els.hostname.textContent = hostname;
   lastScanText = extracted?.text ?? "";
   updateOpenLink(lastScanText);
@@ -197,8 +235,7 @@ function renderScanResult(data) {
 
 // A/B read as "no major passive findings", C as "worth a look", D/F as
 // "several notable findings" — reuses the existing safe/suspicious/high-risk
-// state-pill styling (styles.css) rather than inventing a parallel palette
-// just for grades.
+// state-pill styling (styles.css) rather than inventing a parallel palette.
 const GRADE_STATE = { A: "safe", B: "safe", C: "suspicious", D: "high-risk", F: "high-risk" };
 const SEVERITY_RANK = { high: 4, medium: 3, low: 2, info: 1 };
 
@@ -220,7 +257,7 @@ function renderSecurityReport(report) {
   els.securityFindingsEmpty.hidden = true;
 
   const sorted = [...report.findings].sort((a, b) => (SEVERITY_RANK[b.severity] || 0) - (SEVERITY_RANK[a.severity] || 0));
-  for (const finding of sorted) {
+  for (const finding of sorted.slice(0, POPUP_MAX_SECURITY_FINDINGS)) {
     const li = document.createElement("li");
     li.className = "signal-item";
     li.dataset.severity = finding.severity || "info";
@@ -243,15 +280,18 @@ function renderSecurityReport(report) {
   }
 }
 
+async function activeTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tab ?? null;
+}
+
 async function onSecurityReportClick() {
   els.securityReportBtn.disabled = true;
-  els.actionStatus.className = "status-msg";
-  els.actionStatus.textContent = "Running passive security report — checking headers, TLS, cookies, exposed paths…";
+  setStatus("Running passive security report — checking headers, TLS, cookies, exposed paths…");
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await activeTab();
   if (!tab) {
-    els.actionStatus.className = "status-msg error";
-    els.actionStatus.textContent = "No active tab to scan.";
+    setStatus("No active tab to scan.", "error");
     els.securityReportBtn.disabled = false;
     return;
   }
@@ -260,42 +300,42 @@ async function onSecurityReportClick() {
   els.securityReportBtn.disabled = false;
 
   if (!response?.ok) {
-    els.actionStatus.className = "status-msg error";
-    els.actionStatus.textContent = response?.error || "Security report failed.";
+    setStatus(describeFailure(response).message, "error");
     return;
   }
 
-  els.actionStatus.textContent = "";
+  setStatus("");
   renderSecurityReport(response.data.report);
+  lastReportId = response.data.reportId ?? null;
+  if (els.openReportBtn) {
+    els.openReportBtn.hidden = !lastReportId;
+    const extra = response.data.report.findings.length - POPUP_MAX_SECURITY_FINDINGS;
+    const label = els.openReportBtn.firstElementChild;
+    if (label) label.textContent = extra > 0 ? `Open full report (+${extra} more)` : "Open full report";
+  }
   renderRecent();
 }
 
-// A failed or empty extraction (see content.js) is a DIFFERENT fact from a
-// scan that ran and found nothing - it must never render as "Safe". This is
-// the only path that shows the scan-result section on a !response.ok scan;
-// renderScanResult() (the "Safe" / findings path) is never reachable from a
-// failure, by construction, not by a check someone could forget to add.
-function renderScanInconclusive(reasonText) {
+// A failed scan is a different fact from a scan that ran and found nothing,
+// so it must never read as "Safe" - but it also must not overwrite what the
+// automatic domain check already established (#1: a red "High risk" turned
+// grey). So a failure only ever touches the scan section and the status
+// line; the pill and headline keep describing the domain check.
+function renderScanFailure(response) {
+  const { message } = describeFailure(response);
   els.scanSection.hidden = false;
   els.scanResult.innerHTML = "";
-  const p = document.createElement("p");
-  p.className = "state-text";
-  p.textContent = reasonText || STATE_LABEL.inconclusive;
-  els.scanResult.appendChild(p);
-
-  setStatePill("inconclusive");
-  els.stateText.textContent = `${STATE_LABEL.inconclusive} (from full-page scan)`;
+  els.scanResult.appendChild(paragraph(`Scan incomplete. ${message}`));
+  setStatus(message, "error");
 }
 
 async function onScanClick() {
   els.scanBtn.disabled = true;
-  els.actionStatus.className = "status-msg";
-  els.actionStatus.textContent = "Scanning visible page text…";
+  setStatus("Scanning visible page text…");
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = await activeTab();
   if (!tab) {
-    els.actionStatus.className = "status-msg error";
-    els.actionStatus.textContent = "No active tab to scan.";
+    setStatus("No active tab to scan.", "error");
     els.scanBtn.disabled = false;
     return;
   }
@@ -304,33 +344,29 @@ async function onScanClick() {
   els.scanBtn.disabled = false;
 
   if (!response?.ok) {
-    els.actionStatus.className = "status-msg error";
-    els.actionStatus.textContent = response?.error || "Scan failed.";
-    renderScanInconclusive(response?.error);
+    renderScanFailure(response);
     return;
   }
 
-  els.actionStatus.textContent = "";
+  setStatus("");
   renderScanResult(response.data);
 }
 
 async function onReportClick() {
-  if (!currentHostname) return;
+  if (!isReportableHost(currentHostname)) return;
   els.reportBtn.disabled = true;
-  els.actionStatus.className = "status-msg";
-  els.actionStatus.textContent = `Reporting ${currentHostname}…`;
+  setStatus(`Reporting ${currentHostname}…`);
 
   const response = await chrome.runtime.sendMessage({ type: "REPORT_SENDER", sender: currentHostname });
   els.reportBtn.disabled = false;
 
   if (!response?.ok) {
-    els.actionStatus.className = "status-msg error";
-    els.actionStatus.textContent = response?.error || "Report failed.";
+    setStatus(describeFailure(response).message, "error");
     return;
   }
 
-  els.actionStatus.className = "status-msg success";
-  els.actionStatus.textContent = `Reported. ${currentHostname} has been reported ${response.data.reportCount} time(s).`;
+  const n = response.data.reportCount;
+  setStatus(`Reported. ${currentHostname} has now been reported ${n} time${n === 1 ? "" : "s"}. Thank you — reports help warn other people.`, "success");
 }
 
 async function renderRecent() {
@@ -370,6 +406,10 @@ function timeAgo(at) {
 els.scanBtn.addEventListener("click", onScanClick);
 els.reportBtn.addEventListener("click", onReportClick);
 els.securityReportBtn.addEventListener("click", onSecurityReportClick);
+els.openReportBtn?.addEventListener("click", () => {
+  if (!lastReportId) return;
+  chrome.tabs.create({ url: chrome.runtime.getURL(`report.html?id=${encodeURIComponent(lastReportId)}`) });
+});
 
 renderTabStatus();
 renderRecent();

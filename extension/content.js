@@ -17,14 +17,19 @@
 //      popup can ask it to show a dismissible warning banner once the
 //      analysis result comes back — see 14G in the project brief.
 //
-// Privacy: only document.body.innerText is read. innerText reflects
-// rendered text nodes only — it never includes <input>/<textarea> values,
-// password fields, or hidden-input values, so there is nothing to filter
-// out beyond the length cap. No HTML, no form data, no cookies, no page
-// scripts are ever read or sent anywhere by this file.
+// Privacy: only rendered, non-editable page text is read - see
+// rawVisibleText() below. Form fields, contenteditable regions (anything the
+// user may have typed), hidden elements and scripts are never read. No HTML,
+// no form data, no cookies, no page scripts are ever sent anywhere by this
+// file.
 
-const MAX_CHARS = 4000; // stays under the backend's 5000-char /api/analyze cap with headroom
-const BANNER_ID = "fraudlens-warning-banner";
+// Top-level declarations are `var`, never `const`/`let`/`class`: Chrome
+// injects this file into the SAME isolated world on every click, and a
+// second `const` declaration throws a SyntaxError before anything runs -
+// which is exactly how the second Security Report / Scan This Page on a
+// tab used to come back empty ("collector returned no result").
+var MAX_CHARS = 4000; // stays under the backend's 5000-char /api/analyze cap with headroom
+var BANNER_ID = "fraudlens-warning-banner";
 
 // Live repro (see bug report): on a page whose visible content (title,
 // description, a product-info table) is still being client-rendered at the
@@ -36,12 +41,80 @@ const BANNER_ID = "fraudlens-warning-banner";
 // rendering having actually finished). Below this length, poll a short,
 // bounded window rather than trusting the first read; a real empty page
 // still resolves in one read (the loop condition is false immediately).
-const MIN_EXPECTED_CHARS = 40;
-const MAX_EXTRACTION_WAIT_MS = 1200;
-const EXTRACTION_POLL_MS = 150;
+var MIN_EXPECTED_CHARS = 40;
+var MAX_EXTRACTION_WAIT_MS = 1200;
+var EXTRACTION_POLL_MS = 150;
+
+// ---- What counts as "page text" (privacy boundary, finding #28) ----
+//
+// body.innerText is NOT safe here: it includes whatever the user has typed
+// into a contenteditable region (an email being written, a chat box, a rich
+// text editor). So the text is collected by walking the DOM instead, and
+// these are never entered:
+//   - form controls (input, textarea, select, option) - their values are
+//     the user's data, not the page's
+//   - anything editable (element.isContentEditable covers contenteditable
+//     and every descendant of it)
+//   - non-rendered content (script/style/template/noscript, `hidden`,
+//     display:none, visibility:hidden)
+// Block-level elements and <br> become line breaks, so the backend still
+// sees the page's line structure the way innerText would have given it.
+// Open shadow roots are walked too (innerText skips them), so text inside
+// web components isn't missed.
+var SKIP_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT", "OPTION", "SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "IFRAME", "OBJECT", "EMBED", "SVG", "CANVAS"]);
+var INLINE_DISPLAYS = new Set(["inline", "inline-block", "inline-flex", "inline-grid", "contents", "ruby", "ruby-text"]);
+var MAX_WALK_CHARS = MAX_CHARS * 2; // stop walking huge pages early
+
+function isSkippedElement(el) {
+  if (SKIP_TAGS.has(String(el.tagName).toUpperCase())) return true;
+  // Our own warning banner from a previous scan is not page content.
+  if (el.id === BANNER_ID) return true;
+  if (el.isContentEditable) return true;
+  if (el.hidden) return true;
+  const style = typeof getComputedStyle === "function" ? getComputedStyle(el) : null;
+  return Boolean(style && (style.display === "none" || style.visibility === "hidden" || style.visibility === "collapse"));
+}
+
+function isBlock(el) {
+  const style = typeof getComputedStyle === "function" ? getComputedStyle(el) : null;
+  return !style || !INLINE_DISPLAYS.has(style.display);
+}
+
+function collectText(node, parts, budget) {
+  for (const child of node.childNodes ?? []) {
+    if (budget.used >= MAX_WALK_CHARS) return;
+    if (child.nodeType === 3) {
+      const text = String(child.nodeValue ?? "").replace(/\s+/g, " ");
+      if (text.trim()) {
+        parts.push(text);
+        budget.used += text.length;
+      }
+    } else if (child.nodeType === 1) {
+      if (String(child.tagName).toUpperCase() === "BR") {
+        parts.push("\n");
+        continue;
+      }
+      if (isSkippedElement(child)) continue;
+      const block = isBlock(child);
+      if (block) parts.push("\n");
+      if (child.shadowRoot) collectText(child.shadowRoot, parts, budget);
+      collectText(child, parts, budget);
+      if (block) parts.push("\n");
+    }
+  }
+}
 
 function rawVisibleText() {
-  return ((document.body && document.body.innerText) || "").trim();
+  if (!document.body) return "";
+  const parts = [];
+  collectText(document.body, parts, { used: 0 });
+  return parts
+    .join("")
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 }
 
 async function waitForRenderedText() {

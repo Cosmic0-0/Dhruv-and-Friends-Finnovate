@@ -1,28 +1,98 @@
 // Passive, server-side checks against a single already-fetched response
 // (headers/cookies/body) plus a handful of one-shot GETs to well-known paths
-// on the same host (exposed-artifacts/source-maps). Nothing here sends
-// crafted input, fuzzes, or brute-forces — see services/site-security/index.js
-// for how these are composed into one report.
+// on the same host (exposed-artifacts/source-maps/security.txt). Nothing
+// here sends crafted input, fuzzes, or brute-forces — see
+// services/site-security/index.js for how these are composed into one report.
+//
+// Header coverage: CSP (presence, report-only, and directive-level
+// weaknesses), clickjacking (frame-ancestors OR X-Frame-Options), HSTS,
+// X-Content-Type-Options, Referrer-Policy, Permissions-Policy, COOP, CORS as
+// volunteered to an Origin-less request, and software-version banners.
 
+/**
+ * Parses one Content-Security-Policy header value into Map<directive,
+ * sources[]>. Several policies can arrive comma-joined in one value (Headers
+ * .get() joins repeated headers with ", "); a browser enforces ALL of them,
+ * so for "is this weak?" questions the strictest policy that sets a
+ * directive wins - which, for the checks below, means "a directive counts as
+ * set if any policy sets it".
+ */
+export function parseCsp(value) {
+  const directives = new Map();
+  for (const policy of String(value || "").split(",")) {
+    for (const part of policy.split(";")) {
+      const [name, ...sources] = part.trim().split(/\s+/);
+      if (!name) continue;
+      const key = name.toLowerCase();
+      if (!directives.has(key)) directives.set(key, sources.map((s) => s.toLowerCase()));
+    }
+  }
+  return directives;
+}
+
+const SCHEME_ONLY_SOURCE = /^(?:https?|data|blob|filesystem):$/;
+const isWildcardSource = (s) => s === "*" || SCHEME_ONLY_SOURCE.test(s);
+const hasNonceOrHash = (sources) => sources.some((s) => /^'(?:nonce|sha256|sha384|sha512)-/.test(s));
+
+/** Directive-level CSP weaknesses. Only called when an enforcing CSP exists. */
+function cspWeaknesses(csp, evidence) {
+  const findings = [];
+  const push = (severity, title, description) => findings.push({ category: "headers", severity, title, description, evidence });
+
+  const scriptSrc = csp.get("script-src") ?? csp.get("default-src");
+  if (!scriptSrc) {
+    push("medium", "CSP does not restrict scripts", "The Content-Security-Policy sets neither script-src nor default-src, so it places no limit on where scripts can load from.");
+  } else {
+    // 'unsafe-inline' is ignored by CSP2+ browsers when a nonce/hash is also
+    // present, and 'strict-dynamic' makes host allowlists ignored - both are
+    // the modern, correct way to write a CSP, so neither is flagged then.
+    if (scriptSrc.includes("'unsafe-inline'") && !hasNonceOrHash(scriptSrc)) {
+      push("medium", "CSP allows inline scripts", "script-src includes 'unsafe-inline' without a nonce or hash, so an injected <script> block would still run.");
+    }
+    if (scriptSrc.includes("'unsafe-eval'")) {
+      push("medium", "CSP allows eval()", "script-src includes 'unsafe-eval', allowing strings to be executed as code (eval, new Function, string timers).");
+    }
+    if (!scriptSrc.includes("'strict-dynamic'") && scriptSrc.some(isWildcardSource)) {
+      push("medium", "CSP allows scripts from any host", `script-src includes "${scriptSrc.find(isWildcardSource)}", which permits scripts from essentially anywhere and defeats the policy's purpose.`);
+    }
+  }
+
+  const objectSrc = csp.get("object-src") ?? csp.get("default-src");
+  if (!objectSrc) {
+    push("low", "CSP does not restrict plugins (object-src)", "Neither object-src nor default-src is set, so legacy plugin content (<object>/<embed>) is unrestricted. object-src 'none' is the usual recommendation.");
+  }
+  // base-uri does NOT fall back to default-src.
+  if (!csp.has("base-uri")) {
+    push("low", "CSP does not set base-uri", "Without base-uri, an injected <base> tag can redirect every relative script URL on the page to an attacker's host.");
+  }
+  return findings;
+}
+
+function checkCsp(headers) {
+  const value = headers.get("content-security-policy");
+  if (!value) {
+    if (headers.get("content-security-policy-report-only")) {
+      return [{
+        category: "headers",
+        severity: "low",
+        title: "Content-Security-Policy is report-only",
+        description: "A Content-Security-Policy-Report-Only header is present but no enforcing policy is, so violations are logged but nothing is actually blocked.",
+      }];
+    }
+    return [{
+      category: "headers",
+      severity: "medium",
+      title: "Missing Content-Security-Policy",
+      description: "No Content-Security-Policy header — the browser has no restriction on what scripts, styles, or frames this page may load, which widens the blast radius of any injection bug.",
+    }];
+  }
+  return cspWeaknesses(parseCsp(value), value.slice(0, 200));
+}
+
+// Other headers, each checked independently. X-Frame-Options is NOT here:
+// it is judged together with CSP frame-ancestors in checkFraming(), since
+// either one alone is sufficient protection.
 const HEADER_CHECKS = [
-  {
-    header: "content-security-policy",
-    title: "Content-Security-Policy",
-    missingSeverity: "medium",
-    missingDescription:
-      "No Content-Security-Policy header — the browser has no restriction on what scripts, styles, or frames this page may load, which widens the blast radius of any injection bug.",
-    evaluate(value) {
-      const weak = value.match(/unsafe-inline|unsafe-eval|(?:^|[\s;])\*(?=[\s;]|$)/i);
-      if (weak) {
-        return {
-          severity: "medium",
-          title: "Weak Content-Security-Policy",
-          description: `The CSP includes "${weak[0].trim()}", which significantly weakens its protection against injected scripts.`,
-        };
-      }
-      return null;
-    },
-  },
   {
     header: "strict-transport-security",
     title: "Strict-Transport-Security (HSTS)",
@@ -36,17 +106,8 @@ const HEADER_CHECKS = [
         // 180 days — a common minimum recommendation; short-lived HSTS offers little protection.
         return { severity: "low", title: "Short HSTS max-age", description: `Strict-Transport-Security max-age is ${maxAge || 0} seconds, below the commonly recommended 180-day minimum.` };
       }
-      return null;
-    },
-  },
-  {
-    header: "x-frame-options",
-    title: "X-Frame-Options",
-    missingSeverity: "low",
-    missingDescription: "No X-Frame-Options header — the page can potentially be embedded in a frame on another site for clickjacking, unless CSP's frame-ancestors covers it instead.",
-    evaluate(value) {
-      if (!/^(deny|sameorigin)$/i.test(value.trim())) {
-        return { severity: "low", title: "Non-standard X-Frame-Options value", description: `X-Frame-Options is set to "${value}" rather than DENY or SAMEORIGIN.` };
+      if (!/includesubdomains/i.test(value)) {
+        return { severity: "info", title: "HSTS does not cover subdomains", description: "Strict-Transport-Security lacks includeSubDomains, so subdomains of this site can still be reached over plain HTTP." };
       }
       return null;
     },
@@ -81,10 +142,16 @@ const HEADER_CHECKS = [
     missingSeverity: "info",
     missingDescription: "No Permissions-Policy header — powerful browser features (camera, microphone, geolocation, etc.) are not explicitly restricted for this page or any framed content.",
   },
+  {
+    header: "cross-origin-opener-policy",
+    title: "Cross-Origin-Opener-Policy",
+    missingSeverity: "info",
+    missingDescription: "No Cross-Origin-Opener-Policy header — a page this site opens (or that opens it) can keep a handle to its window, which enables some cross-window attacks such as tabnabbing and XS-Leaks.",
+  },
 ];
 
 export function checkSecurityHeaders(headers, protocol) {
-  const findings = [];
+  const findings = [...checkCsp(headers)];
   for (const check of HEADER_CHECKS) {
     if (check.httpsOnly && protocol !== "https:") continue;
     const value = headers.get(check.header);
@@ -96,6 +163,102 @@ export function checkSecurityHeaders(headers, protocol) {
     if (weak) findings.push({ category: "headers", ...weak, evidence: value.slice(0, 200) });
   }
   return findings;
+}
+
+/**
+ * Clickjacking protection. Either CSP frame-ancestors (modern, takes
+ * precedence in browsers that support it) or X-Frame-Options DENY/
+ * SAMEORIGIN is sufficient on its own - only a page with neither, or with a
+ * permissive value, is flagged.
+ */
+export function checkFraming(headers) {
+  const finding = (severity, title, description, evidence) => [{ category: "framing", severity, title, description, ...(evidence ? { evidence } : {}) }];
+  const csp = headers.get("content-security-policy");
+  const frameAncestors = csp ? parseCsp(csp).get("frame-ancestors") : undefined;
+  if (frameAncestors) {
+    const open = frameAncestors.find(isWildcardSource);
+    if (open) {
+      return finding("medium", "CSP frame-ancestors allows framing from any site", `frame-ancestors includes "${open}", so any site can embed this page in a frame for clickjacking.`, `frame-ancestors ${frameAncestors.join(" ")}`);
+    }
+    return [];
+  }
+
+  const xfo = headers.get("x-frame-options");
+  if (!xfo) {
+    return finding("medium", "Page can be framed by any site", "Neither CSP frame-ancestors nor X-Frame-Options is set, so another site can load this page invisibly inside a frame and trick visitors into clicking on it (clickjacking).");
+  }
+  const value = xfo.trim();
+  if (/^(deny|sameorigin)$/i.test(value)) return [];
+  if (/^allow-from/i.test(value)) {
+    return finding("medium", "X-Frame-Options ALLOW-FROM is ignored", "ALLOW-FROM is not supported by modern browsers, which treat it as if no X-Frame-Options header were set. Use CSP frame-ancestors instead.", value);
+  }
+  return finding("low", "Non-standard X-Frame-Options value", `X-Frame-Options is set to "${value}" rather than DENY or SAMEORIGIN.`, value);
+}
+
+/**
+ * CORS, from the headers of the plain GET already made. No Origin header is
+ * sent (that would be probing), so origin reflection can't be detected here -
+ * only what the server volunteers to every caller.
+ */
+export function checkCors(headers) {
+  const acao = headers.get("access-control-allow-origin")?.trim();
+  if (!acao) return [];
+  const credentials = headers.get("access-control-allow-credentials")?.trim().toLowerCase() === "true";
+  const base = { category: "cors", evidence: `Access-Control-Allow-Origin: ${acao}${credentials ? "; Allow-Credentials: true" : ""}` };
+  if (acao === "null") {
+    return [{ ...base, severity: "medium", title: 'CORS trusts the "null" origin', description: 'Access-Control-Allow-Origin is "null", which sandboxed iframes and local files can present - effectively trusting any attacker who can create one.' }];
+  }
+  if (acao === "*" && credentials) {
+    return [{ ...base, severity: "medium", title: "Contradictory CORS configuration", description: "The response allows any origin (*) and also allows credentials. Browsers refuse this combination, but it signals a CORS policy that may be reflecting origins elsewhere." }];
+  }
+  if (acao === "*") {
+    return [{ ...base, severity: "info", title: "Response readable by any origin", description: "Access-Control-Allow-Origin is *, so any website can read this response with JavaScript. Fine for public content; a problem if the response ever contains user-specific data." }];
+  }
+  return [];
+}
+
+const DISCLOSURE_HEADERS = ["server", "x-powered-by", "x-aspnet-version", "x-aspnetmvc-version", "x-generator"];
+
+/** Software/version banners volunteered in response headers. One finding for all of them. */
+export function checkDisclosure(headers) {
+  const leaked = [];
+  for (const name of DISCLOSURE_HEADERS) {
+    const value = headers.get(name)?.trim();
+    if (!value) continue;
+    // A bare "Server: nginx" / "Server: cloudflare" names the product but no
+    // version - common and harmless. Only versions (digits) or the
+    // framework-specific banners count.
+    if (name === "server" && !/\d/.test(value)) continue;
+    leaked.push(`${name}: ${value.slice(0, 80)}`);
+  }
+  if (leaked.length === 0) return [];
+  return [{
+    category: "disclosure",
+    severity: "low",
+    title: "Server software version disclosed",
+    description: "Response headers announce the server software and version, which lets an attacker look up known vulnerabilities for that exact version without probing.",
+    evidence: leaked.join("; "),
+  }];
+}
+
+/**
+ * RFC 9116 security.txt - one GET of a fixed, standard path. Its absence is
+ * informational: it only means there's no published way to report a
+ * vulnerability to this site.
+ */
+export async function checkSecurityTxt(baseUrl, fetchOnce) {
+  try {
+    const result = await fetchOnce(new URL("/.well-known/security.txt", baseUrl).href, { maxRedirects: 1 });
+    if (result.status === 200 && /^contact:/im.test(result.body || "")) return [];
+  } catch {
+    // Unreachable is the same answer as a 404 here.
+  }
+  return [{
+    category: "policy",
+    severity: "info",
+    title: "No security.txt",
+    description: "No /.well-known/security.txt with a Contact field was found, so there is no published way to report a security problem to this site's owner.",
+  }];
 }
 
 function parseSetCookie(raw) {
@@ -198,21 +361,23 @@ const ARTIFACT_CHECKS = [
   },
 ];
 
+// The probes run in parallel: with no time limit, a slow site (5-6s per
+// request) would otherwise make the report wait for each one in turn.
 export async function checkExposedArtifacts(baseUrl, fetchOnce) {
-  const findings = [];
-  for (const check of ARTIFACT_CHECKS) {
-    try {
-      const target = new URL(check.path, baseUrl).href;
-      const result = await fetchOnce(target, { maxRedirects: 1, timeoutMs: 4000 });
-      const contentType = result.headers.get("content-type");
-      if (check.isPositive(result.status, result.body, contentType)) {
-        findings.push({ category: "exposed-artifacts", severity: check.severity, title: check.title, description: check.description, evidence: `/${check.path}` });
+  const results = await Promise.all(
+    ARTIFACT_CHECKS.map(async (check) => {
+      try {
+        const result = await fetchOnce(new URL(check.path, baseUrl).href, { maxRedirects: 1 });
+        const contentType = result.headers.get("content-type");
+        return check.isPositive(result.status, result.body, contentType)
+          ? { category: "exposed-artifacts", severity: check.severity, title: check.title, description: check.description, evidence: `/${check.path}` }
+          : null;
+      } catch {
+        return null; // Unreachable/blocked path is not itself a finding — same as a 404.
       }
-    } catch {
-      // Unreachable/blocked path is not itself a finding — same as a 404.
-    }
-  }
-  return findings;
+    })
+  );
+  return results.filter(Boolean);
 }
 
 const SCRIPT_SRC_RE = /<script[^>]+src=["']([^"']+)["']/gi;
@@ -237,7 +402,7 @@ export async function checkSourceMaps(baseUrl, html, fetchOnce) {
 
     try {
       const mapUrl = `${src.href}.map`;
-      const result = await fetchOnce(mapUrl, { maxRedirects: 1, timeoutMs: 4000 });
+      const result = await fetchOnce(mapUrl, { maxRedirects: 1 });
       const contentType = result.headers.get("content-type") || "";
       const looksLikeSourceMap = result.status === 200 && (/json/i.test(contentType) || /"mappings"\s*:/.test(result.body));
       if (looksLikeSourceMap) {
@@ -293,7 +458,7 @@ export function scanForErrorSignatures(body) {
   return findings;
 }
 
-const SEVERITY_DEDUCTION = { high: 25, medium: 10, low: 4, info: 0 };
+export const SEVERITY_DEDUCTION = { high: 25, medium: 10, low: 4, info: 0 };
 const GRADE_THRESHOLDS = [
   [90, "A"],
   [75, "B"],
@@ -301,10 +466,42 @@ const GRADE_THRESHOLDS = [
   [40, "D"],
 ];
 
+// Scoring model. A flat "-N per finding" over-punishes repetition: four
+// cookies each missing SameSite is one configuration mistake, not four, and
+// one noisy area shouldn't be able to zero the whole grade by itself. So:
+//   - findings of the same KIND (same category + title, ignoring quoted
+//     names and numbers) count in full once, then REPEAT_WEIGHT each;
+//   - each category's total is capped at CATEGORY_CAP points.
+// Distinct problems in one category (missing CSP AND missing HSTS) still
+// each count in full, up to the cap.
+const REPEAT_WEIGHT = 0.25;
+export const CATEGORY_CAP = 35;
+
+const kindOf = (f) => `${f.category}|${String(f.title || "").replace(/"[^"]*"/g, '""').replace(/\d+/g, "#")}`;
+
+/** @returns {Map<string, number>} points actually lost per category, after repeat weighting and the cap */
+export function pointsLostByCategory(findings) {
+  const kinds = new Map(); // kind -> { category, deductions[] }
+  for (const f of findings) {
+    const d = SEVERITY_DEDUCTION[f.severity] ?? 0;
+    if (d <= 0) continue;
+    const key = kindOf(f);
+    if (!kinds.has(key)) kinds.set(key, { category: f.category, deductions: [] });
+    kinds.get(key).deductions.push(d);
+  }
+  const raw = new Map();
+  for (const { category, deductions } of kinds.values()) {
+    const sorted = [...deductions].sort((a, b) => b - a);
+    const kindTotal = sorted.reduce((sum, d, i) => sum + (i === 0 ? d : d * REPEAT_WEIGHT), 0);
+    raw.set(category, (raw.get(category) ?? 0) + kindTotal);
+  }
+  return new Map([...raw].map(([category, pts]) => [category, Math.min(CATEGORY_CAP, Math.round(pts))]));
+}
+
 export function computeGrade(findings) {
-  let score = 100;
-  for (const finding of findings) score -= SEVERITY_DEDUCTION[finding.severity] ?? 0;
-  score = Math.max(0, score);
+  let lost = 0;
+  for (const pts of pointsLostByCategory(findings).values()) lost += pts;
+  const score = Math.max(0, 100 - lost);
   for (const [min, grade] of GRADE_THRESHOLDS) {
     if (score >= min) return { grade, score };
   }

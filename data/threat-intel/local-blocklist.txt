@@ -1,0 +1,12 @@
+# FraudLens local phishing blocklist - entries the team adds by hand.
+#
+# One URL or hostname per line. A bare hostname blocks the whole domain; a
+# URL with a path blocks that path (and anything under it). On shared hosts
+# (docs.google.com, *.github.io, *.weebly.com ...) only URLs with a path are
+# honoured - see backend/src/services/threat-intel/index.js.
+#
+# Only add something you have evidence for (a real reported scam), and note
+# where the evidence is. Official institution domains are ignored here.
+#
+# Example (commented out):
+# mcb-secure-verify.top   # QA test domain, data/test-payloads

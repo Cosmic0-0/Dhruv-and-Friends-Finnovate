@@ -5,7 +5,8 @@
 // page content itself, only the already-computed backend response.
 
 import { FRONTEND_ORIGIN, MAX_HANDOFF_CHARS } from "./config.js";
-import { stateFromAnalyze, stateFromCheckUrl, STATE_LABEL } from "./state.js";
+import { stateFromAnalyze, stateFromCheckUrl, STATE_LABEL, describeFailure } from "./state.js";
+import { claimedIdentityLine } from "./policy.js";
 
 const els = {
   inputLabel: document.getElementById("input-label"),
@@ -47,12 +48,10 @@ function renderSignals(signals) {
   }
 }
 
+// The web app pre-fills its check screen from ?scan= (see popup.js).
 function updateOpenLink(scanText) {
   const url = new URL(FRONTEND_ORIGIN + "/");
-  if (scanText) {
-    // See popup.js's updateOpenLink for the same documented handoff limitation.
-    url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
-  }
+  if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
   els.openLink.href = url.toString();
 }
 
@@ -70,9 +69,23 @@ async function render() {
 
   els.inputLabel.textContent = entry.inputLabel || "—";
 
+  // #27: background.js opens this window before the answer arrives, so
+  // there is always something on screen straight away.
+  if (entry.pending) {
+    setStatePill("neutral");
+    els.statePillText.textContent = "Checking…";
+    els.stateText.textContent = entry.type === "check-url" ? "Checking this link with FraudLens…" : "Analysing the selected text with FraudLens…";
+    els.signalsList.innerHTML = "";
+    els.signalsEmpty.hidden = true;
+    updateOpenLink("");
+    return;
+  }
+
+  // #27: say what actually happened - a rate limit is not an outage.
   if (entry.error) {
-    setStatePill("unreachable");
-    els.stateText.textContent = `Backend unreachable: ${entry.error}`;
+    const { state, message } = describeFailure(entry);
+    setStatePill(state);
+    els.stateText.textContent = message;
     renderSignals([]);
     updateOpenLink("");
     return;
@@ -83,7 +96,8 @@ async function render() {
     setStatePill(state);
     const parts = [STATE_LABEL[state]];
     if (entry.result?.verdict) parts.unshift(`Verdict: ${entry.result.verdict.toUpperCase()}.`);
-    if (entry.result?.sender) parts.push(`Claimed identity: ${entry.result.sender}.`);
+    const identity = claimedIdentityLine(entry.result);
+    if (identity) parts.push(identity);
     els.stateText.textContent = parts.join(" ");
     renderSignals(entry.result?.signals);
     updateOpenLink(entry.handoffText || "");
@@ -100,3 +114,8 @@ async function render() {
 }
 
 render();
+
+// Re-render when background.js replaces the pending entry with the answer.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && changes["fraudlens.contextResult"]) render();
+});
