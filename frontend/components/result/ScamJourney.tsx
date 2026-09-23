@@ -11,7 +11,7 @@ export default function ScamJourney({ response, copy }: { response: Pick<Analyze
     <section className="border-t border-card-border px-5 py-6" aria-label={c.title}>
       <div className="mb-5 flex items-center justify-between gap-3">
         <h2 className="micro text-ink-soft">{c.title}</h2>
-        <span className="font-mono text-xs text-ink-muted">{String(SCAM_STAGES.indexOf(journey.currentStage) + 1).padStart(2, "0")} / 09</span>
+        <span className="data text-[0.8125rem] text-ink-muted">{String(SCAM_STAGES.indexOf(journey.currentStage) + 1).padStart(2, "0")} / 09</span>
       </div>
       <ol className="relative ml-2 border-l border-card-border">
         {SCAM_STAGES.map((stage) => {
@@ -20,7 +20,7 @@ export default function ScamJourney({ response, copy }: { response: Pick<Analyze
             <span aria-hidden="true" className={`absolute -left-[4.5px] top-[15px] size-2 ${current ? "bg-accent-deep ring-4 ring-accent-soft" : "border border-line-strong bg-card"}`} />
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <span className={`text-sm ${current ? "font-semibold" : ""}`}>{c.labels[stage]}</span>
-              {current && <span className="bg-accent-soft px-2 py-1 text-[10px] font-semibold uppercase tracking-wider">{c.youAreHere}</span>}
+              {current && <span className="bg-accent-soft px-2 py-1 micro-sm font-semibold">{c.youAreHere}</span>}
             </div>
           </li>;
         })}

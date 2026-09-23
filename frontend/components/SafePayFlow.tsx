@@ -197,7 +197,7 @@ export default function SafePayFlow() {
         <button
           type="button"
           onClick={checkAnother}
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
+          className="pill pressable  hover:bg-surface-dark-2"
         >
           {c.checkAnother}
         </button>
@@ -234,7 +234,7 @@ export default function SafePayFlow() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className={`pressable font-heading relative flex min-h-14 items-center justify-center overflow-hidden bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+          className={`pill pressable relative  ${
             loading ? "cursor-progress" : "hover:bg-surface-dark-2"
           }`}
         >

@@ -134,11 +134,13 @@ export interface Copy {
   trends: {
     title: string;
     intro: string;
+    /** Heading for the static reference list of local scam formats. */
+    knownFormats: string;
     categories: { title: string; body: string; example: string }[];
     footerNote: string;
     /**
      * Real aggregate counts from GET /api/trends (components/TrendsContent.tsx)
-     * — genuine usage, never seeded/fabricated numbers (root CLAUDE.md's "no
+     *, genuine usage, never seeded/fabricated numbers (root CLAUDE.md's "no
      * fake live statistics" rule), so there is no "demonstration dataset"
      * label here the way a seeded version of this page would need.
      */
@@ -162,7 +164,7 @@ export interface Copy {
     /**
      * The reveal checklist shown right after a response arrives (see
      * lib/result.ts's revealSteps + components/InvestigationReveal.tsx).
-     * Every line is built from a field actually present on that response —
+     * Every line is built from a field actually present on that response -
      * never shown for data the backend didn't return.
      */
     investigate: {
@@ -220,7 +222,7 @@ export interface Copy {
       unverified: string;
       caveat: string;
     };
-    /** "Why FraudLens flagged this" — signals grouped by their `source`, plus community intelligence. */
+    /** "Why FraudLens flagged this", signals grouped by their `source`, plus community intelligence. */
     evidence: {
       title: string;
       aiTitle: string;
@@ -268,7 +270,7 @@ export interface Copy {
     sentBody: string;
     /** "What was sent" explanation when the text came from a screenshot (the image itself also left the device). */
     sentBodyScreenshot: string;
-    /** Which AI (if any) served the semantic analysis — local self-hosted model, hosted fallback, or none. */
+    /** Which AI (if any) served the semantic analysis, local self-hosted model, hosted fallback, or none. */
     aiSource: {
       label: string;
       local: string;
@@ -284,7 +286,7 @@ export interface Copy {
    * Fraud Replay (components/FraudReplay.tsx, app/replay/page.tsx): the same
    * stored analysis result as the result screen, retold as a chronological
    * story instead of a stacked report. Reuses result.* copy wherever a
-   * concept is shared (identity, journey, campaign match) — this only adds
+   * concept is shared (identity, journey, campaign match), this only adds
    * the narrative framing and the per-signal "why this works" line.
    */
   replay: {
@@ -299,12 +301,12 @@ export interface Copy {
     stepPattern: string;
     patternMatched: (reports: number, senders: number, domains: number) => string;
     stepStop: string;
-    /** One line of general scam psychology per signal kind — never a claim about this specific sender. */
+    /** One line of general scam psychology per signal kind, never a claim about this specific sender. */
     belief: Record<SignalKind, string>;
   };
   /**
    * Simple mode (components/SimpleMode.tsx): an action-first, plain-language
-   * replacement for the detailed result — short sentences, no jargon, one
+   * replacement for the detailed result, short sentences, no jargon, one
    * decision at a time. Toggled from the result screen, remembered across
    * visits (lib/storage.ts's loadSimpleMode/saveSimpleMode).
    */
@@ -388,7 +390,7 @@ export interface Copy {
     /** Dev-only controls (visible in `next dev` only). */
     dev: { title: string; reset: string; seed: string };
   };
-  /** "Before you pay" — a separate entry point from the Check screen, for a payment request rather than a message to analyse. */
+  /** "Before you pay", a separate entry point from the Check screen, for a payment request rather than a message to analyse. */
   safepay: {
     title: string;
     intro: string;
@@ -538,7 +540,7 @@ const INVESTIGATE_EN: Copy["result"]["investigate"] = {
   communityNew: "Not reported before",
   communityFlagged: (n) => (n === 1 ? "Reported by another user before" : `Reported by ${n} other users before`),
   stageIdentified: (stage) => `Scam stage identified: ${stage}`,
-  campaignNew: "New pattern — no matching campaign yet",
+  campaignNew: "New pattern: no matching campaign yet",
   campaignMatched: "Matches a known scam campaign",
 };
 
@@ -659,7 +661,7 @@ const RESULT_EN: Copy["result"] = {
     label: "Analyzed by",
     local: "Local AI model (self-hosted, on-device)",
     fallback: "Cloud fallback AI ({provider})",
-    unavailable: "AI unavailable — deterministic checks only",
+    unavailable: "AI unavailable: deterministic checks only",
   },
   checkAnother: "Check another message",
   missingTitle: "No check to show",
@@ -719,7 +721,7 @@ const IMAGE_PRIVACY_EN =
   "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
 
 /** Stage 3 (40s+) is shown once and stays: honest, calm, no repeated apology. */
-const STILL_WORKING_EN = "Still working — this can take a couple of minutes on our current setup.";
+const STILL_WORKING_EN = "Still working, this can take a couple of minutes on our current setup.";
 
 const WAIT_EN: Copy["wait"] = {
   check: ["Checking the message…", "Looking for warning signs…", "The AI is reading closely…", STILL_WORKING_EN],
@@ -758,7 +760,7 @@ const HOME_EN: Copy["home"] = {
     "FraudLens doesn't just say a message looks suspicious. It shows you exactly why, in plain language, before you pay, click or share a code.",
   bullets: [
     "See exactly which words and links triggered a warning.",
-    "Works in English, French and Kreol — even mixed together.",
+    "Works in English, French and Kreol, even mixed together.",
     "Checks any link against real Mauritius bank and telecom domains.",
     "Check a message, a screenshot, or a payment you're about to make.",
   ],
@@ -901,6 +903,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     trends: {
       title: "Known scam patterns in Mauritius",
+      knownFormats: "Known formats",
       intro:
         "The scam formats reported often enough in Mauritius to be worth knowing by sight, plus what FraudLens has actually seen reported below.",
       categories: [
@@ -921,7 +924,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        "The list above is a reference, not a live feed. The numbers below are FraudLens's actual usage — real checks and reports, not a demonstration dataset.",
+        "The list above is a reference, not a live feed. The numbers here are FraudLens's actual usage, real checks and reports, not a demonstration dataset.",
       live: {
         heading: "What FraudLens has actually seen",
         reportedSenders: (n) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
@@ -930,7 +933,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Most-observed patterns",
         reports: (n) => (n === 1 ? "1 report" : `${n} reports`),
         messages: (n) => (n === 1 ? "1 check" : `${n} checks`),
-        empty: "Not enough activity yet — check a message to be the first.",
+        empty: "Not enough activity yet: check a message to be the first.",
         loading: "Loading…",
         error: "Couldn't load this right now.",
       },
@@ -955,7 +958,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         "FraudLens ne se contente pas de dire qu'un message semble suspect. Il vous montre exactement pourquoi, en langage clair, avant que vous ne payiez, cliquiez ou partagiez un code.",
       bullets: [
         "Voyez exactement quels mots et liens ont déclenché une alerte.",
-        "Fonctionne en anglais, français et kreol — même mélangés.",
+        "Fonctionne en anglais, français et kreol, même mélangés.",
         "Vérifie tout lien face aux vrais domaines des banques et opérateurs mauriciens.",
         "Vérifiez un message, une capture d'écran, ou un paiement que vous vous apprêtez à faire.",
       ],
@@ -970,14 +973,14 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Vérification du message…",
         "Recherche des signaux d'alerte…",
         "L'IA lit attentivement…",
-        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+        "Toujours en cours, cela peut prendre quelques minutes avec notre configuration actuelle.",
       ],
       checkShort: ["Vérification…", "Recherche…", "Lecture attentive…", "Toujours en cours…"],
       screenshot: [
         "Lecture de la capture…",
         "Extraction du texte…",
         "Lecture attentive du texte…",
-        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+        "Toujours en cours, cela peut prendre quelques minutes avec notre configuration actuelle.",
       ],
       progressLabel: "Progression",
       cancel: "Annuler",
@@ -1093,6 +1096,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     trends: {
       title: "Arnaques connues à Maurice",
+      knownFormats: "Formats connus",
       intro:
         "Les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil, ainsi que ce que FraudLens a réellement vu signalé ci-dessous.",
       categories: [
@@ -1113,7 +1117,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        "La liste ci-dessus est une référence, pas un flux en direct. Les chiffres ci-dessous sont l'usage réel de FraudLens — de vraies vérifications et signalements, pas un jeu de données de démonstration.",
+        "La liste ci-dessus est une référence, pas un flux en direct. Les chiffres ci-dessous sont l'usage réel de FraudLens, de vraies vérifications et signalements, pas un jeu de données de démonstration.",
       live: {
         heading: "Ce que FraudLens a réellement observé",
         reportedSenders: (n) => (n === 1 ? "1 expéditeur signalé" : `${n} expéditeurs signalés`),
@@ -1122,7 +1126,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Schémas les plus observés",
         reports: (n) => (n === 1 ? "1 signalement" : `${n} signalements`),
         messages: (n) => (n === 1 ? "1 vérification" : `${n} vérifications`),
-        empty: "Pas encore assez d'activité — vérifiez un message pour être le premier.",
+        empty: "Pas encore assez d'activité, vérifiez un message pour être le premier.",
         loading: "Chargement…",
         error: "Impossible de charger ceci pour le moment.",
       },
@@ -1141,7 +1145,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         communityNew: "Jamais signalé auparavant",
         communityFlagged: (n) => (n === 1 ? "Déjà signalé par un autre utilisateur" : `Déjà signalé par ${n} autres utilisateurs`),
         stageIdentified: (stage) => `Étape de l'arnaque identifiée : ${stage}`,
-        campaignNew: "Nouveau schéma — aucune campagne correspondante pour l'instant",
+        campaignNew: "Nouveau schéma, aucune campagne correspondante pour l'instant",
         campaignMatched: "Correspond à une campagne d'arnaque connue",
       },
       networkLink: "Voir le réseau de fraude",
@@ -1260,7 +1264,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analysé par",
         local: "Modèle IA local (auto-hébergé, sur l'appareil)",
         fallback: "IA de secours dans le cloud ({provider})",
-        unavailable: "IA indisponible — vérifications déterministes uniquement",
+        unavailable: "IA indisponible, vérifications déterministes uniquement",
       },
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
@@ -1420,7 +1424,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     submit: "Verifie sa mesaz la",
     // Stage 0 reuses the reviewed "Pe verifie…" / "Pe lir text la…"; the rest is new and unreviewed.
     wait: {
-      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel."],
+      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel."],
       checkShort: [
         "Pe verifie…",
         "Pe rod siny…",
@@ -1431,7 +1435,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Pe lir text la…",
         "Pe tir text la…",
         "Pe lir text la bien…",
-        "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel.",
+        "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel.",
       ],
       progressLabel: "Progre",
       cancel: "Anile",
@@ -1553,8 +1557,9 @@ export const COPY: Record<UiLanguage, Copy> = {
     }),
     trends: {
       title: "Bann eskrokri konplet dan Moris",
+      knownFormats: TODO_KREOL("Known formats"),
       intro:
-        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel — se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
+        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel, se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
       categories: [
         {
           title: "SMS ki imit enn labank",
@@ -1582,7 +1587,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Most-observed patterns",
         reports: (n: number) => (n === 1 ? "1 report" : `${n} reports`),
         messages: (n: number) => (n === 1 ? "1 check" : `${n} checks`),
-        empty: "Not enough activity yet — check a message to be the first.",
+        empty: "Not enough activity yet: check a message to be the first.",
         loading: "Loading…",
         error: "Couldn't load this right now.",
       }),
@@ -1690,7 +1695,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analize par",
         local: "Model AI lokal (self-hosted, lor aparey)",
         fallback: "AI backup lor cloud ({provider})",
-        unavailable: "AI pa disponib — zis verifikasion deterministik",
+        unavailable: "AI pa disponib, zis verifikasion deterministik",
       },
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",

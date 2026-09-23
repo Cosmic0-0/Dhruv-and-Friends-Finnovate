@@ -198,7 +198,7 @@ export function ScreenshotRow({
   return (
     <div className="flex flex-col gap-3 px-4 py-3">
       <div className="flex items-center gap-3">
-        <div className="relative size-16 shrink-0 overflow-hidden border border-card-border bg-muted-surface">
+        <div className="relative size-16 shrink-0 overflow-hidden rounded-2xl bg-muted-surface">
           {previewUrl && (
             // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
             <img src={previewUrl} alt={copy.shot.alt} className="size-full object-cover object-top" />
@@ -236,7 +236,7 @@ export function ScreenshotRow({
               <button
                 type="button"
                 onClick={onRetry}
-                className="pressable micro flex min-h-10 items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
+                className="pill-sm pressable bg-primary text-on-primary"
               >
                 <RetryIcon className="size-3.5" strokeWidth={2} />
                 {copy.retry}

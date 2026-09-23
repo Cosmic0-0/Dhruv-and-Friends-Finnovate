@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import ScreenTitle from "./ScreenTitle";
 import { batchScan, type ApiError, type ClientBatchResult } from "@/lib/api";
 import { intelligenceCopy } from "@/lib/intelligence-copy";
 import { humanizeType, signalKind, sortSignals } from "@/lib/result";
@@ -75,17 +76,12 @@ export default function BatchScan() {
   const filtered = results && filter ? results.filter((r) => r.scamDna?.fingerprintId === filter) : results;
 
   return (
-    <div className="gutter space-y-7 py-8">
-      <Link href="/" className="micro text-accent-ink hover:underline">
-        {t("← Message check")}
-      </Link>
-      <header className="border-b border-card-border pb-6">
-        <p className="micro mb-3 text-accent-ink">{t("Batch investigation")}</p>
-        <h1>{t("Scan several messages at once.")}</h1>
-        <p className="mt-3 max-w-xl leading-relaxed text-ink-soft">
-          {t("Paste each message separately, with a blank line between them — up to 50 at a time.")}
+    <>
+      <ScreenTitle title={t("Batch scan")} back={{ href: "/", label: copy.tabs.check }} />
+      <div className="gutter flex flex-col gap-4 pt-4">
+        <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">
+          {t("Paste each message separately, with a blank line between them, up to 50 at a time.")}
         </p>
-      </header>
 
       <div className="sheet flex flex-col">
         <label htmlFor="batch-messages" className="micro px-4 pt-3 text-ink-muted">
@@ -111,7 +107,7 @@ export default function BatchScan() {
           type="button"
           onClick={() => void submit()}
           disabled={!canSubmit}
-          className="pressable font-heading flex min-h-14 items-center justify-center gap-3 bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+          className="pill pressable bg-primary text-on-primary disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
         >
           {status === "loading" && <span className="size-4 animate-spin rounded-full border-2 border-on-ink/30 border-t-on-ink" />}
           {status === "loading" ? t("Scanning…") : t("Scan messages")}
@@ -126,7 +122,7 @@ export default function BatchScan() {
 
       {summary && (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-px border border-card-border bg-card-border sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px sheet-border sm:grid-cols-4">
             {[
               [summary.total, t("Messages")],
               [summary.safeCount, t("Safe")],
@@ -148,7 +144,7 @@ export default function BatchScan() {
           {campaigns.length > 0 && (
             <div>
               <h2 className="micro mb-3 text-ink-muted">{t("Possible campaigns")}</h2>
-              <ul className="flex flex-col gap-px border border-card-border bg-card-border sm:grid sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="flex flex-col gap-px sheet-border sm:grid sm:grid-cols-2 lg:grid-cols-3">
                 {campaigns.map((c) => (
                   <li key={c.fingerprintId} className="bg-card p-5">
                     <button
@@ -161,13 +157,13 @@ export default function BatchScan() {
                       <p className="micro mt-2 text-ink-muted">
                         {c.count} {t(c.count === 1 ? "message" : "messages")} · {c.senders.size} {t(c.senders.size === 1 ? "sender" : "senders")} · {c.domains.size} {t(c.domains.size === 1 ? "domain" : "domains")}
                       </p>
-                      <span className="mt-3 inline-block text-sm font-medium text-accent-ink underline underline-offset-4">
+                      <span className="mt-3 inline-block text-sm font-medium text-ink underline underline-offset-4">
                         {filter === c.fingerprintId ? t("Clear filter") : t("Filter to this campaign")}
                       </span>
                     </button>
                     <Link
                       href={`/network/${encodeURIComponent(c.fingerprintId)}`}
-                      className="pressable mt-3 block text-sm font-medium text-accent-ink underline underline-offset-4"
+                      className="pressable mt-3 block text-sm font-medium text-ink underline underline-offset-4"
                     >
                       {copy.result.networkLink}
                     </Link>
@@ -189,7 +185,8 @@ export default function BatchScan() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
