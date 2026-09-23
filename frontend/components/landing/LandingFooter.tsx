@@ -7,7 +7,7 @@ export default function LandingFooter() {
     <footer className="landing-footer">
       <div className="landing-footer-bg" aria-hidden="true" />
       <div className="landing-footer-inner">
-        <div className="landing-footer-brand">
+        <Link href="/" aria-label="FraudLens home" className="landing-footer-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/dhruv-and-friends.png" alt={`${TEAM_NAME} logo`} width={72} height={72} className="landing-footer-logo" />
           <div>
@@ -16,7 +16,7 @@ export default function LandingFooter() {
               by {TEAM_NAME} · {HACKATHON}
             </p>
           </div>
-        </div>
+        </Link>
 
         <nav className="landing-footer-links" aria-label="Project">
           <Link href="/app">Web app</Link>

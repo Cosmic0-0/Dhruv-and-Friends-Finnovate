@@ -43,7 +43,7 @@ export default function SideNav() {
       className="verification-sidenav sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 border-r border-card-border bg-card px-4 py-8 lg:flex"
       style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
     >
-      <div className="flex items-center gap-2.5 px-3">
+      <Link href="/" aria-label="FraudLens home" className="flex items-center gap-2.5 px-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/brand/dhruv-and-friends.png"
@@ -53,7 +53,7 @@ export default function SideNav() {
           className="size-10 shrink-0 rounded-full bg-white"
         />
         <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
-      </div>
+      </Link>
 
       <Link href={NEW_CHECK_HREF} className="btn pressable mx-1 px-4 text-[0.9375rem] bg-primary text-on-primary">
         <PlusIcon className="size-[19px]" />
