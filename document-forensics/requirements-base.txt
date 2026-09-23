@@ -1,0 +1,23 @@
+# Base service only - the FastAPI app, the orchestrator, and stage 1/2
+# (metadata/PDF forensics, ELA). None of this needs PyTorch.
+#
+# Stage 3 (TruFor) and stage 4 (layout comparison) have their own
+# requirements files - requirements-trufor.txt, requirements-layout.txt -
+# kept separate on purpose: running the cheap checks (and most requests,
+# since the expensive ones only run when the cheap ones are inconclusive)
+# should never force a multi-GB PyTorch/transformers install.
+# Loose (not exact-pinned) on purpose: exact pins from one Python version
+# regularly have no prebuilt wheel for another (this repo's dev machines
+# have both 3.12 and 3.14 in play) and fall back to a from-source build that
+# just fails. Use `pip freeze` for a real lockfile once this ships past
+# prototype stage.
+fastapi>=0.115
+uvicorn>=0.34
+pydantic>=2.10
+python-multipart>=0.0.20
+pikepdf>=9.5
+pdfplumber>=0.11
+Pillow>=11.0
+piexif>=1.1
+pytest>=8.3
+httpx>=0.28
