@@ -96,8 +96,22 @@ function isNonEmptyString(value) {
 // level, score, verdict and actions are computed by the deterministic
 // engine, and the LLM is optional enrichment - an LLM timeout/outage still
 // returns 200 with a deterministic assessment (analysis.semantic.status).
+// `pageUrl` is only ever used to derive a hostname for the domain-comparison
+// exception in checkLinkHygiene (see pipeline/index.js) - it is never fetched
+// and never trusted as a claim about the message content, so a malformed
+// value is just ignored rather than rejected (it's supplementary context,
+// not part of what's being analysed).
+function pageHostFrom(pageUrl) {
+  if (typeof pageUrl !== "string" || pageUrl.length === 0 || pageUrl.length > 2000) return null;
+  try {
+    return new URL(pageUrl).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
-  const { message, language } = req.body;
+  const { message, language, pageUrl } = req.body;
   if (!isNonEmptyString(message)) {
     return res.status(400).json({ error: "message is required and must be a non-empty string" });
   }
@@ -113,7 +127,14 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   if (email.error) return res.status(400).json({ error: email.error });
   try {
     res.json(
-      await runPipeline(message, { source: "pasted_text", language, paymentContext: payment.value, emailContext: email.value, ip: req.ip })
+      await runPipeline(message, {
+        source: "pasted_text",
+        language,
+        paymentContext: payment.value,
+        emailContext: email.value,
+        pageHost: pageHostFrom(pageUrl),
+        ip: req.ip,
+      })
     );
   } catch (err) {
     console.error(err);
@@ -192,7 +213,7 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   // route). runPipeline() already survives an LLM outage on its own (the
   // deterministic assessment still counts as analysed), so "unknown" /
   // analysisFailed is now reserved for an unexpected pipeline error; the
-  // summary never counts it as scam/suspicious/safe (FINDINGS.md #6).
+  // summary never counts it as scam/suspicious/safe.
   const analyze = async (message) => {
     try {
       return await runPipeline(message, { source: "batch", ip: req.ip });

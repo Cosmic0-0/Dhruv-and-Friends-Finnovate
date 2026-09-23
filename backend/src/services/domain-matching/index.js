@@ -32,7 +32,7 @@ export const DETECTOR_VERSION = "url-2.1";
 // (https://mcb.mu@evil.top has host evil.top, not mcb.mu).
 const SCHEME_URL_RE = /\bhttps?:\/\/[^\s<>"'()]+/gi;
 // Scheme-less links: require a final all-alpha "TLD-like" label of 2-10
-// chars so prose like "Rs.5000" / "e.g." doesn't match (FINDINGS.md #2).
+// chars so prose like "Rs.5000" / "e.g." doesn't match.
 const BARE_URL_RE = /(?<![@\w.-])(?:www\.)?(?:[a-z0-9-]+\.)+[a-z]{2,10}(?:\/[^\s<>"'()]*)?/gi;
 // Hosts containing non-ASCII letters (homoglyph attacks) that the ASCII
 // patterns above can't see at all.
@@ -73,7 +73,7 @@ function levenshtein(a, b) {
  * Edit distance allowed between a host's registrable label and an official
  * label, scaled by the official label's length. Short labels (mcb, mra, sbm)
  * allow 0: with 3 letters, distance 1-2 is "any other short word" (mra vs
- * mcb, FINDINGS.md #11). Exact brand labels on the wrong domain are caught
+ * mcb). Exact brand labels on the wrong domain are caught
  * separately by the brand-token rule.
  */
 export function maxEditDistance(labelLength) {
@@ -348,14 +348,39 @@ export function extractLookalikeHosts(message) {
 const LINK_CTA_RE =
   /\b(?:verify|confirm|log ?in|sign ?in|update|unlock|reactivate|restore|claim|click|tap|v[ée]rifiez|confirmez|connectez|cliquez|mettez à jour|verifye|konfirm|klik)\b/iu;
 
-/** Weak/structural link signals: URL-05 shortener, URL-06 raw IP, URL-07 userinfo trick, URL-08 action via unofficial link. */
-export function checkLinkHygiene(message) {
+/**
+ * Registrable-domain (eTLD+1) equality: dh480.badssl.com and badssl.com are
+ * the same site; badssl.com.evil-login.net is not (its registrable domain is
+ * evil-login.net, not badssl.com). Deliberately NOT exact-string host
+ * equality - a page's own subdomains must never be mistaken for a lookalike
+ * of themselves. Used to keep the page a message/page scan is running
+ * against out of its own "unofficial link" findings (see checkLinkHygiene).
+ */
+export function isSameSite(hostA, hostB) {
+  if (!hostA || !hostB) return false;
+  return registrableDomain(hostA) === registrableDomain(hostB);
+}
+
+/**
+ * Weak/structural link signals: URL-05 shortener, URL-06 raw IP, URL-07
+ * userinfo trick, URL-08 action via unofficial link.
+ * `pageHost` (the hostname of the page this text was scanned from, when
+ * known - e.g. the extension's "Scan This Page") is excluded from
+ * "unofficial": a page's own domain, or a legitimate subdomain of it, is
+ * never "not an official domain" relative to itself. Without pageHost (the
+ * pasted-message flow, where there is no page to be self-referential about)
+ * behaviour is unchanged.
+ */
+export function checkLinkHygiene(message, pageHost = null) {
   const out = [];
   // "Unofficial" for URL-08 purposes only: not a recognized Mauritius
-  // institution AND not on the trusted-domains allowlist (see
+  // institution, not on the trusted-domains allowlist (see
   // trustedDomains.js's doc comment - this is the ONLY signal that list
-  // affects; a trusted domain still gets zero lookalike protection).
-  const unofficial = extractLinks(message).filter((l) => !institutionForHost(l.host) && !isTrustedDomain(l.host));
+  // affects; a trusted domain still gets zero lookalike protection), and not
+  // the scanned page's own site or a legitimate subdomain of it.
+  const unofficial = extractLinks(message).filter(
+    (l) => !institutionForHost(l.host) && !isTrustedDomain(l.host) && !(pageHost && isSameSite(l.host, pageHost))
+  );
   const cta = unofficial.length > 0 ? LINK_CTA_RE.exec(message) : null;
   if (cta) {
     out.push(

@@ -92,6 +92,57 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   assert.equal("domainAgeDays" in lookalike, false);
 });
 
+test("POST /api/analyze: pageUrl keeps the scanned page's own domain out of URL-08, without weakening a real lookalike of it", async (t) => {
+  globalThis.fetch = routedFetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  const pageText = "badssl.com click through dh480.badssl.com to test an old cipher suite.";
+
+  const withPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText, pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(!withPageUrl.signals.some((s) => s.code === "URL-08"), "badssl.com must not be flagged as an unofficial link on its own page");
+
+  const withoutPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText }),
+    })
+  ).json();
+  assert.ok(withoutPageUrl.signals.some((s) => s.code === "URL-08"), "same text with no page context keeps prior behaviour");
+
+  const lookalikePage = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "click through badssl.com.evil-login.net to continue", pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(lookalikePage.signals.some((s) => s.code === "URL-08"), "a genuine lookalike of the page's own domain must still be flagged");
+
+  // A malformed pageUrl is ignored, not rejected - the request still succeeds.
+  const malformed = await originalFetch(`${base}/analyze`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: pageText, pageUrl: "not a url" }),
+  });
+  assert.equal(malformed.status, 200);
+});
+
 test("POST /api/check-sender looks up an existing report count without incrementing it", async (t) => {
   const app = express();
   app.use("/api", router);

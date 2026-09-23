@@ -1,12 +1,9 @@
 # API Contract (as implemented)
 
-**Status: LOCKED.** This documents the backend routes exactly as implemented
-in `backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`,
-and `backend/src/index.js` — not the original placeholder contract in
-`CLAUDE.md` (kept there only as a superseded historical sketch). Build
-against this. Any shape change here must be flagged to Oleg (frontend),
-Dhruv (OCR/batch), and the extension owner *before* merging — treat it as
-frozen for the rest of the hackathon otherwise.
+**Status: LOCKED.** This documents the backend routes as implemented in
+`backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`, and
+`backend/src/index.js`. Update this file and every consumer together when a
+request or response shape changes.
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
@@ -46,6 +43,7 @@ assessment**; `analysis.semantic.status` says which.
 {
   "message": "string, required, 1-5000 characters",
   "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
+  "pageUrl": "string, optional — the URL of the page `message` was extracted from (e.g. the extension's \"Scan This Page\"). Used ONLY to derive a hostname so links to the scanned page's own site are not flagged as \"not an official domain\" relative to itself (URL-08); never fetched, never treated as a claim about the message, and a malformed value is silently ignored rather than rejected.",
   "paymentContext": {
     "amount": "number >= 0, optional",
     "currency": "string <= 200, optional",
@@ -539,8 +537,7 @@ exactly as submitted; only the counting behavior changed.
 
 ## `POST /api/check-url`
 
-Not in the original placeholder contract — added for the browser extension
-(`extension/`, stretch goal). A bare hostname/URL isn't a scam "message" to
+Used by the browser extension. A bare hostname/URL isn't a scam "message" to
 run through the LLM, and the extension needs a fast, synchronous
 per-navigation check, so this route calls only the non-LLM domain-matching
 check (`checkUrls()`, `backend/src/services/domain-matching/index.js`) — the

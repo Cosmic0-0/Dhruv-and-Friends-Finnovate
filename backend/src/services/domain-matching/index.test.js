@@ -34,7 +34,7 @@ test("checkUrls returns an empty array when the message has no URL", () => {
 });
 
 test("checkUrls does not flag unrelated domains that merely contain brand-token letters", () => {
-  // Substring matching used to flag these (FINDINGS.md #10): myt/absa/sbm
+  // Substring matching used to flag these: myt/absa/sbm
   // appear as letter runs inside real, unrelated hostname labels.
   assert.deepEqual(checkUrls("See https://mythology-store.com/catalog for details"), []);
   assert.deepEqual(checkUrls("Order confirmed at https://absalom-books.com/order/1"), []);
@@ -48,8 +48,7 @@ test("checkUrls still flags a brand token that is its own hostname label", () =>
   assert.match(signals[0].description, /absa/);
 });
 
-// ---- Regression: official subdomains, short-domain collisions, link tricks
-// (docs/ARCHITECTURE-REVIEW.md C1/C2). ----
+// ---- Regression: official subdomains, short-domain collisions, link tricks. ----
 import { isOfficialHost, checkLinkHygiene, maxEditDistance, splitHost } from "./index.js";
 
 test("isOfficialHost accepts the apex and any subdomain, never a suffix lookalike", () => {
@@ -142,4 +141,32 @@ test("URL-08: also never fires for a trusted-domains allowlist entry, or a subdo
 test("URL-08 still fires for a lookalike of a trusted domain - the allowlist grants no lookalike protection", () => {
   const s = checkLinkHygiene("Verify now at https://paypal-secure-login.test/verify").find((x) => x.code === "URL-08");
   assert.ok(s, "expected URL-08 for a domain merely resembling a trusted one");
+});
+
+// ---- Regression: self-contradictory URL-08 on a page's own (sub)domain, live-observed on badssl.com. ----
+import { isSameSite } from "./index.js";
+
+test("isSameSite treats a page's own subdomains as the same site, never a different one's suffix lookalike", () => {
+  assert.equal(isSameSite("dh480.badssl.com", "badssl.com"), true);
+  assert.equal(isSameSite("badssl.com", "dh480.badssl.com"), true);
+  assert.equal(isSameSite("www.badssl.com", "badssl.com"), true);
+  assert.equal(isSameSite("badssl.com.evil-login.net", "badssl.com"), false);
+  assert.equal(isSameSite("notbadssl.com", "badssl.com"), false);
+});
+
+test("checkLinkHygiene: URL-08 never names the scanned page's own domain as \"not an official domain\" (badssl.com live repro)", () => {
+  // Page text as extracted from badssl.com itself: the site lists its own
+  // subdomain test links as plain visible text (no scheme), which is what
+  // made extractLinks() pick up "dh480.badssl.com" as a "link" at all - and
+  // pageHost lets it be recognized as the current site instead of flagged.
+  const pageText = "badssl.com click through dh480.badssl.com to test an old cipher suite.";
+  assert.deepEqual(checkLinkHygiene(pageText, "badssl.com").filter((s) => s.code === "URL-08"), []);
+  // A message with no page context (e.g. a pasted SMS) keeps prior behaviour.
+  assert.ok(checkLinkHygiene(pageText).some((s) => s.code === "URL-08"));
+});
+
+test("checkLinkHygiene: a real lookalike of the current page's own domain still fires URL-08", () => {
+  const s = checkLinkHygiene("click through badssl.com.evil-login.net to continue", "badssl.com").find((x) => x.code === "URL-08");
+  assert.ok(s, "expected URL-08 for a suffix lookalike of the page's own domain");
+  assert.equal(s.metadata.host, "badssl.com.evil-login.net");
 });

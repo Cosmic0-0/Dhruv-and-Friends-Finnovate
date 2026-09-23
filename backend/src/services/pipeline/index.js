@@ -124,12 +124,16 @@ function senderReputation(sender) {
 /**
  * @param {string} rawText the (already redacted) message text
  * @param {{ source?: string, language?: string, paymentContext?: object|null, emailContext?: object|null,
- *   ip?: string, now?: number, ocrQuality?: "low"|"ok", semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
+ *   pageHost?: string|null, ip?: string, now?: number, ocrQuality?: "low"|"ok",
+ *   semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
  *   emailContext must already be validated (services/email-context validateEmailContext); when present,
- *   the source is "email" and the EMAIL-* detectors run on it.
+ *   the source is "email" and the EMAIL-* detectors run on it. pageHost is the hostname of the page this
+ *   text was scanned from (e.g. the extension's "Scan This Page"), when known - it is never fetched or
+ *   trusted as a claim, only used so a page's own domain/subdomains are never flagged as "not an official
+ *   domain" relative to themselves (see domain-matching#checkLinkHygiene).
  */
 export async function runPipeline(rawText, context = {}) {
-  const { language, paymentContext = null, emailContext = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
+  const { language, paymentContext = null, emailContext = null, pageHost = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
   const source = emailContext ? "email" : context.source ?? "pasted_text";
   const text = analysisText(rawText, emailContext);
 
@@ -158,7 +162,7 @@ export async function runPipeline(rawText, context = {}) {
   const organisation = emailContext ? detectOrgSignals(emailContext, { text, now }) : null;
   const deterministic = [
     ...urlSignals,
-    ...checkLinkHygiene(text),
+    ...checkLinkHygiene(text, pageHost),
     ...checkIdentityConsistency(text),
     ...lexicon,
     ...detectInjection(text),
