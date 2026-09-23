@@ -16,7 +16,7 @@ import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
-import { CheckIcon } from "../icons";
+import { ChartIcon, CheckIcon, PersonIcon, WarningIcon } from "../icons";
 import Celebration from "./Celebration";
 import ScreenTitle from "../ScreenTitle";
 import StreakCards from "./StreakCards";
@@ -55,7 +55,13 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
   return (
     <>
       <ScreenTitle tabKey="learn" />
-      <div className="gutter flex flex-col gap-4 pt-4">
+      {/*
+        * Phone: one column, in the order drawn. Desktop: the quiz on the left,
+        * today's progress and the reference list on the right, so the width
+        * carries a second column instead of stretching the question.
+        */}
+      <div className="gutter screen-grid flex flex-col gap-4 pt-4 lg:grid">
+        <div className="flex flex-col gap-4">
 
       {/* Wait for the saved language so a wrong-language question never flashes. */}
       {!ready ? (
@@ -101,18 +107,23 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
         </div>
       )}
 
-      {state && ready && quizLang && (
-        <div aria-live="polite">
-          <StreakCards
-            answered={state.today.answered}
-            streak={visibleStreak(state, today)}
-            copy={copy}
-          />
         </div>
-      )}
-      <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
 
-      <Trends trends={trends} copy={copy} />
+        <div className="flex flex-col gap-4">
+          {state && ready && quizLang && (
+            <div aria-live="polite">
+              <StreakCards
+                answered={state.today.answered}
+                streak={visibleStreak(state, today)}
+                copy={copy}
+              />
+            </div>
+          )}
+
+          <Trends trends={trends} copy={copy} />
+
+          <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
+        </div>
 
       {process.env.NODE_ENV === "development" && (
         <DevTools
@@ -138,21 +149,21 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy; onAccept: () => void }) {
   const L = copy.learn;
   return (
-    <section className="flex flex-col gap-4 bg-surface-dark px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
-      <p id="quiz-label" className="micro text-on-ink/60">
+    <section className="hero flex flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
+      <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
         {L.quizLabel}
       </p>
-      <p className="font-heading text-[1.5rem] leading-tight font-semibold">{L.fewItems(L.languageName[pool.lang])}</p>
+      <p className="text-[1.375rem] leading-[1.8125rem] font-semibold text-white">{L.fewItems(L.languageName[pool.lang])}</p>
       {pool.fallback && (
         <>
           <button
             type="button"
             onClick={onAccept}
-            className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
+            className="pill pressable w-full bg-white text-[#111113]"
           >
             {L.offerOther(L.languageName[pool.fallback])}
           </button>
-          {pool.fallback === "kreol" && <p className="text-sm leading-relaxed text-on-ink/70">{L.kreolMixNote}</p>}
+          {pool.fallback === "kreol" && <p className="text-[0.9375rem] leading-5 text-white/[0.62]">{L.kreolMixNote}</p>}
         </>
       )}
     </section>
@@ -238,16 +249,16 @@ function Quiz({
 
   if (finished) {
     return (
-      <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-4 bg-surface-dark px-5 py-6 text-on-ink" aria-live="polite">
-        <p className="micro text-on-ink/60">{L.scoreLabel}</p>
-        <p className="font-heading text-[3.5rem] leading-none font-medium tabular-nums">
-          {score} <span className="text-on-ink/50">/ {round.length}</span>
+      <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-live="polite">
+        <p className="text-[0.9375rem] font-semibold text-white/70">{L.scoreLabel}</p>
+        <p className="data text-[3.125rem] leading-none font-bold text-white">
+          {score} <span className="text-[1.25rem] font-medium text-white/50">/ {round.length}</span>
         </p>
         <div className="flex flex-col gap-1">
           <p className="text-[1.0625rem] font-medium">{L.scoreLine(score, round.length)}</p>
-          <p className="text-[0.9375rem] leading-relaxed text-on-ink/75">{L.scoreComment(score, round.length)}</p>
+          <p className="text-[0.9375rem] leading-relaxed text-white/[0.72]">{L.scoreComment(score, round.length)}</p>
         </div>
-        {best && <p className="text-sm text-on-ink/60">{L.best(best.score, best.total)}</p>}
+        {best && <p className="text-sm text-white/[0.62]">{L.best(best.score, best.total)}</p>}
         <button
           ref={playAgainRef}
           type="button"
@@ -258,7 +269,7 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="pressable font-heading mt-1 flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
+          className="pill pressable mt-1 w-full bg-white text-[#111113]"
         >
           {L.playAgain}
         </button>
@@ -287,22 +298,27 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-5 bg-surface-dark px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
-      <p id="quiz-label" className="micro text-on-ink/60">
-        {L.quizLabel}
-      </p>
+    <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
+      <div className="flex items-center justify-between gap-3">
+        <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
+          {L.quizLabel}
+        </p>
+        <span className="data text-[0.9375rem] text-white/55">
+          {index + 1} / {round.length}
+        </span>
+      </div>
       {/* A verbatim scam-or-genuine sample — same monospaced, rule-marked
           treatment as a quoted scam sample elsewhere (see TrendsContent),
           so it reads as quoted evidence rather than the app talking. */}
       <blockquote
         key={item.id}
         lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        className="data border-l-2 border-l-white/20 bg-white/5 px-3.5 py-3 text-[0.9375rem] leading-relaxed text-on-ink [overflow-wrap:anywhere]"
+        className="mt-1 text-[1.375rem] leading-[1.8125rem] font-semibold text-white [overflow-wrap:anywhere]"
       >
         &ldquo;{item.text}&rdquo;
       </blockquote>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="mt-2 grid grid-cols-2 gap-2.5">
         {([true, false] as const).map((isScamButton) => {
           const chosen = answer?.choseScam === isScamButton;
           return (
@@ -312,9 +328,9 @@ function Quiz({
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
               aria-pressed={chosen}
-              className={`pressable font-heading flex min-h-14 items-center justify-center px-4 text-[1.0625rem] font-semibold tracking-[0.04em] text-white uppercase transition-opacity ${
-                isScamButton ? "bg-danger" : "bg-safe"
-              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white ring-offset-2 ring-offset-surface-dark" : ""}`}
+              className={`pill pressable transition-opacity ${
+                isScamButton ? "bg-white text-[#111113]" : "bg-white/[0.14] text-white"
+              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white/70" : ""}`}
             >
               {isScamButton ? L.scam : L.genuine}
             </button>
@@ -322,7 +338,7 @@ function Quiz({
         })}
       </div>
 
-      <p className="text-sm text-on-ink/70" aria-live="polite">
+      <p className="text-[0.9375rem] text-white/[0.62]" aria-live="polite">
         {L.progress(index + 1, round.length, right)}
       </p>
 
@@ -333,7 +349,7 @@ function Quiz({
           ref={nextRef}
           type="button"
           onClick={next}
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
+          className="pill pressable w-full bg-white text-[#111113]"
         >
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>
@@ -351,25 +367,25 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
   const showMeaning = lang !== "kreol" && item.languageMix !== "en" && item.englishMeaning;
 
   return (
-    <div role="status" className="flex flex-col gap-3 bg-white/10 p-4">
+    <div role="status" className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4">
       <p className="text-[1.0625rem] font-semibold">
         {/* Correct/incorrect reuses the same accent/danger tones as the
             Genuine/Scam choice buttons above, rather than a separate
             green/pink pair, so the feedback colour ties directly back to
             the choice the player made. */}
-        <span className={answer.correct ? "text-accent" : "text-danger"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
+        <span className={answer.correct ? "text-safe" : "text-danger"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
         {item.isScam ? L.isScam : L.isGenuine}
       </p>
       {reasons.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="micro text-on-ink/60">{L.whyLabel}</p>
+          <p className="micro text-white/[0.62]">{L.whyLabel}</p>
           <ul className="flex flex-col gap-1.5">
             {reasons.map((r) => (
               <li key={r} className="flex items-start gap-2.5 text-[0.9375rem] leading-snug">
                 {item.isScam ? (
                   <span aria-hidden="true" className="mt-[0.45em] size-1.5 shrink-0 bg-danger" />
                 ) : (
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-accent" strokeWidth={2.5} />
+                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-safe" strokeWidth={2.5} />
                 )}
                 {r}
               </li>
@@ -378,18 +394,19 @@ function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; 
         </div>
       )}
       {showMeaning && (
-        <p className="text-sm leading-relaxed text-on-ink/70">
-          <span className="font-semibold text-on-ink/85">{L.inEnglish}:</span> {item.englishMeaning}
+        <p className="text-sm leading-relaxed text-white/70">
+          <span className="font-semibold text-white/85">{L.inEnglish}:</span> {item.englishMeaning}
         </p>
       )}
     </div>
   );
 }
 
-const TAG_TONE: Record<TrendCard["category"], string> = {
-  parcel_fee: "bg-caution-soft text-caution-ink",
-  fake_relative: "bg-danger-soft text-danger-ink",
-  investment: "bg-muted-surface text-ink-muted",
+/** Tint and glyph per pattern, so the three rows read apart at a glance. */
+const TAG_TONE: Record<TrendCard["category"], { chip: string; Icon: typeof WarningIcon }> = {
+  parcel_fee: { chip: "bg-caution-soft text-caution-ink", Icon: WarningIcon },
+  fake_relative: { chip: "bg-danger-soft text-danger-ink", Icon: PersonIcon },
+  investment: { chip: "bg-safe-soft text-safe-ink", Icon: ChartIcon },
 };
 
 /**
@@ -400,20 +417,30 @@ const TAG_TONE: Record<TrendCard["category"], string> = {
 function Trends({ trends, copy }: { trends: TrendCard[]; copy: Copy }) {
   const L = copy.learn;
   return (
-    <section className="flex flex-col gap-3" aria-labelledby="trends-label">
-      <h2 id="trends-label" className="micro text-ink-muted">
-        {L.trendsTitle}
-      </h2>
-      <ul className="flex flex-col gap-3">
+    <section className="sheet" aria-labelledby="trends-label">
+      <div className="px-5 pt-4 pb-1">
+        <h2 id="trends-label" className="micro text-ink-muted">
+          {L.trendsTitle}
+        </h2>
+      </div>
+      <ul className="flex flex-col px-5 pb-2 [&>li+li]:border-t [&>li+li]:border-card-border">
         {trends.map((t) => (
-          <li key={t.category} className="card flex flex-col gap-3 p-5">
-            <span className={`micro w-fit px-1.5 py-1 ${TAG_TONE[t.category]}`}>{L.trends[t.category].tag}</span>
+          <li key={t.category} className="flex flex-col gap-2 py-3.5">
+            <div className="flex items-center gap-3">
+              <span className={`flex size-[34px] shrink-0 items-center justify-center rounded-full ${TAG_TONE[t.category].chip}`}>
+                {(() => {
+                  const Glyph = TAG_TONE[t.category].Icon;
+                  return <Glyph className="size-[17px]" strokeWidth={2} />;
+                })()}
+              </span>
+              <span className="flex-1 text-[1.0625rem] font-medium text-ink">{L.trends[t.category].tag}</span>
+            </div>
             {t.example && (
-              <p className="data border-l-2 border-l-card-border bg-muted-surface px-3 py-2.5 leading-relaxed text-ink-soft [overflow-wrap:anywhere]">
+              <p className="rounded-2xl bg-muted-surface px-3.5 py-3 text-[0.9375rem] leading-5 text-ink-soft [overflow-wrap:anywhere]">
                 &ldquo;{t.example.text}&rdquo;
               </p>
             )}
-            <p className="text-[0.9375rem] leading-relaxed text-ink-soft">{L.trends[t.category].body}</p>
+            <p className="text-[0.9375rem] leading-5 text-ink-muted">{L.trends[t.category].body}</p>
           </li>
         ))}
       </ul>

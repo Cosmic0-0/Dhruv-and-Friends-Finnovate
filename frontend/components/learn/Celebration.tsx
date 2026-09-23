@@ -104,7 +104,11 @@ export default function Celebration({
   return createPortal(
     <div ref={rootRef} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Swallows clicks so nothing behind can be reached; dismissal is Esc or the button only. */}
-      <div className="fl-scrim absolute inset-0 bg-[var(--c-scrim)]" data-closing={closing || undefined} aria-hidden="true" />
+      <div
+        className="fl-scrim absolute inset-0 bg-[var(--c-scrim)] backdrop-blur-[6px] [-webkit-backdrop-filter:blur(6px)]"
+        data-closing={closing || undefined}
+        aria-hidden="true"
+      />
       <div
         ref={cardRef}
         role="dialog"
@@ -112,36 +116,34 @@ export default function Celebration({
         aria-labelledby="celebrate-title"
         aria-describedby="celebrate-line"
         data-closing={closing || undefined}
-        className="fl-card relative flex max-h-[88dvh] w-full max-w-[380px] flex-col items-center gap-4 overflow-y-auto border border-line-strong bg-card px-6 pt-7 pb-6 text-center"
+        className="fl-card relative flex max-h-[88dvh] w-full max-w-[380px] flex-col items-center gap-1.5 overflow-y-auto rounded-[28px] bg-card px-6 pt-7 pb-[22px] text-center shadow-[0_30px_60px_rgb(12_12_14_/_35%)]"
       >
         {streak >= 2 ? <Flame /> : <Tick />}
         <div className="flex flex-col gap-1.5">
-          <h2 id="celebrate-title" className="text-[2.5rem] leading-none">
+          <h2 id="celebrate-title" className="text-[2rem] leading-[2.375rem] font-bold text-ink">
             {L.celebrate.title(streak)}
           </h2>
-          <p id="celebrate-line" className="text-[0.9375rem] text-ink-soft">
+          <p id="celebrate-line" className="text-[1.0625rem] leading-[1.4375rem] text-ink-muted">
             {streak >= 2 ? L.celebrate.streakLine(streak) : L.celebrate.dayOne}
           </p>
-          <p className="data mt-1 text-ink">{L.celebrate.score(right, total)}</p>
+          <p className="data mt-0.5 text-[0.9375rem] text-ink-muted">{L.celebrate.score(right, total)}</p>
         </div>
 
-        <div className="w-full border-t border-card-border pt-4 text-left">
+        <div className="mt-3 w-full border-t border-card-border pt-4 text-left">
           {mistakes.length === 0 ? (
-            <p className="text-center text-[0.9375rem] text-accent-ink">{L.celebrate.allRight}</p>
+            <p className="text-center text-[0.9375rem] text-safe-ink">{L.celebrate.allRight}</p>
           ) : (
             <>
-              <p className="micro mb-3 text-ink-muted">
-                {L.celebrate.mistakesTitle}
-              </p>
+              <p className="micro mb-2.5 text-ink-muted">{L.celebrate.mistakesTitle}</p>
               <ul className="flex flex-col gap-3">
                 {mistakes.map((m) => (
                   <li key={m.id} className="flex flex-col gap-0.5">
-                    <p className="data truncate border-l-2 border-l-card-border pl-2 text-ink-soft">&ldquo;{m.text.replace(/\s+/g, " ")}&rdquo;</p>
+                    <p className="truncate text-[1.0625rem] leading-[1.4375rem] text-ink">&ldquo;{m.text.replace(/\s+/g, " ")}&rdquo;</p>
                     <p className="text-[0.8125rem] leading-snug">
-                      <span className={`font-semibold ${m.isScam ? "text-danger-ink" : "text-accent-ink"}`}>
+                      <span className={`font-semibold ${m.isScam ? "text-danger-ink" : "text-safe-ink"}`}>
                         {m.isScam ? L.scam : L.genuine}
                       </span>
-                      <span className="text-ink-muted"> · {reasonFor(m)}</span>
+                      <span className="text-ink-muted"> {reasonFor(m)}</span>
                     </p>
                   </li>
                 ))}
@@ -154,7 +156,7 @@ export default function Celebration({
           ref={buttonRef}
           type="button"
           onClick={close}
-          className="pressable font-heading mt-1 flex min-h-14 w-full items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
+          className="pill pressable mt-4 w-full bg-primary text-on-primary"
         >
           {L.celebrate.keepGoing}
         </button>
@@ -166,23 +168,24 @@ export default function Celebration({
 
 function Flame() {
   return (
-    <svg viewBox="0 0 64 80" className="h-20 w-16" aria-hidden="true">
-      <defs>
-        <linearGradient id="fl-flame-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" style={{ stopColor: "var(--color-caution)" }} />
-          <stop offset="1" style={{ stopColor: "var(--color-danger)" }} />
-        </linearGradient>
-      </defs>
-      <g className="fl-flame fl-flame-grow">
+    <svg viewBox="0 0 112 132" className="h-[132px] w-28 overflow-visible" aria-hidden="true">
+      {/* Paths and colours copied from design/mockup/Streak.html. The grow,
+          flicker and core keyframes live in app/globals.css and are disabled
+          under prefers-reduced-motion. */}
+      <g className="fl-flame-grow">
         <path
-          className="fl-flame fl-flame-outer"
-          fill="url(#fl-flame-grad)"
-          d="M32 3C37 17 53 27 53 49c0 16-9.4 27-21 27S11 65 11 49c0-11 6-19 10.5-26 1.6 8.5 5 13 9.5 15.5C29 27 27.5 14 32 3z"
+          className="fl-flame-outer"
+          d="M56 6 C 70 30, 98 46, 98 82 C 98 110, 79 126, 56 126 C 33 126, 14 110, 14 82 C 14 60, 28 50, 34 34 C 40 48, 44 54, 50 56 C 48 36, 50 20, 56 6 Z"
+          fill="#FF6A2B"
         />
         <path
-          className="fl-flame fl-flame-inner"
-          style={{ fill: "var(--color-caution-soft)" }}
-          d="M32 36c3.6 9 11 14.5 11 24 0 8.6-5 14-11 14s-11-5.4-11-14c0-6.8 4.2-11.2 7-16.5 1 4.6 2.8 7 5 8.3-1-5.2-1.6-10.3-1-15.8z"
+          d="M56 44 C 64 60, 80 70, 80 92 C 80 110, 69 120, 56 120 C 43 120, 32 110, 32 92 C 32 78, 40 70, 44 60 C 48 70, 52 74, 56 74 C 54 62, 54 54, 56 44 Z"
+          fill="#FF9F0A"
+        />
+        <path
+          className="fl-flame-inner"
+          d="M56 78 C 61 88, 68 94, 68 104 C 68 113, 62 118, 56 118 C 50 118, 44 113, 44 104 C 44 96, 50 90, 56 78 Z"
+          fill="#FFD60A"
         />
       </g>
     </svg>
@@ -191,7 +194,7 @@ function Flame() {
 
 function Tick() {
   return (
-    <svg viewBox="0 0 56 56" className="size-16 text-accent" aria-hidden="true">
+    <svg viewBox="0 0 56 56" className="size-16 text-safe" aria-hidden="true">
       <circle className="fl-tick-circle" cx="28" cy="28" r="24" fill="none" stroke="currentColor" strokeWidth="3.5" />
       <path
         className="fl-tick-check"
