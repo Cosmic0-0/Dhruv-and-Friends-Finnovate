@@ -3,7 +3,14 @@
 import { useLanguage } from "./LanguageProvider";
 import { UI_LANGUAGES } from "@/lib/i18n";
 
-/** EN / FR / KREOL segmented control. Sets UI copy and the /api/analyze language hint. */
+/**
+ * EN / FR / KREOL as an iOS segmented control. Sets the UI copy and the
+ * `language` hint sent to /api/analyze.
+ *
+ * It lives on the Settings screen now rather than in a header, so switching
+ * language no longer competes for space on every screen — but it still changes
+ * every screen, which is the point of the control.
+ */
 export default function LanguageSwitch() {
   const { lang, setLang, copy } = useLanguage();
 
@@ -11,7 +18,7 @@ export default function LanguageSwitch() {
     <div
       role="radiogroup"
       aria-label={copy.languageSwitcher}
-      className="flex items-center divide-x divide-white/15 border border-white/20"
+      className="flex w-full gap-0.5 rounded-[11px] bg-page p-0.5"
     >
       {UI_LANGUAGES.map((l) => {
         const active = l.id === lang;
@@ -23,10 +30,10 @@ export default function LanguageSwitch() {
             aria-checked={active}
             lang={l.htmlLang}
             onClick={() => setLang(l.id)}
-            // 40px min hit area: the visible chip is short, so height comes
-            // from padding rather than a cramped 24px tap target.
-            className={`micro pressable min-h-10 px-3 ${
-              active ? "bg-accent text-white" : "text-on-ink/55 hover:bg-white/10 hover:text-on-ink"
+            className={`pressable min-h-11 flex-1 rounded-[9px] text-[0.9375rem] font-semibold ${
+              active
+                ? "bg-card text-ink shadow-[0_1px_3px_rgb(0_0_0_/_12%)]"
+                : "text-ink-muted"
             }`}
           >
             {l.label}

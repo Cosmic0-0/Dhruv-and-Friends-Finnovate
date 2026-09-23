@@ -11,6 +11,7 @@ import { MessageCard, VerdictBanner } from "./result/parts";
 import { IdentityCompare, LinkCheckPanel, signalTitle, WhatToDo, WhySection } from "./result/sections";
 import ReportButton from "./result/ReportButton";
 import { RetryIcon } from "./icons";
+import ScreenTitle from "./ScreenTitle";
 
 type Status = "idle" | "loading" | "error" | "done";
 
@@ -196,7 +197,7 @@ export default function SafePayFlow() {
         <button
           type="button"
           onClick={checkAnother}
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
+          className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
         >
           {c.checkAnother}
         </button>
@@ -205,11 +206,10 @@ export default function SafePayFlow() {
   }
 
   return (
-    <div className="gutter flex flex-col gap-4 pt-7">
-      <section className="flex flex-col gap-3">
-        <h1>{c.title}</h1>
-        <p className="max-w-[46ch] text-[1.0625rem] leading-relaxed text-ink-soft">{c.intro}</p>
-      </section>
+    <>
+      <ScreenTitle title={c.title} back={{ href: "/", label: copy.tabs.check }} />
+      <div className="gutter flex flex-col gap-4 pt-4">
+        <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{c.intro}</p>
 
       <form
         onSubmit={(e) => {
@@ -234,8 +234,8 @@ export default function SafePayFlow() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className={`pressable font-heading relative flex min-h-14 items-center justify-center overflow-hidden bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
-            loading ? "cursor-progress" : "hover:bg-ink-2"
+          className={`pressable font-heading relative flex min-h-14 items-center justify-center overflow-hidden bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+            loading ? "cursor-progress" : "hover:bg-surface-dark-2"
           }`}
         >
           <span>{c.submit}</span>
@@ -266,7 +266,7 @@ export default function SafePayFlow() {
           <button
             type="button"
             onClick={() => void submit()}
-            className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
+            className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
           >
             <RetryIcon className="size-3.5" strokeWidth={2} />
             {copy.retry}
@@ -274,10 +274,8 @@ export default function SafePayFlow() {
         </div>
       )}
 
-      <Link href="/" className="micro w-fit text-accent-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
-        {c.back}
-      </Link>
-    </div>
+      </div>
+    </>
   );
 }
 

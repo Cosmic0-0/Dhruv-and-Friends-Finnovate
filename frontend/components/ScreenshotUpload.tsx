@@ -204,7 +204,7 @@ export function ScreenshotRow({
             <img src={previewUrl} alt={copy.shot.alt} className="size-full object-cover object-top" />
           )}
           {/* Dimmed while waiting; the bar beside it shows the wait (no separate spinner). */}
-          {waiting && <div aria-hidden="true" className="absolute inset-0 bg-ink/25" />}
+          {waiting && <div aria-hidden="true" className="absolute inset-0 bg-surface-dark/25" />}
         </div>
         {waiting ? (
           status
@@ -236,7 +236,7 @@ export function ScreenshotRow({
               <button
                 type="button"
                 onClick={onRetry}
-                className="pressable micro flex min-h-10 items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
+                className="pressable micro flex min-h-10 items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
               >
                 <RetryIcon className="size-3.5" strokeWidth={2} />
                 {copy.retry}

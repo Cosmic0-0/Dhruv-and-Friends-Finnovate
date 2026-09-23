@@ -1,4 +1,3 @@
-import AppHeader from "@/components/AppHeader";
 import SafePayFlow from "@/components/SafePayFlow";
 
 /**
@@ -16,7 +15,6 @@ import SafePayFlow from "@/components/SafePayFlow";
 export default function SafePayPage() {
   return (
     <main>
-      <AppHeader />
       <SafePayFlow />
     </main>
   );

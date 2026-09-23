@@ -1,13 +1,38 @@
-import { BookIcon, SearchIcon, TrendIcon } from "@/components/icons";
+import { ChartIcon, GridIcon, HomeIcon, PersonIcon } from "@/components/icons";
 
-/** Shared between TabBar (mobile bottom bar) and DesktopNav (header row) so the two never drift apart. */
+/**
+ * The five slots of the floating tab bar (frontend/design/mockup/Main.html):
+ * Check, Learn, a centre primary button, Radar, Settings. The centre button is
+ * not a tab — it opens Check with the input ready — so it lives in TabBar
+ * itself; this list is the four real destinations, in bar order.
+ *
+ * `match` decides which tab is current. Check owns every screen reached from a
+ * check (result, replay, safepay, conversation, network, batch, sandbox), so a
+ * user is never left with no tab lit.
+ */
 export const NAV_TABS = [
   {
     href: "/",
     key: "check",
-    Icon: SearchIcon,
-    match: (p: string) => p === "/" || p.startsWith("/result") || p.startsWith("/replay") || p.startsWith("/safepay") || p.startsWith("/conversation") || p.startsWith("/sandbox") || p.startsWith("/network") || p.startsWith("/batch"),
+    Icon: HomeIcon,
+    match: (p: string) =>
+      p === "/" ||
+      p.startsWith("/result") ||
+      p.startsWith("/replay") ||
+      p.startsWith("/safepay") ||
+      p.startsWith("/conversation") ||
+      p.startsWith("/sandbox") ||
+      p.startsWith("/network") ||
+      p.startsWith("/batch"),
   },
-  { href: "/learn", key: "learn", Icon: BookIcon, match: (p: string) => p.startsWith("/learn") },
-  { href: "/trends", key: "trends", Icon: TrendIcon, match: (p: string) => p.startsWith("/trends") },
+  { href: "/learn", key: "learn", Icon: GridIcon, match: (p: string) => p.startsWith("/learn") },
+  { href: "/trends", key: "trends", Icon: ChartIcon, match: (p: string) => p.startsWith("/trends") },
+  { href: "/settings", key: "settings", Icon: PersonIcon, match: (p: string) => p.startsWith("/settings") },
 ] as const;
+
+/**
+ * Where the tab bar's centre button goes. `?new=1` tells the Check screen to
+ * open the input ready to type (components/CheckForm.tsx), so the button is a
+ * real shortcut rather than a second link to the same screen.
+ */
+export const NEW_CHECK_HREF = "/?new=1";

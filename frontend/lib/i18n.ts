@@ -92,7 +92,40 @@ export interface Copy {
     unexpected: string;
   };
   relativeTime: (ms: number) => string;
-  tabs: { check: string; learn: string; trends: string };
+  /** Tab-bar accessible names. The bar itself is icons only (mockup/Main.html). */
+  tabs: { check: string; learn: string; trends: string; settings: string; newCheck: string };
+  /** Check screen (frontend/design/mockup/Main.html). */
+  check: {
+    /** Time-of-day greeting above the hero question. */
+    greeting: (hour: number) => string;
+    question: string;
+    heroLine: string;
+    paste: string;
+    /** Shown when the clipboard is empty or the browser refuses to read it. */
+    pasteFallback: string;
+    screenshot: string;
+    payRow: string;
+    week: { title: string; checks: (n: number) => string; caught: (n: number) => { strong: string; rest: string }; nothing: string };
+    practice: { title: string; streak: (n: number) => string; start: string };
+    install: { body: string; add: string; notNow: string; iosTitle: string; iosStep1: string; iosStep2: string };
+    recent: { title: string; empty: string; short: Record<"safe" | "suspicious" | "scam", string> };
+  };
+  /**
+   * The "Tools" list on Radar. Batch scan, Conversation and Sandbox have no
+   * tab of their own in the five-slot bar, so this card is their entry point.
+   */
+  tools: { title: string; batch: string; conversation: string; sandbox: string; batchHint: string; conversationHint: string; sandboxHint: string };
+  /** Settings screen: the language switch, the privacy note and an about section. */
+  settings: {
+    title: string;
+    languageTitle: string;
+    languageNote: string;
+    privacyTitle: string;
+    privacyBody: string;
+    aboutTitle: string;
+    aboutBody: string;
+    teamLogoAlt: string;
+  };
   trends: {
     title: string;
     intro: string;
@@ -265,6 +298,16 @@ export interface Copy {
   learn: {
     headline: string;
     streak: (days: number) => string;
+    /** The Today / Streak card pair (design/mockup/Learn.png). */
+    cards: {
+      todayTitle: string;
+      todayCount: (done: number, goal: number) => string;
+      more: (n: number) => string;
+      doneToday: string;
+      streakTitle: string;
+      days: (n: number) => string;
+      noStreak: string;
+    };
     quizLabel: string;
     scam: string;
     genuine: string;
@@ -349,6 +392,15 @@ const TODO_KREOL = <T,>(english: T): T => english;
 const LEARN_EN: Copy["learn"] = {
   headline: "Learn to spot them",
   streak: (d) => `${d}-day streak`,
+  cards: {
+    todayTitle: "Today",
+    todayCount: (done, goal) => `${done} of ${goal}`,
+    more: (n) => `${n} more to keep your streak`,
+    doneToday: "Today's practice is done",
+    streakTitle: "Streak",
+    days: (n) => (n === 1 ? "day" : "days"),
+    noStreak: "Answer 5 to start",
+  },
   quizLabel: "Scam or genuine?",
   scam: "Scam",
   genuine: "Genuine",
@@ -722,7 +774,56 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
-    tabs: { check: "Check", learn: "Learn", trends: "Trends" },
+    tabs: { check: "Check", learn: "Learn", trends: "Radar", settings: "Settings", newCheck: "Check a new message" },
+    check: {
+      greeting: (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
+      question: "Is this a scam?",
+      heroLine: "Paste a message before you pay, tap a link or share a code.",
+      paste: "Paste & check",
+      pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
+      screenshot: "Check a screenshot",
+      payRow: "About to pay someone?",
+      week: {
+        title: "This week",
+        checks: (n) => `${n} ${n === 1 ? "check" : "checks"}`,
+        caught: (n) => ({ strong: `${n} ${n === 1 ? "scam" : "scams"}`, rest: "caught" }),
+        nothing: "nothing caught",
+      },
+      practice: { title: "Practice", streak: (n) => `${n}-day streak`, start: "Start a streak" },
+      install: {
+        body: "Keep FraudLens on your Home Screen, so it's there when the next message lands.",
+        add: "Add to Home Screen",
+        notNow: "Not now",
+        iosTitle: "On iPhone",
+        iosStep1: "Tap the Share button in Safari.",
+        iosStep2: 'Choose "Add to Home Screen".',
+      },
+      recent: {
+        title: "Recent",
+        empty: "Your checks will show here.",
+        short: { safe: "Genuine", suspicious: "Careful", scam: "Scam" },
+      },
+    },
+    tools: {
+      title: "Tools",
+      batch: "Batch scan",
+      batchHint: "Several at once",
+      conversation: "Conversation",
+      conversationHint: "A whole thread",
+      sandbox: "Sandbox",
+      sandboxHint: "Practise safely",
+    },
+    settings: {
+      title: "Settings",
+      languageTitle: "Language",
+      languageNote: "Changes every screen, and tells the analysis which language to answer in.",
+      privacyTitle: "Privacy",
+      privacyBody:
+        "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Your checks are kept on this device only.",
+      aboutTitle: "About",
+      aboutBody: "FraudLens helps you spot a scam message before you pay, tap a link or share a code. Built in Mauritius, for Mauritius.",
+      teamLogoAlt: "Dhruv and Friends logo",
+    },
     trends: {
       title: "Known scam patterns in Mauritius",
       intro:
@@ -856,7 +957,56 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
-    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances" },
+    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Radar", settings: "Réglages", newCheck: "Vérifier un nouveau message" },
+    check: {
+      greeting: (h) => (h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir"),
+      question: "Est-ce une arnaque ?",
+      heroLine: "Collez un message avant de payer, d'ouvrir un lien ou de partager un code.",
+      paste: "Coller et vérifier",
+      pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
+      screenshot: "Vérifier une capture d'écran",
+      payRow: "Sur le point de payer ?",
+      week: {
+        title: "Cette semaine",
+        checks: (n) => `${n} vérification${n === 1 ? "" : "s"}`,
+        caught: (n) => ({ strong: `${n} arnaque${n === 1 ? "" : "s"}`, rest: n === 1 ? "détectée" : "détectées" }),
+        nothing: "rien détecté",
+      },
+      practice: { title: "Entraînement", streak: (n) => `${n} jour${n === 1 ? "" : "s"} d'affilée`, start: "Commencer une série" },
+      install: {
+        body: "Gardez FraudLens sur votre écran d'accueil, pour l'avoir sous la main au prochain message.",
+        add: "Ajouter à l'écran d'accueil",
+        notNow: "Plus tard",
+        iosTitle: "Sur iPhone",
+        iosStep1: "Touchez le bouton Partager dans Safari.",
+        iosStep2: "Choisissez « Sur l’écran d’accueil ».",
+      },
+      recent: {
+        title: "Récent",
+        empty: "Vos vérifications apparaîtront ici.",
+        short: { safe: "Authentique", suspicious: "Prudence", scam: "Arnaque" },
+      },
+    },
+    tools: {
+      title: "Outils",
+      batch: "Analyse groupée",
+      batchHint: "Plusieurs à la fois",
+      conversation: "Conversation",
+      conversationHint: "Tout un échange",
+      sandbox: "Simulation",
+      sandboxHint: "S'entraîner sans risque",
+    },
+    settings: {
+      title: "Réglages",
+      languageTitle: "Langue",
+      languageNote: "Change tous les écrans, et indique à l'analyse dans quelle langue répondre.",
+      privacyTitle: "Confidentialité",
+      privacyBody:
+        "Les numéros de téléphone, adresses e-mail et numéros de compte sont retirés dans votre navigateur avant l'envoi du message pour analyse. Vos vérifications restent sur cet appareil.",
+      aboutTitle: "À propos",
+      aboutBody: "FraudLens vous aide à repérer une arnaque avant de payer, d'ouvrir un lien ou de partager un code. Conçu à Maurice, pour Maurice.",
+      teamLogoAlt: "Logo de Dhruv and Friends",
+    },
     trends: {
       title: "Arnaques connues à Maurice",
       intro:
@@ -1049,6 +1199,15 @@ export const COPY: Record<UiLanguage, Copy> = {
     learn: {
       headline: "Apprenez à les repérer",
       streak: (d) => `${d} jours d'affilée`,
+      cards: {
+        todayTitle: "Aujourd'hui",
+        todayCount: (done, goal) => `${done} sur ${goal}`,
+        more: (n) => `Encore ${n} pour garder votre série`,
+        doneToday: "L'entraînement du jour est fait",
+        streakTitle: "Série",
+        days: (n) => (n === 1 ? "jour" : "jours"),
+        noStreak: "Répondez à 5 pour commencer",
+      },
       quizLabel: "Arnaque ou authentique ?",
       scam: "Arnaque",
       genuine: "Authentique",
@@ -1214,7 +1373,62 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
-    tabs: { check: "Verifie", learn: "Aprann", trends: "Tandans" },
+    tabs: {
+      check: "Verifie",
+      learn: "Aprann",
+      trends: "Radar",
+      settings: TODO_KREOL("Settings"),
+      newCheck: TODO_KREOL("Check a new message"),
+    },
+    check: TODO_KREOL({
+      greeting: (h: number) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
+      question: "Is this a scam?",
+      heroLine: "Paste a message before you pay, tap a link or share a code.",
+      paste: "Paste & check",
+      pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
+      screenshot: "Check a screenshot",
+      payRow: "About to pay someone?",
+      week: {
+        title: "This week",
+        checks: (n: number) => `${n} ${n === 1 ? "check" : "checks"}`,
+        caught: (n: number) => ({ strong: `${n} ${n === 1 ? "scam" : "scams"}`, rest: "caught" }),
+        nothing: "nothing caught",
+      },
+      practice: { title: "Practice", streak: (n: number) => `${n}-day streak`, start: "Start a streak" },
+      install: {
+        body: "Keep FraudLens on your Home Screen, so it's there when the next message lands.",
+        add: "Add to Home Screen",
+        notNow: "Not now",
+        iosTitle: "On iPhone",
+        iosStep1: "Tap the Share button in Safari.",
+        iosStep2: 'Choose "Add to Home Screen".',
+      },
+      recent: {
+        title: "Recent",
+        empty: "Your checks will show here.",
+        short: { safe: "Genuine", suspicious: "Careful", scam: "Scam" },
+      },
+    }),
+    tools: TODO_KREOL({
+      title: "Tools",
+      batch: "Batch scan",
+      batchHint: "Several at once",
+      conversation: "Conversation",
+      conversationHint: "A whole thread",
+      sandbox: "Sandbox",
+      sandboxHint: "Practise safely",
+    }),
+    settings: TODO_KREOL({
+      title: "Settings",
+      languageTitle: "Language",
+      languageNote: "Changes every screen, and tells the analysis which language to answer in.",
+      privacyTitle: "Privacy",
+      privacyBody:
+        "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Your checks are kept on this device only.",
+      aboutTitle: "About",
+      aboutBody: "FraudLens helps you spot a scam message before you pay, tap a link or share a code. Built in Mauritius, for Mauritius.",
+      teamLogoAlt: "Dhruv and Friends logo",
+    }),
     trends: {
       title: "Bann eskrokri konplet dan Moris",
       intro:
@@ -1339,6 +1553,15 @@ export const COPY: Record<UiLanguage, Copy> = {
     learn: {
       headline: "Aprann rekonet zot",
       streak: (d) => `${d} zour ki swiv`,
+      cards: {
+        todayTitle: "Zordi",
+        todayCount: (done: number, goal: number) => `${done} lor ${goal}`,
+        more: TODO_KREOL((n: number) => `${n} more to keep your streak`),
+        doneToday: TODO_KREOL("Today's practice is done"),
+        streakTitle: TODO_KREOL("Streak"),
+        days: (n: number) => (n === 1 ? "zour" : "zour"),
+        noStreak: TODO_KREOL("Answer 5 to start"),
+      },
       quizLabel: "Eskrokri ouswa vre?",
       scam: "Eskrokri",
       genuine: "Vre",

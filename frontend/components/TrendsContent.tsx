@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { getTrends, type TrendsSummary } from "@/lib/intelligence-api";
 import { useLanguage } from "./LanguageProvider";
+import ScreenTitle from "./ScreenTitle";
+import ToolsCard from "./ToolsCard";
 
 type Status = "loading" | "ok" | "error";
 
@@ -36,11 +38,12 @@ export default function TrendsContent() {
   const hasActivity = data && (data.totals.reportedSenders > 0 || data.totals.campaigns > 0);
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-3">
-        <h1>{copy.trends.title}</h1>
-        <p className="max-w-[48ch] text-[1.0625rem] leading-relaxed text-ink-soft">{copy.trends.intro}</p>
-      </section>
+    <>
+      <ScreenTitle tabKey="trends" />
+      <div className="gutter flex flex-col gap-4 pt-4">
+        <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.trends.intro}</p>
+
+        <ToolsCard copy={copy} />
 
       <ol className="sheet">
         {copy.trends.categories.map((c, i) => (
@@ -115,6 +118,7 @@ export default function TrendsContent() {
           </>
         )}
       </section>
-    </div>
+      </div>
+    </>
   );
 }

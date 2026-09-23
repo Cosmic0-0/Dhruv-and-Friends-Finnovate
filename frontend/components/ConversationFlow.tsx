@@ -91,12 +91,12 @@ export default function ConversationFlow() {
           <p className="mt-1 text-right font-mono text-[11px] text-ink-soft">{copy.charCount(message.length, MAX_MESSAGE_LENGTH)}</p>
           <p id="conversation-privacy" className="mt-3 text-xs leading-relaxed text-ink-soft">{copy.privacyNote}</p>
           {errorText && <p role="alert" className="mt-4 border-l-2 border-danger pl-3 text-sm text-danger-ink">{errorText}</p>}
-          {loading ? <div className="mt-5 flex items-center gap-4"><WaitStatus phase="running" stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} /><button type="button" onClick={cancel} className="text-sm underline underline-offset-4">{copy.wait.cancel}</button></div> : <button type="submit" disabled={!message.trim()} className="pressable mt-5 flex min-h-12 w-full items-center justify-between bg-ink px-4 py-3 text-sm font-semibold text-on-ink hover:bg-ink-2 disabled:opacity-40">{error ? copy.retry : c.submit}<span aria-hidden="true">↗</span></button>}
+          {loading ? <div className="mt-5 flex items-center gap-4"><WaitStatus phase="running" stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} /><button type="button" onClick={cancel} className="text-sm underline underline-offset-4">{copy.wait.cancel}</button></div> : <button type="submit" disabled={!message.trim()} className="pressable mt-5 flex min-h-12 w-full items-center justify-between bg-surface-dark px-4 py-3 text-sm font-semibold text-on-ink hover:bg-surface-dark-2 disabled:opacity-40">{error ? copy.retry : c.submit}<span aria-hidden="true">↗</span></button>}
         </form>
       </section>
       <aside className="border border-card-border bg-card md:sticky md:top-6" aria-label={c.progress}>
         <details open className="group">
-          <summary className="cursor-pointer border-b border-card-border bg-ink px-5 py-4 text-on-ink">
+          <summary className="cursor-pointer border-b border-card-border bg-surface-dark px-5 py-4 text-on-ink">
             <span className="micro text-on-ink">{c.progress}</span>
             {furthest?.journey && <span className="mt-2 block text-sm text-on-ink/80">{copy.result.journey.labels[furthest.journey.currentStage]}</span>}
           </summary>

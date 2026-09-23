@@ -5,7 +5,6 @@ import {
   buildRound,
   languagePool,
   localDay,
-  STREAK_PILL_MIN,
   type LanguagePool,
   type QuizItem,
   type QuizLanguage,
@@ -19,6 +18,8 @@ import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
 import { CheckIcon } from "../icons";
 import Celebration from "./Celebration";
+import ScreenTitle from "../ScreenTitle";
+import StreakCards from "./StreakCards";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
@@ -50,23 +51,15 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
-  const streakShown = state ? visibleStreak(state, today) : 0;
-  const doneToday = state?.lastCompletedDay === today;
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex items-start justify-between gap-4">
-        <h1>{copy.learn.headline}</h1>
-        {streakShown >= STREAK_PILL_MIN && (
-          <span className="micro mt-2 shrink-0 bg-caution-soft px-2.5 py-1 whitespace-nowrap text-caution-ink">
-            {copy.learn.streak(streakShown)}
-          </span>
-        )}
-      </header>
+    <>
+      <ScreenTitle tabKey="learn" />
+      <div className="gutter flex flex-col gap-4 pt-4">
 
       {/* Wait for the saved language so a wrong-language question never flashes. */}
       {!ready ? (
-        <div className="h-72 bg-ink" aria-hidden="true" />
+        <div className="h-72 bg-surface-dark" aria-hidden="true" />
       ) : !quizLang ? (
         <LanguageNote pool={pool} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
       ) : (
@@ -109,18 +102,15 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
       )}
 
       {state && ready && quizLang && (
-        <p className="-mt-5 flex items-center gap-2 text-[0.8125rem] font-medium text-ink-soft" aria-live="polite">
-          {doneToday ? (
-            <>
-              <CheckIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2.5} />
-              {copy.learn.dailyDone}
-            </>
-          ) : (
-            copy.learn.dailyProgress(Math.min(state.today.answered, DAILY_GOAL), DAILY_GOAL)
-          )}
-        </p>
+        <div aria-live="polite">
+          <StreakCards
+            answered={state.today.answered}
+            streak={visibleStreak(state, today)}
+            copy={copy}
+          />
+        </div>
       )}
-      <p className="-mt-5 px-1 text-[0.8125rem] leading-snug text-ink-muted">{copy.learn.syntheticNote}</p>
+      <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
 
       <Trends trends={trends} copy={copy} />
 
@@ -139,7 +129,8 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
       )}
 
       {celebration && <Celebration {...celebration} copy={copy} onClose={() => setCelebration(null)} />}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -147,7 +138,7 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy; onAccept: () => void }) {
   const L = copy.learn;
   return (
-    <section className="flex flex-col gap-4 bg-ink px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
+    <section className="flex flex-col gap-4 bg-surface-dark px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
       <p id="quiz-label" className="micro text-on-ink/60">
         {L.quizLabel}
       </p>
@@ -157,7 +148,7 @@ function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy
           <button
             type="button"
             onClick={onAccept}
-            className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-ink uppercase hover:opacity-90"
+            className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
           >
             {L.offerOther(L.languageName[pool.fallback])}
           </button>
@@ -247,7 +238,7 @@ function Quiz({
 
   if (finished) {
     return (
-      <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-4 bg-ink px-5 py-6 text-on-ink" aria-live="polite">
+      <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-4 bg-surface-dark px-5 py-6 text-on-ink" aria-live="polite">
         <p className="micro text-on-ink/60">{L.scoreLabel}</p>
         <p className="font-heading text-[3.5rem] leading-none font-medium tabular-nums">
           {score} <span className="text-on-ink/50">/ {round.length}</span>
@@ -267,7 +258,7 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="pressable font-heading mt-1 flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-ink uppercase hover:opacity-90"
+          className="pressable font-heading mt-1 flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
         >
           {L.playAgain}
         </button>
@@ -296,7 +287,7 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-5 bg-ink px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
+    <section ref={cardRef} className="flex scroll-mt-4 flex-col gap-5 bg-surface-dark px-5 py-6 text-on-ink" aria-labelledby="quiz-label">
       <p id="quiz-label" className="micro text-on-ink/60">
         {L.quizLabel}
       </p>
@@ -323,7 +314,7 @@ function Quiz({
               aria-pressed={chosen}
               className={`pressable font-heading flex min-h-14 items-center justify-center px-4 text-[1.0625rem] font-semibold tracking-[0.04em] text-white uppercase transition-opacity ${
                 isScamButton ? "bg-danger" : "bg-safe"
-              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white ring-offset-2 ring-offset-ink" : ""}`}
+              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white ring-offset-2 ring-offset-surface-dark" : ""}`}
             >
               {isScamButton ? L.scam : L.genuine}
             </button>
@@ -342,7 +333,7 @@ function Quiz({
           ref={nextRef}
           type="button"
           onClick={next}
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-ink uppercase hover:opacity-90"
+          className="pressable font-heading flex min-h-14 items-center justify-center bg-on-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-surface-dark uppercase hover:opacity-90"
         >
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>

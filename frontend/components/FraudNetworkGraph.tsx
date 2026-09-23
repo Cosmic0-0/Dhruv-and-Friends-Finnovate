@@ -13,7 +13,7 @@ type Entity = { kind: "Campaign" | "Claimed identity" | "Sender" | "Domain"; lab
 function IntelligenceNode({ data, selected }: NodeProps<Entity>) {
   const { lang } = useLanguage();
   const t = intelligenceCopy(lang);
-  return <div className={`w-56 border bg-card p-4 shadow-sm transition-shadow ${selected ? "border-accent-deep ring-2 ring-accent/25" : "border-card-border"} ${data.kind === "Campaign" ? "!bg-ink text-on-ink" : "text-ink"}`}>
+  return <div className={`w-56 border bg-card p-4 shadow-sm transition-shadow ${selected ? "border-accent-deep ring-2 ring-accent/25" : "border-card-border"} ${data.kind === "Campaign" ? "!bg-surface-dark text-on-ink" : "text-ink"}`}>
     <Handle type="target" position={Position.Left} className="!size-2 !border-0 !bg-accent" />
     <div className="flex items-center justify-between gap-2"><span className="micro opacity-65">{t(data.kind)}</span><span className={`size-2 ${data.flagged ? "bg-danger" : "bg-accent"}`} /></div>
     <p className="mt-2 break-words font-mono text-sm font-medium">{data.label}</p>

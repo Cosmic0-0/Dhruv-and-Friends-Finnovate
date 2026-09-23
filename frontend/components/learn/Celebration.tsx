@@ -104,7 +104,7 @@ export default function Celebration({
   return createPortal(
     <div ref={rootRef} className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Swallows clicks so nothing behind can be reached; dismissal is Esc or the button only. */}
-      <div className="fl-scrim absolute inset-0 bg-ink/65" data-closing={closing || undefined} aria-hidden="true" />
+      <div className="fl-scrim absolute inset-0 bg-[var(--c-scrim)]" data-closing={closing || undefined} aria-hidden="true" />
       <div
         ref={cardRef}
         role="dialog"
@@ -154,7 +154,7 @@ export default function Celebration({
           ref={buttonRef}
           type="button"
           onClick={close}
-          className="pressable font-heading mt-1 flex min-h-14 w-full items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
+          className="pressable font-heading mt-1 flex min-h-14 w-full items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
         >
           {L.celebrate.keepGoing}
         </button>

@@ -18,7 +18,7 @@ export function SectionLabel({ children, id }: { children: React.ReactNode; id?:
 /** Matches the home screen's instrument band so the two screens read as one tool. */
 export function ResultHeader({ copy, sender }: { copy: Copy; sender?: string }) {
   return (
-    <header className="bg-ink text-on-ink pt-[env(safe-area-inset-top)]">
+    <header className="bg-surface-dark text-on-ink pt-[env(safe-area-inset-top)]">
       <div className="gutter flex items-center gap-3 py-3">
         <Link
           href="/"
@@ -134,7 +134,7 @@ function RiskMeter({ score, label }: { score: number; label: string }) {
       >
         <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${score}%` }} />
         {[25, 50, 75].map((t) => (
-          <span key={t} aria-hidden="true" className="absolute inset-y-0 w-px bg-ink/25" style={{ left: `${t}%` }} />
+          <span key={t} aria-hidden="true" className="absolute inset-y-0 w-px bg-surface-dark/25" style={{ left: `${t}%` }} />
         ))}
       </div>
     </div>
@@ -224,7 +224,7 @@ export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
     <Link
       href="/"
-      className="pressable font-heading flex min-h-14 items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
+      className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
     >
       {copy.result.checkAnother}
     </Link>
