@@ -66,8 +66,21 @@ def analyze(file_bytes: bytes, mime_type: str, document_id: str | None = None) -
     else:
         checks_skipped.append(SkippedCheck(check=CheckName.ERROR_LEVEL_ANALYSIS, reason="not_applicable"))
 
+    # A non-JPEG image (PNG/WEBP) whose only cheap check so far is CLEAN
+    # hasn't actually been resolved: metadata is mostly EXIF, and "no EXIF
+    # on a PNG" is normal, not evidence either way - checks/metadata_pdf.py
+    # correctly reports CLEAN for that, but CLEAN here means "nothing
+    # applicable has actually looked," not "looked and found nothing."
+    # Tracked separately from `status` (rather than overwriting it to
+    # INCONCLUSIVE) so a genuine CLEAN from TruFor still combines cleanly
+    # below instead of being permanently stuck INCONCLUSIVE by
+    # _combine_status's "any INCONCLUSIVE keeps escalation open" rule.
+    needs_evidence_before_resolving = (
+        mime_type != "application/pdf" and not ela.is_applicable(mime_type, context) and status == CheckStatus.CLEAN
+    )
+
     # --- Stage 3: TruFor - only if still inconclusive, images only ------
-    if status == CheckStatus.INCONCLUSIVE and mime_type != "application/pdf":
+    if (status == CheckStatus.INCONCLUSIVE or needs_evidence_before_resolving) and mime_type != "application/pdf":
         from checks import trufor  # lazy: only pulls in torch when actually needed
 
         result3 = trufor.run(file_bytes, mime_type, context)

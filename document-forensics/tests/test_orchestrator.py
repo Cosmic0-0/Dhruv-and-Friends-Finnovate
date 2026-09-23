@@ -129,7 +129,11 @@ def test_trufor_is_never_run_against_a_pdf_even_when_inconclusive(monkeypatch):
 
 def test_signature_check_only_runs_when_a_region_is_found(monkeypatch):
     monkeypatch.setattr(metadata_pdf, "run", lambda *a, **k: _clean(CheckName.METADATA_PDF))
-    monkeypatch.setattr(ela, "is_applicable", lambda *a, **k: False)
+    # ELA genuinely applicable and CLEAN here (not just metadata CLEAN with
+    # ELA inapplicable) - this test is about signature-check invocation,
+    # not about the CLEAN-resolution rule covered by the tests below.
+    monkeypatch.setattr(ela, "is_applicable", lambda *a, **k: True)
+    monkeypatch.setattr(ela, "run", lambda *a, **k: _clean(CheckName.ERROR_LEVEL_ANALYSIS))
     monkeypatch.setattr(metadata_pdf, "find_signature_region", lambda *a, **k: (10, 10, 50, 30))
 
     from app.models import SignatureReport
@@ -144,3 +148,65 @@ def test_signature_check_only_runs_when_a_region_is_found(monkeypatch):
     assert report.signature is not None
     assert report.signature.present is True
     fake_signature_module.run_signature_check.assert_called_once()
+
+
+def test_a_clean_but_uninformative_non_jpeg_image_escalates_to_trufor_instead_of_resolving(monkeypatch):
+    # A PNG with no EXIF is normal, not evidence either way -
+    # checks/metadata_pdf.py correctly reports CLEAN for that, and ELA
+    # never applies to PNG. Neither is a check that actually looked at
+    # this image and found it clean, so resolving CLEAN here would be
+    # resolving on an absence of evidence, not evidence of absence. This
+    # is the exact gap a tampered PNG could otherwise slip through
+    # (verified live against a real tampered PNG during manual testing).
+    monkeypatch.setattr(metadata_pdf, "run", lambda *a, **k: _clean(CheckName.METADATA_PDF))
+    monkeypatch.setattr(metadata_pdf, "find_signature_region", lambda *a, **k: None)
+    monkeypatch.setattr(ela, "is_applicable", lambda *a, **k: False)
+
+    fake_trufor = MagicMock()
+    fake_trufor.run.return_value = _suspicious(CheckName.TRUFOR)
+    monkeypatch.setitem(sys.modules, "checks.trufor", fake_trufor)
+
+    with _block_import("checks.layout", "app.signature"):
+        report = orchestrator.analyze(b"fake-bytes", "image/png")
+
+    assert CheckName.TRUFOR in report.checks_run
+    fake_trufor.run.assert_called_once()
+    assert len(report.indicators) == 1
+
+
+def test_a_genuinely_clean_non_jpeg_image_still_resolves_clean_once_trufor_agrees(monkeypatch):
+    # The fix above must not make every PNG permanently unresolvable -
+    # once a check that IS applicable to it (TruFor) weighs in and agrees
+    # nothing's wrong, the document is genuinely CLEAN.
+    monkeypatch.setattr(metadata_pdf, "run", lambda *a, **k: _clean(CheckName.METADATA_PDF))
+    monkeypatch.setattr(metadata_pdf, "find_signature_region", lambda *a, **k: None)
+    monkeypatch.setattr(ela, "is_applicable", lambda *a, **k: False)
+
+    fake_trufor = MagicMock()
+    fake_trufor.run.return_value = _clean(CheckName.TRUFOR)
+    monkeypatch.setitem(sys.modules, "checks.trufor", fake_trufor)
+
+    with _block_import("checks.layout", "app.signature"):
+        report = orchestrator.analyze(b"fake-bytes", "image/png")
+
+    assert report.summary == "no tampering indicators found"
+    skipped = {s.check: s.reason for s in report.checks_skipped}
+    assert skipped[CheckName.LAYOUT_COMPARISON] == "resolved_by_cheaper_checks"
+
+
+def test_a_clean_pdf_still_resolves_without_forcing_escalation(monkeypatch):
+    # The new rule is scoped to non-PDF images only (see orchestrator.py's
+    # comment) - a PDF's metadata check (pikepdf/pdfplumber) genuinely
+    # examines PDF structure, unlike EXIF-on-a-PNG, so CLEAN there is a
+    # real result, not an absence of evidence. TruFor is images-only
+    # anyway, so this mostly guards against a future regression.
+    monkeypatch.setattr(metadata_pdf, "run", lambda *a, **k: _clean(CheckName.METADATA_PDF))
+    monkeypatch.setattr(metadata_pdf, "find_signature_region", lambda *a, **k: None)
+    monkeypatch.setattr(ela, "is_applicable", lambda *a, **k: False)
+
+    with _block_import("checks.trufor", "checks.layout", "app.signature"):
+        report = orchestrator.analyze(b"fake-bytes", "application/pdf")
+
+    assert report.summary == "no tampering indicators found"
+    skipped = {s.check: s.reason for s in report.checks_skipped}
+    assert skipped[CheckName.TRUFOR] == "not_applicable"
