@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import { router } from "./routes/index.js";
 import { checkOllamaHealth, llmStatus } from "./services/analysis/llmClient.js";
+import { createApiCors } from "./services/http-cors/index.js";
 
 const app = express();
 
@@ -30,7 +31,7 @@ app.use(helmet());
 // Each route declares its own express.json() limit (see routes/index.js) -
 // text routes stay small, the screenshot route needs room for a base64
 // image - so there's no blanket body-size limit here.
-app.use("/api", router);
+app.use("/api", createApiCors(), router);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
@@ -47,7 +48,7 @@ app.get("/health/llm", async (_req, res) => {
 // route it's meant to catch, per Express's error-middleware rules). Without
 // this, a body that fails express.json() parsing (e.g. malformed JSON) falls
 // through to Express's default handler, which returns an HTML stack trace
-// with absolute filesystem paths — see data/test-payloads/FINDINGS.md #5.
+// with absolute filesystem paths (a regression caught during the first QA pass).
 app.use((err, req, res, next) => {
   if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
     return res.status(400).json({ error: "invalid JSON body" });

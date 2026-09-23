@@ -1,0 +1,44 @@
+{
+  "version": "demo-suppliers-1.0",
+  "notes": [
+    "DEMONSTRATION DATA ONLY. Every supplier, domain, address, beneficiary and account below is fictional.",
+    "Domains use the reserved .example TLD (RFC 2606) so no entry can collide with a real business.",
+    "Bank accounts are stored masked (last 4 digits only) - FraudLens never needs or keeps a full account number.",
+    "In a real deployment this file is replaced by the organisation's own vendor master data (ERP / AP system)."
+  ],
+  "suppliers": [
+    {
+      "id": "abc-supplies",
+      "name": "ABC Supplies Ltd",
+      "aliases": ["ABC Supplies"],
+      "domains": ["abc-supplies.example"],
+      "knownEmailAddresses": ["finance@abc-supplies.example", "accounts@abc-supplies.example"],
+      "knownBeneficiaries": ["ABC SUPPLIES LTD"],
+      "bankAccounts": [{ "label": "Primary", "masked": "****4491" }],
+      "verified": true,
+      "demo": true
+    },
+    {
+      "id": "island-freight",
+      "name": "Island Freight Services Ltd",
+      "aliases": ["Island Freight"],
+      "domains": ["islandfreight.example"],
+      "knownEmailAddresses": ["billing@islandfreight.example"],
+      "knownBeneficiaries": ["ISLAND FREIGHT SERVICES LTD"],
+      "bankAccounts": [{ "label": "Primary", "masked": "****2210" }],
+      "verified": true,
+      "demo": true
+    },
+    {
+      "id": "lagoon-office-supplies",
+      "name": "Lagoon Office Supplies",
+      "aliases": [],
+      "domains": ["lagoon-office.example"],
+      "knownEmailAddresses": [],
+      "knownBeneficiaries": [],
+      "bankAccounts": [],
+      "verified": false,
+      "demo": true
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+[
+  {
+    "id": "obvious-phishing",
+    "payload": {
+      "source": "email",
+      "message": "Urgent: your MCB account will be suspended. Send your OTP and password now at https://mcb-secure-login.top/login",
+      "emailContext": {
+        "messageId": "<demo-obvious-1@example>",
+        "from": { "name": "MCB Security", "address": "security@mcb-secure-login.top" },
+        "replyTo": [], "returnPath": null, "subject": "Account suspended",
+        "authentication": { "spf": "fail", "dkim": "fail", "dmarc": "fail" },
+        "attachments": [], "urls": ["https://mcb-secure-login.top/login"], "threadContext": null,
+        "recipient": "user1@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "families": ["SOC", "SEC", "URL"] }
+  },
+  {
+    "id": "internal-executive-bec",
+    "payload": {
+      "source": "email",
+      "message": "Urgently transfer Rs 80,000 today. Keep this confidential and skip the normal approval process.",
+      "emailContext": {
+        "messageId": "<demo-bec-1@example>",
+        "from": { "name": "Jane Smith — Chief Executive Officer", "address": "jane.smith@demo-compan1.example" },
+        "replyTo": [], "returnPath": null, "subject": "Confidential transfer",
+        "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+        "attachments": [], "urls": [], "threadContext": null,
+        "recipient": "user2@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "codes": ["ORG-01", "PAY-01", "SOC-08"] }
+  },
+  {
+    "id": "supplier-bank-change",
+    "payload": {
+      "source": "email",
+      "message": "Our bank details have changed. Please use account ending 7283 for invoice 1182.",
+      "emailContext": {
+        "messageId": "<demo-supplier-1@example>",
+        "from": { "name": "ABC Supplies", "address": "accounts@abc-suppiies.example" },
+        "replyTo": [], "returnPath": null, "subject": "Updated payment details",
+        "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+        "attachments": [{ "name": "Invoice-1182.pdf", "contentType": "application/pdf", "size": 12000 }],
+        "urls": [], "threadContext": null, "recipient": "ap@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "codes": ["EMAIL-02", "EMAIL-06", "PAY-07"] }
+  },
+  {
+    "id": "legitimate-account-compromise-language",
+    "payload": {
+      "source": "email",
+      "message": "Urgently transfer Rs 95,000 today. Keep this confidential and bypass the usual approval.",
+      "emailContext": {
+        "messageId": "<demo-compromise-1@example>",
+        "from": { "name": "ABC Supplies", "address": "accounts@abc-supplies.example" },
+        "replyTo": [{ "name": "ABC Supplies", "address": "accounts@abc-supplies.example" }],
+        "returnPath": "accounts@abc-supplies.example", "subject": "Private transfer",
+        "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+        "attachments": [], "urls": [], "threadContext": null,
+        "recipient": "ap@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "codes": ["PAY-01", "SOC-08"], "absentCodes": ["EMAIL-02", "EMAIL-03"] }
+  },
+  {
+    "id": "legitimate-supplier",
+    "payload": {
+      "source": "email",
+      "message": "Hello, attached is invoice 1182 for the monthly stationery delivery. Please process it through the usual accounts payable workflow.",
+      "emailContext": {
+        "messageId": "<demo-legitimate-1@example>",
+        "from": { "name": "ABC Supplies", "address": "accounts@abc-supplies.example" },
+        "replyTo": [{ "name": "ABC Supplies", "address": "accounts@abc-supplies.example" }],
+        "returnPath": "accounts@abc-supplies.example", "subject": "Invoice 1182",
+        "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+        "attachments": [{ "name": "Invoice-1182.pdf", "contentType": "application/pdf", "size": 12000 }],
+        "urls": [], "threadContext": null, "recipient": "ap@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "level": "low", "absentCodes": ["EMAIL-02", "EMAIL-03", "EMAIL-06", "ORG-01"] }
+  }
+]

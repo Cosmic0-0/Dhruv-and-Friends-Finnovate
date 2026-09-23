@@ -1,5 +1,6 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 
 // Isolated in-memory DB, fast RDAP timeout, and a hosted-fallback LLM path
 // (so this test never depends on a real Ollama instance being reachable) -
@@ -12,8 +13,12 @@ process.env.FALLBACK_API_KEY = "test-key";
 
 const { default: express } = await import("express");
 const { router } = await import("./index.js");
+const { _internals: dnsInternals } = await import("../services/site-security/url-safety.js");
+const { _internals: tlsInternals } = await import("../services/site-security/tls.js");
 
 const originalFetch = globalThis.fetch;
+const originalDnsLookup = dnsInternals.lookup;
+const originalTlsConnect = tlsInternals.connect;
 
 // Semantic-model contract (services/analysis): enum codes + exact quotes
 // only - no verdict, score or action.
@@ -64,12 +69,12 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   const body = await res.json();
 
   // URL-02 (30, rule) + SOC-01 (6, lexicon, corroborated by the model) = 36
-  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.0, not the LLM.
+  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.3, not the LLM.
   assert.equal(body.riskScore, 36);
   assert.deepEqual(body.risk, { score: 36, level: "elevated", confidence: "high" });
   assert.equal(body.verdict, "suspicious");
   assert.equal(body.decision, "verify_first");
-  assert.equal(body.analysis.rulesetVersion, "rs-1.0");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.3");
   assert.equal(body.analysis.semantic.status, "ok");
   assert.ok(Array.isArray(body.signals) && body.signals.length > 0);
   assert.equal(typeof body.suggestedAction, "string");
@@ -85,6 +90,57 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   const lookalike = body.signals.find((s) => s.type === "lookalike_url");
   assert.ok(lookalike, "expected a lookalike_url signal for mcb-secure.top");
   assert.equal("domainAgeDays" in lookalike, false);
+});
+
+test("POST /api/analyze: pageUrl keeps the scanned page's own domain out of URL-08, without weakening a real lookalike of it", async (t) => {
+  globalThis.fetch = routedFetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  const pageText = "badssl.com click through dh480.badssl.com to test an old cipher suite.";
+
+  const withPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText, pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(!withPageUrl.signals.some((s) => s.code === "URL-08"), "badssl.com must not be flagged as an unofficial link on its own page");
+
+  const withoutPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText }),
+    })
+  ).json();
+  assert.ok(withoutPageUrl.signals.some((s) => s.code === "URL-08"), "same text with no page context keeps prior behaviour");
+
+  const lookalikePage = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "click through badssl.com.evil-login.net to continue", pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(lookalikePage.signals.some((s) => s.code === "URL-08"), "a genuine lookalike of the page's own domain must still be flagged");
+
+  // A malformed pageUrl is ignored, not rejected - the request still succeeds.
+  const malformed = await originalFetch(`${base}/analyze`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: pageText, pageUrl: "not a url" }),
+  });
+  assert.equal(malformed.status, 200);
 });
 
 test("POST /api/check-sender looks up an existing report count without incrementing it", async (t) => {
@@ -207,4 +263,73 @@ test("sandbox routes validate stage/type, expose metadata, terminate and survive
  globalThis.fetch=async(url,init)=>{if(String(url).includes("api.anthropic.com")){calls++;throw Error("offline")} return originalFetch(url,init)};
  const ended=await (await post({scamType:"MCB_IMPERSONATION",stage:"URGENCY",turnIndex:5})).json(); assert.equal(ended.ended,true); assert.equal(calls,0);
  const fallback=await (await post({scamType:"MCB_IMPERSONATION",stage:"URGENCY",turnIndex:0})).json(); assert.equal(fallback.source,"scripted"); assert.equal(fallback.simulated,true); assert.ok(fallback.line); assert.equal(calls,1);
+});
+
+test("POST /api/analyze-site validates input, rejects unsafe urls with 400, and returns a graded report for a reachable site", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    dnsInternals.lookup = originalDnsLookup;
+    tlsInternals.connect = originalTlsConnect;
+  });
+  const base = `http://127.0.0.1:${server.address().port}/api`;
+
+  const missing = await originalFetch(`${base}/analyze-site`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(missing.status, 400);
+
+  // A private-IP target must be rejected before any outbound request is
+  // made - see services/site-security/url-safety.js. No DNS/fetch mocking
+  // needed for this one: 127.0.0.1 is a literal, not a hostname to resolve.
+  const unsafe = await originalFetch(`${base}/analyze-site`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url: "http://127.0.0.1:9/admin" }),
+  });
+  assert.equal(unsafe.status, 400);
+  assert.match((await unsafe.json()).error, /private or reserved/);
+
+  // A reachable target: mock DNS/TLS/fetch for the target host, same as
+  // services/site-security/index.test.js, but reached through the real
+  // HTTP route this time.
+  dnsInternals.lookup = async () => [{ address: "93.184.216.34", family: 4 }];
+  tlsInternals.connect = () => {
+    const socket = new EventEmitter();
+    socket.destroy = () => {};
+    socket.getProtocol = () => "TLSv1.3";
+    socket.authorized = true;
+    socket.getPeerCertificate = () => ({
+      valid_from: new Date(Date.now() - 30 * 86_400_000).toUTCString(),
+      valid_to: new Date(Date.now() + 90 * 86_400_000).toUTCString(),
+    });
+    queueMicrotask(() => socket.emit("secureConnect"));
+    return socket;
+  };
+  globalThis.fetch = async (url) => {
+    const href = String(url);
+    if (href === "https://route-target.example/") {
+      return new Response("<html><body>hi</body></html>", { status: 200, headers: { "content-type": "text/html" } });
+    }
+    if (href === "http://route-target.example/") {
+      return new Response(null, { status: 301, headers: { location: "https://route-target.example/" } });
+    }
+    return new Response("not found", { status: 404 });
+  };
+
+  const res = await originalFetch(`${base}/analyze-site`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ url: "https://route-target.example/" }),
+  });
+  assert.equal(res.status, 200);
+  const body = await res.json();
+  assert.equal(typeof body.grade, "string");
+  assert.ok(Array.isArray(body.findings));
+  assert.ok(body.findings.some((f) => f.title === "Missing Content-Security-Policy"));
 });

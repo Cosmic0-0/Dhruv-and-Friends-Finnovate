@@ -158,13 +158,15 @@ section:last-of-type {
 }
 
 .state-pill[data-state="neutral"],
-.state-pill[data-state="unreachable"] {
+.state-pill[data-state="unreachable"],
+.state-pill[data-state="inconclusive"] {
   color: var(--neutral);
   background: rgb(122 130 140 / 12%);
   border-color: var(--line-strong);
 }
 .state-pill[data-state="neutral"] .dot,
-.state-pill[data-state="unreachable"] .dot {
+.state-pill[data-state="unreachable"] .dot,
+.state-pill[data-state="inconclusive"] .dot {
   background: var(--neutral);
 }
 
@@ -197,6 +199,9 @@ section:last-of-type {
 }
 .signal-item[data-severity="low"] {
   border-left-color: var(--accent);
+}
+.signal-item[data-severity="info"] {
+  border-left-color: var(--neutral);
 }
 
 .signal-type {

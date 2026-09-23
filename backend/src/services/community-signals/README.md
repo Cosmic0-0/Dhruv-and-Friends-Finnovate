@@ -1,7 +1,5 @@
 # Community signals: cluster and wave detection
 
-Owner: backend. Built on the `joshua` branch for backend-owner review. See `CLAUDE.md` → Role gating.
-
 Turns community scam reports into **evidence-backed, audited** risk signals.
 When many *different* people report the same scam pattern, and especially
 when reports spike above the usual rate, the next person who checks a

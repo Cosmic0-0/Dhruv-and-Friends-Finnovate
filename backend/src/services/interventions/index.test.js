@@ -45,3 +45,28 @@ test("explanation is built from the decision only and flags AI outage", () => {
   assert.match(text, /AI language analysis was unavailable/);
   assert.match(buildExplanation({ level: "low", score: 0, findingCount: 0, inferredCount: 0, semanticStatus: "ok" }, "fr"), /Aucun signal/);
 });
+
+test("email: verified supplier bank change -> use stored contacts, verify verbally; no duplicate generic advice", () => {
+  const plan = planInterventions({ level: "high", codes: ["EMAIL-06", "PAY-07"], source: "email" });
+  assert.deepEqual(ids(plan).slice(0, 3), ["supplier_dont_use_details", "supplier_contact_known", "supplier_verify_verbally"]);
+  assert.ok(!ids(plan).includes("verify_bank_change"));
+});
+
+test("email: executive impersonation -> hold the transfer, normal approval process", () => {
+  const plan = planInterventions({ level: "critical", codes: ["EMAIL-09", "PAY-01"], source: "email" });
+  for (const id of ["exec_hold_transfer", "exec_normal_approval", "exec_no_email_contacts"]) assert.ok(ids(plan).includes(id), id);
+});
+
+test("email: credential phishing gets email wording; the same codes on SMS keep the SMS wording", () => {
+  const email = planInterventions({ level: "high", codes: ["URL-08", "SEC-01"], source: "email" });
+  assert.ok(ids(email).includes("phish_no_password"));
+  assert.ok(!ids(email).includes("dont_open_link"));
+  const sms = planInterventions({ level: "high", codes: ["URL-08", "SEC-01"], source: "pasted_text" });
+  assert.ok(ids(sms).includes("dont_open_link"));
+  assert.ok(!ids(sms).includes("phish_no_password"));
+});
+
+test("email: low level never gets warnings, even with weak email findings", () => {
+  const plan = planInterventions({ level: "low", codes: ["EMAIL-01"], source: "email" });
+  assert.deepEqual(ids(plan), ["no_warning_signs"]);
+});

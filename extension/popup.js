@@ -11,12 +11,19 @@ const els = {
   signalsEmpty: document.getElementById("signals-empty"),
   scanBtn: document.getElementById("scan-page-btn"),
   reportBtn: document.getElementById("report-btn"),
+  securityReportBtn: document.getElementById("security-report-btn"),
   openLink: document.getElementById("open-fraudlens-link"),
   actionStatus: document.getElementById("action-status"),
   scanSection: document.getElementById("scan-result-section"),
   scanResult: document.getElementById("scan-result"),
   recentList: document.getElementById("recent-list"),
   recentEmpty: document.getElementById("recent-empty"),
+  securitySection: document.getElementById("security-report-section"),
+  securityGrade: document.getElementById("security-grade"),
+  securityGradeText: document.getElementById("security-grade-text"),
+  securitySummary: document.getElementById("security-summary"),
+  securityFindingsList: document.getElementById("security-findings-list"),
+  securityFindingsEmpty: document.getElementById("security-findings-empty"),
 };
 
 let currentHostname = null;
@@ -188,6 +195,98 @@ function renderScanResult(data) {
   renderRecent();
 }
 
+// A/B read as "no major passive findings", C as "worth a look", D/F as
+// "several notable findings" — reuses the existing safe/suspicious/high-risk
+// state-pill styling (styles.css) rather than inventing a parallel palette
+// just for grades.
+const GRADE_STATE = { A: "safe", B: "safe", C: "suspicious", D: "high-risk", F: "high-risk" };
+const SEVERITY_RANK = { high: 4, medium: 3, low: 2, info: 1 };
+
+function renderSecurityReport(report) {
+  els.securitySection.hidden = false;
+  const state = GRADE_STATE[report.grade] ?? "unreachable";
+  els.securityGrade.dataset.state = state;
+  els.securityGradeText.textContent = `Grade ${report.grade}`;
+  els.securitySummary.textContent =
+    report.grade === "N/A"
+      ? "Site could not be reached for a security check."
+      : `${report.findings.length} finding(s)${typeof report.score === "number" ? ` · score ${report.score}/100` : ""}`;
+
+  els.securityFindingsList.innerHTML = "";
+  if (report.findings.length === 0) {
+    els.securityFindingsEmpty.hidden = false;
+    return;
+  }
+  els.securityFindingsEmpty.hidden = true;
+
+  const sorted = [...report.findings].sort((a, b) => (SEVERITY_RANK[b.severity] || 0) - (SEVERITY_RANK[a.severity] || 0));
+  for (const finding of sorted) {
+    const li = document.createElement("li");
+    li.className = "signal-item";
+    li.dataset.severity = finding.severity || "info";
+
+    const type = document.createElement("div");
+    type.className = "signal-type";
+    type.textContent = `${finding.category || "finding"} · ${finding.severity || "info"}`;
+
+    const title = document.createElement("div");
+    title.className = "signal-desc";
+    title.style.fontWeight = "600";
+    title.textContent = finding.title || "";
+
+    const desc = document.createElement("div");
+    desc.className = "signal-desc";
+    desc.textContent = finding.description || "";
+
+    li.append(type, title, desc);
+    els.securityFindingsList.appendChild(li);
+  }
+}
+
+async function onSecurityReportClick() {
+  els.securityReportBtn.disabled = true;
+  els.actionStatus.className = "status-msg";
+  els.actionStatus.textContent = "Running passive security report — checking headers, TLS, cookies, exposed paths…";
+
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!tab) {
+    els.actionStatus.className = "status-msg error";
+    els.actionStatus.textContent = "No active tab to scan.";
+    els.securityReportBtn.disabled = false;
+    return;
+  }
+
+  const response = await chrome.runtime.sendMessage({ type: "RUN_SECURITY_REPORT", tabId: tab.id });
+  els.securityReportBtn.disabled = false;
+
+  if (!response?.ok) {
+    els.actionStatus.className = "status-msg error";
+    els.actionStatus.textContent = response?.error || "Security report failed.";
+    return;
+  }
+
+  els.actionStatus.textContent = "";
+  renderSecurityReport(response.data.report);
+  renderRecent();
+}
+
+// A failed or empty extraction (see content.js) is a DIFFERENT fact from a
+// scan that ran and found nothing - it must never render as "Safe". This is
+// the only path that shows the scan-result section on a !response.ok scan;
+// renderScanResult() (the "Safe" / findings path) is never reachable from a
+// failure, by construction, not by a check someone could forget to add.
+function renderScanInconclusive(reasonText) {
+  els.scanSection.hidden = false;
+  els.scanResult.innerHTML = "";
+  const p = document.createElement("p");
+  p.className = "state-text";
+  p.textContent = reasonText || STATE_LABEL.inconclusive;
+  els.scanResult.appendChild(p);
+
+  setStatePill("inconclusive");
+  els.stateText.textContent = `${STATE_LABEL.inconclusive} (from full-page scan)`;
+}
+
 async function onScanClick() {
   els.scanBtn.disabled = true;
   els.actionStatus.className = "status-msg";
@@ -207,6 +306,7 @@ async function onScanClick() {
   if (!response?.ok) {
     els.actionStatus.className = "status-msg error";
     els.actionStatus.textContent = response?.error || "Scan failed.";
+    renderScanInconclusive(response?.error);
     return;
   }
 
@@ -269,6 +369,7 @@ function timeAgo(at) {
 
 els.scanBtn.addEventListener("click", onScanClick);
 els.reportBtn.addEventListener("click", onReportClick);
+els.securityReportBtn.addEventListener("click", onSecurityReportClick);
 
 renderTabStatus();
 renderRecent();

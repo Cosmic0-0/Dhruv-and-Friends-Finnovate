@@ -57,6 +57,13 @@ export function validatePaymentContext(raw) {
     if (!PAYMENT_METHODS.includes(raw.method)) return { error: `paymentContext.method must be one of: ${PAYMENT_METHODS.join(", ")}` };
     out.method = raw.method;
   }
+  // Only the last 4 digits are kept - enough to compare against a supplier's
+  // masked account on record (EMAIL-06), never a full account number.
+  if (raw.accountNumber !== undefined && raw.accountNumber !== null && raw.accountNumber !== "") {
+    const digits = typeof raw.accountNumber === "string" && raw.accountNumber.length <= 40 ? raw.accountNumber.replace(/\D/g, "") : "";
+    if (digits.length < 4) return { error: "paymentContext.accountNumber must be a string containing at least 4 digits" };
+    out.accountLast4 = digits.slice(-4);
+  }
   if (raw.onCallNow !== undefined && raw.onCallNow !== null) {
     if (typeof raw.onCallNow !== "boolean") return { error: "paymentContext.onCallNow must be a boolean" };
     out.onCallNow = raw.onCallNow;

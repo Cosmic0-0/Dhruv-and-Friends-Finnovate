@@ -24,7 +24,7 @@ test("no signals -> low, proceed, score 0", () => {
   assert.equal(r.score, 0);
   assert.equal(r.level, "low");
   assert.equal(r.decision, "proceed");
-  assert.equal(r.rulesetVersion, "rs-1.0");
+  assert.equal(r.rulesetVersion, "rs-1.3");
 });
 
 test("one suspicious hostname is ONE scored finding, not three full-weight ones", () => {
@@ -95,6 +95,35 @@ test("an interaction between semantic-only findings stays inside the semantic ca
   const r = score([sig("SOC-06", "semantic_model"), sig("PAY-02", "semantic_model")], { semanticStatus: "ok" });
   assert.ok(r.trace.some((t) => t.id === "IX-5" && t.semanticOnly));
   assert.equal(r.score, 30);
+});
+
+// IX-6: an implausible official-publisher claim (ID-04, semantic - see
+// services/analysis) combined with free/cracked-download bait language
+// (SOC-09, lexicon - deliberately brand-agnostic, see services/lexicon).
+// Fake-download-aggregator regression (live repro: a page titled "Grand
+// Theft Auto GTA 6 Free Download For PC (2026)" claiming "Publisher:
+// Rockstar Games" scored Safe with zero signals - see
+// src/routes/pipeline.test.js for the end-to-end version of this fixture).
+test("IX-6: false-publisher claim + piracy bait moves a fake-download page from Safe to Suspicious, on its own", () => {
+  const r = score([sig("ID-04", "semantic_model"), sig("SOC-09", "lexicon")], { semanticStatus: "ok" });
+  assert.ok(r.trace.some((t) => t.id === "IX-6"), "expected the IX-6 interaction to apply");
+  assert.equal(r.score, 12 + 8 + 15); // ID-04 + SOC-09 + IX-6
+  assert.equal(r.level, "elevated");
+  assert.equal(verdictForLevel(r.level), "suspicious");
+});
+
+test("IX-6 does not by itself force a page to high-risk - that needs an actual payment/credential ask (existing IX-1)", () => {
+  const withoutMonetization = score([sig("ID-04", "semantic_model"), sig("SOC-09", "lexicon")], { semanticStatus: "ok" });
+  assert.equal(withoutMonetization.level, "elevated");
+
+  // The same fake-download page ALSO gating the "download" behind a fee
+  // (a well-established real pattern for this scam type) reaches high
+  // through IX-1 (ID-04 is already in its `a` list), with no new rule needed.
+  const withMonetization = score(
+    [sig("ID-04", "semantic_model"), sig("SOC-09", "lexicon"), sig("PAY-04", "lexicon")],
+    { semanticStatus: "ok" }
+  );
+  assert.equal(withMonetization.level, "high");
 });
 
 test("confidence is separate from risk", () => {

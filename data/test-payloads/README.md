@@ -1,7 +1,5 @@
 # Test payloads
 
-Owner: **Caellum**. See `CLAUDE.md` → Role gating.
-
 Scam message test set across English, French, and Kreol (Kreol set
 coordinated with Joshua — see `../kreol-dataset`). Used for edge-case
 testing of `POST /api/analyze` and `POST /api/batch-scan`, and for the
@@ -12,8 +10,6 @@ final demo script.
 - `en.json` — English payloads.
 - `fr.json` — French payloads.
 - `kr.json` — Kreol payloads (2026-09-23 revision, see below).
-- `FINDINGS.md` — QA findings log against the backend, numbered
-  sequentially across rounds.
 - `consistency.mjs` — sends each message to the AI several times and
   reports how often the answer changes (see below).
 
@@ -85,23 +81,20 @@ comparable across the Kreol, English, and French sets.
 - **`signals`** — **subset** match only: every `type` listed in
   `expected.signals` must appear somewhere in the response's `signals`
   array, but the response may contain additional signals not listed.
-  Never assert exact equality on the signals array — the LLM's signal set
-  isn't a fixed enum (see `docs/API-CONTRACT.md` Known Gaps), and
-  `checkUrls()` may append its own `lookalike_url` signal independent of
-  whatever the LLM returned.
+  Never assert exact equality on the signals array: the pipeline can add
+  several independent deterministic and semantic findings.
 - **`explanation`** — never asserted on. It's a free-form, localized
   human-readable string; asserting on its content would be asserting on
   LLM prose.
 - An empty `expected.signals` array means "no signal is required" — it's
   not a claim that the response will have zero signals.
 
-`lookalike_url` is the one signal type that's actually deterministic
-(`backend/src/services/domain-matching/index.js`, not the LLM), so it's
-used wherever a payload's message contains a URL that
+`lookalike_url` is deterministic (`backend/src/services/domain-matching/index.js`),
+so it is used wherever a payload's message contains a URL that
 `checkUrls()` is known to flag — verified directly against the module,
-not assumed. Everything else is LLM-driven and inherently probabilistic;
-keep those `expected.signals` conservative and treat mismatches there as
-prompt-tuning signal, not necessarily a bug.
+not assumed. Other legacy signal types may be produced from deterministic
+lexicon/identity checks or bounded semantic codes. Keep expectations
+conservative and inspect the response trace when a mismatch occurs.
 
 ## Genuine-but-alarming payloads
 

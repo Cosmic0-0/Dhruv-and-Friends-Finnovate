@@ -7,10 +7,14 @@ import rateLimit from "express-rate-limit";
 import { checkUrls } from "../services/domain-matching/index.js";
 import { runPipeline } from "../services/pipeline/index.js";
 import { validatePaymentContext } from "../services/payment-context/index.js";
+import { validateEmailContext } from "../services/email-context/index.js";
+import { listCampaigns, OUTCOME_LABELS, recordOutcome } from "../services/org-intel/index.js";
+import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
+import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
 
 export const router = Router();
 
@@ -57,6 +61,14 @@ const reportLimiter = rateLimited("too many report submissions from this address
   windowMs: 60 * 60 * 1000,
   limit: 5,
 });
+// analyzeSite() makes roughly a dozen outbound requests to the target site
+// per call (main fetch, TLS probe, artifact/source-map checks, HTTP-redirect
+// probe) - much heavier than check-url, so this stays well below that
+// route's 120/15min even though it's also non-LLM.
+const siteSecurityLimiter = rateLimited("too many security-report requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+});
 
 // Magic-byte signatures - the screenshot route never trusts a
 // client-reported MIME type (see checklist.md § Security), it sniffs the
@@ -84,8 +96,22 @@ function isNonEmptyString(value) {
 // level, score, verdict and actions are computed by the deterministic
 // engine, and the LLM is optional enrichment - an LLM timeout/outage still
 // returns 200 with a deterministic assessment (analysis.semantic.status).
+// `pageUrl` is only ever used to derive a hostname for the domain-comparison
+// exception in checkLinkHygiene (see pipeline/index.js) - it is never fetched
+// and never trusted as a claim about the message content, so a malformed
+// value is just ignored rather than rejected (it's supplementary context,
+// not part of what's being analysed).
+function pageHostFrom(pageUrl) {
+  if (typeof pageUrl !== "string" || pageUrl.length === 0 || pageUrl.length > 2000) return null;
+  try {
+    return new URL(pageUrl).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
-  const { message, language } = req.body;
+  const { message, language, pageUrl } = req.body;
   if (!isNonEmptyString(message)) {
     return res.status(400).json({ error: "message is required and must be a non-empty string" });
   }
@@ -94,8 +120,22 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   }
   const payment = validatePaymentContext(req.body.paymentContext);
   if (payment.error) return res.status(400).json({ error: payment.error });
+  // Optional workplace-email metadata (future Outlook add-in). `message` is
+  // the email body; when emailContext is present the source is "email" and
+  // the same runPipeline() runs the EMAIL-* detectors - no separate engine.
+  const email = validateEmailContext(req.body.emailContext);
+  if (email.error) return res.status(400).json({ error: email.error });
   try {
-    res.json(await runPipeline(message, { source: "pasted_text", language, paymentContext: payment.value, ip: req.ip }));
+    res.json(
+      await runPipeline(message, {
+        source: "pasted_text",
+        language,
+        paymentContext: payment.value,
+        emailContext: email.value,
+        pageHost: pageHostFrom(pageUrl),
+        ip: req.ip,
+      })
+    );
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "analysis failed, try again shortly" });
@@ -173,7 +213,7 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
   // route). runPipeline() already survives an LLM outage on its own (the
   // deterministic assessment still counts as analysed), so "unknown" /
   // analysisFailed is now reserved for an unexpected pipeline error; the
-  // summary never counts it as scam/suspicious/safe (FINDINGS.md #6).
+  // summary never counts it as scam/suspicious/safe.
   const analyze = async (message) => {
     try {
       return await runPipeline(message, { source: "batch", ip: req.ip });
@@ -206,6 +246,27 @@ router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) =
   }
   const signals = checkUrls(url);
   res.json({ url, flagged: signals.length > 0, signals });
+});
+
+// Passive site-security scan for the extension's popup (see
+// extension/README.md "Security Report" and
+// backend/src/services/site-security/index.js's header comment for the
+// "no crafted payloads, no fuzzing, no brute-forcing" constraint this runs
+// under). `url` is attacker-influenced input (public POST route), so
+// analyzeSite() runs it through its own SSRF guard before any outbound
+// request - a malformed/unsafe url is a 400 here, not a 500.
+router.post("/analyze-site", siteSecurityLimiter, json({ limit: "300kb" }), async (req, res) => {
+  const { url, clientSignals } = req.body;
+  if (!isNonEmptyString(url)) {
+    return res.status(400).json({ error: "url is required and must be a non-empty string" });
+  }
+  try {
+    res.json(await analyzeSite(url, clientSignals));
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "security report failed, try again shortly" });
+  }
 });
 
 // Read-only counterpart to /api/report: looks up a sender's existing report
@@ -251,6 +312,33 @@ router.get("/campaign/:fingerprintId", checkSenderLimiter, (req, res) => {
   const campaign = getFingerprintMatches(req.params.fingerprintId);
   if (!campaign) return res.status(404).json({ error: "campaign not found" });
   res.json(campaign);
+});
+
+// Organisation-scoped workplace intelligence. The demo has one configured
+// profile; callers cannot choose an arbitrary org id and cross tenant data.
+router.get("/org/campaigns", checkSenderLimiter, (_req, res) => {
+  res.json({
+    organisationId: DEMO_ORGANISATION.organisationId,
+    campaigns: listCampaigns(DEMO_ORGANISATION.organisationId),
+  });
+});
+
+router.post("/org/outcomes", reportLimiter, json({ limit: "10kb" }), (req, res) => {
+  const { observationId, label } = req.body ?? {};
+  if (typeof observationId !== "string" || !/^[a-f0-9]{64}$/.test(observationId)) {
+    return res.status(400).json({ error: "observationId must be a 64-character hexadecimal identifier" });
+  }
+  if (!OUTCOME_LABELS.includes(label)) {
+    return res.status(400).json({ error: `label must be one of: ${OUTCOME_LABELS.join(", ")}` });
+  }
+  const result = recordOutcome({
+    orgId: DEMO_ORGANISATION.organisationId,
+    inputHash: observationId,
+    analystId: req.ip,
+    label,
+  });
+  if (result.error === "not_found") return res.status(404).json({ error: "organisation observation not found" });
+  res.json(result);
 });
 
 // A phone-number-shaped sender is masked to its last 4 digits for this

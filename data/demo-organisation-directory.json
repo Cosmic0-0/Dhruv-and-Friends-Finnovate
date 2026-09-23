@@ -1,0 +1,75 @@
+{
+  "version": "demo-org-profile-1.0",
+  "notes": [
+    "DEMONSTRATION DATA ONLY. The organisation and every person below are fictional.",
+    "The organisation domain uses the reserved .example TLD (RFC 2606).",
+    "In a real deployment this is replaced by the organisation's own profile: protected domains, directory export (e.g. Entra ID), role mailboxes and its payment-verification procedures. Point ORG_PROFILE_PATH at that file."
+  ],
+  "organisationId": "demo-company",
+  "organisationName": "Demo Company Ltd",
+  "organisationDomains": ["demo-company.example"],
+  "brandTokens": ["demo-company", "democompany"],
+  "reportPhishingTo": "security@demo-company.example",
+  "people": [
+    { "name": "Jane Smith", "title": "Chief Executive Officer", "role": "executive", "emails": ["jane.smith@demo-company.example"] },
+    { "name": "Ravi Doorgakant", "title": "Chief Financial Officer", "role": "executive", "emails": ["ravi.doorgakant@demo-company.example"] },
+    { "name": "Marie Laval", "title": "Head of Payroll", "role": "payroll", "emails": ["marie.laval@demo-company.example"] },
+    { "name": "Kevin Ah-Kine", "title": "Accounts Payable Officer", "role": "finance", "emails": ["kevin.ahkine@demo-company.example"] },
+    { "name": "Priya Ramdin", "title": "IT Service Manager", "role": "it", "emails": ["priya.ramdin@demo-company.example"] }
+  ],
+  "roleMailboxes": [
+    { "function": "finance", "labels": ["finance department", "finance team", "accounts payable", "treasury"], "addresses": ["finance@demo-company.example", "ap@demo-company.example"] },
+    { "function": "payroll", "labels": ["payroll", "hr payroll", "human resources"], "addresses": ["payroll@demo-company.example", "hr@demo-company.example"] },
+    { "function": "it", "labels": ["it helpdesk", "it help desk", "it service desk", "it support", "helpdesk", "service desk", "microsoft 365 admin", "mailbox administrator"], "addresses": ["it.support@demo-company.example"] }
+  ],
+  "verificationWorkflows": [
+    {
+      "id": "supplier_bank_change",
+      "title": "Supplier bank-detail change",
+      "owner": "Accounts Payable",
+      "triggers": ["EMAIL-06", "EMAIL-07", "PAY-07"],
+      "steps": [
+        "Hold the payment - do not change the supplier's bank details from this email.",
+        "Call the supplier on the phone number held in the vendor master file, not one in this email.",
+        "Record who confirmed the change, then get a second approver before updating vendor bank details."
+      ],
+      "requiredApprovals": 2
+    },
+    {
+      "id": "executive_payment_request",
+      "title": "Executive or urgent payment request",
+      "owner": "Finance Controller",
+      "triggers": ["EMAIL-09:executive", "EMAIL-09:directory_name", "ORG-01", "SOC-08"],
+      "requiresAny": ["PAY-01", "PAY-02", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07"],
+      "steps": [
+        "Do not make the transfer on the strength of this email.",
+        "Confirm with the requester in person or on their known internal extension.",
+        "Process the payment only through the normal approval workflow, with its usual approvers."
+      ],
+      "requiredApprovals": 2
+    },
+    {
+      "id": "payroll_change",
+      "title": "Payroll / salary account change",
+      "owner": "Payroll",
+      "triggers": ["ORG-03:payroll", "PAY-07:payroll"],
+      "steps": [
+        "Do not update any salary account from an email request.",
+        "Ask the employee to submit the change through the HR self-service portal, or confirm it with them in person."
+      ],
+      "requiredApprovals": 1
+    },
+    {
+      "id": "credential_request",
+      "title": "Login or password request",
+      "owner": "IT Security",
+      "triggers": ["SEC-01", "SEC-02", "ORG-02", "ORG-03:it", "URL-01", "URL-02", "URL-03", "URL-04", "URL-08"],
+      "steps": [
+        "Do not open the link or enter your password.",
+        "Open the organisation's service yourself (bookmark or intranet), never from this email.",
+        "Report the email to the security team."
+      ],
+      "requiredApprovals": 0
+    }
+  ]
+}
