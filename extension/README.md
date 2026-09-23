@@ -84,14 +84,23 @@ only the page's own JS context can see) versus what stays server-side.
 - `popup.html` / `popup.js` (14A) — redesigned, ~380px wide, dark
   "instrument" surface matching the main app's severity palette (steel /
   brass / brick — see `styles.css`). Sections: current site + state pill,
-  strongest evidence (top signals), actions (Scan This Page / Report this
-  site / Security Report / Open in FraudLens), a page-scan result panel
-  that appears after a scan, a security-report panel (grade pill + sorted
-  findings list) that appears after a security scan, recent checks, and the
-  privacy line (14L). There is no separate "Simple/full mode" toggle in
-  this extension (that split, if it exists, is a frontend-app concept, not
-  one already present here) — the Security Report action follows the same
-  single-popup pattern as the existing actions instead of introducing one.
+  automatic domain check (top signals from the per-tab `/api/check-url`
+  call only - explicitly labelled as such, not "strongest evidence for this
+  page", so it can never be read as contradicting the separate page-scan
+  result below it; a real bug found in live testing, see `popup.test.js`),
+  actions (Scan This Page / Report this site / Security Report / Open in
+  FraudLens), a page-scan result panel that appears after a scan, a
+  security-report panel (grade pill + sorted findings list) that appears
+  after a security scan, recent checks, and the privacy line (14L). There is
+  no separate "Simple/full mode" toggle in this extension (that split, if it
+  exists, is a frontend-app concept, not one already present here) — the
+  Security Report action follows the same single-popup pattern as the
+  existing actions instead of introducing one.
+- `popup.test.js` — UI-state regression tests for the popup (initial load /
+  scan with a finding / scan clean), run with `npm test` (`node --test`) from
+  this directory. Uses a small hand-rolled fake DOM (no jsdom dependency) -
+  see that file's header comment. First test file for the extension; nothing
+  else here is automated yet (see "Manual verification checklist" below).
 - `result.html` / `result.js` — small extension page for context-menu
   results, same visual language as the popup, reads the one-shot
   `chrome.storage.local["fraudlens.contextResult"]` entry `background.js`
