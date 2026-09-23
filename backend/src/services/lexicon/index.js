@@ -123,8 +123,8 @@ const RULES = [
   // re-matched the exact "expire in 5 minutes" phrase the lookbehind above
   // exempts, since "in" alone satisfies \b(?:today|soon|in)\b regardless of
   // what follows; "in \d+ ..." is already covered by that lookbehind branch.
-  { code: "SOC-01", lang: "en", checkSafetyContact: true, re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|(?<!expires? )\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
-  { code: "SOC-01", lang: "fr", checkSafetyContact: true, re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
+  { code: "SOC-01", lang: "en", checkSafetyContact: true, checkDisclaimerFooter: true, re: /\burgent(?:ly)?\b|\bimmediately\b|\bright away\b|\basap\b|\bact now\b|\bwithin \d+\s*(?:minutes?|mins?|hours?|hrs?|h)\b|(?<!expires? )\bin \d+\s*(?:minutes?|hours?)\b|\bbefore midnight\b|\btoday only\b|\bexpires? (?:today|soon)\b|\blast chance\b|\bfinal (?:notice|warning|reminder)\b/iu },
+  { code: "SOC-01", lang: "fr", checkSafetyContact: true, checkDisclaimerFooter: true, re: /\burgente?\b|\bimm[ée]diatement\b|\bsans d[ée]lai\b|\bdans les \d+\s*(?:heures|minutes|h)\b|\bsous \d+\s*h\b|\bavant (?:minuit|\d+\s*h)\b|\bdernier (?:avis|rappel)\b|\bau plus vite\b/iu },
   { code: "SOC-01", lang: "mfe", checkSafetyContact: true, re: /\bdeswit\b|\btouswit\b|\btousuit\b|\btoutswit\b|\bzordi mem\b|\bvit vit\b|\bavan minwi\b|\bavan \d+\s*h\b|\bdan \d+\s*(?:minit|er|erdtan|zour)\b/iu },
 
   // SOC-04 - move to another channel / number
@@ -207,6 +207,21 @@ function isSafetyContact(text, start) {
   return SAFETY_CONTACT_RE.test(clauseWindowBefore(text, start, 80));
 }
 
+// Standard "wrong recipient" confidentiality footer, appended to nearly
+// every corporate/institutional email ("If you are not the intended
+// recipient/addressee ..., please delete/cancel it immediately and notify
+// the sender."). Flags SOC-01 on "immediately" purely because that fixed
+// legal boilerplate contains an urgency word - unrelated to the message's
+// actual content. Real scam mail doesn't carry a misdirected-email
+// disclaimer, so this phrase alone is specific enough to carve out (unlike
+// SAFETY_CONTACT_RE, no companion "institution named" requirement needed).
+const DISCLAIMER_FOOTER_RE = /\bnot the intended (?:recipient|addressee)\b|\bpas le destinataire (?:pr[ée]vu|voulu)\b|\bvous n'[êe]tes pas le destinataire\b/iu;
+
+/** True when the match sits inside a "not the intended recipient" disclaimer clause. */
+function isDisclaimerFooter(text, start) {
+  return DISCLAIMER_FOOTER_RE.test(clauseWindowBefore(text, start, 150));
+}
+
 // French/Kreol object pronouns front the verb ("Ne le partagez jamais", "Ne le
 // communiquez à personne") instead of naming the credential again, unlike
 // English ("share it" keeps "it" after the verb, already covered by the
@@ -282,6 +297,7 @@ function firstMatch(text, rule) {
     if (rule.negatable && isNegated(text, m.index)) continue;
     if (rule.checkPassive && isPassiveNotification(text, m.index + m[0].length)) continue;
     if (rule.checkSafetyContact && isSafetyContact(text, m.index)) continue;
+    if (rule.checkDisclaimerFooter && isDisclaimerFooter(text, m.index)) continue;
     return m;
   }
   return null;
