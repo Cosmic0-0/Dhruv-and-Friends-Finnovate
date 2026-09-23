@@ -1,0 +1,107 @@
+{
+  "version": "institutions-1.0",
+  "notes": "Curated registry of institutions FraudLens can verify claims against. NOTHING here may be invented: every domain/phone must be checked against the institution's own website before verification.status is set to 'verified'. Entries with status 'unverified' were carried over from the previous hard-coded BRAND_DOMAIN_MAP (backend/src/services/domain-matching) or from repo QA evidence named in the note - they are used by the detectors but must be verified before the demo. official_phones is intentionally empty until numbers are verified from an official source.",
+  "institutions": [
+    {
+      "id": "mcb",
+      "display_name": "MCB",
+      "type": "bank",
+      "names": ["MCB", "Mauritius Commercial Bank"],
+      "brand_tokens": ["mcb"],
+      "match_patterns": ["\\bmcb\\b", "\\bmauritius commercial bank\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["mcb.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "sbm",
+      "display_name": "SBM",
+      "type": "bank",
+      "names": ["SBM", "State Bank of Mauritius", "SBM Bank"],
+      "brand_tokens": ["sbm"],
+      "match_patterns": ["\\bsbm\\b", "\\bstate bank of mauritius\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["sbmgroup.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "absa",
+      "display_name": "Absa",
+      "type": "bank",
+      "names": ["Absa", "Absa Mauritius", "Absa Bank"],
+      "brand_tokens": ["absa"],
+      "match_patterns": ["\\babsa\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["absa.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "bankone",
+      "display_name": "Bank One",
+      "type": "bank",
+      "names": ["Bank One"],
+      "brand_tokens": ["bankone"],
+      "match_patterns": ["\\bbank\\s?one\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["bankone.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "myt",
+      "display_name": "my.t",
+      "type": "telecom",
+      "names": ["my.t", "Mauritius Telecom"],
+      "brand_tokens": ["myt"],
+      "match_patterns": ["\\bmy\\.?t\\b", "\\bmauritius telecom\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["myt.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "emtel",
+      "display_name": "Emtel",
+      "type": "telecom",
+      "names": ["Emtel"],
+      "brand_tokens": ["emtel"],
+      "match_patterns": ["\\bemtel\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["emtel.com"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": { "status": "unverified", "note": "Carried over from BRAND_DOMAIN_MAP." },
+      "verified_at": null
+    },
+    {
+      "id": "mra",
+      "display_name": "MRA",
+      "type": "government",
+      "names": ["MRA", "Mauritius Revenue Authority"],
+      "brand_tokens": ["mra"],
+      "match_patterns": ["\\bmra\\b", "\\bmauritius revenue authority\\b"],
+      "aliases": { "en": [], "fr": [], "mfe": [] },
+      "official_domains": ["mra.gov.mu", "mra.mu"],
+      "official_phones": [],
+      "source_urls": [],
+      "verification": {
+        "status": "unverified",
+        "note": "mra.gov.mu carried over from BRAND_DOMAIN_MAP; mra.mu added because data/test-payloads/FINDINGS.md #11 and payloads EN-17/FR-17 identify it as the real MRA domain. Verify both against the MRA website - remove whichever is not official."
+      },
+      "verified_at": null
+    }
+  ]
+}

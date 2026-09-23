@@ -41,3 +41,8 @@ test("computeRiskCategories maps OTP/credential signals to payment_risk", () => 
   const categories = computeRiskCategories([{ type: "otp_request", severity: "medium" }]);
   assert.equal(categories.payment_risk, "MEDIUM");
 });
+
+test("computeRiskCategories maps TEMPLATE_ARTIFACT to identity_risk", () => {
+  const categories = computeRiskCategories([{ type: "TEMPLATE_ARTIFACT", severity: "high" }]);
+  assert.equal(categories.identity_risk, "HIGH");
+});

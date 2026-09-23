@@ -190,7 +190,27 @@ export function MessageCard({
   );
 }
 
-export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string; fromScreenshot: boolean; copy: Copy }) {
+type SemanticInfo = NonNullable<AnalyzeResponse["analysis"]>["semantic"];
+
+/** "Analyzed by: local/fallback/unavailable" line — see docs/API-CONTRACT.md's `analysis.semantic`. */
+export function aiSourceLabel(semantic: SemanticInfo | undefined, copy: Copy): string {
+  if (!semantic || semantic.status === "unavailable" || semantic.status === "skipped") return copy.result.aiSource.unavailable;
+  if (semantic.provider === "ollama") return copy.result.aiSource.local;
+  if (semantic.provider) return copy.result.aiSource.fallback.replace("{provider}", semantic.provider);
+  return copy.result.aiSource.unavailable;
+}
+
+export function SentPanel({
+  redacted,
+  fromScreenshot,
+  analysis,
+  copy,
+}: {
+  redacted: string;
+  fromScreenshot: boolean;
+  analysis?: AnalyzeResponse["analysis"];
+  copy: Copy;
+}) {
   return (
     <details className="sheet group">
       <summary className="micro pressable flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-ink-muted">
@@ -207,6 +227,9 @@ export function SentPanel({ redacted, fromScreenshot, copy }: { redacted: string
         <p className="text-sm text-ink-muted">{fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}</p>
         <p className="data mt-3 rounded-2xl bg-muted-surface px-3.5 py-3 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
           {redacted}
+        </p>
+        <p className="micro mt-3 text-ink-muted">
+          {copy.result.aiSource.label}: {aiSourceLabel(analysis?.semantic, copy)}
         </p>
       </div>
     </details>

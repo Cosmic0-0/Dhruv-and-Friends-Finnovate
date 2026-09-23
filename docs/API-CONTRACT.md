@@ -1,7 +1,7 @@
 # API Contract (as implemented)
 
 **Status: LOCKED.** This documents the backend routes exactly as implemented
-in `backend/src/routes/index.js`, `backend/src/services/analysis/index.js`,
+in `backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`,
 and `backend/src/index.js` — not the original placeholder contract in
 `CLAUDE.md` (kept there only as a superseded historical sketch). Build
 against this. Any shape change here must be flagged to Oleg (frontend),
@@ -12,163 +12,191 @@ Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
 ## `POST /api/analyze`
 
-> **RESPONSE SHAPE CHANGE — flag to Oleg (frontend), Dhruv (OCR/batch), and
-> the extension owner before merging.** Two additive changes to this route's
-> `200 OK` response, layered on top of the shape below:
-> 1. Every item in `signals[]` now also carries a `source` field (see the
->    updated response block below) — purely additive, no existing
->    `signals[]` field was removed or renamed.
-> 2. A new top-level `riskCategories` object breaks risk into five
->    LOW/MEDIUM/HIGH categories. **`riskScore` is unchanged and still
->    present** — `riskCategories` is additive alongside it, not a
->    replacement, specifically so the frontend's existing `riskScore` UI
->    keeps working unmodified.
+> **DECISION-ARCHITECTURE CHANGE (2026-09-23) — flag to Oleg (frontend),
+> Dhruv (OCR/batch) and the extension owner before merging.** The response
+> *shape* is backward compatible (every previous field is still present with
+> the same type), but the **meaning** of three fields changed:
+> - `verdict` is now derived from a deterministic risk level
+>   (`low → safe`, `elevated → suspicious`, `high|critical → scam`), not
+>   chosen by the LLM.
+> - `riskScore` is now the deterministic rule score from ruleset `rs-1.0`,
+>   not an LLM "confidence". It is always present.
+> - `suggestedAction` is now a fixed policy key string
+>   (`"block_sender, report_to_bank"` | `"verify_official_channel"` | `"none"`),
+>   not LLM free text. Concrete advice is in the new `actions[]`.
 >
-> `source` on `signals[]` comes from the shared `services/analysis` and
-> `services/domain-matching` modules, so it also appears on
-> `/api/analyze/screenshot` and `/api/batch-scan` results. `riskCategories`
-> and the new `IDENTITY_MISMATCH` evidence item (see below) are now
-> computed on all three routes — `/api/analyze`, `/api/batch-scan`
-> (2026-09-22, see Known Gaps for the `summarizeBatch()` field-passthrough
-> bug this required fixing alongside it), and `/api/analyze/screenshot`
-> (2026-09-22).
+> New fields: `risk`, `decision`, `trace`, `actions`, `reduceConcern`,
+> `analysis`, `observedSender`, and per-signal `code`, `category`,
+> `sourceType`, `tier`, `span`, `metadata`, `scored`, `corroboratedBy`,
+> `mergedInto`. Removed: `adjustedRiskScore` (the community contribution is
+> now inside `riskScore`). `riskAdjustments[]` entries changed shape (see
+> below). The same response is returned by `/api/analyze/screenshot` (plus
+> `extractedText`) and by each `/api/batch-scan` result, because all three
+> call one function: `runPipeline()` in `backend/src/services/pipeline/index.js`.
+
+**Principle:** code verifies facts, AI interprets language, the
+deterministic engine decides. The LLM never computes the score, the level,
+the verdict or the actions. **If the LLM is down, times out or returns
+garbage, this route still returns `200` with a full deterministic
+assessment**; `analysis.semantic.status` says which.
 
 ### Request
 
 ```json
 {
   "message": "string, required, 1-5000 characters",
-  "language": "string, optional — free-form hint, e.g. \"en\" | \"fr\" | \"kreol\" | \"mixed\""
+  "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
+  "paymentContext": {
+    "amount": "number >= 0, optional",
+    "currency": "string <= 200, optional",
+    "method": "optional: bank_transfer | mobile_money | card | cash | cheque | gift_card | voucher | crypto | money_transfer_service | other",
+    "recipient": "string <= 200, optional — who the money would go to",
+    "claimedOrganisation": "string <= 200, optional — who the request claims to be from",
+    "onCallNow": "boolean, optional — is someone on the phone / messaging you while you pay?"
+  }
 }
 ```
 
-`language` is not validated against an enum — it's passed straight into the
-LLM prompt as a hint string.
+`paymentContext` is optional and evaluated **in code** (never turned into
+prose for the LLM): `method` in {gift_card, voucher, crypto,
+money_transfer_service} → `PAY-02`; `recipient` not matching
+`claimedOrganisation` → `PAY-05`; `onCallNow: true` → `PAY-06`. An invalid
+`paymentContext` returns `400` with a field-specific message.
 
 ### Response — `200 OK`
 
-```json
+```jsonc
 {
-  "verdict": "safe" | "suspicious" | "scam",
-  "signals": [
-    {
-      "type": "string, e.g. \"sender_mismatch\" | \"urgency_language\" | \"lookalike_url\" | \"spoofed_identity\" | \"IDENTITY_MISMATCH\"",
-      "description": "string",
-      "severity": "low" | "medium" | "high",
-      "evidence": "string, optional — verbatim excerpt (text or URL) from the message that triggered this signal. Only present when the LLM supplied one; checkUrls()/checkIdentityConsistency()-appended signals never set it.",
-      "source": "\"message_text\" | \"url_parser\" | \"community_reports\" | \"llm_analysis\" | \"identity_check\" — NEW field, where in the pipeline this signal came from. See below.",
-      "domainAgeDays": "number, optional — registered-domain age in days for a lookalike_url signal's host, from a live RDAP lookup (backend/src/services/domain-age/index.js). Best-effort and non-blocking: capped at a 1.5s timeout, wrapped in try/catch, and cached 24h per domain (backend/src/db/index.js) — omitted entirely (not null/0) on any failure, timeout, or if it simply didn't resolve before the response was ready. Never a dependency of the core verdict; only ever set on lookalike_url signals.",
-      "domain": "string, optional, NEW — the actual host detected in the message. Only on `lookalike_url` signals (backend/src/services/domain-matching/index.js).",
-      "officialDomain": "string, optional, NEW — the legitimate domain `domain` was compared against (a `BRAND_DOMAIN_MAP` value). On `lookalike_url` signals, and on `IDENTITY_MISMATCH` signals (the domain the claimed institution should have linked to).",
-      "claimedIdentity": "string, optional, NEW — display name of the institution the message claims to be from (e.g. \"MCB\"). Only on `IDENTITY_MISMATCH` signals (backend/src/services/identity-consistency/index.js).",
-      "actualDomain": "string, optional, NEW — the mismatched host the message actually links to, when the mismatch is domain-based. Only on `IDENTITY_MISMATCH` signals, and only when that mismatch reason applies (a beneficiary-only mismatch omits this).",
-      "beneficiary": "string, optional, NEW — the stated payment recipient name, when the mismatch is beneficiary-based. Only on `IDENTITY_MISMATCH` signals, and only when that mismatch reason applies (a domain-only mismatch omits this)."
-    }
+  "verdict": "safe" | "suspicious" | "scam",          // derived from risk.level
+  "riskScore": 46,                                    // == risk.score, deterministic
+  "risk": { "score": 46, "level": "low" | "elevated" | "high" | "critical", "confidence": "low" | "moderate" | "high" },
+  "decision": "proceed" | "verify_first" | "do_not_pay",
+  "signals": [ /* Signal, see below */ ],
+  "trace": [                                          // how the score was computed, in order
+    { "id": "URL-02", "points": 30, "sourceTypes": ["rule"], "reason": "...", "corroboratedBy": ["ID-01"] },
+    { "id": "IX-1", "points": 15, "reason": "Impersonation combined with a payment or credential request" },
+    { "id": "CAP-SEMANTIC", "points": -8, "reason": "AI-inferred evidence alone is capped at 30 points" },
+    { "id": "FLOOR-SEC01-INSTITUTION", "levelFloor": "high", "points": 15, "reason": "..." }
   ],
-  "suggestedAction": "string, free-form (not an enforced enum)",
-  "explanation": "string, localized to the input language",
-  "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range. Unchanged by this update.",
-  "sender": "string, optional — identity the message claims to be from (phone number, short code, or name), as extracted by the LLM. Omitted if none was apparent.",
-  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present.",
-  "riskCategories": "object, NEW — see below. Always present.",
-  "scamProfile": "object, optional, NEW (P1) — see below. Only present when the LLM supplied a valid `stage` (see below); `type` inside it may still be null.",
-  "journey": "object, optional, NEW (P1) — see below. Present under the same condition as `scamProfile`."
+  "actions": [ { "id": "dont_open_link", "text": "Do not open the link in this message." } ],
+  "reduceConcern": [ "string — checks that would LOWER concern; never claims the message is safe" ],
+  "suggestedAction": "block_sender, report_to_bank" | "verify_official_channel" | "none",
+  "explanation": "string — deterministic template (en/fr/kreol) built from the decision, never model free text",
+  "riskCategories": { "identity_risk": "LOW|MEDIUM|HIGH", "behavioral_risk": "...", "payment_risk": "...", "technical_risk": "...", "verification_risk": "..." },
+  "sender": "string, optional — observed sender (From:/Sender: line) or the claimed registry institution",
+  "observedSender": "string, optional — verbatim From:/Sender: value",
+  "senderReports": "number, optional — only for a trackable sender (not a redaction placeholder, not an official institution)",
+  "riskAdjustments": [ { "ruleId": "CW-2", "rulesVersion": "wave-rules-v2", "signalCode": "REP-02", "points": 20, "levelFrom": "high", "levelTo": "critical", "evidenceCount": 8, "auditRef": "uuid" } ],
+  "scamProfile": { "type": "MCB_IMPERSONATION | ... | null", "stage": "OTP_REQUEST | ...", "claimedIdentity": "string | null" },
+  "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
+  "scamDna": { "...": "unchanged" },
+  "analysis": {
+    "rulesetVersion": "rs-1.0",
+    "source": "pasted_text" | "screenshot" | "batch" | "email",
+    "inputHash": "sha256 of the normalised (already redacted) text",
+    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.0" },
+    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.0", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" }
+  }
 }
 ```
 
-`signals` is the union of the LLM's structured output, the non-LLM
-domain-matching check (`checkUrls`), and the non-LLM identity-consistency
-check (`checkIdentityConsistency`) — any lookalike URL found in the message
-is appended as an additional `type: "lookalike_url"` signal, and any
-claimed-identity/domain/beneficiary mismatch is appended as a
-`type: "IDENTITY_MISMATCH"` signal, independent of what the LLM returned.
-`riskScore`/`sender`/`evidence` are LLM-supplied and best-effort: a malformed
-or missing value is silently omitted, it never fails the request
-(`backend/src/services/analysis/index.js`). `domainAgeDays` is best-effort
-for a different reason — it's an external network dependency (RDAP), not an
-LLM field — but the guarantee is the same: its absence never means anything
-went wrong with the rest of the response.
+`riskAdjustments`, `scamProfile`, `journey`, `sender`, `observedSender`,
+`senderReports`, `scamDna` are omitted (never null) when not applicable.
+`scamProfile`/`journey` are present when the semantic model supplied a valid
+stage **or** a deterministic finding implies one (`SEC-01` → `OTP_REQUEST`,
+a `PAY-*` code → `PAYMENT_REQUEST`).
 
-#### `signals[].source` (NEW)
+#### Signal
 
-Every evidence/signal item now carries a `source` string documenting where
-in the pipeline it came from:
-
-| Value | Meaning |
-|---|---|
-| `"message_text"` | LLM signal whose `type` matches a direct message-content pattern (urgency language, OTP/credential request, secrecy instruction, etc.) — classified deterministically from `type` by `classifySignalSource()` in `backend/src/services/analysis/index.js`, not itself an LLM call. |
-| `"llm_analysis"` | LLM signal that doesn't match a message-text pattern — the LLM's own inferential scam-pattern reasoning (e.g. `sender_mismatch`, `spoofed_identity`). Default bucket when `message_text` doesn't match. |
-| `"url_parser"` | Signal appended by the non-LLM domain-matching module (`checkUrls`, `backend/src/services/domain-matching/index.js`) — currently only `lookalike_url`. |
-| `"identity_check"` | Signal appended by the new non-LLM identity-consistency module (`checkIdentityConsistency`, `backend/src/services/identity-consistency/index.js`) — currently only `IDENTITY_MISMATCH`. |
-| `"community_reports"` | Reserved for a signal derived from the crowdsourced sender-reputation store (`backend/src/db/index.js`). Not currently emitted by any code path — the report count is still only exposed via the existing top-level `senderReports` field, not as a `signals[]` item. Documented here so the value is reserved if/when that changes. |
-
-#### `IDENTITY_MISMATCH` (NEW evidence type)
-
-Emitted by `checkIdentityConsistency()` (`backend/src/services/identity-consistency/index.js`), a deterministic, non-LLM check run alongside `checkUrls()`. It extracts a claimed
-sender/identity from known Mauritius bank/telecom/government brand tokens
-mentioned in the message text (MCB, SBM, Absa, Bank One, my.t, Emtel, MRA —
-`BRAND_DOMAIN_MAP` in `backend/src/services/domain-matching/index.js`), then
-checks that identity against (a) the domain of any URL in the message
-(reusing `extractHostnames()` from domain-matching — no URL/domain parsing
-is duplicated) and (b) a payment beneficiary/recipient name if the message
-states one (plain-text pattern match only, no QR decoding or image
-parsing). A mismatch on either produces exactly one `severity: "high"`
-signal:
-
-```json
-{ "type": "IDENTITY_MISMATCH", "description": "The message claims to be from MCB but the link points to a different domain (...)", "severity": "high", "source": "identity_check" }
-```
-
-#### `riskCategories` (NEW)
-
-```json
+```jsonc
 {
-  "identity_risk": "LOW" | "MEDIUM" | "HIGH",
-  "behavioral_risk": "LOW" | "MEDIUM" | "HIGH",
-  "payment_risk": "LOW" | "MEDIUM" | "HIGH",
-  "technical_risk": "LOW" | "MEDIUM" | "HIGH",
-  "verification_risk": "LOW" | "MEDIUM" | "HIGH"
+  "code": "URL-02",                     // stable reason code - authoritative
+  "type": "lookalike_url",              // legacy name kept for existing UI (mapping in services/signals/registry.js)
+  "category": "technical" | "identity" | "social" | "payment" | "credential" | "reputation",
+  "sourceType": "rule" | "lexicon" | "intel" | "semantic_model" | "community",   // authoritative provenance
+  "source": "url_parser" | "identity_check" | "llm_analysis" | "community_reports", // legacy bucket: every non-AI signal maps to url_parser/identity_check
+  "tier": "V" | "D" | "L" | "S",        // verified / deterministic / lexicon / semantic
+  "severity": "low" | "medium" | "high",
+  "description": "string",
+  "evidence": "string, optional — exact text from the message (or the field value for paymentContext signals)",
+  "span": [52, 73],                     // optional, offsets in the normalised message
+  "metadata": { },                      // detector details (host, officialDomain, confidence, ...)
+  "scored": true,                       // this signal carries its finding's points
+  "corroboratedBy": ["ID-01", "semantic_model"], // optional, on scored signals
+  "mergedInto": "URL-02"                // on scored:false signals - same fact, no extra points
+  // legacy per-type extras are kept: domain, officialDomain, claimedIdentity, actualDomain, beneficiary, domainAgeDays, communityEvidence
 }
 ```
 
-Computed by `computeRiskCategories()`
-(`backend/src/services/risk-categories/index.js`), a pure, deterministic
-function of the final `signals[]` array (LLM + `checkUrls` +
-`checkIdentityConsistency` combined) — no LLM call, no store lookup. Each
-`signals[]` item's `type` is keyword-classified into one of the five
-categories (e.g. `lookalike_url`/`domain`-ish types → `technical_risk`,
-`IDENTITY_MISMATCH`/`spoofed_identity`-ish types → `identity_risk`,
-`urgency`/`secrecy`-ish types → `behavioral_risk`, `otp`/`credential`/
-`payment`-ish types → `payment_risk`; unmatched types default to
-`behavioral_risk`), and a category's rating is the highest severity among
-its matched signals, or `"LOW"` if none matched. **This is purely additive
-— `riskScore` (the existing single 0-100 LLM confidence number) is
-unchanged and still returned exactly as before.**
+**Every `sourceType: "semantic_model"` signal is AI-inferred** and its
+`evidence` has been verified to occur in the submitted message; model
+output whose evidence is not in the message, or whose code is not in the
+semantic allow-list, is dropped (counted in `analysis.semantic.rejectedSignals`)
+and never shown or scored.
 
-#### `scamProfile` / `journey` (NEW, P1)
+#### Reason codes
 
-```json
-{
-  "scamProfile": { "type": "MCB_IMPERSONATION" | ... | null, "stage": "OTP_REQUEST" | ..., "claimedIdentity": "string | null" },
-  "journey": { "currentStage": "OTP_REQUEST" | ..., "likelyNextStages": [ { "stage": "ACCOUNT_TAKEOVER" | ..., "reason": "string" } ] }
-}
-```
+| Code | Meaning | Emitted by |
+|---|---|---|
+| URL-01 | Lookalike of an official domain (edit distance scaled by label length) | rule |
+| URL-02 | Brand token as the registrable label of an unofficial domain | rule |
+| URL-03 | Brand in subdomain or path of an unrelated host | rule |
+| URL-04 | Punycode / homoglyph host | rule |
+| URL-05 | URL shortener (weak) | rule |
+| URL-06 | Raw IP link | rule |
+| URL-07 | `user@host` link disguise | rule |
+| URL-08 | Verify/log-in/claim call-to-action through an unofficial link | rule |
+| ID-01 | Claimed registry institution, link to a non-official host (subdomains of an official domain are official) | rule |
+| ID-02 | Claimed institution, payment beneficiary is someone else | rule |
+| ID-03 | Suspicious sender identity (reserved) | – |
+| ID-04 | Language impersonates an authority | semantic |
+| SOC-01..06 | Urgency, threat, secrecy, off-platform, prize/refund, relationship/investment manipulation | lexicon (EN/FR/Kreol) and/or semantic |
+| SOC-07 | Instructions aimed at an automated checker (prompt injection) | rule (and semantic) |
+| PAY-01..04, PAY-07 | Payment request, unusual method, "safe account", advance fee, bank-details change | lexicon and/or semantic |
+| PAY-05, PAY-06 | Recipient mismatch, active coaching | rule (paymentContext) |
+| SEC-01, SEC-02 | Share OTP/PIN/password/CVV (negation-aware), remote-access app | lexicon and/or semantic |
+| REP-01, REP-02 | Community cluster / wave (CW-1 / CW-2) | community |
+| REP-03 | Sender reported ≥ 3 times | community |
+| REP-04, REP-05 | Confirmed scam template / known-malicious URL (reserved for intel feeds; floors exist) | intel |
 
-Both objects are present only when the LLM supplied a `stage` that
-validates against the fixed `SCAM_STAGES` enum
-(`backend/src/services/playbooks/index.js`) — an invalid or missing value
-from the LLM omits both fields entirely, the same best-effort contract as
-`riskScore`/`sender`. `scamProfile.type` is validated the same way against
-`SCAM_TYPES` and can be `null` even when `scamProfile` itself is present
-(the message clearly represents a known stage of *some* scam, but doesn't
-match one of the known local playbooks). `journey.likelyNextStages` is
-**never LLM-generated** — it's a deterministic lookup,
-`getLikelyNextStages(scamType, stage)` in the same module, capped at 3
-entries — so "what may happen next" can never be an unsupported claim (see
-`CLAUDE.md`'s "Scam Stage Control"/"Scam Playbook Control" sections).
-Present on all three analyze routes (`/api/analyze`, `/api/batch-scan`,
-`/api/analyze/screenshot`), since all three call the same
-`analyzeMessage()`.
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.0`)
+
+1. **Dedupe:** signals about the same link (URL-01..04, URL-08, ID-01 on one
+   host) are one finding; the same code from lexicon + semantic is one
+   finding; a semantic ID-04 corroborates an existing deterministic
+   impersonation finding. The verified member scores; others corroborate.
+2. **Points** per code (see `RULESET_RS_1_0.weights`).
+3. **Caps:** semantic-only findings (and interactions among them) ≤ 30;
+   lexicon-only ≤ 40.
+4. **Interactions** (each at most once): IX-1 impersonation + payment/credential +15,
+   IX-2 urgency/threat + credential +10, IX-3 secrecy + payment +10,
+   IX-4 prize/refund + advance fee +10, IX-5 manipulation + unusual method +15.
+5. **Floors** (non-semantic evidence only): known-malicious URL, confirmed
+   template, safe account, OTP request + claimed institution, remote access +
+   claimed institution → at least `high`; community wave + technical
+   impersonation → `critical`.
+6. **Bands:** 0–19 low, 20–44 elevated, 45–69 high, 70–100 critical.
+7. **Confidence** (separate from risk): `high` when a deterministic finding
+   ≥ 20 points (or deterministic + another source family) drives it;
+   `moderate` for lexicon + semantic agreement or weaker deterministic
+   evidence; `low` when only AI-inferred evidence exists or the semantic
+   step failed with nothing else to check. OCR quality `low` downgrades one step.
+8. **Decision:** `low → proceed`, `elevated → verify_first`,
+   `high|critical → do_not_pay` (semantic-only evidence can never reach it).
+
+#### Community cluster/wave evidence
+
+Rules and compliance controls: `backend/src/services/community-signals/README.md`.
+A matching pattern reported by enough **distinct** pseudonymous reporters
+adds one `REP-01` (cluster, CW-1) or `REP-02` (wave, CW-2) signal with a
+`communityEvidence` object (unchanged fields; `rulesVersion` is now
+`"wave-rules-v2"`). Its points come from the risk engine, and a
+`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.0`),
+evidence ids and the level with and without it (`levelFrom`/`levelTo` in
+`riskAdjustments`). The old verdict-escalation logic is gone — crowd
+evidence alone is worth 10/20 points (elevated at most) and only the
+wave + technical-impersonation floor lifts to critical. `riskCategories`
+excludes community signals.
 
 ### Errors
 
@@ -176,15 +204,16 @@ Present on all three analyze routes (`/api/analyze`, `/api/batch-scan`,
 |---|---|---|
 | `400` | `{ "error": "message is required and must be a non-empty string" }` | `message` missing, not a string, or empty/whitespace-only |
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
-| `502` | `{ "error": "analysis failed, try again shortly" }` | LLM call failed (Ollama and fallback both unreachable/erroring), LLM returned invalid JSON, or LLM output failed schema validation. The real error is logged server-side (`console.error`), never returned to the client (`backend/src/routes/index.js`). |
+| `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
+| `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is no longer an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
 
 ## `POST /api/analyze/screenshot`
 
 Not in the original placeholder contract — added to wire up screenshot/OCR
-ingestion (`backend/src/services/ocr/`, tesseract.js `eng+fra`). Runs OCR
-first, then the extracted text through the exact same
-`analyzeMessage()` + `checkUrls()` pipeline as `/api/analyze`.
+ingestion (`backend/src/services/ocr/`, tesseract.js `eng+fra`). Runs OCR,
+redacts the extracted text server-side, then runs it through the same
+`runPipeline()` as `/api/analyze` (with `analysis.source: "screenshot"`).
 
 ### Request
 
@@ -201,23 +230,14 @@ WEBP, regardless of anything the client claims.
 
 ### Response — `200 OK`
 
+The full `/api/analyze` response (see above) plus:
+
 ```json
-{
-  "extractedText": "string — cleaned OCR output that was actually analyzed",
-  "verdict": "safe" | "suspicious" | "scam",
-  "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high", "evidence": "string, optional" } ],
-  "suggestedAction": "string, free-form (not an enforced enum)",
-  "explanation": "string, localized to the input language",
-  "riskScore": "number, optional — see /api/analyze",
-  "sender": "string, optional — see /api/analyze",
-  "senderReports": "number, optional — see /api/analyze"
-}
+{ "extractedText": "string — redacted OCR output that was actually analyzed" }
 ```
 
-Same `verdict`/`signals`/`suggestedAction`/`explanation`/`riskScore`/`sender`/
-`senderReports` shape as `/api/analyze`, with `extractedText` added so the UI
-can show what OCR read before/alongside the verdict — useful if OCR misreads
-part of the image.
+The UI deliberately uses only `extractedText` (the user reviews/corrects it,
+then submits it to `/api/analyze`).
 
 ### Errors
 
@@ -230,7 +250,7 @@ part of the image.
 | `400` | `{ "error": "no readable text was found in the image" }` | OCR ran but returned empty/whitespace-only text |
 | `400` | `{ "error": "extracted text exceeds maximum length of 5000 characters" }` | OCR text is longer than `/api/analyze`'s message cap — request is rejected, not truncated, since silently truncating could change the analysis without the caller knowing |
 | `502` | `{ "error": "OCR failed, try again shortly" }` | the tesseract.js worker itself threw. The real error is logged server-side, never returned to the client. |
-| `502` | `{ "error": "analysis failed, try again shortly" }` | same LLM-failure cases as `/api/analyze`, once OCR has already succeeded |
+| `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error after OCR succeeded. An LLM outage is **not** an error (see `/api/analyze`). |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (shares the 20 req/15min bucket with `/api/analyze`) |
 
 ## `POST /api/batch-scan`
@@ -247,55 +267,22 @@ part of the image.
 
 ```json
 {
-  "results": [
-    {
-      "message": "string — echoed back from the request",
-      "verdict": "safe" | "suspicious" | "scam" | "unknown",
-      "signals": [ { "type": "string", "description": "string", "severity": "low" | "medium" | "high", "evidence": "string, optional" } ],
-      "suggestedAction": "string",
-      "explanation": "string",
-      "analysisFailed": "boolean — true if this message's LLM analysis failed and the result below was synthesized as a fallback; always present, never omitted",
-      "riskScore": "number, optional — see /api/analyze; never present when analysisFailed is true",
-      "sender": "string, optional — see /api/analyze; never present when analysisFailed is true",
-      "senderReports": "number, optional — see /api/analyze; never present when analysisFailed is true"
-    }
-  ],
-  "summary": {
-    "total": "number",
-    "scamCount": "number",
-    "suspiciousCount": "number",
-    "safeCount": "number",
-    "unanalyzedCount": "number — count of results where analysisFailed is true (verdict: \"unknown\"); purely additive, does not overlap scamCount/suspiciousCount/safeCount"
-  }
+  "results": [ "each item = the full /api/analyze response (see above) + { message: string (echoed), analysisFailed: boolean }" ],
+  "summary": { "total": "number", "scamCount": "number", "suspiciousCount": "number", "safeCount": "number", "unanalyzedCount": "number" }
 }
 ```
 
-**Per-message failure handling:** unlike `/api/analyze`, a single message
-failing analysis does not fail the batch or return a non-2xx status. That
-message's result is instead synthesized as:
+Each message runs through `runPipeline()` (`analysis.source: "batch"`).
+**An LLM outage no longer fails an item**: the item still gets a normal
+deterministic assessment (`analysis.semantic.status: "unavailable"`) and is
+counted in scam/suspicious/safe as usual.
 
-```json
-{
-  "message": "<original message>",
-  "verdict": "unknown",
-  "signals": [ /* still includes any lookalike_url signals from checkUrls() */ ],
-  "suggestedAction": "verify_official_channel",
-  "explanation": "Analysis failed: <error message>",
-  "analysisFailed": true
-}
-```
-
-`checkUrls()` (the deterministic, non-LLM domain-matching check) now runs
-**before** the LLM call for each message, so it's included in the result
-whether or not the LLM call succeeds — a lookalike URL is still surfaced
-even during a total LLM outage. `verdict` is `"unknown"` in the failure
-case — a dedicated fourth value, distinct from the three real outcomes, so
-a failed analysis can never inflate `scamCount`/`suspiciousCount`/
-`safeCount` (`buildSummary` in `backend/src/services/batch/index.js` only
-tallies `"safe"|"suspicious"|"scam"`). `analysisFailed` and the summary's
-`unanalyzedCount` remain the explicit, non-inferred signal for "we couldn't
-analyze this at all" — `verdict: "unknown"` is consistent with that, not a
-second source of truth.
+`verdict: "unknown"` + `analysisFailed: true` is now reserved for an
+*unexpected* pipeline error on that item. Such an item is synthesized as
+`{ message, verdict: "unknown", signals: [], suggestedAction: "verify_official_channel", explanation: "Analysis failed for this message.", analysisFailed: true }`
+and is counted only in `unanalyzedCount`, never in the three real verdict
+counts (`buildSummary` in `backend/src/services/batch/index.js`). A batch
+never returns a top-level 5xx.
 
 ### Errors
 
@@ -352,7 +339,7 @@ arbitrary identifier instead of only one the LLM extracted.
 ```json
 {
   "sender": "string, required, non-empty",
-  "message": "string, optional — accepted but currently unused server-side",
+  "message": "string, optional — the (client-redacted) message text. NEW: when present and ≤ 5000 chars, it is re-redacted server-side and reduced to one-way fingerprints (template hash + SimHash + lookalike hosts) for community cluster/wave detection. The text itself is never stored. Oversized/non-string values are ignored, not rejected.",
   "reportedBy": "string, optional — accepted but currently unused server-side"
 }
 ```
@@ -373,6 +360,13 @@ arbitrary identifier instead of only one the LLM extracted.
 |---|---|---|
 | `400` | `{ "error": "sender is required and must be a non-empty string" }` | `sender` missing, not a string, or empty/whitespace-only |
 | `429` | `{ "error": "too many report submissions from this address, try again later" }` | per-IP rate limit exceeded (5 req/hour — deliberately tighter than the other routes, see checklist.md "Add bot protection") |
+
+**Evidence note (no shape change):** each report is also stored as a
+timestamped `report_events` row with a pseudonymous reporter id (HMAC of the
+client IP; raw IP never stored) and deleted after 90 days
+(`COMMUNITY_EVENT_RETENTION_DAYS`). Reports keyed on an official identity
+(`MCB`, `my.t`, ...) or a redaction placeholder still increment `reportCount`
+as before, but never count toward that sender's community reputation.
 
 **Normalization note (no shape change):** `reportCount` now deduplicates
 internally via a normalized, digits-only canonical key (`backend/src/db/index.js`),
@@ -483,11 +477,17 @@ versus what's likely to change before the demo:
   of truth. Frontend types/`api.ts` runtime validation
   (`frontend/lib/types.ts`, `frontend/lib/api.ts`) were updated to accept
   `"unknown"` on `BatchScanResult.verdict` only.
-- **`suggestedAction` is a free-form string, not an enforced enum** — the
-  LLM is prompted with examples (`block_sender`, `report_to_bank`,
-  `verify_official_channel`) but nothing validates the value it returns
-  against that set. The frontend should not assume it's one of a fixed list
-  yet.
+- **`suggestedAction` is now a fixed policy value** (2026-09-23): one of
+  `"block_sender, report_to_bank"`, `"verify_official_channel"`, `"none"`,
+  set by `services/interventions` from the deterministic risk level. The
+  concrete, per-signal advice is in `actions[]` (`{ id, text }`).
+- **Registry domains are unverified** — `data/institution-registry.json`
+  entries carry `verification.status: "unverified"` until someone checks
+  each domain on the institution's own website. `official_phones` is
+  empty on purpose (nothing verified yet).
+- **OCR quality is not yet passed to the engine** — `runPipeline()` accepts
+  `ocrQuality` (lowers evidence confidence) but the screenshot route does
+  not compute it yet.
 - **No auth on any route** — ties to the open items in `checklist.md` §
   Security. Every route is currently unauthenticated; there's no user/session
   concept in the app at all yet, so this only matters once one is added.
@@ -505,11 +505,9 @@ versus what's likely to change before the demo:
 - **`/api/analyze`, `/api/analyze/screenshot`'s top-level failure, and the
   final error-handling middleware no longer pass through raw `err.message`**
   — they return a generic `{ "error": "..." }` string and log the real error
-  server-side with `console.error`. `/api/batch-scan`'s **per-message**
-  `explanation` field still includes `err.message` on an individual
-  analysis failure (by design — it's user-facing "why this one couldn't be
-  analyzed" copy, and the underlying messages are already short, sanitized
-  strings like `"Ollama request failed: 500"`, never a stack trace).
+  server-side with `console.error`. `/api/batch-scan`'s per-message
+  failure `explanation` is now a fixed string ("Analysis failed for this
+  message.") — no `err.message` is returned.
 - **`/api/analyze/screenshot` has no automated tests yet** — verified
   manually (real PNG generated with ImageMagick, plus missing/non-image/
   blank-image/oversized/data-URI-prefix cases) against the dev server, but

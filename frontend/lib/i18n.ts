@@ -268,6 +268,14 @@ export interface Copy {
     sentBody: string;
     /** "What was sent" explanation when the text came from a screenshot (the image itself also left the device). */
     sentBodyScreenshot: string;
+    /** Which AI (if any) served the semantic analysis — local self-hosted model, hosted fallback, or none. */
+    aiSource: {
+      label: string;
+      local: string;
+      /** "{provider}" is replaced with the fallback provider id (e.g. "anthropic"). */
+      fallback: string;
+      unavailable: string;
+    };
     checkAnother: string;
     missingTitle: string;
     missingBody: string;
@@ -647,6 +655,12 @@ const RESULT_EN: Copy["result"] = {
   sentBody: "Only this version left your phone. Phone numbers, emails and account numbers were replaced first.",
   sentBodyScreenshot:
     "Your screenshot was sent to our server to read the text, with everything in it visible. Your result is based only on this redacted version of the text.",
+  aiSource: {
+    label: "Analyzed by",
+    local: "Local AI model (self-hosted, on-device)",
+    fallback: "Cloud fallback AI ({provider})",
+    unavailable: "AI unavailable — deterministic checks only",
+  },
   checkAnother: "Check another message",
   missingTitle: "No check to show",
   missingBody: "Paste a message on the Check screen to see a result here.",
@@ -1242,6 +1256,12 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Seule cette version a quitté votre téléphone. Les numéros de téléphone, e-mails et numéros de compte ont d'abord été remplacés.",
       sentBodyScreenshot:
         "Votre capture a été envoyée à notre serveur pour lire le texte, avec tout son contenu visible. Votre résultat repose uniquement sur cette version masquée du texte.",
+      aiSource: {
+        label: "Analysé par",
+        local: "Modèle IA local (auto-hébergé, sur l'appareil)",
+        fallback: "IA de secours dans le cloud ({provider})",
+        unavailable: "IA indisponible — vérifications déterministes uniquement",
+      },
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
       missingBody: "Collez un message dans l'onglet Vérifier pour voir un résultat ici.",
@@ -1664,8 +1684,14 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       sentTitle: "Seki finn avoye pou analiz",
       sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
-      sentBodyScreenshot: 
+      sentBodyScreenshot:
         "Ou screenshot finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text-la kot detay personel finn tire.",
+      aiSource: {
+        label: "Analize par",
+        local: "Model AI lokal (self-hosted, lor aparey)",
+        fallback: "AI backup lor cloud ({provider})",
+        unavailable: "AI pa disponib — zis verifikasion deterministik",
+      },
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",

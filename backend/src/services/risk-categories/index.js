@@ -19,7 +19,7 @@ const SEVERITY_RANK = { low: 1, medium: 2, high: 3 };
 // "lookalike_url"/"IDENTITY_MISMATCH"), so this matches on substrings rather
 // than an exact enum.
 const CATEGORY_RULES = [
-  { category: "identity_risk", pattern: /identity|spoof|impersonat|sender.?mismatch|fake.?(identity|sender)/i },
+  { category: "identity_risk", pattern: /identity|spoof|impersonat|sender.?mismatch|fake.?(identity|sender)|template.?artifact/i },
   { category: "technical_risk", pattern: /url|domain|link|lookalike|phishing.?(site|page)|website/i },
   { category: "payment_risk", pattern: /payment|money|transfer|beneficiary|account.?(number|detail)|bank.?detail|mobile.?money|otp|credential|\bpin\b|password/i },
   { category: "verification_risk", pattern: /verif|unofficial|official.?channel|unconfirmed|cannot.?confirm/i },
@@ -35,12 +35,27 @@ function classifyCategory(type) {
   return rule ? rule.category : "behavioral_risk";
 }
 
+// Registry signals (services/signals/registry.js) carry a fixed `category`,
+// so they map exactly instead of by regex over a type string.
+const REGISTRY_CATEGORY_MAP = {
+  identity: "identity_risk",
+  technical: "technical_risk",
+  payment: "payment_risk",
+  credential: "payment_risk",
+  social: "behavioral_risk",
+  reputation: "verification_risk",
+};
+
+function categoryOf(signal) {
+  return REGISTRY_CATEGORY_MAP[signal.category] ?? classifyCategory(signal.type || "");
+}
+
 // A category with no matching evidence is LOW, not "unknown" — absence of
 // evidence in that category is itself the (low-risk) signal.
 export function computeRiskCategories(signals) {
   const categories = Object.fromEntries(RISK_CATEGORIES.map((c) => [c, "LOW"]));
   for (const signal of signals || []) {
-    const category = classifyCategory(signal.type || "");
+    const category = categoryOf(signal);
     const rank = SEVERITY_RANK[signal.severity] || 0;
     const currentRank = SEVERITY_RANK[categories[category].toLowerCase()] || 0;
     if (rank > currentRank) {

@@ -35,8 +35,13 @@ export default function ResultView() {
   const [simple, setSimple] = useState(false);
 
   useEffect(() => {
-    setResult(loadResult());
+    const loaded = loadResult();
+    setResult(loaded);
     setSimple(loadSimpleMode());
+    // Demo/debug aid: which AI (if any) actually served this analysis —
+    // see docs/API-CONTRACT.md's `analysis.semantic` and the "Analyzed by"
+    // line in the "What was sent" panel below for the in-app equivalent.
+    if (loaded?.response.analysis) console.log("[fraudlens] analyzed by:", loaded.response.analysis.semantic);
   }, []);
 
   function toggleSimple() {
@@ -213,7 +218,7 @@ export default function ResultView() {
         )}
 
         <CheckAnotherButton copy={copy} />
-        <SentPanel redacted={redacted} fromScreenshot={result.source === "screenshot"} copy={copy} />
+        <SentPanel redacted={redacted} fromScreenshot={result.source === "screenshot"} analysis={response.analysis} copy={copy} />
       </div>
     </div>
   );

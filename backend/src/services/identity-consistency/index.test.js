@@ -32,3 +32,25 @@ test("checkIdentityConsistency does not flag when the beneficiary references the
   const signals = checkIdentityConsistency("Emtel: please pay to Emtel Ltd to renew your plan.");
   assert.deepEqual(signals, []);
 });
+
+// ---- Regression (docs/ARCHITECTURE-REVIEW.md C1/C2) ----
+test("an official subdomain is not an identity mismatch", () => {
+  assert.deepEqual(checkIdentityConsistency("MCB: log in at https://internet.mcb.mu to view your statement"), []);
+});
+
+test("a URL shortener is not an identity mismatch", () => {
+  assert.deepEqual(checkIdentityConsistency("MCB: see https://mcb.mu/help and bit.ly/mcbhelp"), []);
+});
+
+test("MRA linking either of its registered official domains is not a mismatch", () => {
+  assert.deepEqual(checkIdentityConsistency("MRA: file your return at mra.mu before 30 September"), []);
+  assert.deepEqual(checkIdentityConsistency("MRA: file your return at https://mra.gov.mu"), []);
+});
+
+test("domain and beneficiary mismatches are separate coded signals with evidence", () => {
+  const signals = checkIdentityConsistency("This is MCB. Pay to John Peter at https://mcb-pay.top/now");
+  assert.deepEqual(signals.map((s) => s.code).sort(), ["ID-01", "ID-02"]);
+  const id01 = signals.find((s) => s.code === "ID-01");
+  assert.equal(id01.actualDomain, "mcb-pay.top");
+  assert.equal(id01.sourceType, "rule");
+});

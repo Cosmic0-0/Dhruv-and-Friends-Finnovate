@@ -83,7 +83,14 @@ sender data touches the demo, since the app ingests untrusted user input
       middleware (`backend/src/routes/index.js`) — no CAPTCHA/challenge
       added, a strict per-IP throttle is the practical deterrent for a
       hackathon build; revisit if the report feed still gets gamed in
-      testing.
+      testing. Strengthened 2026-09-23 (`joshua` branch): community
+      cluster/wave detection (`backend/src/services/community-signals`)
+      counts only DISTINCT pseudonymous reporters (HMAC of IP), never
+      official identities (`MCB`, `my.t`, ...) or redaction placeholders as
+      sender keys, never boosts messages linking only official domains, and
+      ignores machine-only evidence - so one IP re-reporting can't create a
+      cluster. The legacy `reportCount` itself is still a raw per-sender
+      tally, protected only by the 5/hour limit.
 - [x] **Parameterize all DB queries** — verified 2026-09-22: every query in
       `backend/src/db/index.js` uses `?` placeholders via `better-sqlite3`'s
       `.prepare().run()`, no string concatenation.

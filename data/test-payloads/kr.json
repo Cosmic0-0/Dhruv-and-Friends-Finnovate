@@ -1,0 +1,266 @@
+[
+  {
+    "id": "KR-01",
+    "language": "kreol",
+    "scamType": "bank_impersonation",
+    "message": "Ou kont OceanBank pou bloke zordi si ou pa fer verification. Klik lor oceanbank-verify-secure.test deswit.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0001 (owner_reviewed, Joshua). URGENCY+THREAT+IMPERSONATION tagged in the source corpus -> urgency_language + spoofed_identity. oceanbank-verify-secure.test doesn't match any BRAND_TOKENS (fictional org, deliberately distinct from real MU banks) and isn't Levenshtein-close to a LEGIT_DOMAINS entry, so lookalike_url is NOT asserted -- same boundary case as EN-08."
+  },
+  {
+    "id": "KR-02",
+    "language": "mixed",
+    "scamType": "otp_theft",
+    "message": "Ser client, lekip sekirite IslandTrust Bank pe demann ou konfirm OTP (583291) lor sa nimero-la pou anil enn transaksion sispe.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0002 (owner_reviewed, Joshua). IMPERSONATION tagged -> spoofed_identity; no URGENCY/THREAT tag in the source, so urgency_language is not asserted even though OTP theft is implicitly urgent -- trusting the corpus's own signal tagging over re-reading the message."
+  },
+  {
+    "id": "KR-03",
+    "language": "kreol",
+    "scamType": "bank_impersonation",
+    "message": "ALERT SunCoast Bank: To kart inn sispann pou rezon sekirite. Apel sa nimero-la dans 24 er temps: +230 5xxx xxxx.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0003 (owner_reviewed, Joshua). URGENCY+THREAT+IMPERSONATION tagged -> urgency_language + spoofed_identity. Masked phone callback, no URL, so lookalike_url doesn't apply."
+  },
+  {
+    "id": "KR-04",
+    "language": "mixed",
+    "scamType": "account_verification",
+    "message": "Ou compte Meridian Bank inn sispann temporairement. Verifye ou compte lor meridianbank-secure-login.test avan minwi.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0004 (owner_reviewed, Joshua). URGENCY+IMPERSONATION tagged -> urgency_language + spoofed_identity. meridianbank-secure-login.test doesn't match any BRAND_TOKENS -> no lookalike_url."
+  },
+  {
+    "id": "KR-05",
+    "language": "mixed",
+    "scamType": "bank_impersonation",
+    "message": "Ser client, ou compte OceanBank inn bloke pou bann raison de securite. Konfirm ou code PIN deswit lor sa lyen-la.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0005 (owner_reviewed, Joshua). URGENCY+IMPERSONATION tagged -> urgency_language + spoofed_identity. 'Sa lyen-la' (this link) isn't an actual URL string in the message, so lookalike_url can't apply."
+  },
+  {
+    "id": "KR-06",
+    "language": "kreol",
+    "scamType": "refund_scam",
+    "message": "Bonzour, ou'nn gagn enn remboursement MRA Rs 8,400. Klik lien la pou resevwar li avan 24h.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0006 (owner_reviewed, Joshua). MRA impersonation matching the worked example in kreol-dataset/CLAUDE.md. URGENCY+IMPERSONATION tagged -> urgency_language + spoofed_identity. 'Lien la' is a reference, not an actual URL string, so lookalike_url doesn't apply."
+  },
+  {
+    "id": "KR-07",
+    "language": "mixed",
+    "scamType": "government_impersonation",
+    "message": "Lannons MRA: Ou ena enn peyman tax outstanding de Rs 12,500. Si ou pa ressi fer li avan 48h ou kav gegn bann penalite ek prosekision legal.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0007 (owner_reviewed, Joshua). URGENCY+THREAT+IMPERSONATION tagged -> urgency_language + spoofed_identity."
+  },
+  {
+    "id": "KR-08",
+    "language": "kreol",
+    "scamType": "government_impersonation",
+    "message": "Ministre Finans/MRA: Ou dosye ranboursman bloke. Konfirm ou numero kont labank touswit lor sa form-la pou nou rezoud sa.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language", "spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0008 (owner_reviewed, Joshua). URGENCY+IMPERSONATION tagged -> urgency_language + spoofed_identity. Bank-account-number request via a form, no URL in the message."
+  },
+  {
+    "id": "KR-09",
+    "language": "kreol",
+    "scamType": "payment_request",
+    "message": "Salut, mo finn avoy larzan par erer lor to kont la banque. Silvouple reavoyy Rs 3,000 lor sa numero-la deswit.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0009 (owner_reviewed, Joshua). Mobile-money 'wrong transfer, refund me' pattern, same as EN-06/FR-06. URGENCY tagged but no IMPERSONATION/org claimed -> urgency_language only."
+  },
+  {
+    "id": "KR-10",
+    "language": "mixed",
+    "scamType": "merchant_payment_change",
+    "message": "Nou ban detail la banque inn sanze pou sa payment-la. Nouvo compte beneficiaire: fer le necessaire avan ou fer transfer.",
+    "expected": {
+      "verdict": "suspicious",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0010 (owner_reviewed, Joshua). BEC-style beneficiary-change, same understated pattern as EN-12/FR-12 -- no URGENCY/THREAT/IMPERSONATION tagged, zero textual red flags by design, so verdict is suspicious (not scam) and signals is empty, matching the EN-12/FR-12 precedent exactly."
+  },
+  {
+    "id": "KR-11",
+    "language": "kreol",
+    "scamType": "payment_request",
+    "message": "Support PayIsle: Ou pou gagn enn erer lor ou transaksion. Avoy Rs 500 kouma enn frais verification pou nou debloke ou kont.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["spoofed_identity"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0011 (owner_reviewed, Joshua). IMPERSONATION tagged (claims to be 'PayIsle Support', a fictional mobile-payment provider) -> spoofed_identity. No URGENCY/THREAT tag -> urgency_language not asserted."
+  },
+  {
+    "id": "KR-12",
+    "language": "kreol",
+    "scamType": "family_impersonation",
+    "message": "Ma, mo finn sanz numero. Mo dan enn problem, mo bizin Rs 2,000 deswit. Pa dir personn, avoy lor sa numero-la.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0012 (owner_reviewed, Joshua). URGENCY+SECRECY tagged -> urgency_language. spoofed_identity NOT asserted for family_impersonation, matching EN-09/FR-09 -- IMPERSONATION here means claiming to be a relative, not spoofing an institutional identity."
+  },
+  {
+    "id": "KR-13",
+    "language": "mixed",
+    "scamType": "family_impersonation",
+    "message": "Bonojour mo mem ca, monn perdi mo portab et samem mo nouvo nimero. Pas kav fer bann appel la, urgent mo bizin pay enn bill, ou kapav avoy Rs 4,500 pou mwa?",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0013 (owner_reviewed, Joshua). New-number + can't-call-now family impersonation. URGENCY tagged -> urgency_language; spoofed_identity omitted per the family_impersonation convention (see KR-12)."
+  },
+  {
+    "id": "KR-14",
+    "language": "mixed",
+    "scamType": "family_impersonation",
+    "message": "Momem sa, monn gegn een problem urgent, mo pa kapav explik par telefone. Envoye Rs 3,500 silvouple, li tres urgent, pa dir papa.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0014 (owner_reviewed, Joshua). URGENCY+SECRECY tagged -> urgency_language; spoofed_identity omitted (see KR-12)."
+  },
+  {
+    "id": "KR-15",
+    "language": "kreol",
+    "scamType": "parcel_customs",
+    "message": "Colis pou ou finn ariv kot la douane. Peye Rs 650 kouma fre douane lor sa lyen-la avan li retourn expediteur.",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0015 (owner_reviewed, Joshua). URGENCY tagged ('avan li retourn expediteur') -> urgency_language. 'Sa lyen-la' isn't an actual URL string, so lookalike_url doesn't apply."
+  },
+  {
+    "id": "KR-16",
+    "language": "mixed",
+    "scamType": "parcel_customs",
+    "message": "Ou parcel pa finn delivre. Update ou delivery address ek peye Rs 250 pou bann fre livraison lor track-parcel-mu.test.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0016 (owner_reviewed, Joshua). No URGENCY/THREAT tag in the source (no deadline wording), so urgency_language is not asserted, unlike KR-15. track-parcel-mu.test deliberately doesn't match any BRAND_TOKENS -> no lookalike_url, same boundary case as EN-08."
+  },
+  {
+    "id": "KR-17",
+    "language": "kreol",
+    "scamType": "investment",
+    "message": "Investi Rs 5,000 zordi, gagn Rs 15,000 dan 7 zour, garanti san risk. Kontakte mwa lor WhatsApp pou koumanse.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0017 (owner_reviewed, Joshua). Guaranteed-return investment lure, same pattern as EN-10/FR-10. No URGENCY/IMPERSONATION tag -> verdict is the load-bearing assertion, signals empty, matching EN-10/FR-10's empty signals array."
+  },
+  {
+    "id": "KR-18",
+    "language": "mixed",
+    "scamType": "investment",
+    "message": "Zwen nou group exclusif trading, 30% retour garanti sak semenn. Minimum deposit Rs 10,000 lor crypto wallet.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0018 (owner_reviewed, Joshua). Crypto-deposit guaranteed-return lure. No URGENCY/IMPERSONATION tag -> signals empty (see KR-17)."
+  },
+  {
+    "id": "KR-19",
+    "language": "kreol",
+    "scamType": "job_scam",
+    "message": "Travay fasil work from home, gegn Rs 8,000 par semenn. Zis avoy Rs 500 pou fre inscription pou konfirm ou plas.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0019 (owner_reviewed, Joshua). Upfront-fee job scam, same pattern as EN-11/FR-11. No hard urgency/impersonation wording -> signals empty, matching EN-11/FR-11."
+  },
+  {
+    "id": "KR-20",
+    "language": "mixed",
+    "scamType": "job_scam",
+    "message": "Nou pe rekrit bann dimoun pou online data entry, zero experience neceser, Rs 400 par zour. Pey Rs 800 registration fee pou gagn ou starter kit.",
+    "expected": {
+      "verdict": "scam",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0020 (owner_reviewed, Joshua). Data-entry job scam with a registration fee. No URGENCY/IMPERSONATION tag -> signals empty (see KR-19)."
+  },
+  {
+    "id": "KR-21",
+    "language": "mixed",
+    "scamType": "prize_lottery",
+    "message": "Felicitations! Ou'nn gagne enn loterie WhatsApp International, avecv enn prix de Rs 50,000. Avoye ou bann details bancaires pou reklam li avan 24h, li urgent!",
+    "expected": {
+      "verdict": "scam",
+      "signals": ["urgency_language"]
+    },
+    "notes": "Source: kreol-dataset FL-KM-0021 (owner_reviewed, Joshua). Trilingual code-switch test (mfe+en+fr). URGENCY tagged -> urgency_language. No IMPERSONATION tag and no specific brand claimed ('WhatsApp International' lottery, not a real org) -> spoofed_identity not asserted; message has no URL at all, so lookalike_url doesn't apply."
+  },
+  {
+    "id": "KR-22",
+    "language": "kreol",
+    "scamType": "legitimate",
+    "message": "Ou statement mansyel disponib lor ou paz. Pena aksion pou fer si tou paret korek.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0022 (owner_reviewed, Joshua). Genuine low-risk statement notice, no scam signals -- false-positive control, same role as EN-13..18/FR-13..18."
+  },
+  {
+    "id": "KR-23",
+    "language": "mixed",
+    "scamType": "legitimate",
+    "message": "Ou mot de pass inn zanze le 12 Sep. Si li pas ti ou, contact lekip support lor app, pas lor messaz",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0023 (owner_reviewed, Joshua). Genuine password-change notice that explicitly directs to the official app, not a reply -- false-positive control."
+  },
+  {
+    "id": "KR-24",
+    "language": "mixed",
+    "scamType": "legitimate",
+    "message": "Rappel: ou ena enn rendez-vous ar ou konseye labank lindi prosen 10h. Kontakte labank si ou pa disponib.",
+    "expected": {
+      "verdict": "safe",
+      "signals": []
+    },
+    "notes": "Source: kreol-dataset FL-KM-0024 (owner_reviewed, Joshua). Genuine routine appointment reminder, no request of any kind -- false-positive control."
+  }
+]

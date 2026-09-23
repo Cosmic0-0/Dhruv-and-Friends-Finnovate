@@ -1,0 +1,8 @@
+{
+  "enabledPlugins": {
+    "impeccable@impeccable": true
+  },
+  "skillOverrides": {
+    "gateguard": "on"
+  }
+}

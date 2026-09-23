@@ -78,6 +78,17 @@ export interface AnalyzeResponse {
     technical_risk: RiskLevel;
     verification_risk: RiskLevel;
   };
+  /** OPTIONAL: pipeline metadata, incl. which AI (if any) served this analysis — see docs/API-CONTRACT.md. */
+  analysis?: {
+    source: string;
+    semantic: {
+      status: "ok" | "unavailable" | "invalid" | "skipped";
+      /** e.g. "qwen3:8b" (local) or "claude-haiku-4-5-20251001" (fallback). Absent when status is "unavailable"/"skipped". */
+      model?: string;
+      /** e.g. "ollama" (local/self-hosted) or "anthropic"/"openai"/"openrouter" (hosted fallback). */
+      provider?: string;
+    };
+  };
 }
 
 // ---- POST /api/analyze/screenshot ----
