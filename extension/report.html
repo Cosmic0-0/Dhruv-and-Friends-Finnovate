@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Security Report — FraudLens AI</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="report.css" />
+  </head>
+  <body class="report">
+    <header class="rp-bar">
+      <div class="rp-brand">
+        <span class="rp-wordmark">FraudLens AI</span>
+        <span class="rp-kicker">Site security report</span>
+      </div>
+      <div class="rp-bar-actions">
+        <button id="export-btn" type="button">Export JSON</button>
+        <button id="print-btn" type="button">Print / Save PDF</button>
+      </div>
+    </header>
+
+    <main id="report-root" class="rp-main" hidden>
+      <section class="rp-target">
+        <h1 id="rp-host" class="rp-host">—</h1>
+        <p class="rp-meta">
+          <span id="rp-url" class="mono"></span>
+          <span class="rp-sep" aria-hidden="true">·</span>
+          <span id="rp-scanned"></span>
+        </p>
+      </section>
+
+      <section class="rp-overview" aria-label="Overview">
+        <div class="rp-grade">
+          <div class="rp-ring">
+            <canvas id="score-ring" width="180" height="180" aria-label="Security score"></canvas>
+            <div class="rp-ring-label">
+              <span id="rp-grade" class="rp-grade-letter">—</span>
+              <span id="rp-score" class="rp-grade-score"></span>
+            </div>
+          </div>
+          <p id="rp-grade-note" class="rp-grade-note"></p>
+        </div>
+
+        <div class="rp-kpis">
+          <div class="rp-kpi" data-sev="high"><span class="rp-kpi-value" id="kpi-high">0</span><span class="rp-kpi-label">High</span></div>
+          <div class="rp-kpi" data-sev="medium"><span class="rp-kpi-value" id="kpi-medium">0</span><span class="rp-kpi-label">Medium</span></div>
+          <div class="rp-kpi" data-sev="low"><span class="rp-kpi-value" id="kpi-low">0</span><span class="rp-kpi-label">Low</span></div>
+          <div class="rp-kpi" data-sev="info"><span class="rp-kpi-value" id="kpi-info">0</span><span class="rp-kpi-label">Info</span></div>
+          <div class="rp-coverage">
+            <p class="section-label">Coverage</p>
+            <ul id="rp-areas" class="rp-area-list"></ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="rp-charts">
+        <figure class="rp-chart">
+          <figcaption class="section-label">Posture by area <span class="rp-cap-note">score out of 100</span></figcaption>
+          <div class="rp-canvas-wrap"><canvas id="area-chart" aria-label="Score per security area"></canvas></div>
+        </figure>
+        <figure class="rp-chart">
+          <figcaption class="section-label">Where points were lost <span class="rp-cap-note">by category</span></figcaption>
+          <div class="rp-canvas-wrap"><canvas id="category-chart" aria-label="Points lost per finding category"></canvas></div>
+          <p id="category-empty" class="empty-note" hidden>Nothing cost points on this page.</p>
+        </figure>
+      </section>
+
+      <section class="rp-findings" aria-labelledby="findings-heading">
+        <div class="rp-findings-head">
+          <h2 id="findings-heading" class="rp-h2">Findings <span id="rp-count" class="rp-count"></span></h2>
+          <div class="rp-filters">
+            <div class="rp-chips" role="group" aria-label="Filter by severity">
+              <button type="button" class="rp-chip" data-sev="all" aria-pressed="true">All</button>
+              <button type="button" class="rp-chip" data-sev="high" aria-pressed="false">High</button>
+              <button type="button" class="rp-chip" data-sev="medium" aria-pressed="false">Medium</button>
+              <button type="button" class="rp-chip" data-sev="low" aria-pressed="false">Low</button>
+              <button type="button" class="rp-chip" data-sev="info" aria-pressed="false">Info</button>
+            </div>
+            <label class="rp-search">
+              <span class="visually-hidden">Search findings</span>
+              <input id="rp-search" type="search" placeholder="Search findings" autocomplete="off" />
+            </label>
+          </div>
+        </div>
+        <div id="rp-findings-list"></div>
+        <p id="rp-findings-empty" class="empty-note" hidden>No findings match this filter.</p>
+      </section>
+
+      <section class="rp-checks" aria-labelledby="checks-heading">
+        <div class="rp-findings-head">
+          <h2 id="checks-heading" class="rp-h2">Every check <span id="rp-checks-count" class="rp-count"></span></h2>
+          <p id="rp-checks-tally" class="rp-tally"></p>
+        </div>
+        <p class="rp-fine rp-checks-intro">
+          Everything this report tested, most pressing first: failed checks (worst first), then warnings, then
+          passes. "Not checked" means the check couldn't run on this page — it is not a pass.
+        </p>
+        <ol id="rp-checks-list" class="rp-check-list"></ol>
+      </section>
+
+      <section class="rp-method">
+        <p class="section-label">How this report was made</p>
+        <p>
+          Passive checks only. The FraudLens backend fetched this page once, read its headers, cookies and TLS
+          certificate, and requested a short fixed list of well-known paths (for example <span class="mono">/.git/HEAD</span>,
+          <span class="mono">/.env</span>, <span class="mono">/.well-known/security.txt</span>). The extension read the page as
+          it was already rendered in your browser. Nothing was submitted, fuzzed or brute-forced.
+        </p>
+        <p>
+          Findings describe <strong>possible</strong> weaknesses. Anything that looks like an injection point needs
+          authorized testing to confirm. The score starts at 100; each kind of problem costs 25 / 10 / 4 points
+          (high / medium / low), repeats of the same kind count a quarter, no single category can cost more than 35,
+          and informational notes cost nothing. A 90 / 75 / 60 / 40 or better earns A / B / C / D.
+        </p>
+        <p id="rp-datasets" class="rp-fine"></p>
+      </section>
+    </main>
+
+    <main id="report-missing" class="rp-main rp-missing" hidden>
+      <h1 class="rp-host">No report to show</h1>
+      <p class="state-text">
+        Reports are kept only until the browser closes. Run <strong>Security Report</strong> from the FraudLens popup
+        on the page you want to check, then choose <strong>Open full report</strong>.
+      </p>
+    </main>
+
+    <script src="vendor/chart.umd.min.js"></script>
+    <script src="report.js" type="module"></script>
+  </body>
+</html>

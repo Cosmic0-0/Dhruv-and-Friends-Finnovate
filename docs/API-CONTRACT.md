@@ -598,9 +598,11 @@ lock policy above, not a silent break.
 ```json
 {
   "url": "string, required, non-empty — a full http(s) URL, e.g. \"https://example.com/\"",
-  "clientSignals": "object, optional — client-collected signals from extension/collect-signals.js (DOM sinks, reflected params, mixed content, insecure forms, vulnerable libraries, third-party scripts, API surface). Loosely validated and capped server-side; omit if none collected."
+  "clientSignals": "object, optional — client-collected signals from extension/collect-signals.js (DOM sinks, reflected params, mixed content, insecure forms, vulnerable libraries, third-party scripts, scripts without SRI, password-field count + page protocol, API surface, libraryDataFetchedAt). Loosely validated and capped server-side; omit or send null if none collected.",
+  "clientCollectionError": "string, optional — why client-side collection failed, when it did. Adds an info-severity coverage finding; never fails the request."
 }
 ```
+
 
 ### Response — `200 OK`
 
@@ -610,16 +612,27 @@ lock policy above, not a silent break.
   "finalUrl": "string | null — the URL actually reached after following redirects, or null if the site could not be reached at all",
   "grade": "\"A\" | \"B\" | \"C\" | \"D\" | \"F\" | \"N/A\" — N/A only when the site could not be reached",
   "score": "number | null — 0-100, null only alongside grade \"N/A\"",
-  "scannedAt": "string — ISO timestamp",
-  "findings": [
+  "scannedAt": "string — ISO timestamp of the server-side scan",
     {
-      "category": "string — e.g. \"headers\" | \"tls\" | \"cookies\" | \"exposed-artifacts\" | \"injection-signal\" | \"client-dom\" | \"mixed-content\" | \"forms\" | \"vulnerable-library\" | \"third-party\" | \"api-surface\" | \"network\"",
+      "category": "string — e.g. \"headers\" | \"framing\" | \"cors\" | \"policy\" | \"disclosure\" | \"tls\" | \"cookies\" | \"exposed-artifacts\" | \"injection-signal\" | \"client-dom\" | \"sri\" | \"credentials\" | \"mixed-content\" | \"forms\" | \"vulnerable-library\" | \"third-party\" | \"api-surface\" | \"network\" | \"coverage\"",
       "severity": "\"info\" | \"low\" | \"medium\" | \"high\"",
       "title": "string",
       "description": "string",
-      "evidence": "string, optional — the specific header/cookie name/path/match that triggered this finding"
+      "evidence": "string, optional — the specific header/cookie name/path/match that triggered this finding",
+      "recommendation": "string, optional — one-line fix for this kind of finding"
     }
-  ]
+  ],
+  "summary": {
+    "severityCounts": "{ high, medium, low, info } — number of findings per severity",
+    "categories": "[{ category, area, count, points }] — points actually lost per category after scoring, sorted by points; points always sum to 100 - score",
+    "areas": "[{ id, label, status: \"clean\" | \"issues\" | \"not_checked\", score: number | null, findings, pointsLost }] — eight fixed areas (transport, headers, framing, cookies, exposure, page-code, content, third-party)"
+  },
+  "checks": "[{ id, label, area, status: \"fail\" | \"warn\" | \"pass\" | \"not_run\", severity?, findings?: string[], reason? }] — every check the report runs (44), most pressing first: failures (worst severity first), warnings, passes, then checks that couldn't run with the reason. not_run is never a pass",
+  "coverage": {
+    "serverChecks": "boolean — false when the site could not be reached",
+    "clientSignals": "boolean — false when no page-side signals were collected",
+    "libraryDataFetchedAt": "string | null — date of the extension's Retire.js signature data"
+  }
 }
 ```
 
@@ -635,6 +648,13 @@ routes. Only a genuinely unsafe/malformed `url` is a `400`.
 | `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
 | `400` | `{ "error": "<SSRF-guard message>" }` | `url` isn't http(s), resolves to a private/loopback/reserved address, or can't be resolved at all |
 | `429` | `{ "error": "too many security-report requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min — tighter than check-url since each call makes roughly a dozen outbound requests to the target site) |
+
+Scoring: the score starts at 100. Each kind of finding costs 25 / 10 / 4 / 0
+(high / medium / low / info); repeats of the same kind (e.g. the same cookie
+flag missing on several cookies) count a quarter after the first; each
+category is capped at 35. Grade: A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, else F.
+`summary.categories[].points` are these capped values, so they always sum to
+`100 - score`.
 
 ## `GET /health/llm`
 

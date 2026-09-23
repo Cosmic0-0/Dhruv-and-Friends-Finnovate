@@ -32,16 +32,33 @@ export const TRUSTED_DOMAINS = Object.freeze(
 
 const TRUSTED_SET = new Set(TRUSTED_DOMAINS);
 
-/**
- * Exact match or subdomain of a trusted domain (same subdomain rule as
- * institutions.isOfficialHost: pay.google.com is trusted because it ends
- * in ".google.com"; notgoogle.com is not).
- */
-export function isTrustedDomain(host) {
-  const h = String(host || "")
+// Hosts under a trusted parent where anyone can publish a page, form or
+// file (docs.google.com, forms.office.com, ...). Never trusted - see the
+// data file's user_content_hosts note.
+export const USER_CONTENT_HOSTS = Object.freeze((raw.user_content_hosts?.hosts ?? []).map((d) => d.toLowerCase()));
+
+const normalize = (host) =>
+  String(host || "")
     .toLowerCase()
     .replace(/\.$/, "")
     .replace(/^www\./, "");
+
+const matchesAny = (h, domains) => domains.some((d) => h === d || h.endsWith(`.${d}`));
+
+/** docs.google.com, forms.office.com, ... - anyone can host content here. */
+export function isUserContentHost(host) {
+  return matchesAny(normalize(host), USER_CONTENT_HOSTS);
+}
+
+/**
+ * Exact match or subdomain of a trusted domain (same subdomain rule as
+ * institutions.isOfficialHost: pay.google.com is trusted because it ends
+ * in ".google.com"; notgoogle.com is not) - except user-content hosts,
+ * which are never trusted.
+ */
+export function isTrustedDomain(host) {
+  const h = normalize(host);
+  if (!h || isUserContentHost(h)) return false;
   if (TRUSTED_SET.has(h)) return true;
   for (const domain of TRUSTED_SET) {
     if (h.endsWith(`.${domain}`)) return true;

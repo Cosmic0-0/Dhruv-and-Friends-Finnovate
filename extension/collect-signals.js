@@ -23,15 +23,20 @@
 // attribution ambiguity for a hackathon-timeline build. See
 // extension/README.md.
 
-const MAX_FETCHED_SCRIPTS = 6;
-const MAX_SCRIPT_TEXT_CHARS = 20_000;
-const MAX_SCRIPTS_LISTED = 40;
-const MAX_REFLECTED_PARAMS = 10;
-const MAX_FORMS = 20;
-const MAX_MIXED_CONTENT = 20;
-const MAX_ELEMENTS_FOR_INLINE_HANDLERS = 4000;
+// Top-level declarations are `var`, never `const`/`let`/`class`: Chrome
+// injects this file into the SAME isolated world on every click, and a
+// second `const` declaration throws a SyntaxError before anything runs -
+// which is exactly how the second Security Report / Scan This Page on a
+// tab used to come back empty ("collector returned no result").
+var MAX_FETCHED_SCRIPTS = 6;
+var MAX_SCRIPT_TEXT_CHARS = 20_000;
+var MAX_SCRIPTS_LISTED = 40;
+var MAX_REFLECTED_PARAMS = 10;
+var MAX_FORMS = 20;
+var MAX_MIXED_CONTENT = 20;
+var MAX_ELEMENTS_FOR_INLINE_HANDLERS = 4000;
 
-const SINK_PATTERNS = [
+var SINK_PATTERNS = [
   { sink: "eval", re: /\beval\s*\(/g },
   { sink: "new Function", re: /\bnew\s+Function\s*\(/g },
   { sink: "innerHTML", re: /\.innerHTML\s*=/g },
@@ -123,7 +128,7 @@ function collectScriptRefs() {
     }
     if (seen.has(url.href) || scripts.length >= MAX_SCRIPTS_LISTED) continue;
     seen.add(url.href);
-    scripts.push({ src: url.href, host: url.host, isThirdParty: url.host !== location.host });
+    scripts.push({ src: url.href, host: url.host, isThirdParty: url.host !== location.host, hasIntegrity: el.hasAttribute("integrity") });
   }
   return { scripts, inlineText: inlineText.slice(0, MAX_SCRIPT_TEXT_CHARS * 2) };
 }
@@ -165,6 +170,10 @@ async function collectSecuritySignals() {
     mixedContent: collectMixedContent(),
     insecureForms: collectInsecureForms(),
     thirdPartyScripts: scripts.filter((s) => s.isThirdParty).map((s) => ({ src: s.src, host: s.host })),
+    scriptsWithoutIntegrity: scripts.filter((s) => s.isThirdParty && !s.hasIntegrity).map((s) => ({ src: s.src, host: s.host })),
+    // Counted, never read: the field's value is not touched.
+    passwordFields: document.querySelectorAll('input[type="password"]').length,
+    pageProtocol: location.protocol,
     scriptsForRetire,
   };
 }
@@ -172,4 +181,13 @@ async function collectSecuritySignals() {
 // Completion value of the file — see content.js's header comment for why
 // this works with chrome.scripting.executeScript (a returned Promise is
 // awaited automatically before InjectionResult.result is set).
-collectSecuritySignals();
+//
+// Wrapped in its own try/catch: an uncaught rejection here would make the
+// completion value itself `undefined` (indistinguishable, from
+// background.js's side, from "the script never ran at all"), throwing away
+// the actual reason. Returning `{ error }` on failure means the completion
+// value is always a defined, structured-cloneable object, so
+// background.js#runSecurityReport can tell "collection failed, here's why"
+// apart from "collection never happened" and log/report the real cause
+// instead of a generic message.
+collectSecuritySignals().catch((err) => ({ error: err?.message || String(err) }));

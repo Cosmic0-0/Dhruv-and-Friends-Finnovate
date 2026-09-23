@@ -3,6 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "update:retire": "node scripts/update-retire-dataset.mjs",
+    "check:retire": "node scripts/update-retire-dataset.mjs --check"
   }
 }

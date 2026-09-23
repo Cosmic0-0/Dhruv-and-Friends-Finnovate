@@ -13,3 +13,4 @@ export const FRONTEND_ORIGIN = "http://localhost:3000";
 // in one request, whatever the source (scanned page / selected text).
 export const MAX_ANALYZE_CHARS = 5000; // backend's own /api/analyze cap
 export const MAX_HANDOFF_CHARS = 400; // kept short: this goes in a URL query param
+

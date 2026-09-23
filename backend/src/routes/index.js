@@ -4,7 +4,7 @@ import { getFingerprintMatches } from "../services/scam-dna/index.js";
 import { recordUserReport } from "../services/community-signals/index.js";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
-import { checkUrls } from "../services/domain-matching/index.js";
+import { assessUrl } from "../services/url-reputation/index.js";
 import { runPipeline } from "../services/pipeline/index.js";
 import { validatePaymentContext } from "../services/payment-context/index.js";
 import { validateEmailContext } from "../services/email-context/index.js";
@@ -41,8 +41,9 @@ const batchLimiter = rateLimited("too many batch-scan requests, try again shortl
   windowMs: 15 * 60 * 1000,
   limit: 10,
 });
-// checkUrls() is pure/non-LLM and cheap, so this only needs to stop naive
-// hammering, not protect an expensive resource.
+// Non-LLM and mostly in-memory; the one outbound lookup (domain age via
+// RDAP) is cached per domain for 24h and capped at 1.5s. The extension
+// caches results per URL too, so tab switching doesn't spend this budget.
 const checkUrlLimiter = rateLimited("too many check-url requests, try again shortly", {
   windowMs: 15 * 60 * 1000,
   limit: 120,
@@ -239,13 +240,24 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
 // never reimplement it locally. Deliberately skips runPipeline(): a bare
 // URL isn't a scam "message" to classify, and the extension needs a fast,
 // deterministic per-navigation check, not an LLM round trip.
-router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) => {
+//
+// services/url-reputation adds what a single visited URL can show without a
+// message: shortener / raw-IP / "@" tricks, known-phishing lists, brand-new
+// domains, repeated user reports, and the positive "official domain" fact.
+router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), async (req, res) => {
   const { url } = req.body;
   if (!isNonEmptyString(url)) {
     return res.status(400).json({ error: "url is required and must be a non-empty string" });
   }
-  const signals = checkUrls(url);
-  res.json({ url, flagged: signals.length > 0, signals });
+  if (url.length > 2048) {
+    return res.status(400).json({ error: "url exceeds maximum length of 2048 characters" });
+  }
+  try {
+    res.json(await assessUrl(url));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "link check failed, try again shortly" });
+  }
 });
 
 // Passive site-security scan for the extension's popup (see
@@ -256,12 +268,12 @@ router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) =
 // analyzeSite() runs it through its own SSRF guard before any outbound
 // request - a malformed/unsafe url is a 400 here, not a 500.
 router.post("/analyze-site", siteSecurityLimiter, json({ limit: "300kb" }), async (req, res) => {
-  const { url, clientSignals } = req.body;
+  const { url, clientSignals, clientCollectionError } = req.body;
   if (!isNonEmptyString(url)) {
     return res.status(400).json({ error: "url is required and must be a non-empty string" });
   }
   try {
-    res.json(await analyzeSite(url, clientSignals));
+    res.json(await analyzeSite(url, clientSignals, { clientCollectionError: typeof clientCollectionError === "string" ? clientCollectionError : undefined }));
   } catch (err) {
     if (err instanceof UnsafeUrlError) return res.status(400).json({ error: err.message });
     console.error(err);

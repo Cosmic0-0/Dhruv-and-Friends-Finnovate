@@ -178,11 +178,11 @@ test("popup: Scan This Page finding a signal never contradicts the automatic dom
   assert.equal(els.get("signals-list").children.length, 0);
 });
 
-test("popup: a failed/empty extraction renders the inconclusive state, never Safe", async () => {
+test("popup: a failed/empty extraction is reported as incomplete in the scan section, never as a verdict", async () => {
   const els = installFakeDom();
   installChromeMock({
     tabStatus: { hostname: "example.com", flagged: false, signals: [] },
-    onMessage: (m) => (m.type === "SCAN_ACTIVE_TAB" ? { ok: false, error: "No readable text found on this page." } : null),
+    onMessage: (m) => (m.type === "SCAN_ACTIVE_TAB" ? { ok: false, errorKind: "no_text", error: "no readable text" } : null),
   });
   await import(`./popup.js?t=${Date.now()}-d`);
   await flush();
@@ -190,13 +190,97 @@ test("popup: a failed/empty extraction renders the inconclusive state, never Saf
   await els.get("scan-page-btn").click();
   await flush();
 
-  assert.equal(els.get("state-pill").dataset.state, "inconclusive");
-  assert.notEqual(els.get("state-pill").dataset.state, "safe");
-  assert.match(els.get("state-text").textContent, /could not read this page/i);
   assert.equal(els.get("scan-result-section").hidden, false);
+  assert.match(els.get("scan-result").textContent, /Scan incomplete/);
   assert.match(els.get("scan-result").textContent, /no readable text/i);
   // Never the "Verdict: SAFE" copy a completed clean scan renders.
   assert.doesNotMatch(els.get("scan-result").textContent, /Verdict:/);
+  // The headline still describes the automatic domain check, labelled as such.
+  assert.doesNotMatch(els.get("state-text").textContent, /full-page scan/);
+});
+
+test("popup #1: a failed scan leaves a red domain warning red (pill and headline untouched)", async () => {
+  const els = installFakeDom();
+  installChromeMock({
+    tabUrl: "https://mcb-secure-verify.top/login",
+    tabStatus: { hostname: "mcb-secure-verify.top", flagged: true, signals: [{ code: "URL-02", type: "lookalike_url", severity: "high", description: "brand token" }] },
+    onMessage: (m) => (m.type === "SCAN_ACTIVE_TAB" ? { ok: false, errorKind: "rate_limited", error: "too many analyze requests" } : null),
+  });
+  await import(`./popup.js?t=${Date.now()}-e`);
+  await flush();
+  const headline = els.get("state-text").textContent;
+  assert.equal(els.get("state-pill").dataset.state, "high-risk");
+
+  await els.get("scan-page-btn").click();
+  await flush();
+
+  assert.equal(els.get("state-pill").dataset.state, "high-risk");
+  assert.equal(els.get("state-text").textContent, headline);
+  // The failure says what actually happened - not "could not read this page".
+  assert.match(els.get("action-status").textContent, /too many checks/i);
+  assert.doesNotMatch(els.get("action-status").textContent, /could not read/i);
+});
+
+test("popup: a clean page scan never downgrades a red domain warning to Safe", async () => {
+  const els = installFakeDom();
+  installChromeMock({
+    tabUrl: "https://mcb-secure-verify.top/login",
+    tabStatus: { hostname: "mcb-secure-verify.top", flagged: true, signals: [{ code: "URL-02", type: "lookalike_url", severity: "high", description: "brand token" }] },
+    onMessage: (m) =>
+      m.type === "SCAN_ACTIVE_TAB"
+        ? { ok: true, data: { analysis: { verdict: "safe", signals: [] }, extracted: { text: "hi", truncated: false }, state: "safe", hostname: "mcb-secure-verify.top" } }
+        : null,
+  });
+  await import(`./popup.js?t=${Date.now()}-f`);
+  await flush();
+  await els.get("scan-page-btn").click();
+  await flush();
+  assert.equal(els.get("state-pill").dataset.state, "high-risk");
+  assert.match(els.get("state-text").textContent, /automatic domain check/);
+});
+
+test("popup #26: on a browser page the actions are disabled and it never says \"reload the page\"", async () => {
+  const els = installFakeDom();
+  installChromeMock({ tabUrl: "chrome://newtab/", tabStatus: { notWebPage: true } });
+  await import(`./popup.js?t=${Date.now()}-g`);
+  await flush();
+  assert.equal(els.get("report-btn").disabled, true);
+  assert.equal(els.get("scan-page-btn").disabled, true);
+  assert.equal(els.get("security-report-btn").disabled, true);
+  assert.doesNotMatch(els.get("state-text").textContent, /reload/i);
+});
+
+test("popup #30: the claimed identity comes from the registry and never shows \"(reported 0x)\"", async () => {
+  const els = installFakeDom();
+  installChromeMock({
+    tabStatus: { hostname: "example.com", flagged: false, signals: [] },
+    onMessage: (m) =>
+      m.type === "SCAN_ACTIVE_TAB"
+        ? { ok: true, data: { analysis: { verdict: "scam", sender: "Messages I received", senderReports: 0, signals: [{ ...SIGNAL, claimedIdentity: "MCB" }] }, extracted: { text: "x", truncated: false }, state: "high-risk", hostname: "example.com" } }
+        : null,
+  });
+  await import(`./popup.js?t=${Date.now()}-h`);
+  await flush();
+  await els.get("scan-page-btn").click();
+  await flush();
+  const text = els.get("scan-result").textContent;
+  assert.match(text, /Claims to be: MCB/);
+  assert.doesNotMatch(text, /Messages I received|reported 0/);
+});
+
+test("popup: the domain check explains itself - official site, reports, new domain", async () => {
+  const els = installFakeDom();
+  installChromeMock({ tabUrl: "https://internet.mcb.mu/", tabStatus: { hostname: "internet.mcb.mu", flagged: false, signals: [], officialInstitution: "MCB" } });
+  await import(`./popup.js?t=${Date.now()}-i`);
+  await flush();
+  assert.match(els.get("state-text").textContent, /Official MCB website/);
+
+  const els2 = installFakeDom();
+  installChromeMock({ tabUrl: "https://new-shop.top/", tabStatus: { hostname: "new-shop.top", flagged: true, signals: [{ code: "URL-09", severity: "medium", description: "new" }], reportCount: 4, domainAgeDays: 3 } });
+  await import(`./popup.js?t=${Date.now()}-j`);
+  await flush();
+  assert.match(els2.get("state-text").textContent, /Reported by FraudLens users 4 times/);
+  assert.match(els2.get("state-text").textContent, /registered 3 days ago/);
 });
 
 test("popup: Scan This Page running clean does not fabricate a finding in the domain-check section", async () => {

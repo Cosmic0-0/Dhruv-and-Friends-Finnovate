@@ -17,17 +17,23 @@ function str(value, maxLen = 300) {
   return typeof value === "string" ? value.slice(0, maxLen) : "";
 }
 
+// These come from a text search of the page's scripts, so they show a sink
+// is USED, not that untrusted data reaches it - most sites ship a library
+// containing innerHTML or eval somewhere. Weighted accordingly: a
+// string-to-code sink is worth a look (medium), an HTML sink is a hint (low),
+// and inline handlers are context only (info). Confirmed-precondition signals
+// such as a reflected parameter stay high.
 const SINK_SEVERITY = {
-  eval: "high",
-  "new Function": "high",
-  innerHTML: "medium",
-  outerHTML: "medium",
-  "document.write": "medium",
-  insertAdjacentHTML: "medium",
-  dangerouslySetInnerHTML: "medium",
+  eval: "medium",
+  "new Function": "medium",
   "setTimeout(string)": "medium",
   "setInterval(string)": "medium",
-  inlineEventHandler: "low",
+  innerHTML: "low",
+  outerHTML: "low",
+  "document.write": "low",
+  insertAdjacentHTML: "low",
+  dangerouslySetInnerHTML: "low",
+  inlineEventHandler: "info",
 };
 
 export function mapClientSignals(clientSignals) {
@@ -113,6 +119,37 @@ export function mapClientSignals(clientSignals) {
           .map((v) => str(v?.info, 200))
           .filter(Boolean)
           .join("; ") || undefined,
+    });
+  }
+
+  // Subresource Integrity: a third-party script without an integrity hash
+  // runs whatever that host serves today - a compromised CDN becomes code on
+  // this page.
+  const noSri = arr(clientSignals.scriptsWithoutIntegrity);
+  if (noSri.length > 0) {
+    const hosts = [...new Set(noSri.map((s) => str(s?.host, 200)).filter(Boolean))].slice(0, 5);
+    findings.push({
+      category: "sri",
+      severity: "low",
+      title: `${noSri.length} third-party script(s) without Subresource Integrity`,
+      description: `These scripts have no integrity="" hash, so if ${hosts.length === 1 ? "that host is" : "any of those hosts is"} compromised the browser will run whatever it serves.${hosts.length ? ` Hosts: ${hosts.join(", ")}` : ""}`,
+      evidence: noSri
+        .slice(0, 3)
+        .map((s) => str(s?.src, 200))
+        .filter(Boolean)
+        .join("; ") || undefined,
+    });
+  }
+
+  // A password field on a page that isn't HTTPS is the single clearest
+  // credential-theft precondition a passive scan can see.
+  const passwordFields = typeof clientSignals.passwordFields === "number" && Number.isFinite(clientSignals.passwordFields) ? Math.max(0, Math.floor(clientSignals.passwordFields)) : 0;
+  if (passwordFields > 0 && clientSignals.pageProtocol === "http:") {
+    findings.push({
+      category: "credentials",
+      severity: "high",
+      title: "Password field on an unencrypted page",
+      description: `This page shows ${passwordFields} password field(s) but was loaded over plain HTTP, so anything typed into it can be read or altered on the network.`,
     });
   }
 

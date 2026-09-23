@@ -7,6 +7,9 @@
 // version-capturing group before compiling — this module does the same
 // substitution, so the regexes themselves are unmodified from upstream.
 //
+// Implemented extractors: `uri` (full script URL), `filename` (last path
+// segment, e.g. jquery-1.8.0.min.js) and `filecontent` (fetched text).
+//
 // Deliberately NOT implemented (scope cut for the hackathon build, not a
 // silent gap — see extension/README.md's Security Report section):
 //   - `func` extractors (read a global like window.jQuery.fn.jquery) - these
@@ -40,7 +43,9 @@ function firstMatch(patterns, subject) {
   for (const pattern of patterns) {
     const re = compileExtractor(pattern);
     const match = re?.exec(subject);
-    if (match?.[1]) return match[1];
+    // The version capture is greedy, so a filename like jquery-1.8.0.min.js
+    // yields "1.8.0.min" - strip minification suffixes back off.
+    if (match?.[1]) return match[1].replace(/[.-](?:min|slim|pack)(?:[.-](?:min|slim|pack))*$/i, "");
   }
   return null;
 }
@@ -66,6 +71,17 @@ function compareVersions(a, b) {
   return 0;
 }
 
+// retire.js `filename` extractors match the last path segment only
+// ("jquery-1.8.0.min.js"), never the full URL.
+function fileNameOf(src) {
+  if (!src) return null;
+  try {
+    return new URL(src).pathname.split("/").pop() || null;
+  } catch {
+    return String(src).split(/[?#]/)[0].split("/").pop() || null;
+  }
+}
+
 function isInRange(version, vuln) {
   if (vuln.below && compareVersions(version, vuln.below) >= 0) return false;
   if (vuln.atOrAbove && compareVersions(version, vuln.atOrAbove) < 0) return false;
@@ -84,7 +100,10 @@ export function detectVulnerableLibraries(scripts) {
     for (const [key, lib] of Object.entries(RETIRE_JS_DATASET)) {
       if (matchedLibraries.has(key)) continue;
 
-      const version = firstMatch(lib.extractors.uri ?? [], script.src) ?? firstMatch(lib.extractors.filecontent ?? [], script.text);
+      const version =
+        firstMatch(lib.extractors.uri ?? [], script.src) ??
+        firstMatch(lib.extractors.filename ?? [], fileNameOf(script.src)) ??
+        firstMatch(lib.extractors.filecontent ?? [], script.text);
       if (!version) continue;
       matchedLibraries.add(key);
 

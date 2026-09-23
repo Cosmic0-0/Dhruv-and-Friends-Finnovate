@@ -67,14 +67,17 @@ test("analyzeSite gives a well-secured site an A grade with no findings", async 
         status: 200,
         headers: {
           ...Object.fromEntries(cookieHeaders),
-          "content-security-policy": "default-src 'self'",
+          "content-security-policy": "default-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self'",
           "strict-transport-security": "max-age=63072000; includeSubDomains",
           "x-frame-options": "DENY",
           "x-content-type-options": "nosniff",
           "referrer-policy": "strict-origin-when-cross-origin",
           "permissions-policy": "geolocation=()",
+          "cross-origin-opener-policy": "same-origin",
         },
       }),
+    "https://good.example/.well-known/security.txt": () =>
+      new Response("Contact: mailto:security@good.example\nExpires: 2027-01-01T00:00:00Z\n", { status: 200, headers: { "content-type": "text/plain" } }),
     "https://good.example/.git/HEAD": () => new Response("not found", { status: 404 }),
     "https://good.example/.env": () => new Response("not found", { status: 404 }),
     "https://good.example/phpmyadmin/": () => new Response("not found", { status: 404 }),
@@ -178,4 +181,32 @@ test("analyzeSite rejects an unsafe url before making any request", async () => 
   };
   await assert.rejects(() => analyzeSite("http://127.0.0.1/"));
   assert.equal(called, false);
+});
+
+test("the report carries a chartable summary, recommendations and coverage notes", async () => {
+  stubPublicDns();
+  stubTls();
+  globalThis.fetch = async () => new Response("<html>ok</html>", { status: 200, headers: { "content-type": "text/html" } });
+
+  const report = await analyzeSite("https://summary.example/", null, { clientCollectionError: "collector returned no result" });
+
+  assert.ok(report.summary.severityCounts.medium > 0);
+  assert.ok(report.summary.areas.find((a) => a.id === "headers").score < 100);
+  assert.equal(report.summary.areas.find((a) => a.id === "page-code").status, "not_checked");
+  assert.equal(report.coverage.clientSignals, false);
+  assert.ok(report.findings.some((f) => f.title === "Page-content checks were skipped" && f.severity === "info"));
+  assert.ok(report.findings.find((f) => f.title === "Missing Content-Security-Policy").recommendation);
+});
+
+test("stale vulnerable-library signature data is called out, fresh data is not", async () => {
+  stubPublicDns();
+  stubTls();
+  globalThis.fetch = async () => new Response("<html>ok</html>", { status: 200, headers: { "content-type": "text/html" } });
+  const now = Date.parse("2027-06-01T00:00:00Z");
+
+  const stale = await analyzeSite("https://stale.example/", { libraryDataFetchedAt: "2026-09-23" }, { now });
+  const fresh = await analyzeSite("https://fresh.example/", { libraryDataFetchedAt: "2027-05-01" }, { now });
+
+  assert.ok(stale.findings.some((f) => f.title === "Vulnerable-library signatures are out of date"));
+  assert.ok(!fresh.findings.some((f) => f.title === "Vulnerable-library signatures are out of date"));
 });

@@ -9,8 +9,9 @@
 //   - opens a bare TLS handshake to read protocol/certificate metadata
 //     (tls.js) — no HTTP request sent over it,
 //   - makes one GET each against a short FIXED list of well-known paths
-//     (checks.js's ARTIFACT_CHECKS) and the page's own referenced scripts'
-///    .map siblings — never a wordlist, never expanded at runtime,
+//     (checks.js's ARTIFACT_CHECKS, /.well-known/security.txt) and the
+//     page's own referenced scripts' .map siblings — never a wordlist,
+//     never expanded at runtime,
 //   - scans the body already fetched for error-message text patterns
 //     (checks.js's scanForErrorSignatures) — it never tries to trigger an
 //     error, and reports any match as a possible weakness requiring
@@ -21,15 +22,36 @@
 //
 // The target URL is attacker-influenced input (this is reached from a
 // public POST route), so every outbound request goes through
-// assertPublicHttpUrl()'s SSRF guard (url-safety.js) first.
+// assertPublicHttpUrl()'s SSRF guard (url-safety.js) first. There is no
+// per-target limit, cache or concurrency cap (removed at the product
+// owner's request) - only the per-client-IP rate limit in routes/index.js.
 
 import { fetchOnce } from "./fetcher.js";
 import { probeTls } from "./tls.js";
 import { assertPublicHttpUrl, UnsafeUrlError } from "./url-safety.js";
-import { checkSecurityHeaders, checkCookies, checkExposedArtifacts, checkSourceMaps, scanForErrorSignatures, computeGrade } from "./checks.js";
+import {
+  checkSecurityHeaders,
+  checkFraming,
+  checkCors,
+  checkDisclosure,
+  checkSecurityTxt,
+  checkCookies,
+  checkExposedArtifacts,
+  checkSourceMaps,
+  scanForErrorSignatures,
+  computeGrade,
+} from "./checks.js";
 import { mapClientSignals } from "./client-signals.js";
+import { summarizeReport } from "./summary.js";
+import { buildChecklist } from "./checklist.js";
+import { withRecommendations } from "./recommendations.js";
 
 export { UnsafeUrlError };
+
+// Vulnerable-library signatures ship inside the extension
+// (extension/vendor/retire-js-dataset.js); past this age the report says so,
+// because "no vulnerable libraries found" is only as good as the data.
+const LIBRARY_DATA_STALE_DAYS = 120;
 
 const OUTDATED_TLS_PROTOCOLS = new Set(["TLSv1", "TLSv1.1", "SSLv3", "SSLv2"]);
 
@@ -80,7 +102,7 @@ async function checkHttpsRedirect(parsedUrl, mainResult) {
   }
 
   try {
-    const result = await fetchOnce(`http://${parsedUrl.hostname}/`, { maxRedirects: 0, readBody: false, timeoutMs: 4000 });
+    const result = await fetchOnce(`http://${parsedUrl.hostname}/`, { maxRedirects: 0, readBody: false });
     if (result.status >= 200 && result.status < 300) {
       return {
         category: "tls",
@@ -96,24 +118,19 @@ async function checkHttpsRedirect(parsedUrl, mainResult) {
 }
 
 /**
- * @param {string} url - the page to analyze (typically the extension's current-tab URL)
- * @param {object} [clientSignals] - optional client-collected signals from extension/collect-signals.js
- * @returns {Promise<{url: string, finalUrl: string|null, grade: string, score: number|null, scannedAt: string, findings: object[]}>}
- * Throws UnsafeUrlError for a malformed/unsafe url (mapped to 400 by the route); never throws for a well-formed public URL that merely fails to load.
+ * The server-side half of a report: everything that depends only on the
+ * URL. This is the part that makes outbound requests, so it is the part
+ * that makes outbound requests to the target site.
+ * @returns {Promise<{ finalUrl: string|null, scannedAt: string, findings: object[] }>}
  */
-export async function analyzeSite(url, clientSignals) {
-  const parsedUrl = await assertPublicHttpUrl(url);
-
+async function serverScan(parsedUrl) {
   let mainResult;
   try {
     mainResult = await fetchOnce(parsedUrl.href);
   } catch (err) {
     if (err instanceof UnsafeUrlError) throw err;
     return {
-      url: parsedUrl.href,
       finalUrl: null,
-      grade: "N/A",
-      score: null,
       scannedAt: new Date().toISOString(),
       findings: [
         {
@@ -130,16 +147,20 @@ export async function analyzeSite(url, clientSignals) {
   const findings = [];
 
   findings.push(...checkSecurityHeaders(mainResult.headers, finalUrl.protocol));
+  findings.push(...checkFraming(mainResult.headers));
+  findings.push(...checkCors(mainResult.headers));
+  findings.push(...checkDisclosure(mainResult.headers));
   findings.push(...checkCookies(mainResult.headers, finalUrl.protocol));
   findings.push(...scanForErrorSignatures(mainResult.body));
 
-  const [artifactFindings, sourceMapFindings, tlsResult, redirectFinding] = await Promise.all([
+  const [artifactFindings, sourceMapFindings, securityTxtFindings, tlsResult, redirectFinding] = await Promise.all([
     checkExposedArtifacts(finalUrl.href, fetchOnce).catch(() => []),
     checkSourceMaps(finalUrl.href, mainResult.body, fetchOnce).catch(() => []),
+    checkSecurityTxt(finalUrl.href, fetchOnce).catch(() => []),
     finalUrl.protocol === "https:" ? probeTls(finalUrl.hostname).catch((err) => ({ ok: false, error: err.message })) : Promise.resolve(null),
     checkHttpsRedirect(parsedUrl, mainResult).catch(() => null),
   ]);
-  findings.push(...artifactFindings, ...sourceMapFindings);
+  findings.push(...artifactFindings, ...sourceMapFindings, ...securityTxtFindings);
 
   if (finalUrl.protocol === "https:") {
     findings.push(...tlsFindings(tlsResult));
@@ -148,8 +169,71 @@ export async function analyzeSite(url, clientSignals) {
   }
   if (redirectFinding) findings.push(redirectFinding);
 
-  findings.push(...mapClientSignals(clientSignals));
+  return { finalUrl: mainResult.finalUrl, scannedAt: new Date().toISOString(), findings };
+}
 
-  const { grade, score } = computeGrade(findings);
-  return { url: parsedUrl.href, finalUrl: mainResult.finalUrl, grade, score, scannedAt: new Date().toISOString(), findings };
+/** Honest notes about what this report could NOT see. Informational only - they never cost points. */
+function coverageFindings(clientSignals, clientCollectionError, now) {
+  const findings = [];
+  if (typeof clientCollectionError === "string" && clientCollectionError.trim()) {
+    findings.push({
+      category: "coverage",
+      severity: "info",
+      title: "Page-content checks were skipped",
+      description: `The extension could not collect DOM/script signals from this page (${clientCollectionError.trim().slice(0, 200)}). Header, cookie, TLS and exposed-file checks are unaffected.`,
+    });
+  }
+  const fetchedAt = Date.parse(clientSignals?.libraryDataFetchedAt ?? "");
+  if (Number.isFinite(fetchedAt)) {
+    const ageDays = Math.floor((now - fetchedAt) / 86_400_000);
+    if (ageDays > LIBRARY_DATA_STALE_DAYS) {
+      findings.push({
+        category: "coverage",
+        severity: "info",
+        title: "Vulnerable-library signatures are out of date",
+        description: `The extension's Retire.js signature data is ${ageDays} days old, so recently disclosed library vulnerabilities may be missed. Run npm run update:retire in extension/ and reload the extension.`,
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * @param {string} url - the page to analyze (typically the extension's current-tab URL)
+ * @param {object} [clientSignals] - optional client-collected signals from extension/collect-signals.js
+ * @param {{ clientCollectionError?: string, now?: number }} [options]
+ * @returns {Promise<{url: string, finalUrl: string|null, grade: string, score: number|null, scannedAt: string,
+ *   findings: object[], summary: object, coverage: object}>}
+ * Throws UnsafeUrlError for a malformed/unsafe url (400). Never throws for a well-formed public URL that
+ * merely fails to load.
+ */
+export async function analyzeSite(url, clientSignals, { clientCollectionError, now = Date.now() } = {}) {
+  const parsedUrl = await assertPublicHttpUrl(url);
+  const server = await serverScan(parsedUrl);
+
+  const reachable = server.finalUrl !== null;
+  const hasClientSignals = Boolean(clientSignals && typeof clientSignals === "object") && !clientCollectionError;
+  const findings = withRecommendations([
+    ...server.findings,
+    ...mapClientSignals(clientSignals),
+    ...coverageFindings(clientSignals, clientCollectionError, now),
+  ]);
+  const { grade, score } = reachable ? computeGrade(findings) : { grade: "N/A", score: null };
+
+  return {
+    url: parsedUrl.href,
+    finalUrl: server.finalUrl,
+    grade,
+    score,
+    scannedAt: server.scannedAt,
+    findings,
+    summary: summarizeReport(findings, { reachable, clientSignals: hasClientSignals }),
+    // Every check that was run (or couldn't be), with pass/fail - most pressing first.
+    checks: buildChecklist(findings, { reachable, https: reachable && server.finalUrl.startsWith("https:"), clientSignals: hasClientSignals }),
+    coverage: {
+      serverChecks: reachable,
+      clientSignals: hasClientSignals,
+      libraryDataFetchedAt: typeof clientSignals?.libraryDataFetchedAt === "string" ? clientSignals.libraryDataFetchedAt.slice(0, 40) : null,
+    },
+  };
 }

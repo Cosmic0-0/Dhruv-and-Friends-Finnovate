@@ -18,6 +18,7 @@ import { normalizeText, inputHash } from "../normalize/index.js";
 import { findClaimedInstitution, REGISTRY_VERSION } from "../institutions/index.js";
 import { checkUrls, checkLinkHygiene, registrableDomain, DETECTOR_VERSION as URL_DETECTOR_VERSION } from "../domain-matching/index.js";
 import { attachDomainAges } from "../domain-age/index.js";
+import { checkThreatIntel } from "../threat-intel/index.js";
 import { checkIdentityConsistency } from "../identity-consistency/index.js";
 import { detectLexicon, detectInjection, detectTemplateArtifacts, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
 import { evaluatePaymentContext } from "../payment-context/index.js";
@@ -163,6 +164,9 @@ export async function runPipeline(rawText, context = {}) {
   const deterministic = [
     ...urlSignals,
     ...checkLinkHygiene(text, pageHost),
+    // Known-phishing lists (REP-05 - already weighted and floored to "high"
+    // by the risk engine; nothing emitted it until now).
+    ...checkThreatIntel(text),
     ...checkIdentityConsistency(text),
     ...lexicon,
     ...detectInjection(text),

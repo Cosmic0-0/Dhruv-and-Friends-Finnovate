@@ -1,5 +1,5 @@
 {
-  "version": "trusted-domains-1.0",
+  "version": "trusted-domains-1.1",
   "notes": "A plain allowlist, deliberately separate from institution-registry.json. Purpose: suppress URL-08 ('asks you to verify/log in/pay through a link that is not an official [Mauritius institution] domain') for well-known, long-standing services that legitimately ask users to click their own links every day - being asked to 'verify your account' via a link to paypal.com or google.com is not itself suspicious the way it is for an unrecognized domain. A domain here gets NO impersonation/lookalike protection (URL-01..04 / ID-01 / ID-02 do not consult this file at all, and never will via isTrustedDomain()) - it only ever removes one specific, low-severity false-positive source. Safety principle: because a WRONG entry here would suppress a real warning rather than merely annoy someone, only add a domain you are confident is correct and currently operated by the org it claims to be - when in doubt, leave it out; a missed suppression only costs one extra (still accurate) URL-08 flag, but a wrong entry could hide a real scam. The 'mauritius' list is intentionally short: each entry should get the same before-demo verification pass as data/institution-registry.json before being relied on live. The 'global' list is longer because these are among the most widely-recognized domains on the internet, but they were still not individually re-checked against a live fetch in the same way institution-registry.json's stricter workflow calls for - remove anything that turns out to be wrong or dead. Do not add adult, gambling, or otherwise unvetted domains here, and do not bulk-import from an unreviewed external list - every entry should be one a human can vouch for by name.",
   "mauritius": {
     "government_and_public_bodies": [
@@ -23,49 +23,140 @@
   },
   "global": {
     "search_and_browsers": [
-      "google.com", "gmail.com", "youtube.com", "android.com", "chrome.com",
-      "bing.com", "duckduckgo.com", "yahoo.com", "mozilla.org",
-      "wikipedia.org", "wikimedia.org"
+      "google.com",
+      "gmail.com",
+      "youtube.com",
+      "android.com",
+      "chrome.com",
+      "bing.com",
+      "duckduckgo.com",
+      "yahoo.com",
+      "mozilla.org",
+      "wikipedia.org",
+      "wikimedia.org"
     ],
     "social_and_messaging": [
-      "facebook.com", "instagram.com", "whatsapp.com", "messenger.com",
-      "telegram.org", "viber.com", "twitter.com", "x.com", "linkedin.com",
-      "snapchat.com", "pinterest.com", "reddit.com", "tiktok.com",
-      "discord.com", "signal.org"
+      "facebook.com",
+      "instagram.com",
+      "whatsapp.com",
+      "messenger.com",
+      "telegram.org",
+      "viber.com",
+      "twitter.com",
+      "x.com",
+      "linkedin.com",
+      "snapchat.com",
+      "pinterest.com",
+      "reddit.com",
+      "tiktok.com",
+      "discord.com",
+      "signal.org"
     ],
     "cloud_productivity_and_dev": [
-      "microsoft.com", "outlook.com", "live.com", "office.com", "office365.com",
-      "onedrive.com", "apple.com", "icloud.com", "github.com", "gitlab.com",
-      "bitbucket.org", "dropbox.com", "zoom.us", "slack.com", "atlassian.com",
-      "adobe.com", "cloudflare.com", "digitalocean.com", "heroku.com",
-      "vercel.com", "netlify.com"
+      "microsoft.com",
+      "outlook.com",
+      "live.com",
+      "office.com",
+      "office365.com",
+      "apple.com",
+      "icloud.com",
+      "github.com",
+      "gitlab.com",
+      "bitbucket.org",
+      "zoom.us",
+      "slack.com",
+      "atlassian.com",
+      "adobe.com",
+      "cloudflare.com",
+      "digitalocean.com",
+      "heroku.com",
+      "vercel.com",
+      "netlify.com"
     ],
     "payments_and_finance": [
-      "paypal.com", "visa.com", "mastercard.com", "americanexpress.com",
-      "stripe.com", "wise.com", "revolut.com", "westernunion.com",
-      "moneygram.com", "skrill.com", "worldremit.com"
+      "paypal.com",
+      "visa.com",
+      "mastercard.com",
+      "americanexpress.com",
+      "stripe.com",
+      "wise.com",
+      "revolut.com",
+      "westernunion.com",
+      "moneygram.com",
+      "skrill.com",
+      "worldremit.com"
     ],
     "ecommerce_and_retail": [
-      "amazon.com", "ebay.com", "alibaba.com", "aliexpress.com", "etsy.com",
-      "shopify.com", "walmart.com", "target.com", "ikea.com"
+      "amazon.com",
+      "ebay.com",
+      "alibaba.com",
+      "aliexpress.com",
+      "etsy.com",
+      "shopify.com",
+      "walmart.com",
+      "target.com",
+      "ikea.com"
     ],
     "streaming_and_media": [
-      "netflix.com", "spotify.com", "disneyplus.com", "hulu.com",
-      "primevideo.com", "soundcloud.com", "twitch.tv", "vimeo.com"
+      "netflix.com",
+      "spotify.com",
+      "disneyplus.com",
+      "hulu.com",
+      "primevideo.com",
+      "soundcloud.com",
+      "twitch.tv",
+      "vimeo.com"
     ],
     "travel": [
-      "booking.com", "airbnb.com", "expedia.com", "tripadvisor.com",
-      "uber.com", "emirates.com", "airfrance.com", "britishairways.com"
+      "booking.com",
+      "airbnb.com",
+      "expedia.com",
+      "tripadvisor.com",
+      "uber.com",
+      "emirates.com",
+      "airfrance.com",
+      "britishairways.com"
     ],
     "reference_and_news": [
-      "bbc.co.uk", "bbc.com", "cnn.com", "nytimes.com", "reuters.com",
+      "bbc.co.uk",
+      "bbc.com",
+      "cnn.com",
+      "nytimes.com",
+      "reuters.com",
       "theguardian.com"
     ],
     "international_orgs": [
-      "un.org", "who.int", "worldbank.org", "imf.org", "unicef.org"
+      "un.org",
+      "who.int",
+      "worldbank.org",
+      "imf.org",
+      "unicef.org"
     ],
     "education_platforms": [
-      "coursera.org", "udemy.com", "khanacademy.org", "edx.org"
+      "coursera.org",
+      "udemy.com",
+      "khanacademy.org",
+      "edx.org"
+    ]
+  },
+  "user_content_hosts": {
+    "_note": "Hosts under a trusted domain where ANYONE can publish a page, form or file. They are never trusted, even though their parent domain is: a phishing page on docs.google.com or forms.office.com is still phishing. Matched as the host itself or any subdomain of it.",
+    "hosts": [
+      "docs.google.com",
+      "sites.google.com",
+      "drive.google.com",
+      "forms.google.com",
+      "script.google.com",
+      "storage.googleapis.com",
+      "forms.office.com",
+      "sway.office.com",
+      "onedrive.live.com",
+      "1drv.ms",
+      "express.adobe.com",
+      "acrobat.adobe.com",
+      "gist.github.com",
+      "raw.githubusercontent.com",
+      "dl.dropboxusercontent.com"
     ]
   }
 }
