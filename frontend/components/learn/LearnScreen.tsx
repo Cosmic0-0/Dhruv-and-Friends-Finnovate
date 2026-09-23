@@ -12,13 +12,14 @@ import {
 } from "@/lib/learn-content";
 import { redact } from "@/lib/redact";
 import { safeChecks } from "@/lib/result";
-import { DAILY_GOAL, recordAnswer, type Mistake, type StreakState } from "@/lib/streak";
+import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState } from "@/lib/streak";
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
 import { CheckIcon } from "../icons";
 import Celebration from "./Celebration";
 import ScreenTitle from "../ScreenTitle";
+import StreakCards from "./StreakCards";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
@@ -50,7 +51,6 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
-  const doneToday = state?.lastCompletedDay === today;
 
   return (
     <>
@@ -102,18 +102,15 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
       )}
 
       {state && ready && quizLang && (
-        <p className="-mt-5 flex items-center gap-2 text-[0.8125rem] font-medium text-ink-soft" aria-live="polite">
-          {doneToday ? (
-            <>
-              <CheckIcon className="size-4 shrink-0 text-accent-ink" strokeWidth={2.5} />
-              {copy.learn.dailyDone}
-            </>
-          ) : (
-            copy.learn.dailyProgress(Math.min(state.today.answered, DAILY_GOAL), DAILY_GOAL)
-          )}
-        </p>
+        <div aria-live="polite">
+          <StreakCards
+            answered={state.today.answered}
+            streak={visibleStreak(state, today)}
+            copy={copy}
+          />
+        </div>
       )}
-      <p className="-mt-5 px-1 text-[0.8125rem] leading-snug text-ink-muted">{copy.learn.syntheticNote}</p>
+      <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
 
       <Trends trends={trends} copy={copy} />
 

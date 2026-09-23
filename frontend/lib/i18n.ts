@@ -298,6 +298,16 @@ export interface Copy {
   learn: {
     headline: string;
     streak: (days: number) => string;
+    /** The Today / Streak card pair (design/mockup/Learn.png). */
+    cards: {
+      todayTitle: string;
+      todayCount: (done: number, goal: number) => string;
+      more: (n: number) => string;
+      doneToday: string;
+      streakTitle: string;
+      days: (n: number) => string;
+      noStreak: string;
+    };
     quizLabel: string;
     scam: string;
     genuine: string;
@@ -382,6 +392,15 @@ const TODO_KREOL = <T,>(english: T): T => english;
 const LEARN_EN: Copy["learn"] = {
   headline: "Learn to spot them",
   streak: (d) => `${d}-day streak`,
+  cards: {
+    todayTitle: "Today",
+    todayCount: (done, goal) => `${done} of ${goal}`,
+    more: (n) => `${n} more to keep your streak`,
+    doneToday: "Today's practice is done",
+    streakTitle: "Streak",
+    days: (n) => (n === 1 ? "day" : "days"),
+    noStreak: "Answer 5 to start",
+  },
   quizLabel: "Scam or genuine?",
   scam: "Scam",
   genuine: "Genuine",
@@ -1180,6 +1199,15 @@ export const COPY: Record<UiLanguage, Copy> = {
     learn: {
       headline: "Apprenez à les repérer",
       streak: (d) => `${d} jours d'affilée`,
+      cards: {
+        todayTitle: "Aujourd'hui",
+        todayCount: (done, goal) => `${done} sur ${goal}`,
+        more: (n) => `Encore ${n} pour garder votre série`,
+        doneToday: "L'entraînement du jour est fait",
+        streakTitle: "Série",
+        days: (n) => (n === 1 ? "jour" : "jours"),
+        noStreak: "Répondez à 5 pour commencer",
+      },
       quizLabel: "Arnaque ou authentique ?",
       scam: "Arnaque",
       genuine: "Authentique",
@@ -1525,6 +1553,15 @@ export const COPY: Record<UiLanguage, Copy> = {
     learn: {
       headline: "Aprann rekonet zot",
       streak: (d) => `${d} zour ki swiv`,
+      cards: {
+        todayTitle: "Zordi",
+        todayCount: (done: number, goal: number) => `${done} lor ${goal}`,
+        more: TODO_KREOL((n: number) => `${n} more to keep your streak`),
+        doneToday: TODO_KREOL("Today's practice is done"),
+        streakTitle: TODO_KREOL("Streak"),
+        days: (n: number) => (n === 1 ? "zour" : "zour"),
+        noStreak: TODO_KREOL("Answer 5 to start"),
+      },
       quizLabel: "Eskrokri ouswa vre?",
       scam: "Eskrokri",
       genuine: "Vre",
