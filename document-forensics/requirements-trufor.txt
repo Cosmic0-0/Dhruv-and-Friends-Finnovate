@@ -1,0 +1,22 @@
+# Stage 3 (TruFor) only - see README.md "Deployment footprint follows the
+# same principle". Installed separately from requirements-base.txt so
+# importing/running the cheap checks never pulls in PyTorch.
+#
+# torch/torchvision are deliberately NOT pinned here with a plain version
+# specifier: PyPI's default `torch` wheel is CUDA-enabled and multi-GB,
+# which is pointless on a machine with no GPU (true of most dev/CI boxes
+# here). Install the CPU-only build first, from PyTorch's own index, then
+# install this file:
+#
+#   ./.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#   ./.venv/bin/pip install -r requirements-trufor.txt
+#
+# timm/yacs/numpy below are the actual runtime deps of the vendored
+# inference code (checks/trufor.py, vendor/trufor/) - matching exactly
+# what TruFor's own upstream test_docker/Dockerfile installs for
+# inference (`tqdm yacs>=0.1.8 timm>=0.5.4 numpy`). No mmcv/mmsegmentation/
+# mmcls: those appear in TruFor's conda env but are training-only and
+# never imported by the inference path vendored here.
+timm>=0.9
+yacs>=0.1.8
+numpy>=1.24
