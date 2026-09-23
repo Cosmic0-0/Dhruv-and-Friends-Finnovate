@@ -33,15 +33,20 @@ sender data touches the demo, since the app ingests untrusted user input
       per-user/session scoping concept exists at all yet (no auth — see
       below), so there's no notion of "another user's row" to isolate.
 - [ ] **Encrypt sensitive data at rest** — anything that could identify a
-      reporter or contain raw message content in the DB. Not satisfied
-      2026-09-22, but risk surface is smaller than the sketch assumed:
-      `backend/src/db/index.js`'s `reports` table stores only a normalized
-      sender identifier + count (no message text, no `reportedBy` — see
-      `docs/API-CONTRACT.md` Known Gaps), and `batch_history` stores only
-      aggregate counts. No raw message content or reporter identity is
-      persisted anywhere today, so there's currently nothing sensitive at
-      rest to encrypt — recheck if `reportedBy`/message content is ever
-      added to the schema.
+      reporter or contain raw message content in the DB. **Not satisfied**
+      (verified 2026-09-23). The `documents` table
+      (`backend/src/db/index.js`, written by
+      `backend/src/services/document-store/`) holds the original bytes of
+      every accepted `POST /api/documents` upload (PDF/PNG/JPEG/WEBP, with
+      its client-supplied file name) and of every PDF sent to
+      `POST /api/analyze/document`. These can be bank statements or ID
+      documents. They are stored unencrypted, with no retention period and
+      no delete path, in a database any route can write to without
+      authentication. No route returns the stored bytes. The other tables
+      hold no raw message text and no raw reporter IP: `reports` keeps a
+      normalised sender identifier and a count, report events keep
+      fingerprints and an HMAC pseudonym of the reporter, and `batch_history`
+      keeps aggregate counts.
 - [ ] **Enforce server-side auth** on every endpoint that reads/writes
       report or batch-history data — never trust a client-supplied user ID.
       Not satisfied 2026-09-22: no auth middleware anywhere in

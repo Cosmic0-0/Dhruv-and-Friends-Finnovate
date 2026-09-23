@@ -133,11 +133,13 @@ image size, and resource tables read from the installed package, never the
 network.
 
 **Privacy.** The file must reach the server, as screenshots do. It is parsed in
-memory, never written to disk and never stored. The same goes for its text and
-previews. The LLM receives only the redacted text, never the file, its images or
-the forensic facts. The response returns tool names and dates from the metadata.
-Author and "last saved by" fields are read only to match against the
-editing-tool list, and are never returned.
+memory, and its text and previews are never stored. A PDF's original bytes are
+stored in SQLite, the same way `/api/documents` stores uploads (see "OCR,
+privacy, and storage" below); a DOCX is not stored. The LLM receives only the
+redacted text, never the file, its images or the forensic facts. The response
+returns tool names and dates from the metadata. Author and "last saved by"
+fields are read only to match against the editing-tool list, and are never
+returned.
 
 **False-positive guards.**
 
@@ -248,9 +250,30 @@ The OCR route accepts PNG, JPEG, and WEBP content up to 5 MB after decoding and
 checks magic bytes. Tesseract runs in memory. OCR text is returned to the user for
 review before the normal text-analysis request is made.
 
-SQLite stores aggregate report counts, privacy-minimised report events and audit
-rows, batch summaries, cached domain ages, and campaign graph observations. Raw
-message text and raw reporter IP addresses are not stored in those tables.
+SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
+
+- Uploaded documents, as original bytes (`documents` table). `POST
+  /api/documents` stores every accepted PDF, PNG, JPEG or WEBP upload with its
+  client-supplied file name, MIME type, size, SHA-256 and receive time. `POST
+  /api/analyze/document` stores PDF uploads the same way, without a file name.
+  These can be bank statements or identity documents. They are stored
+  unencrypted, no route returns them, and nothing deletes them.
+- Sender report counts keyed on the reported identifier (`reports`). A
+  phone-shaped identifier is stored as its normalised digits.
+- Privacy-minimised report events (fingerprints of redacted text and an HMAC
+  pseudonym of the reporter's IP) and risk audit rows. These are deleted
+  after `COMMUNITY_EVENT_RETENTION_DAYS` (default 90) and
+  `COMMUNITY_AUDIT_RETENTION_DAYS` (default 180), checked at startup and
+  every 6 hours.
+- Campaign graph observations (`scam_dna*`): scam type, claimed identity,
+  observed sender identifiers and lookalike domains.
+- Organisation email observations, indicators and analyst outcome labels
+  (`org_*`), keyed on HMAC pseudonyms of addresses and of the analyst's IP.
+  A purge function exists but nothing calls it, so these rows are kept.
+- Batch summary counts and cached domain registration dates.
+
+Raw message text and raw reporter IP addresses are not stored. Apart from the
+community events and audit rows, nothing has a retention period.
 
 The prototype has no accounts or tenant isolation. Campaigns, trends, and sender
 report counts should be treated as public demo data. Do not add user history APIs

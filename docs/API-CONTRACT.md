@@ -455,12 +455,14 @@ ordinary `DOC-*` entries in `signals[]`, scored by `rs-1.4`. The LLM sees
 only the redacted text, never the file, its images or the forensic facts.
 An LLM outage still returns `200` with the full deterministic verdict.
 
-The uploaded bytes are also stored byte-exact
+A PDF's uploaded bytes are also stored byte-exact in SQLite
 (`backend/src/services/document-store/`, the same storage `POST
-/api/documents` below uses) — `documentId` in the response is an internal
+/api/documents` below uses). `documentId` in the response is an internal
 reference only, not a public retrieval endpoint (see that route's own
-Security note). Storage failing does not fail the analysis; `documentId` is
-simply `null` in that case.
+Security note). A DOCX is not stored, because the document store accepts
+only PDF and image types, so `documentId` is always `null` for a DOCX.
+Storage failing does not fail the analysis; `documentId` is `null` in that
+case too.
 
 ### Request
 
@@ -500,7 +502,7 @@ How it runs (`backend/src/services/document-forensics`):
   boundary rather than rejected.** `document.textTruncated` says when that
   happened.
 
-The parsed content (text/previews) is never stored - only the raw uploaded
+The parsed content (text/previews) is never stored. Only a PDF's raw uploaded
 bytes are, per `documentId` above. Like every check, the pipeline may
 record the same privacy-minimised aggregate observations (ScamDNA
 type/claimed-identity counts) that text checks record.
@@ -671,6 +673,10 @@ bank statement, an ID, or other sensitive personal data, and this backend
 has no per-user auth layer — a UUID alone is not real access control, so
 byte retrieval is only ever an internal function call
 (`getStoredDocument()`), never a public HTTP path.
+
+Stored bytes, the client-supplied `filename`, MIME type, size, SHA-256 and
+receive time are kept in the SQLite `documents` table, unencrypted. There is
+no retention period and no delete route.
 
 ### Errors
 
