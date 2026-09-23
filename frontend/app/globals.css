@@ -1034,13 +1034,19 @@ button:not(:disabled):hover, .dc-pill:hover { transform: translateY(-1.5px); }
 button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
 .dc-lift { transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .35s; }
 .dc-lift:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px rgba(0,0,0,.35); }
-[data-flr] { opacity: 0; transform: translateY(22px); filter: blur(4px); }
-[data-flr][data-flin] {
-  opacity: 1; transform: none; filter: none;
-  transition: opacity .8s cubic-bezier(.2,.8,.2,1), transform .8s cubic-bezier(.2,.8,.2,1), filter .8s;
+/* Reveal: headings, paragraphs and cards rise in as they scroll into view.
+   CSS-only (scroll-driven animations), so content is always visible where
+   it's unsupported and nothing depends on JavaScript to un-hide it. */
+@keyframes flRise { from { opacity: 0; transform: translateY(22px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@supports (animation-timeline: view()) {
+  main h1, main h2, main p, main [data-fx], footer {
+    animation: flRise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-flr] { opacity: 1; transform: none; filter: none; }
+  main h1, main h2, main p, main [data-fx], footer { animation: none !important; }
   .fl-glow { animation: none; }
   button:hover, a:hover, .dc-lift:hover { transform: none !important; }
 }

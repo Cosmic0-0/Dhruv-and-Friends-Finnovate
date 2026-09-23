@@ -12,7 +12,18 @@
  * an "Issue" badge, which would appear mid-demo.
  */
 
-import { loadShareSamples } from "./storage";
+/**
+ * "Share anonymous scam samples" (Settings). Read inline rather than imported
+ * from ./storage so this module keeps only type imports and stays runnable by
+ * Node's test runner. Key and default must match lib/storage.ts.
+ */
+function loadShareSamples(): boolean {
+  try {
+    return typeof window === "undefined" || window.localStorage.getItem("fraudlens.shareSamples.v1") !== "false";
+  } catch {
+    return true;
+  }
+}
 import type {
   AnalyzeDocumentRequest,
   AnalyzeDocumentResponse,

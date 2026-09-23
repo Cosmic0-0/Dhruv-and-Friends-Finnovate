@@ -24,18 +24,15 @@ export default function RadarScreen() {
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    console.log("[radar-debug] effect fired", range, attempt);
     const controller = new AbortController();
     setStatus("loading");
     getRadar(range, controller.signal)
       .then((d) => {
-        console.log("[radar-debug] resolved", controller.signal.aborted);
         if (controller.signal.aborted) return;
         setData(d);
         setStatus("ok");
       })
-      .catch((e) => {
-        console.log("[radar-debug] rejected", String(e), controller.signal.aborted);
+      .catch(() => {
         if (!controller.signal.aborted) setStatus("error");
       });
     return () => controller.abort();
