@@ -236,19 +236,23 @@ export default function ResultView() {
 
             {/* Reporting is for message senders: a document's "sender" would be
                 the institution it names, which must never be reported as a scammer. */}
-            <ActionDock response={response} hasReportSection={!fromDocument} copy={copy} />
+            {/* One next-steps panel: where to go, then reporting. Three
+                separate surfaces read as three unrelated offers. */}
+            <div className="panel">
+              <ActionDock response={response} hasReportSection={!fromDocument} copy={copy} />
 
-            {!fromDocument && (
-              <div id="report-section" className="scroll-mt-6">
-                <ReportButton
-                  sender={sender}
-                  redacted={redacted}
-                  reported={result.reported}
-                  onReported={onReported}
-                  copy={copy}
-                />
-              </div>
-            )}
+              {!fromDocument && (
+                <div id="report-section" className="section scroll-mt-6">
+                  <ReportButton
+                    sender={sender}
+                    redacted={redacted}
+                    reported={result.reported}
+                    onReported={onReported}
+                    copy={copy}
+                  />
+                </div>
+              )}
+            </div>
 
             <SafetyCard response={response} claimedIdentity={claimedIdentity} copy={copy} lang={lang} show={show} />
           </>

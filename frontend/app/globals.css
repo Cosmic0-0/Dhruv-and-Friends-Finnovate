@@ -142,6 +142,14 @@
   --shadow-tabbar: 0 10px 30px rgb(0 0 0 / 12%);
   --shadow-lift: 0 8px 24px rgb(0 0 0 / 8%);
 
+  /* ---- Space ----
+     Four steps. Eight different gap values across the app is what made it
+     read as assembled rather than designed. */
+  --space-1: 0.5rem;   /* inside a row */
+  --space-2: 0.875rem; /* between rows in a group */
+  --space-3: 1.25rem;  /* between groups */
+  --space-4: 2rem;     /* between regions */
+
   /* ---- Layout ---- */
   --container-app: 430px;
   --spacing-gutter: 18px;
@@ -565,6 +573,42 @@
    * The gradient is the base; ::before bleeds a warm glow in from the top
    * right so the surface has a light source instead of being a flat fill.
    */
+  /*
+   * The panel. ONE surface holding several related sections, divided by
+   * hairlines, instead of each section floating as its own card.
+   *
+   * This is the difference between a designed screen and a stack of boxes:
+   * grouping is carried by the container, and the divisions inside it show
+   * what belongs together. Most things that used .card should be a section
+   * inside a .panel.
+   */
+  .panel {
+    background: var(--c-card);
+    border: 1px solid var(--c-card-edge);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: clip;
+  }
+
+  .panel > * + * {
+    border-top: 1px solid var(--color-card-border);
+  }
+
+  /* A section inside a panel: its own padding, no surface of its own. */
+  .section {
+    padding: var(--space-3) var(--space-3) var(--space-3);
+  }
+
+  /* Section heading. Sized as a heading, not as another grey micro-label on
+     top of every block. */
+  .section-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.375rem;
+    letter-spacing: -0.006em;
+    color: var(--color-ink);
+  }
+
   /* The one dark card per screen, carrying its main question. Flat fill. */
   .hero {
     position: relative;

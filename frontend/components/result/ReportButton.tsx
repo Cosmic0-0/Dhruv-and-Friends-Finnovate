@@ -64,7 +64,7 @@ export default function ReportButton({
     <section className="flex flex-col gap-3">
       {showForm ? (
         <form
-          className="sheet flex flex-col"
+          className="flex flex-col"
           onSubmit={(e) => {
             e.preventDefault();
             void send(value);

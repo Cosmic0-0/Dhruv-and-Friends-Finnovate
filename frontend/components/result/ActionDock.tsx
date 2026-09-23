@@ -43,7 +43,7 @@ export default function ActionDock({
   }
 
   return (
-    <nav aria-label={copy.result.whatToDoTitle} className="sheet">
+    <nav aria-label={copy.result.whatToDoTitle}>
       <ul className="flex flex-col px-5 [&>li+li]:border-t [&>li+li]:border-card-border">
         {rows.map(({ href, Icon, label, danger }) => (
           <li key={href}>
