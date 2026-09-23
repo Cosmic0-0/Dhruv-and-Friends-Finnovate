@@ -82,25 +82,45 @@ own virtualenv.
 cd document-forensics
 python3.12 -m venv .venv
 ./.venv/bin/pip install -r requirements-base.txt
-# Only if you're working on stage 3 or 4:
+
+# Only if you're working on (or want to actually run) stage 3:
+./.venv/bin/pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ./.venv/bin/pip install -r requirements-trufor.txt
+# One-time weight download - see checks/trufor.py's module docstring for
+# the exact commands and MD5. Not committed (260MB); *.pth is gitignored.
+
+# Only if you're working on (or want to actually run) stage 4:
 ./.venv/bin/pip install -r requirements-layout.txt
+# First run downloads naver-clova-ix/donut-base-finetuned-docvqa (~2.5GB)
+# into the shared ~/.cache/huggingface - one-time, out of band.
 
 ./.venv/bin/python -m pytest        # unit tests - fast, no model downloads
 ./.venv/bin/python -m app.main      # or: ./.venv/bin/uvicorn app.main:app --port 8081
 ```
 
+Install `torch`/`torchvision` together in one `pip install` call, not two
+separate ones - installing them separately can resolve a version pair whose
+native extensions don't actually match (`RuntimeError: operator
+torchvision::nms does not exist`), even though each install individually
+reports success.
+
 ## Implementation status
+
+All four checks are real, local-model implementations, not stubs - every
+one is independently verified end-to-end against real weights, not just
+mocked. `./.venv/bin/python -m pytest` is 55 tests, all passing, with all
+four checks' dependencies installed.
 
 | Stage | Module | Status |
 |---|---|---|
-| 1. Metadata/PDF forensics + signature region | `checks/metadata_pdf.py`, `app/signature.py` | stub (`NotImplementedError`) |
-| 2. Error Level Analysis | `checks/ela.py` | stub (`NotImplementedError`) |
-| 3. TruFor | `checks/trufor.py` | stub (`NotImplementedError`) |
-| 4. Layout/template comparison | `checks/layout.py` | stub (`NotImplementedError`) |
+| 1. Metadata/PDF forensics + signature region | `checks/metadata_pdf.py`, `app/signature.py` | done - EXIF, pikepdf incremental-update chain, pdfplumber text-layer/glyph mismatch, stroke-width signature check. CPU only, no model. |
+| 2. Error Level Analysis | `checks/ela.py` | done - Pillow re-save/diff, block-level outlier clustering. CPU only, no model. |
+| 3. TruFor | `checks/trufor.py`, `vendor/trufor/` | done - real vendored inference code + real pretrained weights (not committed; one-time download, see the module's docstring). **Nonprofit-use-only license** (GRIP-UNINA) - see `vendor/trufor/LICENSE.txt` before any commercial use of this repo. |
+| 4. Layout/template comparison | `checks/layout.py` | done - Donut (`donut-base-finetuned-docvqa`) identifies what a document claims to be; a separate deterministic Pillow ink-density measurement (not the model - it has no bounding-box output) checks logo/field placement against `tests/fixtures/templates/*.json`. |
 | Orchestrator, response contract, FastAPI app | `app/orchestrator.py`, `app/models.py`, `app/main.py` | done, tested (`tests/test_orchestrator.py`) |
 
-Each stub module's docstring is that check's scope. Replacing a stub is a
-self-contained change - `tests/test_orchestrator.py` already exercises the
-gating logic against mocked checks, so a real implementation only needs its
+Each module's docstring documents its own scope and honest limitations
+(calibration basis, what a heuristic is/isn't proven against, etc.) - read
+the module before relying on its output, this is a first pass calibrated
+against a handful of fixtures, not a tuned production detector.
 own test module (`tests/test_<check>.py`) plus fixtures.
