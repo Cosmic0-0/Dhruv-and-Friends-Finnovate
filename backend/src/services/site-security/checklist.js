@@ -27,6 +27,14 @@ const needs = {
 
 /** [id, label, area, requirement, title pattern] */
 const CHECKS = [
+  ["cloned-metadata", "Metadata doesn't point to another organisation's site", "identity", "client", /^Page metadata points to another organisation's website$/],
+  ["brand-claim", "Page doesn't claim another organisation while asking for credentials", "identity", "client", /^Page claims to be another organisation and asks for credentials$/],
+  ["borrowed-branding", "Branding isn't loaded from another organisation's site", "identity", "client", /^Page loads its branding from another organisation's website$/],
+  ["exfiltration", "No data sent to Telegram bots or Discord webhooks", "identity", "client", /^Page sends data to /],
+  ["privacy-policy", "Links to its own working privacy policy", "identity", "client", /^(?:No privacy policy link|Privacy policy link is broken|Privacy policy link goes to another organisation's website)$/],
+  ["obfuscation", "No deliberately hidden (obfuscated) code", "identity", "client", /^Page runs deliberately hidden \(obfuscated\) code$/],
+  ["context-menu", "Right-click isn't blocked", "identity", "client", /^Right-click is disabled$/],
+
   ["https", "Page is served over HTTPS", "transport", "server", /^Site is not served over HTTPS$/],
   ["http-redirect", "Plain HTTP redirects to HTTPS", "transport", "server", /^(?:HTTP does not redirect to HTTPS|Plain HTTP is also served without a redirect)$/],
   ["tls-handshake", "TLS connection can be established", "transport", "https", /^Could not establish a TLS connection$/],

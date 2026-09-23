@@ -58,7 +58,7 @@ export default function FraudNetworkGraph({ fingerprintId }: { fingerprintId: st
     void load(); return () => controller.abort();
   }, [fingerprintId, attempt, setNodes, setEdges]);
   return <div className="gutter space-y-6 py-8">
-    <Link href="/" className="micro text-ink hover:underline">{t("← Message check")}</Link>
+    <Link href="/app" className="micro text-ink hover:underline">{t("← Message check")}</Link>
     <header className="flex flex-wrap items-end justify-between gap-4 pb-2"><div><p className="micro mb-3 text-ink">{t("Campaign intelligence / ScamDNA")}</p><h1>{t("Follow the connections.")}</h1><p className="mt-3 max-w-xl text-ink-soft">{t("Explore the senders, claimed identity and links observed in this scam pattern.")}</p></div>{campaign && <div className="flex gap-6">{[[campaign.messageCount, "Checks"], [campaign.senders.length, "Senders"], [campaign.domains.length, "Domains"]].map(([count, label]) => <div key={label}><p className="font-heading text-3xl">{count}</p><p className="micro text-ink-muted">{t(String(label))}</p></div>)}</div>}</header>
     {loading ? <div role="status" className="flex h-96 items-center justify-center sheet text-ink-muted"><span className="mr-3 size-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />{t("Mapping observed connections…")}</div> : error ? <div role="alert" className="border-l-2 border-danger bg-danger-soft p-6"><p>{error}</p><button onClick={() => setAttempt(n => n + 1)} className="mt-4 text-sm font-semibold underline">{t("Try again")}</button></div> : <>
       <div className="sheet grid gap-0 overflow-hidden xl:grid-cols-[minmax(0,1fr)_260px]">

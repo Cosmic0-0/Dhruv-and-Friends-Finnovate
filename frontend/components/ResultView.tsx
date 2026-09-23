@@ -63,7 +63,7 @@ export default function ResultView() {
           <div className="card flex flex-col items-start gap-3">
             <h2>{copy.result.missingTitle}</h2>
             <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
-            <Link href="/" className="btn-sm pressable mt-1 bg-primary text-on-primary">
+            <Link href="/app" className="btn-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>

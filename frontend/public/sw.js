@@ -2,7 +2,8 @@
  * FraudLens service worker: caches the app shell so the app opens offline.
  *
  * - Navigations: network-first; every successful page is cached by path, and
- *   offline falls back to that page, then to the shell ("/").
+ *   offline falls back to that page, then to the shell ("/app", the web app;
+ *   "/" is the landing page).
  * - Same-origin build assets (/_next/static, /icons): cache-first (they're
  *   content-hashed or versioned, so a cached copy is always correct).
  * - Everything else goes straight to the network and is never cached. API
@@ -14,10 +15,11 @@
  *
  * Bump CACHE_VERSION when the precache list changes.
  */
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_NAME = `fraudlens-shell-${CACHE_VERSION}`;
-const SHELL_URL = "/";
+const SHELL_URL = "/app";
 const PRECACHE = [
+  "/",
   SHELL_URL,
   "/learn",
   "/manifest.webmanifest",

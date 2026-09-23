@@ -23,6 +23,9 @@ export default function TabBar() {
   const pathname = usePathname() ?? "/";
   const { copy } = useLanguage();
 
+  // The landing page (/) is full-bleed and carries its own navigation.
+  if (pathname === "/") return null;
+
   return (
     <nav
       aria-label="Main"

@@ -154,7 +154,7 @@ export default function DocumentCheck() {
 
   return (
     <div>
-      <ScreenTitle title={d.title} subtitle={d.subtitle} back={{ href: "/", label: copy.tabs.check }} />
+      <ScreenTitle title={d.title} subtitle={d.subtitle} back={{ href: "/app", label: copy.tabs.check }} />
 
       <div className="gutter flex max-w-3xl flex-col gap-4 pt-5 pb-10">
         <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{d.intro}</p>

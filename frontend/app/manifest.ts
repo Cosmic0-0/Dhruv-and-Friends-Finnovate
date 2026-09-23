@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "FraudLens",
     description:
       "Check a suspicious SMS or message for scam warning signs before you pay. Works in English, French and Kreol.",
-    start_url: "/",
+    start_url: "/app",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

@@ -24,7 +24,7 @@ export function ResultHeader({ copy, sender, subtitle }: { copy: Copy; sender?: 
     <ScreenTitle
       title={copy.result.title}
       subtitle={subtitle ?? (sender ? copy.result.fromSender(sender) : undefined)}
-      back={{ href: "/", label: copy.tabs.check }}
+      back={{ href: "/app", label: copy.tabs.check }}
     />
   );
 }
@@ -261,7 +261,7 @@ export function SentPanel({
 export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
     <Link
-      href="/"
+      href="/app"
       className="btn pressable w-full bg-primary text-on-primary"
     >
       {copy.result.checkAnother}

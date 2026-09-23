@@ -91,7 +91,7 @@ test("a check that couldn't run is not_run with a reason - never a pass", () => 
 
 test("an unreachable site marks every server-side check not_run", () => {
   const rows = buildChecklist([], { reachable: false, https: false, clientSignals: true });
-  for (const r of rows.filter((r) => !["page-code", "content", "third-party"].includes(r.area))) assert.equal(r.status, "not_run", r.id);
+  for (const r of rows.filter((r) => !["page-code", "content", "third-party", "identity"].includes(r.area))) assert.equal(r.status, "not_run", r.id);
   assert.ok(rows.some((r) => r.area === "page-code" && r.status === "pass"));
 });
 

@@ -56,7 +56,7 @@ export default function ConversationFlow() {
   const errorText = error ? error.kind === "validation" ? copy.errors.validation[error.reason ?? "invalid"] : error.kind === "llm_unavailable" ? copy.errors.llm : error.kind === "network" ? copy.errors.network : error.kind === "timeout" ? copy.errors.timeout : copy.errors.unexpected : null;
 
   return <>
-    <ScreenTitle title={c.title} back={{ href: "/", label: copy.tabs.check }} />
+    <ScreenTitle title={c.title} back={{ href: "/app", label: copy.tabs.check }} />
     <div className="gutter flex flex-col gap-4 pt-4">
     <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{c.intro}</p>
     <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(240px,0.6fr)]">

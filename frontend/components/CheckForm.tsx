@@ -180,7 +180,7 @@ export default function CheckForm({
     } else {
       pasteAndFocus();
     }
-    router.replace("/", { scroll: false });
+    router.replace("/app", { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

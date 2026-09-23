@@ -77,7 +77,7 @@ export default function BatchScan() {
 
   return (
     <>
-      <ScreenTitle title={t("Batch scan")} back={{ href: "/", label: copy.tabs.check }} />
+      <ScreenTitle title={t("Batch scan")} back={{ href: "/app", label: copy.tabs.check }} />
       <div className="gutter flex flex-col gap-4 pt-4">
         <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">
           {t("Paste each message separately, with a blank line between them, up to 50 at a time.")}

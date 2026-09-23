@@ -130,7 +130,7 @@ npm run dev
 ```
 
 The frontend runs at `http://localhost:3000` and proxies `/api/*` to the backend
-at `http://localhost:4000`. Configure Ollama and the hosted fallback as described
+at `http://localhost:4000`. The landing page is `/`; the web app itself is at `/app`. Configure Ollama and the hosted fallback as described
 in [`backend/README.md`](./backend/README.md). The deterministic pipeline still
 returns an assessment when semantic analysis is unavailable.
 

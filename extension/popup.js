@@ -91,7 +91,7 @@ function renderSignals(signals) {
 // with it (frontend/components/CheckForm.tsx), so this opens FraudLens with
 // a short, capped excerpt of the scanned text ready to analyse in full.
 function updateOpenLink(scanText) {
-  const url = new URL(FRONTEND_ORIGIN + "/");
+  const url = new URL(FRONTEND_ORIGIN + "/app");
   if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
   els.openLink.href = url.toString();
 }

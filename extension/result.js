@@ -50,7 +50,7 @@ function renderSignals(signals) {
 
 // The web app pre-fills its check screen from ?scan= (see popup.js).
 function updateOpenLink(scanText) {
-  const url = new URL(FRONTEND_ORIGIN + "/");
+  const url = new URL(FRONTEND_ORIGIN + "/app");
   if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
   els.openLink.href = url.toString();
 }

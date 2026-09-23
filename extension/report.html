@@ -4,10 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Security Report — FraudLens AI</title>
+    <link rel="preload" href="fonts/ibm-plex-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="fonts/ibm-plex-sans-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="fonts.css" />
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="report.css" />
   </head>
   <body class="report">
+    <div class="rp-backdrop" aria-hidden="true"></div>
     <header class="rp-bar">
       <div class="rp-brand">
         <span class="rp-wordmark">FraudLens AI</span>
@@ -29,15 +33,17 @@
         </p>
       </section>
 
-      <section id="rp-intent" class="rp-intent" aria-labelledby="rp-intent-headline" hidden>
-        <p class="rp-kicker">Badly built, or hostile?</p>
-        <h2 id="rp-intent-headline" class="rp-intent-headline"></h2>
-        <p id="rp-intent-explanation" class="rp-intent-explanation"></p>
-        <ul id="rp-intent-reasons" class="rp-intent-list"></ul>
-      </section>
-
-      <section class="rp-overview" aria-label="Overview">
+      <section class="rp-verdict" aria-labelledby="rp-intent-headline">
+        <div id="rp-intent" class="rp-intent" hidden>
+          <span id="rp-intent-icon" class="rp-intent-icon" aria-hidden="true"></span>
+          <div class="rp-intent-body">
+            <h2 id="rp-intent-headline" class="rp-intent-headline"></h2>
+            <p id="rp-intent-explanation" class="rp-intent-explanation"></p>
+            <ul id="rp-intent-reasons" class="rp-intent-list"></ul>
+          </div>
+        </div>
         <div class="rp-grade">
+          <p class="rp-grade-title">Build quality</p>
           <div class="rp-ring">
             <canvas id="score-ring" width="180" height="180" aria-label="Security score"></canvas>
             <div class="rp-ring-label">
@@ -47,7 +53,21 @@
           </div>
           <p id="rp-grade-note" class="rp-grade-note"></p>
         </div>
+      </section>
 
+      <section id="rp-key" class="rp-key" aria-labelledby="key-heading" hidden>
+        <div class="rp-section-head">
+          <h2 id="key-heading" class="rp-h2">What gives a scam away</h2>
+          <p class="rp-section-sub">The checks that separate a phishing or malware site from a badly built one.</p>
+        </div>
+        <ol id="rp-key-list" class="rp-key-list"></ol>
+      </section>
+
+      <section class="rp-overview" aria-labelledby="overview-heading">
+        <div class="rp-section-head">
+          <h2 id="overview-heading" class="rp-h2">How the site is built</h2>
+          <p class="rp-section-sub">Security hygiene: headers, TLS, cookies, exposed files and page code. This is what the grade measures.</p>
+        </div>
         <div class="rp-kpis">
           <div class="rp-kpi" data-sev="high"><span class="rp-kpi-value" id="kpi-high">0</span><span class="rp-kpi-label">High</span></div>
           <div class="rp-kpi" data-sev="medium"><span class="rp-kpi-value" id="kpi-medium">0</span><span class="rp-kpi-label">Medium</span></div>

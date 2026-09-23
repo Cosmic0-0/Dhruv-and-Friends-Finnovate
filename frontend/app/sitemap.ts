@@ -8,6 +8,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${SITE_URL}/app`, changeFrequency: "weekly", priority: 0.9 },
     { url: `${SITE_URL}/safepay`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${SITE_URL}/document`, changeFrequency: "monthly", priority: 0.7 },
     { url: `${SITE_URL}/conversation`, changeFrequency: "monthly", priority: 0.7 },

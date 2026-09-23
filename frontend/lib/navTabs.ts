@@ -13,11 +13,11 @@ import { ChartIcon, GridIcon, HomeIcon, PersonIcon } from "@/components/icons";
  */
 export const NAV_TABS = [
   {
-    href: "/",
+    href: "/app",
     key: "check",
     Icon: HomeIcon,
     match: (p: string) =>
-      p === "/" ||
+      p === "/app" ||
       p.startsWith("/result") ||
       p.startsWith("/replay") ||
       p.startsWith("/safepay") ||
@@ -37,4 +37,4 @@ export const NAV_TABS = [
  * open the input ready to type (components/CheckForm.tsx), so the button is a
  * real shortcut rather than a second link to the same screen.
  */
-export const NEW_CHECK_HREF = "/?new=1";
+export const NEW_CHECK_HREF = "/app?new=1";

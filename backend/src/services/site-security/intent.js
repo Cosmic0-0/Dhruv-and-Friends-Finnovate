@@ -66,6 +66,20 @@ function trustFacts(reputation) {
  * @returns {{ kind: string, headline: string, explanation: string, reasons: string[], trustFacts: string[], reputationChecked: boolean }}
  */
 export function classifySiteIntent({ reputation, grade, findings }) {
+  // Phishing-kit tells in the page itself (page-identity.js) are hostile on
+  // their own, whatever the reputation lookup says.
+  const hostileOnPage = findings.filter((f) => f.hostile).map((f) => f.description).filter(Boolean);
+  if (hostileOnPage.length > 0) {
+    const fromReputation = (reputation?.signals ?? []).filter((s) => HOSTILE_CODES.has(s.code)).map((s) => s.description);
+    return {
+      kind: "malicious",
+      headline: HEADLINE.malicious,
+      explanation: EXPLANATION.malicious,
+      reasons: [...fromReputation, ...hostileOnPage],
+      trustFacts: [],
+      reputationChecked: Boolean(reputation),
+    };
+  }
   if (!reputation) {
     return {
       kind: WEAK_GRADES.has(grade) ? "weak_security" : "ok",

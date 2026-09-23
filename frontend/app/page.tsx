@@ -1,21 +1,35 @@
-import { Suspense } from "react";
-import CheckScreen from "@/components/check/CheckScreen";
+import type { Metadata } from "next";
+import LandingHero from "@/components/landing/LandingHero";
+import BadgeDivider from "@/components/landing/BadgeDivider";
+import { ProblemSection, ApproachSection, MauritiusSection, ChecksSection, GetItSection } from "@/components/landing/LandingSections";
+import TeamSection from "@/components/landing/TeamSection";
+import LandingFooter from "@/components/landing/LandingFooter";
+import "./landing.css";
 
-const JSON_LD = {
-  "@context": "https://schema.org", "@type": "WebApplication",
-  name: "FraudLens AI", applicationCategory: "SecurityApplication", operatingSystem: "Any",
-  description: "Paste a suspicious SMS or message and see the scam warning signs: sender mismatch, urgency, lookalike links. Built for Mauritius, in English, French and Kreol.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+export const metadata: Metadata = {
+  title: { absolute: "FraudLens AI: catch the scam before you pay" },
+  description:
+    "FraudLens AI checks suspicious messages, links, websites and emails before you pay, built for Mauritius in English, French and Kreol. By Dhruv & Friends.",
+  alternates: { canonical: "/" },
 };
 
-export default function CheckPage() {
+// The project's front door: what FraudLens is, the three ways in, why it is
+// built for Mauritius, how to install each client, and the team. Full-bleed;
+// SideNav and TabBar step aside on this route. The web app itself is /app.
+export default function LandingPage() {
   return (
-    <main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-      {/* CheckScreen reads ?scan= / ?new=1 via useSearchParams. */}
-      <Suspense fallback={null}>
-        <CheckScreen />
-      </Suspense>
-    </main>
+    <div className="landing">
+      <LandingHero />
+      <BadgeDivider />
+      <main>
+        <ProblemSection />
+        <ApproachSection />
+        <MauritiusSection />
+        <ChecksSection />
+        <GetItSection />
+        <TeamSection />
+      </main>
+      <LandingFooter />
+    </div>
   );
 }

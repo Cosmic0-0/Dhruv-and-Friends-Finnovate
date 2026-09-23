@@ -207,7 +207,7 @@ export default function SafePayFlow() {
 
   return (
     <>
-      <ScreenTitle title={c.title} back={{ href: "/", label: copy.tabs.check }} />
+      <ScreenTitle title={c.title} back={{ href: "/app", label: copy.tabs.check }} />
       <div className="gutter flex flex-col gap-4 pt-4">
         <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{c.intro}</p>
 

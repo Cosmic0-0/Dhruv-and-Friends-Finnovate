@@ -29,6 +29,8 @@
 import { fetchOnce } from "./fetcher.js";
 import { probeTls } from "./tls.js";
 import { classifySiteIntent } from "./intent.js";
+import { readPageMeta, pageIdentityFindings, checkPrivacyPolicy } from "./page-identity.js";
+import { buildKeyChecks } from "./key-checks.js";
 import { assessUrl } from "../url-reputation/index.js";
 import { assertPublicHttpUrl, UnsafeUrlError } from "./url-safety.js";
 import {
@@ -241,21 +243,31 @@ function coverageFindings(clientSignals, clientCollectionError, now) {
  * Throws UnsafeUrlError for a malformed/unsafe url (400). Never throws for a well-formed public URL that
  * merely fails to load.
  */
-export async function analyzeSite(url, clientSignals, { clientCollectionError, now = Date.now(), reputation = assessUrl } = {}) {
+export async function analyzeSite(url, clientSignals, { clientCollectionError, now = Date.now(), reputation = assessUrl, fetchPrivacyPage } = {}) {
   const parsedUrl = await assertPublicHttpUrl(url);
-  // Reputation (who runs the site) runs alongside the scan (how it's built);
-  // capped and fail-open so it can never hold up or break the report.
+  const hasClientSignals = Boolean(clientSignals && typeof clientSignals === "object") && !clientCollectionError;
+  const meta = hasClientSignals ? readPageMeta(clientSignals.pageMeta) : null;
+  // Reputation (who runs the site) and the privacy-policy check run alongside
+  // the scan (how it's built); capped and fail-open so neither can hold up or
+  // break the report.
   const reputationPromise = withTimeout(Promise.resolve().then(() => reputation(parsedUrl.href)), REPUTATION_TIMEOUT_MS).catch(() => null);
+  const privacyPromise = checkPrivacyPolicy(meta, parsedUrl.href, fetchPrivacyPage ? { fetch: fetchPrivacyPage } : {}).catch(() => ({ finding: null, status: "unknown", url: null }));
   const server = await serverScan(parsedUrl);
 
   const reachable = server.finalUrl !== null;
-  const hasClientSignals = Boolean(clientSignals && typeof clientSignals === "object") && !clientCollectionError;
+  const pageUrl = server.finalUrl ?? parsedUrl.href;
+  const privacy = await privacyPromise;
+  const identityFindings = [...pageIdentityFindings(meta, pageUrl), ...(privacy.finding ? [privacy.finding] : [])];
   const findings = withRecommendations([
-    ...server.findings.map((f) => withServerLocation(f, server.finalUrl ?? parsedUrl.href)),
+    ...identityFindings,
+    ...server.findings.map((f) => withServerLocation(f, pageUrl)),
     ...mapClientSignals(clientSignals),
     ...coverageFindings(clientSignals, clientCollectionError, now),
   ]);
-  const { grade, score } = reachable ? computeGrade(findings) : { grade: "N/A", score: null };
+  // The grade measures how the site is BUILT. Identity findings say who runs
+  // it, so they drive the intent verdict and key checks, never the grade.
+  const hygiene = findings.filter((f) => f.category !== "identity");
+  const { grade, score } = reachable ? computeGrade(hygiene) : { grade: "N/A", score: null };
   const siteReputation = await reputationPromise;
 
   return {
@@ -266,6 +278,14 @@ export async function analyzeSite(url, clientSignals, { clientCollectionError, n
     scannedAt: server.scannedAt,
     // Badly built vs hostile: see intent.js.
     intent: classifySiteIntent({ reputation: siteReputation, grade, findings }),
+    // The checks that separate a scam from a clumsy site, shown first.
+    keyChecks: buildKeyChecks({
+      reputation: siteReputation,
+      identityFindings,
+      privacy,
+      hasMeta: Boolean(meta),
+      isHttps: pageUrl.startsWith("https:"),
+    }),
     reputation: siteReputation
       ? {
           signals: siteReputation.signals,
@@ -276,7 +296,7 @@ export async function analyzeSite(url, clientSignals, { clientCollectionError, n
         }
       : null,
     findings,
-    summary: summarizeReport(findings, { reachable, clientSignals: hasClientSignals }),
+    summary: summarizeReport(hygiene, { reachable, clientSignals: hasClientSignals }),
     // Every check that was run (or couldn't be), with pass/fail - most pressing first.
     checks: buildChecklist(findings, { reachable, https: reachable && server.finalUrl.startsWith("https:"), clientSignals: hasClientSignals }),
     coverage: {

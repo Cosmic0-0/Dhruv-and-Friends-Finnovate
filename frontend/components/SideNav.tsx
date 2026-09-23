@@ -24,6 +24,9 @@ export default function SideNav() {
   const pathname = usePathname() ?? "/";
   const { copy } = useLanguage();
 
+  // The landing page (/) is full-bleed and carries its own navigation.
+  if (pathname === "/") return null;
+
   const tools = [
     { href: "/safepay", Icon: ShieldIcon, label: copy.home.payCta },
     { href: "/document", Icon: DocumentIcon, label: copy.tools.document },

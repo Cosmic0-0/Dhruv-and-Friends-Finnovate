@@ -232,6 +232,132 @@ async function fetchSameOriginScriptText(scripts) {
   return new Map(results);
 }
 
+// ---------------- Page identity (pageMeta) ----------------
+// Who the page says it is, and the tells a phishing kit leaves behind. The
+// backend (services/site-security/page-identity.js) judges these; this only
+// reads tags, link targets and code patterns - never form values.
+
+var MAX_LINKS_SCANNED = 600;
+var MAX_ASSET_HOSTS = 30;
+var PRIVACY_RE = /privacy|confidentialit|vie priv[ée]e|donn[ée]es personnelles|data protection|konfidansialite/i;
+var TERMS_RE = /terms|conditions|mentions l[ée]gales|\bcgu\b|\bcgv\b/i;
+var CONTACT_RE = /contact|about us|[àa] propos|nous joindre/i;
+var CARD_FIELD_RE = /\b(?:cc-?(?:number|num|csc|exp)|card-?(?:number|no|num)|cardnumber|cvv|cvc|csc)\b/i;
+var EXFIL_PATTERNS = [
+  { target: "Telegram bot API", re: /api\.telegram\.org\/bot/gi },
+  { target: "a Discord webhook", re: /discord(?:app)?\.com\/api\/webhooks/gi },
+];
+var OBFUSCATION_RE = /\b(?:eval|Function)\s*\(\s*(?:window\.)?(?:atob|unescape)\s*\(/g;
+var CONTEXT_MENU_RE = /contextmenu['"]?\s*,[\s\S]{0,120}?preventDefault|oncontextmenu\s*=\s*["']?\s*(?:return\s+false|function)/gi;
+
+/** Every match of `re` across the page's scripts, with the first few locations. */
+function scanSources(re, sources) {
+  let count = 0;
+  const locations = [];
+  for (const { file, text, lineOffset } of sources) {
+    re.lastIndex = 0;
+    for (let m = re.exec(text); m; m = re.exec(text)) {
+      count++;
+      if (locations.length < MAX_LOCATIONS) {
+        const { line, code } = lineAt(text, m.index);
+        locations.push({ file, line: line + lineOffset, code });
+      }
+    }
+  }
+  return { count, locations };
+}
+
+function metaContent(selector) {
+  const el = document.querySelector(selector);
+  return el ? (el.getAttribute("content") || el.getAttribute("href") || "").trim().slice(0, 500) : "";
+}
+
+function collectPolicyLinks() {
+  const found = { privacyLinks: [], termsLinks: [], contactLinks: [] };
+  const anchors = Array.from(document.querySelectorAll("a[href]")).slice(0, MAX_LINKS_SCANNED);
+  for (const a of anchors) {
+    const text = (a.textContent || "").trim().slice(0, 120);
+    const href = a.getAttribute("href") || "";
+    const haystack = `${text} ${href}`;
+    let url;
+    try {
+      url = new URL(href, location.href).href;
+    } catch {
+      continue;
+    }
+    if (!/^https?:/.test(url)) continue;
+    if (PRIVACY_RE.test(haystack) && found.privacyLinks.length < 3) found.privacyLinks.push({ href: url, text });
+    else if (TERMS_RE.test(haystack) && found.termsLinks.length < 3) found.termsLinks.push({ href: url, text });
+    else if (CONTACT_RE.test(haystack) && found.contactLinks.length < 3) found.contactLinks.push({ href: url, text });
+  }
+  return found;
+}
+
+/** Hosts other than this one that the page loads images, icons, styles or scripts from. */
+function collectAssetHosts() {
+  const byKey = new Map();
+  const add = (el, raw, kind) => {
+    if (!raw || byKey.size >= MAX_ASSET_HOSTS) return;
+    let url;
+    try {
+      url = new URL(raw, location.href);
+    } catch {
+      return;
+    }
+    if (!/^https?:$/.test(url.protocol) || url.host === location.host) return;
+    const key = `${url.hostname}|${kind}`;
+    if (!byKey.has(key)) byKey.set(key, { host: url.hostname, kind, locations: compact([locateElement(el)]) });
+  };
+  for (const el of document.querySelectorAll("img[src]")) add(el, el.getAttribute("src"), "image");
+  for (const el of document.querySelectorAll('link[rel~="icon"][href]')) add(el, el.getAttribute("href"), "icon");
+  for (const el of document.querySelectorAll('link[rel="stylesheet"][href]')) add(el, el.getAttribute("href"), "stylesheet");
+  for (const el of document.querySelectorAll("script[src]")) add(el, el.getAttribute("src"), "script");
+  return [...byKey.values()];
+}
+
+function collectPageMeta(sources) {
+  const inputs = Array.from(document.querySelectorAll("input"));
+  const hasCredentialField = inputs.some((i) => (i.getAttribute("type") || "").toLowerCase() === "password" || (i.getAttribute("autocomplete") || "").toLowerCase().startsWith("cc-") || CARD_FIELD_RE.test(`${i.name || ""} ${i.id || ""}`));
+
+  const formText = Array.from(document.forms).map((f) => ({ file: location.href, text: `${openingTag(f)}\n`, lineOffset: 0 }));
+  const exfil = [];
+  for (const { target, re } of EXFIL_PATTERNS) {
+    const hit = scanSources(re, [...sources, ...formText]);
+    if (hit.count > 0) exfil.push({ target, locations: hit.locations });
+  }
+
+  const obfuscation = scanSources(OBFUSCATION_RE, sources);
+  const menu = scanSources(CONTEXT_MENU_RE, sources);
+  const menuAttr = document.querySelector("[oncontextmenu]");
+  const contextMenuLocations = compact([...(menuAttr ? [locateElement(menuAttr)] : []), ...menu.locations]);
+
+  return {
+    title: (document.title || "").slice(0, 300),
+    description: metaContent('meta[name="description"]'),
+    siteName: metaContent('meta[property="og:site_name"]'),
+    canonical: metaContent('link[rel="canonical"]'),
+    ogUrl: metaContent('meta[property="og:url"]'),
+    generator: metaContent('meta[name="generator"]'),
+    ...collectPolicyLinks(),
+    assetHosts: collectAssetHosts(),
+    hasCredentialField,
+    exfil,
+    contextMenuBlocked: Boolean(menuAttr) || menu.count > 0,
+    contextMenuLocations,
+    obfuscation: obfuscation.count > 0,
+    obfuscationLocations: obfuscation.locations,
+  };
+}
+
+/** A metadata problem must never cost the rest of the report. */
+function orNull(fn) {
+  try {
+    return fn();
+  } catch {
+    return null;
+  }
+}
+
 async function collectSecuritySignals() {
   pageHtml = null; // fresh serialization for this run
   const { scripts, inlineScripts, inlineText } = collectScriptRefs();
@@ -264,6 +390,7 @@ async function collectSecuritySignals() {
     // Counted, never read: the field's value is not touched.
     passwordFields: passwordInputs.length,
     passwordFieldLocations: compact(Array.from(passwordInputs).slice(0, MAX_LOCATIONS).map(locateElement)),
+    pageMeta: orNull(() => collectPageMeta(sinkSources)),
     pageProtocol: location.protocol,
     scriptsForRetire,
   };
