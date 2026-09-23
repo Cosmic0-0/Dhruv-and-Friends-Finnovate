@@ -2,43 +2,67 @@
 
 **Status: LOCKED.** This documents the backend routes as implemented in
 `backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`, and
-`backend/src/index.js`. Update this file and every consumer together when a
-request or response shape changes.
+`backend/src/index.js`. Shapes change only additively, and only when this
+file and every consumer (frontend, extension, Outlook add-in) are updated
+together. Where the implementation returns something this file does not
+describe, the route's section says so under "Contract gap".
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
-> **ADDITIVE CHANGE (2026-09-23): document forensics.** New route
-> `POST /api/analyze/document` (see below), new reason codes `DOC-01`..`DOC-08`,
-> ruleset `rs-1.4` (rs-1.0..1.3 unchanged and selectable), intervention
-> policy `interventions-1.2` (two new action ids), `analysis.source` value
-> `"document"`, an optional `analysis.detectorVersions.document`, and a
-> generic `413` for any request body over a route's size limit. No existing
-> field changed type or meaning, and existing clients need no change. Flag it
-> to the frontend, OCR/batch, extension and Outlook owners before merging.
+## Routes at a glance
+
+Every route with a body declares its own JSON body limit. A body over it gets
+`413 { "error": "request body is too large" }`, and malformed JSON gets
+`400 { "error": "invalid JSON body" }` (`backend/src/services/http-errors`).
+Rate limits are per client IP and return `429` with a JSON `error` and
+standard `RateLimit-*` headers. There is no authentication on any route.
+
+| Method and path | Body limit | Rate limit |
+|---|---|---|
+| `POST /api/analyze` | 300kb | 20 / 15 min (analyze) |
+| `POST /api/analyze/screenshot` | 8mb | 20 / 15 min (analyze) |
+| `POST /api/analyze/document` | 14mb | 20 / 15 min (analyze) |
+| `POST /api/documents` | 20mb | 15 / 15 min |
+| `POST /api/batch-scan` | 300kb | 10 / 15 min |
+| `POST /api/check-url` | 10kb | 120 / 15 min |
+| `POST /api/analyze-site` | 300kb | 15 / 15 min |
+| `POST /api/check-sender` | 10kb | 120 / 15 min (read) |
+| `POST /api/report` | 300kb | 5 / hour (report) |
+| `GET /api/campaign/:fingerprintId` | none | 120 / 15 min (read) |
+| `GET /api/org/campaigns` | none | 120 / 15 min (read) |
+| `POST /api/org/outcomes` | 10kb | 5 / hour (report) |
+| `GET /api/trends` | none | 120 / 15 min (read) |
+| `GET /api/sandbox/playbooks` | none | 120 / 15 min (read) |
+| `POST /api/sandbox/next` | 10kb | 30 / 15 min |
+| `GET /health` | none | none |
+| `GET /health/llm` | none | none |
+| `GET /health/document-forensics` | none | none |
+
+Routes marked "(analyze)", "(read)" or "(report)" share one limiter per
+group, and so one counter per IP: for example, five `/api/org/outcomes` calls
+use up the same hourly budget as five `/api/report` calls.
 
 ## `POST /api/analyze`
 
-> **DECISION-ARCHITECTURE CHANGE (2026-09-23) — flag to Oleg (frontend),
-> Dhruv (OCR/batch) and the extension owner before merging.** The response
-> *shape* is backward compatible (every previous field is still present with
-> the same type), but the **meaning** of three fields changed:
-> - `verdict` is now derived from a deterministic risk level
->   (`low → safe`, `elevated → suspicious`, `high|critical → scam`), not
->   chosen by the LLM.
-> - `riskScore` is now the deterministic rule score from ruleset `rs-1.0`,
->   not an LLM "confidence". It is always present.
-> - `suggestedAction` is now a fixed policy key string
->   (`"block_sender, report_to_bank"` | `"verify_official_channel"` | `"none"`),
->   not LLM free text. Concrete advice is in the new `actions[]`.
->
-> New fields: `risk`, `decision`, `trace`, `actions`, `reduceConcern`,
-> `analysis`, `observedSender`, and per-signal `code`, `category`,
-> `sourceType`, `tier`, `span`, `metadata`, `scored`, `corroboratedBy`,
-> `mergedInto`. Removed: `adjustedRiskScore` (the community contribution is
-> now inside `riskScore`). `riskAdjustments[]` entries changed shape (see
-> below). The same response is returned by `/api/analyze/screenshot` (plus
-> `extractedText`) and by each `/api/batch-scan` result, because all three
-> call one function: `runPipeline()` in `backend/src/services/pipeline/index.js`.
+The same response is returned by `/api/analyze/screenshot` (plus
+`extractedText`), by `/api/analyze/document` (plus `documentId`,
+`extractedText` and `document`) and by each `/api/batch-scan` result, because
+all of them call one function: `runPipeline()` in
+`backend/src/services/pipeline/index.js`.
+
+The compatibility fields are computed by the deterministic engine, never by
+the LLM:
+
+- `verdict` is derived from the risk level (`low → safe`,
+  `elevated → suspicious`, `high|critical → scam`).
+- `riskScore` is the deterministic rule score from the active ruleset
+  (`rs-1.4`). It is always present.
+- `suggestedAction` is a fixed policy key (`"block_sender, report_to_bank"` |
+  `"verify_official_channel"` | `"none"`) set by `services/interventions`.
+  Concrete advice is in `actions[]` (`{ id, text }`).
+
+There is no `adjustedRiskScore`; the community contribution is inside
+`riskScore`.
 
 **Principle:** code verifies facts, AI interprets language, the
 deterministic engine decides. The LLM never computes the score, the level,
@@ -103,8 +127,8 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
     "rulesetVersion": "rs-1.4",
     "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
-    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.1", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "detectorVersions": { "url": "url-2.1", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
+    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.2", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
 }
@@ -178,8 +202,7 @@ and never shown or scored.
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
 SOC-07 policy described under "Email analysis". `rs-1.0` stays selectable
-(`score(signals, ctx, "rs-1.0")`). On the 84-case deterministic eval both
-rulesets produce identical results.
+(`score(signals, ctx, "rs-1.0")`).
 
 `rs-1.2` keeps both published rulesets frozen and adds ORG-01..06. Base
 weights: ORG-01 30; ORG-02 link 25 / Reply-To 20; ORG-03 12; ORG-04 3;
@@ -196,13 +219,12 @@ or payment/credential fact (e.g. a download-unlock fee reaching "high"
 through the existing IX-1, since ID-04 is already in its `a` list).
 
 `rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
-fingerprints) and adds the document-forensics weights, interaction DX-1 and
-floor FLOOR-DOC-FORGED-INSTITUTION (see `POST /api/analyze/document`).
-Text-only analyses score identically because they cannot emit a DOC-* code;
-the 84-case deterministic eval gives the same results under rs-1.3 and rs-1.4.
-The engine gained one additive feature: a floor may carry `anyVariants`,
-which narrows its `any` codes by `metadata.variant` exactly as an
-interaction's `aVariants` narrows `a`. No earlier ruleset sets it.
+fingerprints) and adds the document-forensics weights and interaction DX-1
+(see `POST /api/analyze/document`). It adds no floor; its floors are
+`rs-1.3`'s. Text-only analyses score identically under `rs-1.3` and `rs-1.4`
+because they cannot emit a DOC-* code. The engine supports `anyVariants` on
+a floor, which narrows its `any` codes by `metadata.variant` exactly as an
+interaction's `aVariants` narrows `a`; no published ruleset uses it.
 
 1. **Dedupe:** signals about the same link (URL-01..04, URL-08, ID-01 on one
    host) are one finding; the same code from lexicon + semantic is one
@@ -232,13 +254,12 @@ interaction's `aVariants` narrows `a`. No earlier ruleset sets it.
 Rules and compliance controls: `backend/src/services/community-signals/README.md`.
 A matching pattern reported by enough **distinct** pseudonymous reporters
 adds one `REP-01` (cluster, CW-1) or `REP-02` (wave, CW-2) signal with a
-`communityEvidence` object (unchanged fields; `rulesVersion` is now
-`"wave-rules-v2"`). Its points come from the risk engine, and a
-`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.3`),
-evidence ids and the level with and without it (`levelFrom`/`levelTo` in
-`riskAdjustments`). The old verdict-escalation logic is gone — crowd
-evidence alone is worth 10/20 points (elevated at most) and only the
-wave + technical-impersonation floor lifts to critical. `riskCategories`
+`communityEvidence` object (`rulesVersion: "wave-rules-v2"`). Its points come
+from the risk engine, and a `risk_audit_log` row records the rule, versions
+(`wave-rules-v2+<active ruleset>`), evidence ids and the level with and
+without it (`levelFrom`/`levelTo` in `riskAdjustments`). Crowd evidence alone
+is worth 10/20 points (elevated at most), and only the wave +
+technical-impersonation floor lifts to critical. `riskCategories`
 excludes community signals.
 
 #### Email analysis (`emailContext`, detector `email-1.1`)
@@ -375,13 +396,10 @@ Message-ID (when supplied), content fingerprint and recipient pseudonym, so
 re-analysis is a no-op while copies sent to different recipients remain
 distinct.
 
-`GET /api/org/campaigns` lists active campaigns for the configured
-organisation. `POST /api/org/outcomes` accepts `{ observationId, label }`.
-Primary labels are `confirmed_phishing`, `confirmed_bec`,
-`supplier_impersonation`, `false_positive`, `legitimate`, and
-`insufficient_evidence`; `confirmed_fraud` and `suspicious_unconfirmed` are
-retained for compatibility with the partial implementation. Outcomes affect
-explainable reputation lookups only; there is no live retraining.
+`GET /api/org/campaigns` lists these campaigns and `POST /api/org/outcomes`
+records an analyst's label for one observation; both are described in their
+own sections below. Outcomes affect explainable reputation lookups and
+campaign counts only; there is no live retraining.
 
 ### Errors
 
@@ -391,16 +409,16 @@ explainable reputation lookups only; there is no live retraining.
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
 | `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
 | `400` | `{ "error": "emailContext.<field> ..." }` | invalid `emailContext` (wrong type, unparsable address, too many entries) |
-| `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is no longer an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
+| `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is not an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
 | `413` | `{ "error": "request body is too large" }` | the body exceeds the route's JSON limit. This applies to every route and is mapped in `backend/src/services/http-errors`. Malformed JSON is `400 { "error": "invalid JSON body" }`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
 
 ## `POST /api/analyze/screenshot`
 
-Not in the original placeholder contract — added to wire up screenshot/OCR
-ingestion (`backend/src/services/ocr/`, tesseract.js `eng+fra`). Runs OCR,
-redacts the extracted text server-side, then runs it through the same
-`runPipeline()` as `/api/analyze` (with `analysis.source: "screenshot"`).
+Screenshot/OCR ingestion (`backend/src/services/ocr/`, tesseract.js
+`eng+fra`). Runs OCR, redacts the extracted text server-side, then runs it
+through the same `runPipeline()` as `/api/analyze` (with
+`analysis.source: "screenshot"`). The image is not stored.
 
 ### Request
 
@@ -443,7 +461,7 @@ memory client-side and submitted to `/api/analyze` once "Check" is pressed.
 
 ## `POST /api/analyze/document`
 
-**Additive (2026-09-23).** Document forensics for PDF/DOCX. The route looks
+Document forensics for PDF/DOCX. The route looks
 for structural warning signs in an uploaded PDF or Word (.docx) file: a
 signature pasted onto a scan, text typed onto a scan, a change after
 digital signing, editing-tool metadata, hidden text and active content. It
@@ -571,13 +589,10 @@ Their legacy `type` has the form `document_*`.
 - **DX-1** (+15, applied once) combines a forgery artefact with ID-01..04 or
   PAY-01..07. The forgery artefacts are DOC-04 (not the DOCX variant),
   DOC-05, DOC-08 and DOC-02 `after_signature`.
-- **`FLOOR-DOC-FORGED-INSTITUTION` was removed (2026-09-23).** A single
-  heuristic structural signal forcing a hard `high`/`scam` verdict on a
-  claimed-institution document was judged too confident given known
-  false-positive rates in this problem space (see
-  `docs/DOCUMENT-FORENSICS.md`) — these signals now only ever contribute
-  points via DX-1 and their own weights below, like every other signal in
-  this app, never an automatic floor.
+- There is no document-specific floor. A single heuristic structural signal
+  never forces a `high`/`scam` verdict on a claimed-institution document;
+  DOC-* signals contribute only through their own weights and DX-1 (see
+  `docs/DOCUMENT-FORENSICS.md`).
 - Each weak signal alone stays `low`. Alone, DOC-04 (transparent or
   upscaled), DOC-05, DOC-02 after-signing and the high-severity DOC-07 variants
   reach `elevated`, never `high`.
@@ -686,7 +701,7 @@ no retention period and no delete route.
 | `400` | `{ "error": "document could not be decoded as base64" }` | decoding `document` (after stripping any `data:...;base64,` prefix) produces a zero-length buffer |
 | `400` | `{ "error": "document exceeds maximum size of 15MB" }` | decoded buffer exceeds 15MB |
 | `400` | `{ "error": "document must be a valid PDF, PNG, JPEG, or WEBP file (checked by content, not the declared type)" }` | magic-byte sniff doesn't match any supported type |
-| `429` | `{ "error": "too many document-check requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min — its own bucket, since Part 2's forensics pipeline adds local model inference on top of OCR) |
+| `429` | `{ "error": "too many document-check requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min, its own counter, separate from the analyze routes) |
 
 A failure of OCR itself is not an error for this route: ingestion has
 already succeeded and the bytes are safely stored by the time OCR runs, so
@@ -712,11 +727,11 @@ already succeeded and the bytes are safely stored by the time OCR runs, so
 ```
 
 Each message runs through `runPipeline()` (`analysis.source: "batch"`).
-**An LLM outage no longer fails an item**: the item still gets a normal
+**An LLM outage does not fail an item**: the item still gets a normal
 deterministic assessment (`analysis.semantic.status: "unavailable"`) and is
 counted in scam/suspicious/safe as usual.
 
-`verdict: "unknown"` + `analysisFailed: true` is now reserved for an
+`verdict: "unknown"` + `analysisFailed: true` is reserved for an
 *unexpected* pipeline error on that item. Such an item is synthesized as
 `{ message, verdict: "unknown", signals: [], suggestedAction: "verify_official_channel", explanation: "Analysis failed for this message.", analysisFailed: true }`
 and is counted only in `unanalyzedCount`, never in the three real verdict
@@ -738,9 +753,8 @@ per-message as described above.
 
 ## `POST /api/check-sender`
 
-Not in the original placeholder contract — added as the read-only
-counterpart to `/api/report` (which increments the count as a side effect).
-Built for the "Before You Pay" flow: it needs to show "this recipient has
+The read-only counterpart to `/api/report` (which increments the count as
+a side effect). Used by the "Before You Pay" flow to show "this recipient has
 been reported N times" for a payment recipient identifier the user typed in,
 without that lookup itself inflating the count. Reuses `getReportCount()`
 (`backend/src/db/index.js`) — the exact same lookup and normalization
@@ -778,7 +792,7 @@ arbitrary identifier instead of only one the LLM extracted.
 ```json
 {
   "sender": "string, required, non-empty",
-  "message": "string, optional — the (client-redacted) message text. NEW: when present and ≤ 5000 chars, it is re-redacted server-side and reduced to one-way fingerprints (template hash + SimHash + lookalike hosts) for community cluster/wave detection. The text itself is never stored. Oversized/non-string values are ignored, not rejected.",
+  "message": "string, optional — the (client-redacted) message text. When present and ≤ 5000 chars, it is re-redacted server-side and reduced to one-way fingerprints (template hash + SimHash + lookalike hosts) for community cluster/wave detection. The text itself is never stored. Oversized/non-string values are ignored, not rejected.",
   "reportedBy": "string, optional — accepted but currently unused server-side"
 }
 ```
@@ -807,24 +821,22 @@ client IP; raw IP never stored) and deleted after 90 days
 (`MCB`, `my.t`, ...) or a redaction placeholder still increment `reportCount`
 as before, but never count toward that sender's community reputation.
 
-**Normalization note (no shape change):** `reportCount` now deduplicates
+**Normalization note (no shape change):** `reportCount` deduplicates
 internally via a normalized, digits-only canonical key (`backend/src/db/index.js`),
 assuming the `230` Mauritius country code for 8-digit local numbers. So
 `"+230 5789 1234"`, `"+23057891234"`, and `"57891234"` all accumulate against
 the same underlying count instead of three independent rows. The `sender`
-field in the response is unaffected — it still echoes back the raw string
-exactly as submitted; only the counting behavior changed.
+field in the response echoes back the raw string exactly as submitted.
 
 ## `POST /api/check-url`
 
 Used by the browser extension. A bare hostname/URL isn't a scam "message" to
-run through the LLM, and the extension needs a fast, synchronous
-per-navigation check, so this route calls only the non-LLM domain-matching
-check (`checkUrls()`, `backend/src/services/domain-matching/index.js`) — the
-exact same function `/api/analyze` uses for its `lookalike_url` signals.
-This is an **additive** change to the locked contract (new route, no
-existing route's shape changed) — flagged to Oleg/Dhruv per the lock policy
-above, not a silent break.
+run through the LLM, and the extension needs a fast per-navigation check, so
+this route skips `runPipeline()` and calls `assessUrl()`
+(`backend/src/services/url-reputation/index.js`). That runs the same
+non-LLM domain-matching check `/api/analyze` uses (`checkUrls()`), selected
+link-hygiene rules, the local threat-intel list, the sender-report count for
+the host, and a domain-age lookup.
 
 ### Request
 
@@ -849,21 +861,37 @@ above, not a silent break.
 | Status | Body | When |
 |---|---|---|
 | `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
+| `400` | `{ "error": "url exceeds maximum length of 2048 characters" }` | `url.length > 2048` |
 | `429` | `{ "error": "too many check-url requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min) |
+| `500` | `{ "error": "link check failed, try again shortly" }` | unexpected internal error |
+
+**Contract gap (open).** The implementation returns more than the response
+above describes, and the extension already reads the extra fields
+(`extension/api.js`, `extension/popup.js`):
+
+- Top-level fields not listed above: `host` (string or null),
+  `reportCount` (number), `officialInstitution` (string or null), `trusted`
+  (boolean), `domainAgeDays` (number or null) and `version`
+  (`"url-rep-1.0"`).
+- Each `signals[]` item is a full Signal object (see `/api/analyze`), and
+  `type` is not always `"lookalike_url"`: link-hygiene, threat-intel and
+  domain-age findings carry their own types and codes.
+
+The frontend/UI owner, extension owner and backend owner should agree
+whether to document these fields as part of the contract or to narrow the
+response.
 
 ## `POST /api/analyze-site`
 
-Not in the original placeholder contract — added for the extension's
-**Security Report** feature (`extension/README.md`). Passive-only: this
+The extension's **Security Report** feature (`extension/README.md`).
+Passive-only: this
 route never sends crafted payloads, fuzzes, or brute-forces the target
 site — see `backend/src/services/site-security/index.js`'s header comment
 for the exact constraint. `url` is attacker-influenced input (this is a
 public route), so it's validated against an SSRF guard
 (`backend/src/services/site-security/url-safety.js`) before any outbound
 request; a malformed or private/internal-resolving URL is a `400`, not a
-silent no-op. This is an **additive** change to the locked contract (new
-route, no existing route's shape changed) — flagged to Oleg/Dhruv per the
-lock policy above, not a silent break.
+silent no-op.
 
 ### Request
 
@@ -880,11 +908,12 @@ lock policy above, not a silent break.
 
 ```json
 {
-  "url": "string — echoed back from the request",
+  "url": "string — the request's url after parsing (normalised, e.g. a trailing slash added), not a byte-for-byte echo",
   "finalUrl": "string | null — the URL actually reached after following redirects, or null if the site could not be reached at all",
   "grade": "\"A\" | \"B\" | \"C\" | \"D\" | \"F\" | \"N/A\" — N/A only when the site could not be reached",
   "score": "number | null — 0-100, null only alongside grade \"N/A\"",
   "scannedAt": "string — ISO timestamp of the server-side scan",
+  "findings": [
     {
       "category": "string — e.g. \"headers\" | \"framing\" | \"cors\" | \"policy\" | \"disclosure\" | \"tls\" | \"cookies\" | \"exposed-artifacts\" | \"injection-signal\" | \"client-dom\" | \"sri\" | \"credentials\" | \"mixed-content\" | \"forms\" | \"vulnerable-library\" | \"third-party\" | \"api-surface\" | \"network\" | \"coverage\"",
       "severity": "\"info\" | \"low\" | \"medium\" | \"high\"",
@@ -920,6 +949,7 @@ routes. Only a genuinely unsafe/malformed `url` is a `400`.
 | `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
 | `400` | `{ "error": "<SSRF-guard message>" }` | `url` isn't http(s), resolves to a private/loopback/reserved address, or can't be resolved at all |
 | `429` | `{ "error": "too many security-report requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min — tighter than check-url since each call makes roughly a dozen outbound requests to the target site) |
+| `500` | `{ "error": "security report failed, try again shortly" }` | unexpected internal error |
 
 Scoring: the score starts at 100. Each kind of finding costs 25 / 10 / 4 / 0
 (high / medium / low / info); repeats of the same kind (e.g. the same cookie
@@ -928,11 +958,98 @@ category is capped at 35. Grade: A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, else F.
 `summary.categories[].points` are these capped values, so they always sum to
 `100 - score`.
 
+## `GET /api/org/campaigns`
+
+Organisation-scoped campaign list for the Outlook analyst view. The demo has
+one configured organisation (`services/workplace-registry`); callers cannot
+choose an organisation id. No request body. Read-only, non-LLM.
+
+### Response — `200 OK`
+
+```jsonc
+{
+  "organisationId": "string — the configured demo organisation",
+  "campaigns": [
+    {
+      "campaignId": "OC-<12 hex>",          // stable per organisation + indicator
+      "indicator": "string — the shared indicator, e.g. \"link:<host>\" (type prefix before the first colon)",
+      "indicatorType": "string — e.g. sender_domain, link, account, payee",
+      "messages": 3,                       // distinct flagged observations
+      "senders": 2,                        // distinct pseudonymous senders
+      "recipients": 2,                     // distinct pseudonymous recipients
+      "firstSeen": "ISO timestamp",
+      "lastSeen": "ISO timestamp",
+      "rulesVersion": "org-campaign-1.0"
+    }
+  ]
+}
+```
+
+Only campaigns that meet the rules in "Organisation intelligence and
+verification" are listed (at least 3 flagged observations in the last 14
+days, plus two recipients, two senders, or a strong account/payee/link
+indicator), sorted by `messages` descending. Observations whose consensus
+outcome label is `legitimate` or `false_positive` are left out. An empty
+database returns `"campaigns": []`.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `429` | `{ "error": "too many check-sender requests, try again shortly" }` | shares the 120 req/15min read counter |
+
+## `POST /api/org/outcomes`
+
+Records an analyst's outcome label for an email the organisation already
+analysed. One label per analyst per observation; a later label from the same
+analyst replaces the earlier one. The analyst is identified by an HMAC
+pseudonym of the client IP. There is no authentication.
+
+### Request
+
+```json
+{
+  "observationId": "string, required — 64 lowercase hex characters, the analysis.organisation.observationId of an email result",
+  "label": "string, required — one of the labels below"
+}
+```
+
+Labels: `confirmed_phishing`, `confirmed_bec`, `supplier_impersonation`,
+`false_positive`, `legitimate`, `insufficient_evidence`, and, kept for
+compatibility, `confirmed_fraud` and `suspicious_unconfirmed`.
+
+### Response — `200 OK`
+
+```jsonc
+{
+  "inputHash": "string — the observationId",
+  "label": "string — the label just recorded",
+  "consensus": "string — the most common label across analysts (latest wins a tie)",
+  "votes": 1                               // number of analysts who labelled it
+}
+```
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "observationId must be a 64-character hexadecimal identifier" }` | missing or malformed `observationId` |
+| `400` | `{ "error": "label must be one of: ..." }` | `label` not in the list |
+| `404` | `{ "error": "organisation observation not found" }` | no stored observation with that id |
+| `429` | `{ "error": "too many report submissions from this address, try again later" }` | shares the 5 req/hour counter with `/api/report` |
+
+## `GET /health`
+
+Liveness check. No request body, no rate limit. Always `200`:
+
+```json
+{ "status": "ok" }
+```
+
 ## `GET /health/llm`
 
-Not in the original placeholder contract, but load-bearing for the demo —
-this is the pre-demo check for which provider will actually serve
-`/api/analyze` right now. Do not call this during the live demo flow itself.
+The pre-demo check for which provider will actually serve `/api/analyze`
+right now. Do not call this during the live demo flow itself.
 
 ### Response — `200 OK`
 
@@ -949,78 +1066,76 @@ this is the pre-demo check for which provider will actually serve
 There is no error status for this route — it always resolves 200, with
 `reachable: false` when Ollama is down.
 
+## `GET /health/document-forensics`
+
+Whether the optional Python document-forensics service
+(`document-forensics/`, `DOCUMENT_FORENSICS_URL`) answers its own `/health`
+within 3 seconds. No request body, no rate limit. Always `200`:
+
+```json
+{ "reachable": "boolean" }
+```
+
+`false` does not mean `POST /api/documents` fails; it means that route will
+return `forensics.status: "unavailable"`.
+
 ## Known Gaps
 
-Flagging these so Oleg/Dhruv/extension know what's stable to build against
-versus what's likely to change before the demo:
+Current limitations of the implemented API. Each one is open unless it says
+otherwise.
 
-- **Email analysis has a read-mode Outlook add-in (`outlook-addin/`).** It
-  analyses only the selected message after the user clicks the task-pane
-  button. Microsoft Graph integration and mailbox polling do not exist.
-  The supplier registry and organisation directory are **demo data**
-  (`data/demo-*.json`) - there is no admin API to load real vendor/directory
-  data yet. The email body shares `/api/analyze`'s 5000-character limit, so
-  the add-in trims long bodies to 4800 characters after removing recognisable
-  quoted history. EMAIL-10 ("new sender") only knows a
-  supplier's addresses on record - there is no per-mailbox sender history.
-  `extension/` and `frontend/` do not render email-specific UI; the Outlook
-  task pane does. Email
+- **No authentication on any route.** There is no user or session concept.
+  See `checklist.md` § Security.
+- **Stored documents.** `POST /api/documents` and (for PDFs)
+  `POST /api/analyze/document` store original file bytes in SQLite,
+  unencrypted, with no retention period and no delete route. No route
+  returns them.
+- **Organisation outcomes are unauthenticated.** Any caller can post a
+  `legitimate` or `false_positive` label for an observation id, which removes
+  that observation from `GET /api/org/campaigns` counts. The only protection
+  is the shared 5 req/hour report limit.
+- **`POST /api/check-url` returns more than this contract describes.** See
+  that route's "Contract gap".
+- **`POST /api/documents` echoes an internal error.** `forensics.reason` is
+  the error message from the call to the Python service, which can include up
+  to 200 characters of that service's error body.
+- **Email analysis is read-mode only (`outlook-addin/`).** It analyses only
+  the selected message after the user clicks the task-pane button. There is
+  no Microsoft Graph integration or mailbox polling. The supplier registry and
+  organisation directory are **demo data** (`data/demo-*.json`) with no admin
+  API to load real data. The email body shares `/api/analyze`'s 5000-character
+  limit, so the add-in trims long bodies to 4800 characters after removing
+  recognisable quoted history. EMAIL-10 ("new sender") only knows a
+  supplier's addresses on record; there is no per-mailbox sender history.
+  `extension/` and `frontend/` do not render email-specific UI; email
   signals arrive in the normal `signals[]` with legacy `type` values the
   frontend already maps.
-
-- **`riskCategories` and `IDENTITY_MISMATCH`/`identity_check` evidence are
-  now computed on all three analyze routes** (`/api/analyze`,
-  `/api/batch-scan`, `/api/analyze/screenshot` — the last one wired in
-  2026-09-22, verified live with a real ImageMagick-generated PNG against
-  the dev server: OCR extraction → local-model analysis → `riskCategories`
-  + `IDENTITY_MISMATCH` all present, same pattern as the manual
-  verification method already used for this route per the note below on
-  it having no automated HTTP test). No remaining route gap for these two
-  fields as of 2026-09-22.
-- **Extending `/api/batch-scan` to compute these (2026-09-22) surfaced a
-  real, pre-existing bug**: `summarizeBatch()`
-  (`backend/src/services/batch/index.js`) was destructuring only five
-  known fields (`verdict`/`signals`/`suggestedAction`/`explanation`/
-  `analysisFailed`) off whatever the `analyze()` callback returned and
-  rebuilding a new object from just those — silently dropping `riskScore`,
-  `sender`, and `senderReports` from every batch result even before this
-  session's changes existed, and would have dropped the new
-  `riskCategories` too. Fixed to spread the full result through instead.
-  Batch results now carry the same fields single-message `/api/analyze`
-  does (verified live: `riskScore`, `sender`, `senderReports`,
-  `riskCategories`, and `IDENTITY_MISMATCH` all present per-result).
-- **`/api/report`'s `message` and `reportedBy` fields are accepted in the
-  request shape but silently ignored** — nothing is persisted beyond the
-  `sender` string and its report count (`backend/src/db/index.js` only has a
-  `reports(sender, report_count)` table). If the crowdsourced feed needs to
-  show reported message content later, this will change.
-- **`/api/batch-scan` now reports a dedicated `verdict: "unknown"` for a
-  per-message analysis failure** (was `"suspicious"`) — `signals[].verdict`
-  can be `safe | suspicious | scam | unknown` for this route specifically;
-  `/api/analyze`'s `VERDICTS` (`backend/src/services/analysis/index.js`) is
-  unchanged at `safe | suspicious | scam`, since the LLM itself never
-  produces `"unknown"` — only the batch failure-synthesis path in
-  `backend/src/routes/index.js` does. `analysisFailed: boolean` and the
-  summary's `unanalyzedCount` are unchanged and remain the authoritative
-  signal; `verdict: "unknown"` is consistent with them, not a second source
-  of truth. Frontend types/`api.ts` runtime validation
-  (`frontend/lib/types.ts`, `frontend/lib/api.ts`) were updated to accept
-  `"unknown"` on `BatchScanResult.verdict` only.
-- **`suggestedAction` is now a fixed policy value** (2026-09-23): one of
-  `"block_sender, report_to_bank"`, `"verify_official_channel"`, `"none"`,
-  set by `services/interventions` from the deterministic risk level. The
-  concrete, per-signal advice is in `actions[]` (`{ id, text }`).
-- **Registry domains are unverified** — `data/institution-registry.json`
-  entries carry `verification.status: "unverified"` until someone checks
-  each domain on the institution's own website. `official_phones` is
-  empty on purpose (nothing verified yet).
+- **`/api/report` accepts `reportedBy` but ignores it.** Its `message` is
+  reduced to fingerprints for community detection and not stored.
+- **`verdict: "unknown"` exists only on `/api/batch-scan` items**, for an
+  unexpected pipeline error on that item (`analysisFailed: true`, counted in
+  `unanalyzedCount`). `/api/analyze` never returns it.
+- **Registry domains are unverified.** Every `data/institution-registry.json`
+  entry carries `verification.status: "unverified"` until someone checks each
+  domain on the institution's own website. `official_phones` is empty on
+  purpose.
 - **OCR quality reaches the engine only for documents.** The document route
-  passes `ocrQuality` when it had to OCR a scan. The screenshot route still
-  does not compute it.
+  passes `ocrQuality` when it had to OCR a scan. The screenshot route does
+  not compute it.
+- **`/api/analyze/screenshot` has no HTTP-level automated test.**
+  `backend/src/services/ocr/index.test.js` covers `extractTextFromImage` and
+  `cleanExtractedText` directly.
+- **Tesseract has no Kreol Morisien language pack.** OCR runs with
+  `eng+fra`, which covers Kreol's Latin script but is not Kreol-tuned.
+  Recheck against the Kreol owner's dataset once real Kreol screenshots are
+  available.
+- **Rate limits are in-process.** They reset when the backend restarts and
+  are not shared between instances.
 - **Document forensics limits** (`POST /api/analyze/document`):
   - Metadata can be stripped or forged, so DOC-01/03 prove nothing on their own.
   - A forgery that was printed and scanned again leaves no structural trace.
-  - There is no pixel-level error-level analysis.
+  - There is no error-level analysis or ML model on this route (the Python
+    service used by `/api/documents` has them).
   - PDF annotations (e.g. form fields filled on a scan) and XFA forms are not
     inspected.
   - For PDFs with permissions-only encryption, the active-content scan is
@@ -1032,39 +1147,8 @@ versus what's likely to change before the demo:
     larger than that is cut short by Next and comes back as a generic proxy 500
     rather than the backend's 413. The web app never sends one: it refuses
     files over 10MB before uploading.
-- **No auth on any route** — ties to the open items in `checklist.md` §
-  Security. Every route is currently unauthenticated; there's no user/session
-  concept in the app at all yet, so this only matters once one is added.
-- **Rate limiting and bot protection are now in place** (`express-rate-limit`,
-  applied per-route in `backend/src/routes/index.js`): 20 req/15min for
-  `/api/analyze` and `/api/analyze/screenshot`, 10 req/15min for
-  `/api/batch-scan`, 120 req/15min for `/api/check-url`, and a much tighter
-  5 req/hour for `/api/report` specifically as bot protection for the
-  crowdsourced feed. All limits are per-IP and return `429` with
-  `{ "error": "..." }` plus standard `RateLimit-*` headers when exceeded —
-  callers should treat 429 as a distinct, retryable case.
-- **Security headers are now set** via `helmet()` in `backend/src/index.js`
-  (CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS,
-  etc.) on every response, including `/api/*`.
-- **`/api/analyze`, `/api/analyze/screenshot`'s top-level failure, and the
-  final error-handling middleware no longer pass through raw `err.message`**
-  — they return a generic `{ "error": "..." }` string and log the real error
-  server-side with `console.error`. `/api/batch-scan`'s per-message
-  failure `explanation` is now a fixed string ("Analysis failed for this
-  message.") — no `err.message` is returned.
-- **`/api/analyze/screenshot` has no automated tests yet** — verified
-  manually (real PNG generated with ImageMagick, plus missing/non-image/
-  blank-image/oversized/data-URI-prefix cases) against the dev server, but
-  unlike the other routes there's no `services/ocr/` integration test
-  exercising it through the HTTP layer. `services/ocr/index.test.js`
-  covers `extractTextFromImage`/`cleanExtractedText` directly.
-- **Tesseract has no dedicated Kreol Morisyen language pack** — OCR runs
-  with `eng+fra`, which covers Kreol's Latin-script text well enough per
-  `services/ocr/index.js`'s comment, but isn't Kreol-tuned. Recheck with
-  Joshua's dataset once real Kreol screenshots are available to test
-  against.
 
-## P1 campaign intelligence (additive)
+## Campaign intelligence
 
 The three analysis routes (`POST /api/analyze`, `/api/analyze/screenshot`,
 `/api/batch-scan` per-message results) optionally include:
@@ -1129,32 +1213,7 @@ must belong to that type's `typicalStages`. `turnIndex` is a non-negative safe
 integer, starting at zero. Invalid input returns 400. Body limit 10kb;
 30 requests / 15 minutes / IP, 429 when exceeded.
 
-### GET /api/trends
-
-Read-only, non-LLM, no request body. Real aggregate counts for the Radar
-page — every number comes from the `reports` and `scam_dna*` tables
-(`backend/src/db/index.js`'s `getTrendSummary()`); nothing here is
-synthesized or seeded for demo effect. On a fresh/empty database every array
-is `[]` and every total is `0` — the frontend must render that honestly
-(see `checklist.md` / root `CLAUDE.md`'s "no fake live statistics" rule),
-not pad it with invented activity.
-
-```ts
-{
-  totals: { reportedSenders: number; totalReports: number; campaigns: number; domains: number };
-  topSenders: { sender: string; reportCount: number }[]; // top 5 by reportCount
-  topCampaigns: { fingerprintId: string; scamType: string; claimedIdentity: string | null; messageCount: number }[]; // top 5 by messageCount
-  scamTypeCounts: { scamType: string; campaigns: number; messages: number }[]; // one row per scamType observed, no fixed order guarantee beyond messages DESC
-}
-```
-
-`topSenders.sender` is masked to its last 4 digits (`"•••• 1234"`) when the
-underlying identifier is phone-number-shaped (6+ digits); a brand/identity
-name (`"MCB"`) is shown as-is, since it isn't personally identifying. This is
-a public leaderboard, unlike `POST /api/check-sender`'s exact-match lookup —
-it surfaces senders nobody specifically searched for, hence the masking.
-Shares the 120 requests / 15 minutes / IP read limiter used by
-`/check-sender` and `/campaign/:fingerprintId`.
+Response `200 OK`:
 
 ```ts
 {
@@ -1186,3 +1245,30 @@ uses a deterministic example selected by `turnIndex` (no 502). Tactic labels
 and explanations always come from the fixed playbook, never the model.
 Live LLM latency and hosted-fallback reachability still need a pre-demo check;
 the scripted fallback keeps the lesson available during an outage.
+
+### GET /api/trends
+
+Read-only, non-LLM, no request body. Real aggregate counts for the Radar
+page — every number comes from the `reports` and `scam_dna*` tables
+(`backend/src/db/index.js`'s `getTrendSummary()`); nothing here is
+synthesized or seeded for demo effect. On a fresh/empty database every array
+is `[]` and every total is `0` — the frontend must render that honestly
+(see `checklist.md` / root `CLAUDE.md`'s "no fake live statistics" rule),
+not pad it with invented activity.
+
+```ts
+{
+  totals: { reportedSenders: number; totalReports: number; campaigns: number; domains: number };
+  topSenders: { sender: string; reportCount: number }[]; // top 5 by reportCount
+  topCampaigns: { fingerprintId: string; scamType: string; claimedIdentity: string | null; messageCount: number }[]; // top 5 by messageCount
+  scamTypeCounts: { scamType: string; campaigns: number; messages: number }[]; // one row per scamType observed, no fixed order guarantee beyond messages DESC
+}
+```
+
+`topSenders.sender` is masked to its last 4 digits (`"•••• 1234"`) when the
+underlying identifier is phone-number-shaped (6+ digits); a brand/identity
+name (`"MCB"`) is shown as-is, since it isn't personally identifying. This is
+a public leaderboard, unlike `POST /api/check-sender`'s exact-match lookup —
+it surfaces senders nobody specifically searched for, hence the masking.
+Shares the 120 requests / 15 minutes / IP read limiter used by
+`/check-sender` and `/campaign/:fingerprintId`.
