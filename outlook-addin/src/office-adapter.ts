@@ -125,11 +125,12 @@ export async function buildAnalyzePayload(bridge: OutlookBridge = defaultBridge(
       bodyTruncated: prepared.truncated,
       quotedContextRemoved: prepared.removedQuotedContent,
       headersAvailable: headerResult.available,
-      unavailable: [
-        ...(!headerResult.available ? ["internet headers, Reply-To and Return-Path"] : []),
-        "conversation sender history",
-        "mailbox-wide sender history",
-      ],
+      // Conversation/mailbox-wide sender history is never available from
+      // this bounded ReadItem-only client (threadContext/senderContext are
+      // always null, see types.ts) - listing it here would repeat the same
+      // two lines on every single result, so it's left out rather than
+      // shown as if it varied.
+      unavailable: [...(!headerResult.available ? ["internet headers, Reply-To and Return-Path"] : [])],
     },
   };
 }
