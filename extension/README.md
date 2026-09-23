@@ -385,7 +385,7 @@ plans to show it. Before the demo, a human should walk through:
       no result cache), and neither shows a **Cached result** tag.
 12. **Permissions sanity**: in `chrome://extensions` → Details → confirm the
     permissions list matches `manifest.json` (`tabs`, `contextMenus`,
-    `storage`, `activeTab`, `scripting`, plus the `api.159-195-245-28.sslip.io` host
+    `storage`, `activeTab`, `scripting`, plus the `api.fraudlens.site` host
     permission) — no unexpected broad host access.
 
 ## Demo note (differentiator: domain/lookalike-URL matching)

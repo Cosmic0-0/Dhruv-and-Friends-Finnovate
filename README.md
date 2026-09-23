@@ -172,7 +172,7 @@ project gap rather than presented as a passing check.
 The application is still a hackathon prototype. It has no accounts or tenant
 isolation, uses a shared SQLite database, and exposes aggregate campaign/trend
 data publicly. The extension points at the deployed backend
-(`https://api.159-195-245-28.sslip.io`). For local work, point `extension/config.js`
+(`https://api.fraudlens.site`). For local work, point `extension/config.js`
 and the manifest's `host_permissions` back at `http://localhost:4000`.
 Set `NEXT_PUBLIC_SITE_URL`, `BACKEND_URL`, `REPORTER_HASH_SECRET`, and a tested LLM
 fallback before sharing a production URL.
