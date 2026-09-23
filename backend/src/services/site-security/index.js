@@ -28,6 +28,8 @@
 
 import { fetchOnce } from "./fetcher.js";
 import { probeTls } from "./tls.js";
+import { classifySiteIntent } from "./intent.js";
+import { assessUrl } from "../url-reputation/index.js";
 import { assertPublicHttpUrl, UnsafeUrlError } from "./url-safety.js";
 import {
   checkSecurityHeaders,
@@ -172,6 +174,38 @@ async function serverScan(parsedUrl) {
   return { finalUrl: mainResult.finalUrl, scannedAt: new Date().toISOString(), findings };
 }
 
+const REPUTATION_TIMEOUT_MS = 5000;
+
+// Where a server-side finding comes from, for the report's "Where" line.
+// These aren't in page code: they're in the server's response or TLS setup,
+// which is where the fix goes (web server / CDN configuration).
+const SERVER_SOURCE = {
+  headers: "HTTP response headers",
+  cors: "HTTP response headers",
+  policy: "HTTP response headers",
+  framing: "HTTP response headers",
+  cookies: "Set-Cookie response headers",
+  disclosure: "HTTP response headers",
+  tls: "TLS certificate and handshake",
+  network: "HTTP to HTTPS redirect",
+  "exposed-artifacts": "Publicly reachable file",
+  "injection-signal": "Page HTML returned by the server",
+};
+
+function withServerLocation(finding, pageUrl) {
+  const source = SERVER_SOURCE[finding.category];
+  if (!source || finding.locations) return finding;
+  return { ...finding, locations: [{ file: `${source} · ${pageUrl}`, code: finding.evidence ?? "(not present in the response)" }] };
+}
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error("timed out")), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 /** Honest notes about what this report could NOT see. Informational only - they never cost points. */
 function coverageFindings(clientSignals, clientCollectionError, now) {
   const findings = [];
@@ -207,18 +241,22 @@ function coverageFindings(clientSignals, clientCollectionError, now) {
  * Throws UnsafeUrlError for a malformed/unsafe url (400). Never throws for a well-formed public URL that
  * merely fails to load.
  */
-export async function analyzeSite(url, clientSignals, { clientCollectionError, now = Date.now() } = {}) {
+export async function analyzeSite(url, clientSignals, { clientCollectionError, now = Date.now(), reputation = assessUrl } = {}) {
   const parsedUrl = await assertPublicHttpUrl(url);
+  // Reputation (who runs the site) runs alongside the scan (how it's built);
+  // capped and fail-open so it can never hold up or break the report.
+  const reputationPromise = withTimeout(Promise.resolve().then(() => reputation(parsedUrl.href)), REPUTATION_TIMEOUT_MS).catch(() => null);
   const server = await serverScan(parsedUrl);
 
   const reachable = server.finalUrl !== null;
   const hasClientSignals = Boolean(clientSignals && typeof clientSignals === "object") && !clientCollectionError;
   const findings = withRecommendations([
-    ...server.findings,
+    ...server.findings.map((f) => withServerLocation(f, server.finalUrl ?? parsedUrl.href)),
     ...mapClientSignals(clientSignals),
     ...coverageFindings(clientSignals, clientCollectionError, now),
   ]);
   const { grade, score } = reachable ? computeGrade(findings) : { grade: "N/A", score: null };
+  const siteReputation = await reputationPromise;
 
   return {
     url: parsedUrl.href,
@@ -226,6 +264,17 @@ export async function analyzeSite(url, clientSignals, { clientCollectionError, n
     grade,
     score,
     scannedAt: server.scannedAt,
+    // Badly built vs hostile: see intent.js.
+    intent: classifySiteIntent({ reputation: siteReputation, grade, findings }),
+    reputation: siteReputation
+      ? {
+          signals: siteReputation.signals,
+          officialInstitution: siteReputation.officialInstitution,
+          domainAgeDays: siteReputation.domainAgeDays,
+          firstCertificateDays: siteReputation.firstCertificateDays,
+          certificate: siteReputation.certificate,
+        }
+      : null,
     findings,
     summary: summarizeReport(findings, { reachable, clientSignals: hasClientSignals }),
     // Every check that was run (or couldn't be), with pass/fail - most pressing first.

@@ -78,7 +78,7 @@ test("wave of 5 distinct reporters -> REP-02 registry signal scored by the engin
   assert.equal(adj.levelTo, "critical");
   const audit = db.prepare("SELECT * FROM risk_audit_log WHERE id = ?").get(adj.auditRef);
   assert.equal(audit.rule_id, "CW-2");
-  assert.equal(audit.rules_version, "wave-rules-v2+rs-1.4");
+  assert.equal(audit.rules_version, "wave-rules-v2+rs-1.5");
   assert.equal(audit.verdict_from, adj.levelFrom);
   assert.equal(audit.verdict_to, "critical");
   assert.equal(JSON.parse(audit.evidence_event_ids).length, 5);

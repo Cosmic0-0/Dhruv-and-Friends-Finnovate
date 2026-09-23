@@ -53,6 +53,7 @@ assessment**; `analysis.semantic.status` says which.
   "message": "string, required, 1-5000 characters",
   "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
   "pageUrl": "string, optional — the URL of the page `message` was extracted from (e.g. the extension's \"Scan This Page\"). Used ONLY to derive a hostname so links to the scanned page's own site are not flagged as \"not an official domain\" relative to itself (URL-08); never fetched, never treated as a claim about the message, and a malformed value is silently ignored rather than rejected.",
+  "pageForms": "array, optional, at most 10 — Scan This Page only, ignored without pageUrl: [{ actionHost: string|null (where a password/card form submits; null = the page itself), hasPassword: boolean, hasCard: boolean }]. Field values are never sent. Feeds URL-10. A malformed value is a 400.",
   "paymentContext": {
     "amount": "number >= 0, optional",
     "currency": "string <= 200, optional",
@@ -100,7 +101,7 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.4",
+    "rulesetVersion": "rs-1.5",
     "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
     "inputHash": "sha256 of the normalised (already redacted) text",
     "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
@@ -148,14 +149,18 @@ and never shown or scored.
 
 | Code | Meaning | Emitted by |
 |---|---|---|
-| URL-01 | Lookalike of an official domain (edit distance scaled by label length) | rule |
-| URL-02 | Brand token as the registrable label of an unofficial domain | rule |
+| URL-01 | Lookalike of an official domain (edit distance scaled by label length), or of a global brand in `data/global-brands.json` (visual fold, or a typo keeping the first letter) | rule |
+| URL-02 | Brand token as the registrable label of an unofficial domain; for global brands, the brand (plain or disguised) as one hyphen part (`micros0ft-login.com`) | rule |
 | URL-03 | Brand in subdomain or path of an unrelated host | rule |
-| URL-04 | Punycode / homoglyph host | rule |
+| URL-04 | Punycode / homoglyph host (NFKC + confusables skeleton; names the institution or global brand imitated when it matches) | rule |
 | URL-05 | URL shortener (weak) | rule |
 | URL-06 | Raw IP link | rule |
 | URL-07 | `user@host` link disguise | rule |
 | URL-08 | Verify/log-in/claim call-to-action through an unofficial link | rule |
+| URL-10 | Scan This Page: the page text claims a known institution, the page is not its official site, and a password/card form submits cross-site to a host that is neither official nor on the trusted-domains list (SSO). High; rs-1.5 weight 30 plus floor FLOOR-URL10-CREDENTIAL-FORM | rule |
+| URL-11 | `/api/check-url` only: the site runs on a tunnel or dynamic-DNS host (ngrok, trycloudflare, duckdns, no-ip …). Medium; no risk-engine weight | rule |
+| CERT-01 | `/api/check-url` only: the site's TLS certificate is expired, not yet valid, self-signed, issued for another host, or not trusted. A missing intermediate alone (browsers fill it in) is not reported. High; no risk-engine weight | rule |
+| CERT-02 | `/api/check-url` only: a lookalike host (URL-01..04) whose certificate was issued in the last 7 days. Medium; never fires without a lookalike | rule |
 | ID-01 | Claimed registry institution, link to a non-official host (subdomains of an official domain are official) | rule |
 | ID-02 | Claimed institution, payment beneficiary is someone else | rule |
 | ID-03 | Suspicious sender identity (reserved) | – |
@@ -173,7 +178,7 @@ and never shown or scored.
 | EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
 | DOC-01..DOC-08 | Structural evidence in an uploaded PDF/DOCX - see `POST /api/analyze/document` | rule (document forensics) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.4`)
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.5`)
 
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
@@ -194,6 +199,11 @@ claim combined with free/cracked-download bait language). Deliberately not
 inflated to reach "high" on its own: that still needs an actual technical
 or payment/credential fact (e.g. a download-unlock fee reaching "high"
 through the existing IX-1, since ID-04 is already in its `a` list).
+
+`rs-1.5` (active) is `rs-1.4` plus URL-10 (weight 30) and floor
+FLOOR-URL10-CREDENTIAL-FORM (high, requires a claimed institution). Nothing
+else changes, and only Scan This Page requests with `pageForms` can emit
+URL-10, so every other analysis scores exactly as under rs-1.4.
 
 `rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
 fingerprints) and adds the document-forensics weights, interaction DX-1 and
@@ -833,10 +843,32 @@ above, not a silent break.
 ```json
 {
   "url": "string — echoed back from the request",
-  "flagged": "boolean — true if checkUrls() produced any signal",
-  "signals": [ { "type": "lookalike_url", "description": "string", "severity": "low" | "medium" | "high" } ]
+  "host": "string | null — normalized hostname, null when the url can't be parsed",
+  "flagged": "boolean — true if any signal fired",
+  "signals": "[signal] — same shape as /api/analyze signals: lookalike (URL-01..04), shortener / raw IP / @ disguise (URL-05..07), known-phishing list (REP-05), new domain (URL-09), repeated reports (REP-03)",
+  "reportCount": "number — user reports for this host (0 for official/trusted hosts)",
+  "officialInstitution": "string | null — display name when the host is an institution's official domain",
+  "trusted": "boolean — host is on data/trusted-domains.json",
+  "domainAgeDays": "number | null — registration age from RDAP, null when unknown",
+  "resolvedUrl": "string | null — for a known URL shortener only: where it points, read from ONE redirect response of the shortener (the destination is never fetched). Signals for the destination are included in `signals` with metadata.viaShortener set to the shortener host. null when not a shortener or unresolvable",
+  "firstCertificateDays": "number | null — days since the domain's first certificate in Certificate Transparency logs (crt.sh), looked up on every check for non-official, non-trusted hosts; null when unknown",
+  "certificate": "null | { validation: \"EV\" | \"OV\" | \"DV\" | null, organization: string|null, issuer: string|null, validFrom, validTo, issuedDaysAgo, expiresInDays, trusted: boolean, problem: null | \"expired\" | \"not_yet_valid\" | \"self_signed\" | \"wrong_host\" | \"untrusted\" } — read from a bare TLS handshake on EVERY https check, official sites included (the old browser green bar: EV/OV name a verified organisation). SSRF-guarded, 2.5 s timeout, cached per host for 1 h, null when unreachable or plain HTTP",
+  "version": "string"
 }
 ```
+
+Known-malicious lists (REP-05) are the local files in `data/threat-intel/`
+(OpenPhish phishing and URLhaus malware feeds, refreshed by
+`npm run update:threat-feed`, plus the committed local blocklist) and, only
+when `SAFE_BROWSING_API_KEY` is set, Google Safe Browsing (2 s timeout,
+fail-open, cached 30 min). When RDAP returns no registration date (a registry
+without RDAP, or a slow/failed lookup), URL-09 falls back to the domain's first certificate in
+Certificate Transparency logs (crt.sh): worded as "first appeared in public
+certificate logs", capped at medium, and `domainAgeDays` stays null.
+
+Short-link resolution contacts only hosts on the fixed shortener list in
+`services/domain-matching`, over HTTPS, after the SSRF guard, with a 3 s
+timeout (`services/url-reputation/short-links.js`).
 
 ### Errors
 
@@ -893,7 +925,10 @@ lock policy above, not a silent break.
     "categories": "[{ category, area, count, points }] — points actually lost per category after scoring, sorted by points; points always sum to 100 - score",
     "areas": "[{ id, label, status: \"clean\" | \"issues\" | \"not_checked\", score: number | null, findings, pointsLost }] — eight fixed areas (transport, headers, framing, cookies, exposure, page-code, content, third-party)"
   },
-  "checks": "[{ id, label, area, status: \"fail\" | \"warn\" | \"pass\" | \"not_run\", severity?, findings?: string[], reason? }] — every check the report runs (44), most pressing first: failures (worst severity first), warnings, passes, then checks that couldn't run with the reason. not_run is never a pass",
+  "checks": "[{ id, label, area, status: \"fail\" | \"warn\" | \"pass\" | \"info\" | \"not_run\", severity?, findings?: string[], reason? }] — every check the report runs (44), most pressing first: failures (worst severity first), warnings, passes, informational inventories (info: lists what was seen, e.g. API calls, and is never a pass), then checks that couldn't run with the reason. not_run is never a pass",
+  "intent": "{ kind: \"malicious\" | \"suspicious\" | \"weak_security\" | \"ok\", headline, explanation, reasons: string[], trustFacts: string[], reputationChecked: boolean } — badly built vs hostile. The grade measures engineering hygiene; intent comes from the same reputation assessment as /api/check-url (threat lists, lookalikes, tunnel hosts, certificate, domain age). weak_security = real gaps but no sign of bad intent (common on older and government sites), with the facts that show the site is genuine",
+  "reputation": "null | { signals, officialInstitution, domainAgeDays, firstCertificateDays, certificate } — the /api/check-url assessment used for intent; null when it timed out (5 s cap, fail-open)",
+  "findings[].locations": "optional [{ file, line?, code }] (at most 3) — where the finding is: for page-code findings the script URL or page URL, 1-based line and that line of source as collected by the extension; for server findings the part of the response (e.g. \"HTTP response headers · <url>\") and the header/evidence. Untrusted page text, capped and stripped of control characters; clients must render it as text. checks[].locations carries the first three from the findings a check matched",
   "coverage": {
     "serverChecks": "boolean — false when the site could not be reached",
     "clientSignals": "boolean — false when no page-side signals were collected",

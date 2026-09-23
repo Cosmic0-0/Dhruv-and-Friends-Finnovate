@@ -127,14 +127,55 @@ async function waitForRenderedText() {
   return text;
 }
 
+// Password/card forms on the page, for the backend's URL-10 check: only where
+// each form submits (host) and which kind of field it has. Field VALUES are
+// never read. A form without an action attribute submits to the page itself
+// (actionHost null).
+var MAX_FORMS = 10; // backend's pageForms cap
+var CARD_FIELD_RE = /\b(?:cc-?(?:number|num|csc|exp)|card-?(?:number|no|num)|cardnumber|cvv|cvc|csc)\b/i;
+
+function isCardField(input) {
+  const autocomplete = (input.getAttribute("autocomplete") || "").toLowerCase();
+  if (autocomplete.startsWith("cc-")) return true;
+  return CARD_FIELD_RE.test(`${input.name || ""} ${input.id || ""}`);
+}
+
+function collectSensitiveForms() {
+  const forms = [];
+  for (const form of document.querySelectorAll("form")) {
+    const hasPassword = Boolean(form.querySelector('input[type="password"]'));
+    const hasCard = Array.from(form.querySelectorAll("input")).some(isCardField);
+    if (!hasPassword && !hasCard) continue;
+    let actionHost = null;
+    const action = form.getAttribute("action");
+    if (action && action.trim()) {
+      try {
+        actionHost = new URL(action, location.href).hostname || null;
+      } catch (_) {
+        actionHost = null;
+      }
+    }
+    forms.push({ actionHost, hasPassword, hasCard });
+    if (forms.length >= MAX_FORMS) break;
+  }
+  return forms;
+}
+
 async function extractPageText() {
   const trimmed = await waitForRenderedText();
   const text = trimmed.length > MAX_CHARS ? trimmed.slice(0, MAX_CHARS) : trimmed;
+  let pageForms = [];
+  try {
+    pageForms = collectSensitiveForms();
+  } catch (_) {
+    pageForms = []; // a form scan problem never blocks the text scan
+  }
   return {
     text,
     truncated: trimmed.length > MAX_CHARS,
     totalLength: trimmed.length,
     pageUrl: location.href,
+    pageForms,
   };
 }
 

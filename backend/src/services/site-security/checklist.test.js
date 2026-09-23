@@ -74,7 +74,8 @@ test("statuses: fail for costly findings, warn for info-only, pass when clean - 
   assert.equal(rows[0].id, "exposed-env", "high failures come first");
   assert.equal(rows[1].id, "csp");
   const order = rows.map((r) => r.status);
-  assert.deepEqual(order, [...order].sort((a, b) => ["fail", "warn", "pass", "not_run"].indexOf(a) - ["fail", "warn", "pass", "not_run"].indexOf(b)));
+  const rank = ["fail", "warn", "pass", "info", "not_run"];
+  assert.deepEqual(order, [...order].sort((a, b) => rank.indexOf(a) - rank.indexOf(b)));
 });
 
 test("a check that couldn't run is not_run with a reason - never a pass", () => {
@@ -92,4 +93,18 @@ test("an unreachable site marks every server-side check not_run", () => {
   const rows = buildChecklist([], { reachable: false, https: false, clientSignals: true });
   for (const r of rows.filter((r) => !["page-code", "content", "third-party"].includes(r.area))) assert.equal(r.status, "not_run", r.id);
   assert.ok(rows.some((r) => r.area === "page-code" && r.status === "pass"));
+});
+
+test("the API-calls inventory is informational: never shown as a pass, with or without calls", () => {
+  const coverage = { reachable: true, https: true, clientSignals: true };
+  const none = buildChecklist([], coverage).find((c) => c.id === "api-calls");
+  assert.equal(none.status, "info");
+  assert.match(none.reason, /no API calls/i);
+
+  const some = buildChecklist([{ title: "3 API call(s) observed", severity: "info" }], coverage).find((c) => c.id === "api-calls");
+  assert.equal(some.status, "info");
+  assert.deepEqual(some.findings, ["3 API call(s) observed"]);
+
+  const unread = buildChecklist([], { ...coverage, clientSignals: false }).find((c) => c.id === "api-calls");
+  assert.equal(unread.status, "not_run");
 });

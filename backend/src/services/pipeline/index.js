@@ -20,6 +20,7 @@ import { checkUrls, checkLinkHygiene, registrableDomain, DETECTOR_VERSION as URL
 import { attachDomainAges } from "../domain-age/index.js";
 import { checkThreatIntel } from "../threat-intel/index.js";
 import { checkIdentityConsistency } from "../identity-consistency/index.js";
+import { checkPageForms } from "../page-forms/index.js";
 import { detectLexicon, detectInjection, detectTemplateArtifacts, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
 import { evaluatePaymentContext } from "../payment-context/index.js";
 import { analyzeSemantics, SEMANTIC_PROMPT_VERSION } from "../analysis/index.js";
@@ -149,7 +150,7 @@ function senderReputation(sender) {
  */
 export async function runPipeline(rawText, context = {}) {
   const {
-    language, paymentContext = null, emailContext = null, pageHost = null, ip, now = Date.now(), ocrQuality,
+    language, paymentContext = null, emailContext = null, pageHost = null, pageForms = null, ip, now = Date.now(), ocrQuality,
     extraSignals, extraDetectorVersions = {}, semantic: semanticOpts = {},
   } = context;
   const source = emailContext ? "email" : context.source ?? "pasted_text";
@@ -185,6 +186,7 @@ export async function runPipeline(rawText, context = {}) {
     // by the risk engine; nothing emitted it until now).
     ...checkThreatIntel(text),
     ...checkIdentityConsistency(text),
+    ...checkPageForms(pageForms, { pageHost, claimedInstitution }),
     ...lexicon,
     ...detectInjection(text),
     ...detectTemplateArtifacts(text),

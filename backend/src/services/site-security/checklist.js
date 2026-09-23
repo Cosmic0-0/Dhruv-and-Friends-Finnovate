@@ -7,6 +7,8 @@
 //   fail     at least one finding from this check costs points
 //   warn     only informational findings (worth knowing, costs nothing)
 //   pass     the check ran and found nothing
+//   info     an inventory, not a test (e.g. API calls): lists what was seen
+//            and never counts as a pass, even when nothing was seen
 //   not_run  the check couldn't run for this page - `reason` says why.
 //            Never shown as a pass: "we didn't look" is not "it's fine".
 //
@@ -78,10 +80,21 @@ const CHECKS = [
   ["api-calls", "API calls made by the page", "third-party", "client", /API call\(s\) observed$/],
 ];
 
+// Inventory checks: they report what the page does without judging it.
+const INFORMATIONAL = {
+  "api-calls": "No API calls were observed while the page loaded. This lists calls; it doesn't test them.",
+};
+
+/** The first few code/response locations behind a check's findings, for the report. */
+function locationsOf(matched) {
+  const locations = matched.flatMap((f) => f.locations ?? []).slice(0, 3);
+  return locations.length ? { locations } : {};
+}
+
 export const CHECK_IDS = Object.freeze(CHECKS.map(([id]) => id));
 
 const SEVERITY_ORDER = ["high", "medium", "low", "info"];
-const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, not_run: 3 };
+const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, info: 3, not_run: 4 };
 
 /** The check a finding belongs to, or null (network/coverage notes aren't checks). */
 export function checkIdForFinding(finding) {
@@ -102,6 +115,11 @@ export function buildChecklist(findings, { reachable, https, clientSignals }) {
     const reason = needs[requirement](ctx);
     const matched = findings.filter((f) => re.test(f.title || ""));
     if (reason && matched.length === 0) return { id, label, area, status: "not_run", reason };
+    if (INFORMATIONAL[id]) {
+      return matched.length
+        ? { id, label, area, status: "info", findings: matched.map((f) => f.title), ...locationsOf(matched) }
+        : { id, label, area, status: "info", reason: INFORMATIONAL[id] };
+    }
     const costly = matched.filter((f) => (SEVERITY_DEDUCTION[f.severity] ?? 0) > 0);
     const worst = SEVERITY_ORDER.find((s) => matched.some((f) => f.severity === s)) ?? null;
     const status = costly.length > 0 ? "fail" : matched.length > 0 ? "warn" : "pass";
@@ -112,6 +130,7 @@ export function buildChecklist(findings, { reachable, https, clientSignals }) {
       status,
       ...(worst ? { severity: worst } : {}),
       ...(matched.length ? { findings: matched.map((f) => f.title) } : {}),
+      ...locationsOf(matched),
     };
   });
 

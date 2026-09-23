@@ -30,7 +30,8 @@ const { reportSender } = await import("../../db/index.js");
 
 before(() => _reloadThreatIntel());
 
-const noAge = { domainAge: async () => undefined };
+// Offline by default: no RDAP lookup and no short-link resolution.
+const noAge = { domainAge: async () => undefined, certAge: async () => undefined, certificate: async () => null, resolveShortLink: async () => null, safeBrowsing: async () => null };
 const high = (r) => r.signals.some((s) => s.severity === "high");
 const codes = (r) => r.signals.map((s) => s.code);
 
@@ -112,7 +113,7 @@ test("reports against an official or trusted domain are never shown or scored (b
 
 test("a domain registered days ago is flagged; an old one and a trusted one are not looked up at all", async () => {
   const lookups = [];
-  const age = (days) => ({ domainAge: async (d) => (lookups.push(d), days) });
+  const age = (days) => ({ domainAge: async (d) => (lookups.push(d), days), certAge: async () => undefined, certificate: async () => null });
   const fresh = await assessUrl("https://login.brand-new-bank.top/verify", age(3));
   assert.ok(fresh.signals.some((s) => s.code === "URL-09" && s.severity === "high"));
   assert.equal(fresh.domainAgeDays, 3);
@@ -130,7 +131,7 @@ test("a domain registered days ago is flagged; an old one and a trusted one are 
 });
 
 test("a failing age lookup never fails the check", async () => {
-  const r = await assessUrl("https://whatever.example/", { domainAge: async () => { throw new Error("rdap down"); } });
+  const r = await assessUrl("https://whatever.example/", { ...noAge, domainAge: async () => { throw new Error("rdap down"); } });
   assert.equal(r.flagged, false);
   assert.equal(r.domainAgeDays, null);
 });
@@ -162,4 +163,88 @@ test("threat intel: listed page is a high REP-05 in check-url, and in message li
   assert.equal(inMessage.length, 1);
   assert.equal(inMessage[0].code, "REP-05");
   assert.equal(inMessage[0].sourceType, "intel");
+});
+
+// ---- shortened links: the destination is checked, the short link is never followed further ----
+
+test("a shortened link is resolved and its destination checked: a lookalike behind bit.ly is flagged", async () => {
+  const r = await assessUrl("https://bit.ly/abc123", { ...noAge, resolveShortLink: async () => "https://paypa1.com/signin" });
+  assert.equal(r.resolvedUrl, "https://paypa1.com/signin");
+  const codes = r.signals.map((s) => s.code);
+  assert.ok(codes.includes("URL-05"), "the shortener itself is still noted");
+  assert.ok(codes.includes("URL-01"), "the lookalike destination is flagged");
+  assert.equal(r.signals.find((s) => s.code === "URL-01").metadata.viaShortener, "bit.ly");
+});
+
+test("a destination on a known-phishing list is REP-05 even behind a shortener", async () => {
+  const r = await assessUrl("https://tinyurl.com/x", { ...noAge, resolveShortLink: async () => "https://phish-dedicated.top/login" });
+  assert.ok(r.signals.some((s) => s.code === "REP-05"));
+});
+
+test("an unresolvable short link degrades to the plain shortener signal", async () => {
+  const r = await assessUrl("https://bit.ly/gone", { ...noAge, resolveShortLink: async () => { throw new Error("timeout"); } });
+  assert.equal(r.resolvedUrl, null);
+  assert.deepEqual(r.signals.map((s) => s.code), ["URL-05"]);
+});
+
+test("ordinary links never call the short-link resolver", async () => {
+  let called = false;
+  const r = await assessUrl("https://example.org/page", { ...noAge, resolveShortLink: async () => { called = true; return null; } });
+  assert.equal(called, false);
+  assert.equal(r.resolvedUrl, null);
+});
+
+test("a Google Safe Browsing match is REP-05; official sites are never looked up", async () => {
+  const r = await assessUrl("https://evil-download.example/x", { ...noAge, safeBrowsing: async () => "MALWARE" });
+  const rep = r.signals.find((s) => s.code === "REP-05");
+  assert.equal(rep.metadata.list, "google-safe-browsing");
+  assert.match(rep.description, /malware/);
+
+  let asked = false;
+  await assessUrl("https://mcb.mu/", { ...noAge, safeBrowsing: async () => { asked = true; return "MALWARE"; } });
+  assert.equal(asked, false);
+});
+
+test("with no registration date, a domain first seen in certificate logs days ago is a medium URL-09", async () => {
+  const r = await assessUrl("https://mcb-help.mu/login", { ...noAge, certAge: async () => 3 });
+  const s = r.signals.find((x) => x.code === "URL-09");
+  assert.equal(s.severity, "medium");
+  assert.match(s.description, /certificate logs 3 days ago/);
+  assert.equal(r.domainAgeDays, null, "domainAgeDays stays the registration age");
+});
+
+test("certificate logs are always looked up and reported, but URL-09 prefers the registration date", async () => {
+  const r = await assessUrl("https://old-shop.example/", { ...noAge, domainAge: async () => 4000, certAge: async () => 1 });
+  assert.equal(r.firstCertificateDays, 1);
+  assert.equal(r.domainAgeDays, 4000);
+  assert.ok(!r.signals.some((s) => s.code === "URL-09"), "an old registration outranks a fresh certificate");
+});
+
+// ---- certificate ("green bar") and tunnel hosts ----
+
+const EV = { validation: "EV", organization: "The Mauritius Commercial Bank Ltd", issuer: "DigiCert Inc", issuedDaysAgo: 120, expiresInDays: 200, trusted: true, problem: null };
+
+test("the certificate is read for every https page, official sites included", async () => {
+  const seen = [];
+  const r = await assessUrl("https://mcb.mu/", { ...noAge, certificate: async (h) => (seen.push(h), EV) });
+  assert.deepEqual(seen, ["mcb.mu"]);
+  assert.equal(r.certificate.organization, "The Mauritius Commercial Bank Ltd");
+  assert.equal(r.flagged, false);
+  const plain = await assessUrl("http://example.org/", { ...noAge, certificate: async () => { throw new Error("must not probe plain http"); } });
+  assert.equal(plain.certificate, null);
+});
+
+test("an invalid certificate is CERT-01; a brand-new one on a lookalike is CERT-02", async () => {
+  const bad = await assessUrl("https://shop.example/", { ...noAge, certificate: async () => ({ ...EV, trusted: false, problem: "expired" }) });
+  assert.ok(bad.signals.some((s) => s.code === "CERT-01"));
+  const fresh = await assessUrl("https://mcb-secure.top/", { ...noAge, certificate: async () => ({ ...EV, validation: "DV", organization: null, issuedDaysAgo: 1 }) });
+  assert.deepEqual(fresh.signals.map((s) => s.code).sort(), ["CERT-02", "URL-02"]);
+});
+
+test("tunnel and dynamic-DNS hosts are URL-11", async () => {
+  for (const u of ["https://abc123.ngrok-free.app/login", "https://quiet-river.trycloudflare.com/", "http://mybank.duckdns.org/"]) {
+    const r = await assessUrl(u, noAge);
+    assert.ok(r.signals.some((s) => s.code === "URL-11"), u);
+  }
+  assert.ok(!(await assessUrl("https://ngrok.com/docs", noAge)).signals.some((s) => s.code === "URL-11"));
 });

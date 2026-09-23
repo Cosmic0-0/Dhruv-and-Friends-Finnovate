@@ -381,11 +381,11 @@ plans to show it. Before the demo, a human should walk through:
     - On a page where the extension can't read the content (e.g. the Chrome
       Web Store), the report should still arrive with server-side results and
       a "Page-content checks were skipped" note — never a bare error.
-    - Scan the same site twice within 10 minutes: the second report shows a
-      **Cached result** tag and the backend makes no new requests to the site.
+    - Scan the same site twice: each scan produces a fresh report (there is
+      no result cache), and neither shows a **Cached result** tag.
 12. **Permissions sanity**: in `chrome://extensions` → Details → confirm the
     permissions list matches `manifest.json` (`tabs`, `contextMenus`,
-    `storage`, `activeTab`, `scripting`, plus the `localhost:4000` host
+    `storage`, `activeTab`, `scripting`, plus the `api.159-195-245-28.sslip.io` host
     permission) — no unexpected broad host access.
 
 ## Demo note (differentiator: domain/lookalike-URL matching)

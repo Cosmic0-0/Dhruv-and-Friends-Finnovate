@@ -115,3 +115,33 @@ test("content.js: text inside an open shadow root is collected", async () => {
   const { text: extracted } = await ctx.extractPageText();
   assert.match(extracted, /pay the customs fee/);
 });
+
+// Minimal forms for collectSensitiveForms(): only what it reads.
+const input = (attrs) => ({ name: attrs.name ?? "", id: attrs.id ?? "", type: attrs.type ?? "text", getAttribute: (k) => attrs[k] ?? null });
+const form = (action, inputs) => ({
+  getAttribute: (k) => (k === "action" ? action : null),
+  querySelector: (sel) => (sel === 'input[type="password"]' ? inputs.find((i) => i.type === "password") ?? null : null),
+  querySelectorAll: () => inputs,
+});
+
+test("content.js: reports password/card forms by destination host and field kind, never values", async () => {
+  const ctx = loadContentJs({ initialText: "Log in to MCB Internet Banking with your password here." });
+  ctx.URL = URL;
+  ctx.document.querySelectorAll = () => [
+    form("https://grab.evil.top/collect.php", [input({ name: "user" }), input({ type: "password", name: "pw" })]),
+    form(null, [input({ autocomplete: "cc-number" })]),
+    form("/search", [input({ name: "q" })]),
+  ];
+  const { pageForms } = await ctx.extractPageText();
+  assert.deepEqual(JSON.parse(JSON.stringify(pageForms)), [
+    { actionHost: "grab.evil.top", hasPassword: true, hasCard: false },
+    { actionHost: null, hasPassword: false, hasCard: true },
+  ]);
+});
+
+test("content.js: a page where forms can't be read still returns its text", async () => {
+  const ctx = loadContentJs({ initialText: "Ordinary page text that is long enough to count as real content." });
+  const result = await ctx.extractPageText();
+  assert.deepEqual(JSON.parse(JSON.stringify(result.pageForms)), []);
+  assert.match(result.text, /Ordinary page text/);
+});

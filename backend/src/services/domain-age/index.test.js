@@ -102,3 +102,12 @@ test("attachDomainAges never blocks the caller and only attaches lookups that al
   assert.equal(signals[0].domainAgeDays, 3);
   assert.equal("domainAgeDays" in signals[1], false);
 });
+
+test("getCertificateAgeDays: earliest certificate date from crt.sh, undefined on failure", async () => {
+  const { getCertificateAgeDays } = await import("./index.js");
+  const tenDaysAgo = new Date(Date.now() - 10 * 86_400_000).toISOString();
+  const fetchImpl = async () => new Response(JSON.stringify([{ not_before: new Date().toISOString() }, { not_before: tenDaysAgo }]));
+  assert.equal(await getCertificateAgeDays("ct-fixture-1.example", { fetchImpl }), 10);
+  assert.equal(await getCertificateAgeDays("ct-fixture-2.example", { fetchImpl: async () => new Response("[]") }), undefined);
+  assert.equal(await getCertificateAgeDays("ct-fixture-3.example", { fetchImpl: async () => { throw new Error("down"); } }), undefined);
+});

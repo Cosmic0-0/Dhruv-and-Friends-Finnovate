@@ -83,3 +83,26 @@ test("mapClientSignals caps array inputs so an oversized payload can't blow up t
   const findings = mapClientSignals({ domSinks });
   assert.equal(findings.length, 25);
 });
+
+test("findings carry the code locations the collector recorded, capped and sanitised", () => {
+  const [sink] = mapClientSignals({
+    domSinks: [{
+      sink: "eval",
+      count: 5,
+      locations: [
+        { file: "https://site.example/app.js", line: 42, code: "  eval(userInput);\u0007" },
+        { file: "https://site.example/", line: 7, code: "eval(x)" },
+        { file: "https://site.example/", line: 9, code: "eval(y)" },
+        { file: "https://site.example/", line: 11, code: "eval(z)" },
+        { file: "x", line: -1, code: "bad line" },
+      ],
+    }],
+  });
+  assert.equal(sink.locations.length, 3);
+  assert.deepEqual(sink.locations[0], { file: "https://site.example/app.js", line: 42, code: "  eval(userInput);" });
+
+  const [form] = mapClientSignals({ insecureForms: [{ action: "http://x/f", httpAction: true, locations: [{ file: "https://p/", line: 3, code: '<form action="http://x/f">' }] }] });
+  assert.equal(form.locations[0].line, 3);
+  const [bare] = mapClientSignals({ domSinks: [{ sink: "eval", count: 1 }] });
+  assert.equal(bare.locations, undefined, "no locations key when the collector sent none");
+});

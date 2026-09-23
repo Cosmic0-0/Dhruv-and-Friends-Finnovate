@@ -23,8 +23,8 @@ const PUBLISHED = {
   "rs-1.3": [RULESET_RS_1_3, "90219063951955de"],
 };
 
-test("rs-1.4 is active and the published rulesets are unchanged", () => {
-  assert.equal(ACTIVE_RULESET.version, "rs-1.4");
+test("rs-1.5 is active and the published rulesets are unchanged", () => {
+  assert.equal(ACTIVE_RULESET.version, "rs-1.5");
   for (const [version, [rs, expected]] of Object.entries(PUBLISHED)) {
     assert.equal(fingerprint(rs), expected, `${version} was edited in place`);
     assert.ok(!Object.keys(rs.weights).some((c) => c.startsWith("DOC-")), version);

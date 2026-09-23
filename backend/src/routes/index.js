@@ -8,6 +8,7 @@ import { assessUrl } from "../services/url-reputation/index.js";
 import { runPipeline } from "../services/pipeline/index.js";
 import { validatePaymentContext } from "../services/payment-context/index.js";
 import { validateEmailContext } from "../services/email-context/index.js";
+import { validatePageForms } from "../services/page-forms/index.js";
 import { listCampaigns, OUTCOME_LABELS, recordOutcome } from "../services/org-intel/index.js";
 import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
@@ -144,6 +145,11 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   // the same runPipeline() runs the EMAIL-* detectors - no separate engine.
   const email = validateEmailContext(req.body.emailContext);
   if (email.error) return res.status(400).json({ error: email.error });
+  // Scan This Page: destination host + field kinds of the page's password/card
+  // forms (never values). Only meaningful with a pageUrl.
+  const forms = validatePageForms(req.body.pageForms);
+  if (forms.error) return res.status(400).json({ error: forms.error });
+  const pageHost = pageHostFrom(pageUrl);
   try {
     res.json(
       await runPipeline(message, {
@@ -151,7 +157,8 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
         language,
         paymentContext: payment.value,
         emailContext: email.value,
-        pageHost: pageHostFrom(pageUrl),
+        pageHost,
+        pageForms: pageHost ? forms.value : null,
         ip: req.ip,
       })
     );

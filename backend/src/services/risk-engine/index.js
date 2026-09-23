@@ -286,13 +286,29 @@ export const RULESET_RS_1_4 = Object.freeze({
   bands: RULESET_RS_1_3.bands,
 });
 
-export const ACTIVE_RULESET = RULESET_RS_1_4;
+// rs-1.5: URL-10 (Scan This Page: a password/card form on a page claiming a
+// known institution sends to another site). Weighted like a lookalike link
+// and floored to "high": the page is asking for credentials on behalf of a
+// bank and handing them to someone else. Everything else is rs-1.4.
+export const RULESET_RS_1_5 = Object.freeze({
+  ...RULESET_RS_1_4,
+  version: "rs-1.5",
+  weights: Object.freeze({ ...RULESET_RS_1_4.weights, "URL-10": 30 }),
+  floors: Object.freeze([
+    ...RULESET_RS_1_4.floors,
+    { id: "FLOOR-URL10-CREDENTIAL-FORM", level: "high", reason: "A page claiming a known institution sends your password or card details to another site",
+      all: ["URL-10"], requiresClaimedInstitution: true },
+  ]),
+});
+
+export const ACTIVE_RULESET = RULESET_RS_1_5;
 export const RULESETS = Object.freeze({
   [RULESET_RS_1_0.version]: RULESET_RS_1_0,
   [RULESET_RS_1_1.version]: RULESET_RS_1_1,
   [RULESET_RS_1_2.version]: RULESET_RS_1_2,
   [RULESET_RS_1_3.version]: RULESET_RS_1_3,
   [RULESET_RS_1_4.version]: RULESET_RS_1_4,
+  [RULESET_RS_1_5.version]: RULESET_RS_1_5,
 });
 
 const LEVEL_ORDER = ["low", "elevated", "high", "critical"];

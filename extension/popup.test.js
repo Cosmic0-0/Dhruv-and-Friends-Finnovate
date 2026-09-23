@@ -311,3 +311,26 @@ test("popup: Scan This Page running clean does not fabricate a finding in the do
   assert.equal(els.get("signals-empty").hidden, false);
   assert.equal(els.get("signals-list").children.length, 0);
 });
+
+test("popup: shows who the certificate was issued to (the old green bar), and what a DV certificate doesn't prove", async () => {
+  const els = installFakeDom();
+  installChromeMock({
+    tabUrl: "https://www.mcb.mu/",
+    tabStatus: { hostname: "www.mcb.mu", flagged: false, signals: [], officialInstitution: "MCB",
+      certificate: { validation: "EV", organization: "The Mauritius Commercial Bank Limited", issuer: "DigiCert Inc", problem: null, trusted: true } },
+  });
+  await import(`./popup.js?t=${Date.now()}-cert1`);
+  await flush();
+  assert.match(els.get("state-text").textContent, /Certificate verified for The Mauritius Commercial Bank Limited \(Extended Validation/);
+
+  const els2 = installFakeDom();
+  installChromeMock({
+    tabUrl: "https://mcb-help.mu/",
+    tabStatus: { hostname: "mcb-help.mu", flagged: false, signals: [], domainAgeDays: null, firstCertificateDays: 4,
+      certificate: { validation: "DV", organization: null, issuer: "Let's Encrypt", problem: null, trusted: true } },
+  });
+  await import(`./popup.js?t=${Date.now()}-cert2`);
+  await flush();
+  assert.match(els2.get("state-text").textContent, /First seen in public certificate logs 4 days ago/);
+  assert.match(els2.get("state-text").textContent, /proves this address only/);
+});

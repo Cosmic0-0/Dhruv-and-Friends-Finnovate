@@ -18,6 +18,7 @@ import {
 } from "../institutions/index.js";
 import { domainToUnicode } from "node:url";
 import { isTrustedDomain, TRUSTED_DOMAINS_VERSION } from "./trustedDomains.js";
+import { GLOBAL_BRAND_DOMAINS } from "./globalBrands.js";
 import { makeSignal } from "../signals/registry.js";
 
 export { BRAND_DOMAIN_MAP, BRAND_TOKENS, isOfficialHost, isTrustedDomain };
@@ -26,7 +27,10 @@ export const LEGIT_DOMAINS = OFFICIAL_DOMAINS;
 // trusted-domains allowlist (data/trusted-domains.json) - see
 // trustedDomains.js. URL-01..04 are unchanged: a trusted domain still gets
 // zero impersonation/lookalike protection.
-export const DETECTOR_VERSION = "url-2.1";
+// url-2.2: URL-01/URL-02/URL-04 also cover the global brands in
+// data/global-brands.json (paypa1.com, micros0ft-login.com), and the
+// homoglyph skeleton applies NFKC plus a wider confusables map.
+export const DETECTOR_VERSION = "url-2.2";
 
 // Explicit-scheme URLs are parsed with URL() so the real host is used
 // (https://mcb.mu@evil.top has host evil.top, not mcb.mu).
@@ -50,12 +54,24 @@ const MULTI_LABEL_SUFFIXES = new Set([
   "co.za", "com.au", "co.in", "com.br", "co.nz",
 ]);
 
-// Small confusable map (Cyrillic/Greek letters that render like Latin) used
-// only to compute a "skeleton" of a non-ASCII host for comparison.
+// Confusable map (Cyrillic/Greek/Armenian/Latin-extended letters that render
+// like Latin) used only to compute a "skeleton" of a non-ASCII host for
+// comparison. Fullwidth and other compatibility forms are folded by NFKC
+// first (see skeleton()), so they don't need entries here.
 const CONFUSABLES = {
   "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "х": "x", "у": "y", "і": "i", "ј": "j", "ѕ": "s", "һ": "h", "ԁ": "d", "ӏ": "l",
-  "α": "a", "ο": "o", "ρ": "p", "ε": "e", "ι": "i", "κ": "k", "ν": "v", "τ": "t", "υ": "u",
+  "ԛ": "q", "ԝ": "w", "ҽ": "e", "ʏ": "y", "ь": "b", "в": "b", "к": "k", "м": "m", "н": "h", "т": "t", "ѵ": "v", "ӧ": "o",
+  "α": "a", "ο": "o", "ρ": "p", "ε": "e", "ι": "i", "κ": "k", "ν": "v", "τ": "t", "υ": "u", "χ": "x", "ω": "w", "γ": "y",
+  "օ": "o", "ս": "u", "ց": "g", "հ": "h", "ո": "n", "ռ": "n", "ք": "p",
+  "ı": "i", "ɩ": "i", "ɡ": "g", "ɑ": "a", "ɒ": "a", "ɔ": "c", "ɛ": "e", "ʟ": "l", "ɴ": "n", "ʀ": "r", "ꜱ": "s", "ᴠ": "v", "ᴡ": "w", "ᴢ": "z",
 };
+
+// Characters people misread for each other, folded to one representative
+// on BOTH sides before comparing (asp1re / aspIre / aspire -> asplre).
+const VISUAL_FOLDS = [
+  [/rn/g, "m"], [/vv/g, "w"], [/cl/g, "d"],
+  [/[il1|!]/g, "l"], [/[o0]/g, "o"], [/5/g, "s"], [/3/g, "e"], [/4/g, "a"], [/7/g, "t"], [/8/g, "b"], [/6/g, "g"],
+];
 
 function levenshtein(a, b) {
   const dp = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
@@ -93,6 +109,44 @@ export function splitHost(host) {
     subdomains: labels.slice(0, Math.max(0, registrableIndex)),
     suffix: labels.slice(-suffixLen).join("."),
   };
+}
+
+// Global brands for lookalike checks: registrable label, plus its visual fold.
+const GLOBAL_BRANDS = GLOBAL_BRAND_DOMAINS.map((domain) => {
+  const label = splitHost(domain).registrable;
+  return { domain, label, folded: visualFold(label) };
+});
+
+const isGlobalBrandHost = (host) => GLOBAL_BRANDS.some((b) => isOfficialHost(host, b.domain));
+
+/**
+ * The global brand (data/global-brands.json) a host imitates, or null:
+ *   URL-02  the brand, plain or disguised, is one hyphen part (micros0ft-login.com)
+ *   URL-01  the label folds to the brand (paypa1.com, rnicrosoft.com), or is a
+ *           typo of it that keeps its first letter (paypall.com, not finance.com)
+ * The brand itself, its subdomains, other TLDs of the same label
+ * (amazon.co.uk) and trusted-domains hosts are never flagged.
+ * @param {string} host
+ * @returns {{ domain: string, code: "URL-01" | "URL-02" } | null}
+ */
+export function globalBrandImitated(host) {
+  const h = normalizeHost(host);
+  if (!h || isGlobalBrandHost(h) || isTrustedDomain(h)) return null;
+  const { registrable } = splitHost(h);
+  const parts = registrable.split("-");
+  const folded = visualFold(registrable);
+  for (const brand of GLOBAL_BRANDS) {
+    if (registrable === brand.label) continue;
+    if (parts.length > 1 && parts.some((p) => visualFold(p) === brand.folded)) return { domain: brand.domain, code: "URL-02" };
+    const isTypo = registrable[0] === brand.label[0] && levenshtein(registrable, brand.label) <= maxEditDistance(brand.label.length);
+    if (folded === brand.folded || isTypo) return { domain: brand.domain, code: "URL-01" };
+  }
+  return null;
+}
+
+/** Global brand domain whose host a (skeletonised) host matches exactly, or null. */
+function globalBrandForHost(host) {
+  return GLOBAL_BRANDS.find((b) => isOfficialHost(host, b.domain))?.domain ?? null;
 }
 
 function isShortener(host) {
@@ -199,6 +253,17 @@ function classifyLink(link) {
     });
   }
 
+  const global = globalBrandImitated(link.host);
+  if (global) {
+    return lookalikeSignal(global.code, link, {
+      official: global.domain,
+      description:
+        global.code === "URL-02"
+          ? `${link.host} contains the ${global.domain} brand name but is not ${global.domain}`
+          : `${link.host} closely resembles legitimate domain ${global.domain}`,
+    });
+  }
+
   // A bank name in the subdomain/path of a big, well-known site
   // (en.wikipedia.org/wiki/MCB_Group, github.com/absa/...) is a page ABOUT
   // the bank, not an impersonation of it. Lookalike/brand-in-domain checks
@@ -220,7 +285,7 @@ function classifyLink(link) {
 }
 
 export function skeleton(host) {
-  return [...host.toLowerCase()].map((ch) => CONFUSABLES[ch] ?? ch).join("");
+  return [...host.normalize("NFKC").toLowerCase()].map((ch) => CONFUSABLES[ch] ?? ch).join("");
 }
 
 /** Lower-cased host in Unicode form (xn-- punycode labels decoded), "" when unparsable. */
@@ -259,12 +324,6 @@ export function compareDomains(candidate, trusted) {
   return technique && technique !== "brand_embedded" ? "lookalike" : "different";
 }
 
-// Characters people misread for each other, folded to one representative
-// on BOTH sides before comparing (asp1re / aspIre / aspire -> asplre).
-const VISUAL_FOLDS = [
-  [/rn/g, "m"], [/vv/g, "w"], [/cl/g, "d"],
-  [/[il1|!]/g, "l"], [/[o0]/g, "o"], [/5/g, "s"], [/3/g, "e"], [/4/g, "a"], [/7/g, "t"], [/8/g, "b"], [/6/g, "g"],
-];
 function visualFold(label) {
   return VISUAL_FOLDS.reduce((s, [re, to]) => s.replace(re, to), skeleton(label));
 }
@@ -317,7 +376,7 @@ function homoglyphSignals(message) {
     if (!/[^\x00-\x7f]/.test(host) && !isPunycode) continue;
     const skel = skeleton(host);
     const target = institutionForHost(skel) ?? institutionForToken(brandInLabels(splitHost(skel).labels));
-    const official = target?.official_domains[0] ?? null;
+    const official = target?.official_domains[0] ?? globalBrandForHost(skel);
     out.push(
       makeSignal("URL-04", {
         sourceType: "rule",

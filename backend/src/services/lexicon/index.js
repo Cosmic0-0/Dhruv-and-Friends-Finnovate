@@ -8,6 +8,7 @@
 // the LLM switched off - point at the SEC-01 evidence span on screen.
 
 import { makeSignal } from "../signals/registry.js";
+import { institutionForHost } from "../institutions/index.js";
 
 export const LEXICON_VERSION = "lexicon-1.0";
 
@@ -278,6 +279,24 @@ const FACTUAL_ACCOUNT_NOTICE_RE = compile(
   )
 );
 
+// Safety advice phrased as a prohibition: "Do not click links in unexpected
+// messages", "Never share your code", "Ne cliquez jamais". Only advice verbs,
+// so "Do not ignore this or your account is blocked" / "Do not delay" stay.
+const PROTECTIVE_ADVICE_RE =
+  /^\s*(?:please\s+)?(?:(?:never|do not|don'?t)\s+(?:\w+\s+){0,2}?|ne\s+\w+\s+(?:jamais|pas)\s+(?:\w+\s+){0,2}?|(?:pa|zame)\s+(?:\w+\s+){0,2}?)(?:click|tap|open|share|give|disclose|reveal|send|reply|respond|enter|type|call|download|install|transfer|pay|scan|forward|cliqu\w*|partag\w*|donn\w*|r[ée]pond\w*|klik|partaz|donn|reponn)\b/iu;
+// Codes where advice like that can be mistaken for the tactic. Threats
+// (SOC-02), secrecy (SOC-03: "don't tell anyone") and bypassing process
+// (SOC-08: "don't involve finance") are real scam phrasings with a negation.
+const PROTECTIVE_ADVICE_CODES = new Set(["SOC-01", "SOC-04", "SOC-05", "SEC-01"]);
+const HOST_IN_TEXT_RE = /\b(?:[a-z0-9-]+\.)+[a-z]{2,10}\b/giu;
+const PHONE_IN_TEXT_RE = /\+?\d[\d\s-]{6,}\d/u;
+
+/** Every place `evidence` sends you is an institution's own official domain (no number, no other site). */
+function onlyOfficialDestinations(evidence) {
+  const hosts = evidence.match(HOST_IN_TEXT_RE) ?? [];
+  return hosts.length > 0 && !PHONE_IN_TEXT_RE.test(evidence) && hosts.every((h) => institutionForHost(h));
+}
+
 /**
  * Sanity-checks a semantic-model (LLM) SEC-01/ID-04/SOC-04 signal against the
  * same negation/safety-contact logic the deterministic lexicon rules already
@@ -303,6 +322,8 @@ export function isBenignCredentialOrContactLanguage(code, text, evidence, start)
     if (SAFETY_CONTACT_RE.test(evidence) || isSafetyContact(text, start)) return true;
   }
   if (code === "ID-04" && FACTUAL_ACCOUNT_NOTICE_RE.test(evidence)) return true;
+  if (PROTECTIVE_ADVICE_CODES.has(code) && PROTECTIVE_ADVICE_RE.test(evidence)) return true;
+  if ((code === "SOC-04" || code === "ID-04") && onlyOfficialDestinations(evidence)) return true;
   return false;
 }
 

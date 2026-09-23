@@ -1,0 +1,29 @@
+{
+  "version": "global-brands-1.0",
+  "notes": "Global brands that phishing most often imitates, used ONLY for lookalike detection (URL-01/URL-02/URL-04 in backend/src/services/domain-matching). Deliberately separate from trusted-domains.json, which is an allowlist and gives no lookalike protection. Adding a domain here can only ADD warnings about OTHER domains that imitate it, never mark anything safe. Rules for entries: the brand label must be distinctive (not an everyday word like 'apple' or 'office', which would flag unrelated sites) and at least 5 letters (shorter labels are one edit away from ordinary words). Only the brand's primary domain is listed: TLD swaps (amazon.co.uk) and the brand as a subdomain (facebook.github.io) are never flagged, because brands legitimately own and use both. A typo match (one or two edits) must also keep the brand's first letter, so finance.com is not read as binance.com or email.com as gmail.com.",
+  "domains": [
+    "paypal.com",
+    "microsoft.com",
+    "office365.com",
+    "google.com",
+    "gmail.com",
+    "icloud.com",
+    "amazon.com",
+    "netflix.com",
+    "facebook.com",
+    "instagram.com",
+    "whatsapp.com",
+    "linkedin.com",
+    "youtube.com",
+    "twitter.com",
+    "telegram.org",
+    "dropbox.com",
+    "docusign.com",
+    "binance.com",
+    "coinbase.com",
+    "fedex.com",
+    "yahoo.com",
+    "spotify.com",
+    "steampowered.com"
+  ]
+}
