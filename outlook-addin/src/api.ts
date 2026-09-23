@@ -1,3 +1,4 @@
+import { validResponse } from "./response";
 import type { AnalyzePayload, AnalyzeResponse } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 70_000;
@@ -5,16 +6,6 @@ const DEFAULT_TIMEOUT_MS = 70_000;
 function apiBase(): string {
   const configured = String(import.meta.env.VITE_FRAUDLENS_API_URL || "/fraudlens-api").trim();
   return configured.replace(/\/$/, "");
-}
-
-function validResponse(value: unknown): value is AnalyzeResponse {
-  if (!value || typeof value !== "object") return false;
-  const result = value as Partial<AnalyzeResponse>;
-  return Boolean(
-    result.risk && typeof result.risk.score === "number" && typeof result.risk.level === "string" &&
-    Array.isArray(result.signals) && Array.isArray(result.trace) && Array.isArray(result.actions) &&
-    result.analysis && typeof result.analysis.rulesetVersion === "string"
-  );
 }
 
 export async function analyzeCurrentEmail(
@@ -40,6 +31,9 @@ export async function analyzeCurrentEmail(
     return data;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw new Error("FraudLens took too long to respond. Try again.");
+    // fetch rejects with a bare TypeError ("Failed to fetch") when offline,
+    // blocked by CORS or the host is unreachable; never show that raw text.
+    if (error instanceof TypeError) throw new Error("Could not reach FraudLens. Check your connection and the backend address, then try again.");
     if (error instanceof Error) throw error;
     throw new Error("FraudLens is unavailable. Check the backend connection and try again.");
   } finally {

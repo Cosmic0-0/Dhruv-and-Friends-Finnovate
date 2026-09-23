@@ -27,6 +27,33 @@ only after enough current-message text, and the remainder is capped at 4,800
 characters to stay within the API's 5,000-character limit. Up to 25 non-inline
 attachment metadata records and 50 HTTP(S) hrefs are included.
 
+The backend rejects the whole request with HTTP 400 when any single field is
+out of bounds, so the add-in trims or omits such values first (`src/contract.ts`
+mirrors the backend's limits): over-long subjects, display names and attachment
+names are truncated, links longer than 2,048 characters (common tracking links)
+keep their host and path but lose the query string (reported in the task pane;
+omitted only if still too long), and an address the API cannot
+parse - for example an unresolved Exchange legacy DN - is sent as a display
+name only. One odd field therefore degrades one piece of evidence, never the
+whole analysis.
+
+## Task pane behaviour
+
+- The manifest sets `SupportsPinning`, so the pane can stay open while you move
+  between messages. On `ItemChanged` the pane returns to its start screen and
+  discards any analysis still in flight for the previous message; a result is
+  never shown next to a different email.
+- Link evidence matches the analysed text: when quoted reply history is removed
+  from the message, hrefs inside that history (Outlook `divRplyFwdMsg`, Gmail
+  quotes, `blockquote`, or after an `On ... wrote:` / `Original Message` marker)
+  are not submitted either. A reply too short to trigger removal keeps both
+  its history text and its links, so the two never disagree.
+- Analysis is an explicit click (**Analyse email**), not automatic, because it
+  sends the message to the FraudLens service. A result shows the analysed
+  subject, sender address and time, and **Analyse again** re-runs it.
+- Failures (offline, timeout, unreadable body, invalid response) show a
+  plain-language message and **Try again** without reloading the add-in.
+
 ## Local setup and sideload
 
 Requirements: Node.js, Outlook on the web/new Outlook/classic Outlook/Mac,
@@ -69,15 +96,25 @@ npm run build
 npm run validate
 ```
 
-With the backend running on port 4000, exercise the five synthetic scenarios:
+`npm test` also runs every demo fixture through the real backend validator and
+deterministic pipeline in-process (no server, LLM off). With the backend
+running on port 4000, exercise the same fixtures over HTTP:
 
 ```powershell
 npm run smoke:demo
 ```
 
-The fixtures cover obvious phishing, executive BEC, supplier bank-detail
-change, suspicious language from a legitimate authenticated supplier mailbox,
-and a legitimate supplier invoice. They use `.example` identities only.
+The nine fixtures cover obvious and credential phishing, a failed-payment card
+scam, executive BEC, supplier bank-detail change, suspicious language from a
+legitimate authenticated supplier mailbox, a legitimate supplier invoice, a
+legitimate lecturer notice, and an ambiguous "please review this invoice"
+message. They use `.example` identities only, and the engine is not tuned to
+them.
+
+Attachments are listed by name, type and size only; their contents are never
+read, so no attachment is ever reported as scanned. Links are extracted from
+HTML `href` attributes for the backend's domain checks; the add-in does not
+score link text versus destination itself.
 
 ## Testing the live deployment
 

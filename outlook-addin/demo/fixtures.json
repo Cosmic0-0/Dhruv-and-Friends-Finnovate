@@ -80,5 +80,69 @@
       }
     },
     "expect": { "level": "low", "absentCodes": ["EMAIL-02", "EMAIL-03", "EMAIL-06", "ORG-01"] }
+  },
+  {
+    "id": "credential-phishing",
+    "payload": {
+      "source": "email",
+      "message": "Microsoft Security: unusual sign-in detected on your account. Confirm your password within 24 hours at https://microsoft-verify-login.top/signin or your mailbox will be closed.",
+      "emailContext": {
+        "messageId": "<demo-cred-1@example>",
+        "from": { "name": "Microsoft Security", "address": "no-reply@microsoft-verify-login.top" },
+        "replyTo": [], "returnPath": null, "subject": "Unusual sign-in detected",
+        "authentication": { "spf": "fail", "dkim": "fail", "dmarc": "fail" },
+        "attachments": [], "urls": ["https://microsoft-verify-login.top/signin"], "threadContext": null,
+        "recipient": "user3@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "families": ["SOC", "URL"] }
+  },
+  {
+    "id": "financial-payment-failed",
+    "payload": {
+      "source": "email",
+      "message": "Your payment has failed. Update your card details urgently at https://billing-update.top/card to avoid suspension.",
+      "emailContext": {
+        "messageId": "<demo-pay-1@example>",
+        "from": { "name": "Billing Team", "address": "billing@billing-update.top" },
+        "replyTo": [], "returnPath": null, "subject": "Payment failed",
+        "authentication": { "spf": "fail", "dkim": "fail", "dmarc": "fail" },
+        "attachments": [], "urls": ["https://billing-update.top/card"], "threadContext": null,
+        "recipient": "user4@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": { "families": ["SOC", "URL"] }
+  },
+  {
+    "id": "legitimate-lecturer",
+    "payload": {
+      "source": "email",
+      "message": "Hello everyone, tomorrow's class is moved to room B204 in the main building. Please bring your printed notes. See you at 10am.",
+      "emailContext": {
+        "messageId": "<demo-lect-1@example>",
+        "from": { "name": "Dr. Ramgoolam", "address": "a.ramgoolam@university.example" },
+        "replyTo": [], "returnPath": null, "subject": "Class location tomorrow",
+        "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+        "attachments": [], "urls": [], "threadContext": null,
+        "recipient": "student@university.example", "senderContext": null
+      }
+    },
+    "expect": { "level": "low" }
+  },
+  {
+    "id": "ambiguous-invoice-review",
+    "payload": {
+      "source": "email",
+      "message": "Please review this invoice when you have a moment.",
+      "emailContext": {
+        "messageId": "<demo-amb-1@example>",
+        "from": { "name": "Accounts", "address": "accounts@some-vendor.example" },
+        "replyTo": [], "returnPath": null, "subject": "Invoice",
+        "authentication": { "spf": "unknown", "dkim": "unknown", "dmarc": "unknown" },
+        "attachments": [], "urls": [], "threadContext": null,
+        "recipient": "user5@demo-company.example", "senderContext": null
+      }
+    },
+    "expect": {}
   }
 ]
