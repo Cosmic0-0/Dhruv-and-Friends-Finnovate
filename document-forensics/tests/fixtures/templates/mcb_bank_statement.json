@@ -1,0 +1,24 @@
+{
+  "template_id": "mcb_bank_statement",
+  "display_name": "MCB bank statement",
+  "institution_id": "mcb",
+  "expected_fields": {
+    "institution_name": ["MCB", "Mauritius Commercial Bank"],
+    "document_title": ["Statement of Account", "Bank Statement"]
+  },
+  "expected_regions": [
+    {
+      "name": "logo",
+      "description": "MCB wordmark/logo box in the top-left header band.",
+      "bbox": [0.03, 0.02, 0.30, 0.10],
+      "expected_ink_density": [0.02, 0.35]
+    },
+    {
+      "name": "document_title",
+      "description": "Statement title, right of the logo in the same header band.",
+      "bbox": [0.40, 0.02, 0.95, 0.10],
+      "expected_ink_density": [0.003, 0.35]
+    }
+  ],
+  "notes": "Illustrative layout only - not calibrated against a corpus of real MCB statements. Ink-density ranges are coarse placeholders meant to catch gross displacement (a missing, moved, or resized logo/title block), not fine-grained forgery detection."
+}

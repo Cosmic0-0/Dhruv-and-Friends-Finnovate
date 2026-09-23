@@ -1,0 +1,18 @@
+# Stage 4 only (checks/layout.py) - Donut structured extraction + template
+# comparison. Kept separate from requirements-base.txt (and from
+# requirements-trufor.txt) on purpose: importing/running the cheap checks,
+# or most requests (stage 4 only runs when 1-3 are still inconclusive),
+# should never require PyTorch/transformers - see README.md "Deployment
+# footprint follows the same principle".
+#
+# Install torch from the CPU-only index - this sandbox/most dev machines
+# have no GPU, and the default PyPI wheel drags in several GB of CUDA
+# libraries for nothing:
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install -r requirements-layout.txt
+#
+# Loose (not exact-pinned) on purpose - see requirements-base.txt's note.
+torch
+transformers>=4.45
+sentencepiece
+protobuf

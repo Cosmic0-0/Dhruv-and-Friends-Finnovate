@@ -1,0 +1,18 @@
+{
+  "template_id": "generic_mu_bank_letterhead",
+  "display_name": "Generic Mauritius bank letterhead",
+  "institution_id": null,
+  "expected_fields": {
+    "institution_name": [],
+    "document_title": ["Notice", "Circular", "Important Notice", "Letter"]
+  },
+  "expected_regions": [
+    {
+      "name": "logo",
+      "description": "Institution logo/wordmark in the top-left header band - common to most local bank letterheads regardless of institution.",
+      "bbox": [0.03, 0.02, 0.30, 0.10],
+      "expected_ink_density": [0.02, 0.35]
+    }
+  ],
+  "notes": "Deliberately institution-agnostic (empty institution_name list means any institution name is accepted) - covers the common letterhead layout shared by several local banks rather than one specific statement format. Add an institution-specific template ahead of this one in the directory listing order if you need it to take priority; matching stops at the first template whose expected fields are satisfied."
+}
