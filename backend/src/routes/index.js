@@ -11,6 +11,7 @@ import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
+import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
 
 export const router = Router();
 
@@ -56,6 +57,14 @@ const checkSenderLimiter = rateLimited("too many check-sender requests, try agai
 const reportLimiter = rateLimited("too many report submissions from this address, try again later", {
   windowMs: 60 * 60 * 1000,
   limit: 5,
+});
+// analyzeSite() makes roughly a dozen outbound requests to the target site
+// per call (main fetch, TLS probe, artifact/source-map checks, HTTP-redirect
+// probe) - much heavier than check-url, so this stays well below that
+// route's 120/15min even though it's also non-LLM.
+const siteSecurityLimiter = rateLimited("too many security-report requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
 });
 
 // Magic-byte signatures - the screenshot route never trusts a
@@ -206,6 +215,27 @@ router.post("/check-url", checkUrlLimiter, json({ limit: "10kb" }), (req, res) =
   }
   const signals = checkUrls(url);
   res.json({ url, flagged: signals.length > 0, signals });
+});
+
+// Passive site-security scan for the extension's popup (see
+// extension/README.md "Security Report" and
+// backend/src/services/site-security/index.js's header comment for the
+// "no crafted payloads, no fuzzing, no brute-forcing" constraint this runs
+// under). `url` is attacker-influenced input (public POST route), so
+// analyzeSite() runs it through its own SSRF guard before any outbound
+// request - a malformed/unsafe url is a 400 here, not a 500.
+router.post("/analyze-site", siteSecurityLimiter, json({ limit: "300kb" }), async (req, res) => {
+  const { url, clientSignals } = req.body;
+  if (!isNonEmptyString(url)) {
+    return res.status(400).json({ error: "url is required and must be a non-empty string" });
+  }
+  try {
+    res.json(await analyzeSite(url, clientSignals));
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) return res.status(400).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: "security report failed, try again shortly" });
+  }
 });
 
 // Read-only counterpart to /api/report: looks up a sender's existing report
