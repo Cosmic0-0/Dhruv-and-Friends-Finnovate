@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { BODY_LIMIT, extractUrlsFromHtml, htmlToText, prepareEmailBody } from "../src/body";
+import { BODY_LIMIT, extractCurrentMessageUrls, htmlToText, prepareEmailBody } from "../src/body";
 
 describe("email body preparation", () => {
   test("normalises text and removes a quoted thread only after the current message", () => {
@@ -24,6 +24,6 @@ describe("email body preparation", () => {
   test("converts HTML safely and extracts only HTTP targets", () => {
     const html = `<p>Pay <strong>now</strong></p><script>steal()</script><a href="https://asp1re.example/login">portal</a><a href="javascript:alert(1)">bad</a>`;
     expect(htmlToText(html)).toBe("Pay nowportalbad");
-    expect(extractUrlsFromHtml(html)).toEqual(["https://asp1re.example/login"]);
+    expect(extractCurrentMessageUrls(html).urls).toEqual(["https://asp1re.example/login"]);
   });
 });

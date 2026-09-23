@@ -108,6 +108,11 @@ export interface Copy {
     /** Hero button to the document check (app/document). */
     document: string;
     payRow: string;
+    /**
+     * Shown only before the first check. A new user otherwise lands on a
+     * dashboard of empty cards with nothing saying what the app is for.
+     */
+    intro: { title: string; points: readonly string[] };
     /** Checking state (design/mockup/Checking.png). */
     checkingLabel: string;
     checkingNote: string;
@@ -147,11 +152,13 @@ export interface Copy {
   trends: {
     title: string;
     intro: string;
+    /** Heading for the static reference list of local scam formats. */
+    knownFormats: string;
     categories: { title: string; body: string; example: string }[];
     footerNote: string;
     /**
      * Real aggregate counts from GET /api/trends (components/TrendsContent.tsx)
-     * — genuine usage, never seeded/fabricated numbers (root CLAUDE.md's "no
+     *, genuine usage, never seeded/fabricated numbers (root CLAUDE.md's "no
      * fake live statistics" rule), so there is no "demonstration dataset"
      * label here the way a seeded version of this page would need.
      */
@@ -175,7 +182,7 @@ export interface Copy {
     /**
      * The reveal checklist shown right after a response arrives (see
      * lib/result.ts's revealSteps + components/InvestigationReveal.tsx).
-     * Every line is built from a field actually present on that response —
+     * Every line is built from a field actually present on that response -
      * never shown for data the backend didn't return.
      */
     investigate: {
@@ -235,7 +242,7 @@ export interface Copy {
       unverified: string;
       caveat: string;
     };
-    /** "Why FraudLens flagged this" — signals grouped by their `source`, plus community intelligence. */
+    /** "Why FraudLens flagged this", signals grouped by their `source`, plus community intelligence. */
     evidence: {
       title: string;
       aiTitle: string;
@@ -285,7 +292,7 @@ export interface Copy {
     sentBodyScreenshot: string;
     /** "What was sent" explanation for a document check (the file itself went to the server). */
     sentBodyDocument: string;
-    /** Which AI (if any) served the semantic analysis — local self-hosted model, hosted fallback, or none. */
+    /** Which AI (if any) served the semantic analysis, local self-hosted model, hosted fallback, or none. */
     aiSource: {
       label: string;
       local: string;
@@ -301,7 +308,7 @@ export interface Copy {
    * Fraud Replay (components/FraudReplay.tsx, app/replay/page.tsx): the same
    * stored analysis result as the result screen, retold as a chronological
    * story instead of a stacked report. Reuses result.* copy wherever a
-   * concept is shared (identity, journey, campaign match) — this only adds
+   * concept is shared (identity, journey, campaign match), this only adds
    * the narrative framing and the per-signal "why this works" line.
    */
   replay: {
@@ -316,12 +323,12 @@ export interface Copy {
     stepPattern: string;
     patternMatched: (reports: number, senders: number, domains: number) => string;
     stepStop: string;
-    /** One line of general scam psychology per signal kind — never a claim about this specific sender. */
+    /** One line of general scam psychology per signal kind, never a claim about this specific sender. */
     belief: Record<SignalKind, string>;
   };
   /**
    * Simple mode (components/SimpleMode.tsx): an action-first, plain-language
-   * replacement for the detailed result — short sentences, no jargon, one
+   * replacement for the detailed result, short sentences, no jargon, one
    * decision at a time. Toggled from the result screen, remembered across
    * visits (lib/storage.ts's loadSimpleMode/saveSimpleMode).
    */
@@ -405,7 +412,7 @@ export interface Copy {
     /** Dev-only controls (visible in `next dev` only). */
     dev: { title: string; reset: string; seed: string };
   };
-  /** "Before you pay" — a separate entry point from the Check screen, for a payment request rather than a message to analyse. */
+  /** "Before you pay", a separate entry point from the Check screen, for a payment request rather than a message to analyse. */
   safepay: {
     title: string;
     intro: string;
@@ -506,9 +513,19 @@ export interface DocumentCopy {
 /**
  * A Kreol string not written yet because we weren't confident in it. It
  * shows the English so the screen stays readable, and marks the spot for
- * the Kreol reviewer: grep TODO_KREOL.
+ * the Kreol reviewer: grep DRAFT_KREOL. Nothing currently falls back to
+ * English; TODO_KREOL is kept for a string added faster than it is translated.
  */
 const TODO_KREOL = <T,>(english: T): T => english;
+
+/**
+ * Kreol that IS written but has not been through the Kreol owner's review.
+ *
+ * Unlike TODO_KREOL, this renders the Kreol: leaving English on screen for a
+ * Kreol user is the worse failure. It stays a named wrapper so the strings
+ * needing review are still one grep away (grep DRAFT_KREOL).
+ */
+const DRAFT_KREOL = <T,>(kreol: T): T => kreol;
 
 const LEARN_EN: Copy["learn"] = {
   headline: "Learn to spot them",
@@ -622,7 +639,7 @@ const INVESTIGATE_EN: Copy["result"]["investigate"] = {
   communityNew: "Not reported before",
   communityFlagged: (n) => (n === 1 ? "Reported by another user before" : `Reported by ${n} other users before`),
   stageIdentified: (stage) => `Scam stage identified: ${stage}`,
-  campaignNew: "New pattern — no matching campaign yet",
+  campaignNew: "New pattern: no matching campaign yet",
   campaignMatched: "Matches a known scam campaign",
 };
 
@@ -747,7 +764,7 @@ const RESULT_EN: Copy["result"] = {
     label: "Analyzed by",
     local: "Local AI model (self-hosted, on-device)",
     fallback: "Cloud fallback AI ({provider})",
-    unavailable: "AI unavailable — deterministic checks only",
+    unavailable: "AI unavailable: deterministic checks only",
   },
   checkAnother: "Check another message",
   missingTitle: "No check to show",
@@ -801,14 +818,14 @@ const CARD_EN: Copy["card"] = {
   copied: "Copied",
 };
 
-// Screenshot upload copy (English), held in constants so Kreol can fall back via TODO_KREOL.
+// Screenshot upload copy, held in constants so each language reuses one source.
 // Matches backend/src/routes/index.js (/analyze/screenshot): the image arrives
 // as-is, and the OCR text is redacted (services/redact) before any analysis.
 const IMAGE_PRIVACY_EN =
   "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
 
 /** Stage 3 (40s+) is shown once and stays: honest, calm, no repeated apology. */
-const STILL_WORKING_EN = "Still working — this can take a couple of minutes on our current setup.";
+const STILL_WORKING_EN = "Still working, this can take a couple of minutes on our current setup.";
 
 const WAIT_EN: Copy["wait"] = {
   check: ["Checking the message…", "Looking for warning signs…", "The AI is reading closely…", STILL_WORKING_EN],
@@ -855,7 +872,7 @@ const HOME_EN: Copy["home"] = {
     "FraudLens doesn't just say a message looks suspicious. It shows you exactly why, in plain language, before you pay, click or share a code.",
   bullets: [
     "See exactly which words and links triggered a warning.",
-    "Works in English, French and Kreol — even mixed together.",
+    "Works in English, French and Kreol, even mixed together.",
     "Checks any link against real Mauritius bank and telecom domains.",
     "Check a message, a screenshot, or a payment you're about to make.",
   ],
@@ -1171,7 +1188,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
       document: "Check a document",
-      payRow: "About to pay someone?",
+      payRow: "Check before you pay",
+      intro: {
+        title: "What this does",
+        points: [
+          "Spots bank, parcel and prize scams of the kind sent in Mauritius.",
+          "Reads Kreol, French and English, including messages that mix them.",
+          "Phone numbers and account numbers are removed on your phone, before anything is sent.",
+        ],
+      },
       checkingLabel: "Checking the message",
       checkingNote: "This can take up to a minute. You can keep this screen open.",
       week: {
@@ -1226,6 +1251,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     trends: {
       title: "Known scam patterns in Mauritius",
+      knownFormats: "Known formats",
       intro:
         "The scam formats reported often enough in Mauritius to be worth knowing by sight, plus what FraudLens has actually seen reported below.",
       categories: [
@@ -1246,7 +1272,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        "The list above is a reference, not a live feed. The numbers below are FraudLens's actual usage — real checks and reports, not a demonstration dataset.",
+        "The list above is a reference, not a live feed. The numbers here are FraudLens's actual usage, real checks and reports, not a demonstration dataset.",
       live: {
         heading: "What FraudLens has actually seen",
         reportedSenders: (n) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
@@ -1255,7 +1281,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Most-observed patterns",
         reports: (n) => (n === 1 ? "1 report" : `${n} reports`),
         messages: (n) => (n === 1 ? "1 check" : `${n} checks`),
-        empty: "Not enough activity yet — check a message to be the first.",
+        empty: "Not enough activity yet: check a message to be the first.",
         loading: "Loading…",
         error: "Couldn't load this right now.",
       },
@@ -1281,7 +1307,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         "FraudLens ne se contente pas de dire qu'un message semble suspect. Il vous montre exactement pourquoi, en langage clair, avant que vous ne payiez, cliquiez ou partagiez un code.",
       bullets: [
         "Voyez exactement quels mots et liens ont déclenché une alerte.",
-        "Fonctionne en anglais, français et kreol — même mélangés.",
+        "Fonctionne en anglais, français et kreol, même mélangés.",
         "Vérifie tout lien face aux vrais domaines des banques et opérateurs mauriciens.",
         "Vérifiez un message, une capture d'écran, ou un paiement que vous vous apprêtez à faire.",
       ],
@@ -1296,14 +1322,14 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Vérification du message…",
         "Recherche des signaux d'alerte…",
         "L'IA lit attentivement…",
-        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+        "Toujours en cours, cela peut prendre quelques minutes avec notre configuration actuelle.",
       ],
       checkShort: ["Vérification…", "Recherche…", "Lecture attentive…", "Toujours en cours…"],
       screenshot: [
         "Lecture de la capture…",
         "Extraction du texte…",
         "Lecture attentive du texte…",
-        "Toujours en cours — cela peut prendre quelques minutes avec notre configuration actuelle.",
+        "Toujours en cours, cela peut prendre quelques minutes avec notre configuration actuelle.",
       ],
       progressLabel: "Progression",
       cancel: "Annuler",
@@ -1371,7 +1397,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
       screenshot: "Vérifier une capture d'écran",
       document: "Vérifier un document",
-      payRow: "Sur le point de payer ?",
+      payRow: "Vérifier avant de payer",
+      intro: {
+        title: "À quoi ça sert",
+        points: [
+          "Repère les arnaques bancaires, de colis et de faux gains telles qu'on les reçoit à Maurice.",
+          "Comprend le kreol, le français et l'anglais, même mélangés dans un même message.",
+          "Les numéros de téléphone et de compte sont retirés sur votre téléphone, avant tout envoi.",
+        ],
+      },
       checkingLabel: "Analyse du message",
       checkingNote: "Cela peut prendre jusqu'à une minute. Vous pouvez laisser cet écran ouvert.",
       week: {
@@ -1426,6 +1460,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     trends: {
       title: "Arnaques connues à Maurice",
+      knownFormats: "Formats connus",
       intro:
         "Les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil, ainsi que ce que FraudLens a réellement vu signalé ci-dessous.",
       categories: [
@@ -1446,7 +1481,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        "La liste ci-dessus est une référence, pas un flux en direct. Les chiffres ci-dessous sont l'usage réel de FraudLens — de vraies vérifications et signalements, pas un jeu de données de démonstration.",
+        "La liste ci-dessus est une référence, pas un flux en direct. Les chiffres ci-dessous sont l'usage réel de FraudLens, de vraies vérifications et signalements, pas un jeu de données de démonstration.",
       live: {
         heading: "Ce que FraudLens a réellement observé",
         reportedSenders: (n) => (n === 1 ? "1 expéditeur signalé" : `${n} expéditeurs signalés`),
@@ -1455,7 +1490,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Schémas les plus observés",
         reports: (n) => (n === 1 ? "1 signalement" : `${n} signalements`),
         messages: (n) => (n === 1 ? "1 vérification" : `${n} vérifications`),
-        empty: "Pas encore assez d'activité — vérifiez un message pour être le premier.",
+        empty: "Pas encore assez d'activité, vérifiez un message pour être le premier.",
         loading: "Chargement…",
         error: "Impossible de charger ceci pour le moment.",
       },
@@ -1474,7 +1509,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         communityNew: "Jamais signalé auparavant",
         communityFlagged: (n) => (n === 1 ? "Déjà signalé par un autre utilisateur" : `Déjà signalé par ${n} autres utilisateurs`),
         stageIdentified: (stage) => `Étape de l'arnaque identifiée : ${stage}`,
-        campaignNew: "Nouveau schéma — aucune campagne correspondante pour l'instant",
+        campaignNew: "Nouveau schéma, aucune campagne correspondante pour l'instant",
         campaignMatched: "Correspond à une campagne d'arnaque connue",
       },
       networkLink: "Voir le réseau de fraude",
@@ -1597,7 +1632,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analysé par",
         local: "Modèle IA local (auto-hébergé, sur l'appareil)",
         fallback: "IA de secours dans le cloud ({provider})",
-        unavailable: "IA indisponible — vérifications déterministes uniquement",
+        unavailable: "IA indisponible, vérifications déterministes uniquement",
       },
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
@@ -1753,13 +1788,25 @@ export const COPY: Record<UiLanguage, Copy> = {
     headline: "Ou finn gagn enn mesaz lor larzan?",
     subline:
       "Kol li isi avan ou pey, klik ouswa partaz enn kod. Nou pou montre ou seki paret pa bon ek kifer.",
-    home: TODO_KREOL(HOME_EN),
+    home: DRAFT_KREOL({
+      tagline: "Trouv eskrokri la avan li arive.",
+      pitch:
+        "FraudLens pa zis dir enn mesaz paret sispe. Li montre ou exakteman kifer, dan enn langaz senp, avan ou pey, klike ouswa partaz enn kod.",
+      bullets: [
+        "Get exakteman ki bann mo ek lien finn deklans enn lalert.",
+        "Li mars an Angle, Franse ek Kreol, mem kan zot melanze.",
+        "Li verifie tou lien kont bann vre domenn labank ek telekom Morisien.",
+        "Verifie enn mesaz, enn kopi lekran, ouswa enn pelman ki ou lor pwen fer.",
+      ],
+      payCta: "Mo lor pwen pey",
+      payCtaSub: "Fer verifikasion avan ou avoy larzan, pa apre.",
+    }),
     messageLabel: "Mesaz la",
     placeholder: "Kol text SMS, WhatsApp ouswa email la isi...",
     submit: "Verifie sa mesaz la",
     // Stage 0 reuses the reviewed "Pe verifie…" / "Pe lir text la…"; the rest is new and unreviewed.
     wait: {
-      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel."],
+      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel."],
       checkShort: [
         "Pe verifie…",
         "Pe rod siny…",
@@ -1770,7 +1817,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Pe lir text la…",
         "Pe tir text la…",
         "Pe lir text la bien…",
-        "Pe travay ankor — sa kapav pran de-trwa minit lor nou sistem aktiel.",
+        "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel.",
       ],
       progressLabel: "Progre",
       cancel: "Anile",
@@ -1830,74 +1877,88 @@ export const COPY: Record<UiLanguage, Copy> = {
       check: "Verifie",
       learn: "Aprann",
       trends: "Radar",
-      settings: TODO_KREOL("Settings"),
-      newCheck: TODO_KREOL("Check a new message"),
+      settings: DRAFT_KREOL("Paramet"),
+      newCheck: DRAFT_KREOL("Verifie enn nouvo mesaz"),
     },
-    check: TODO_KREOL({
-      greeting: (h: number) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
-      question: "Is this a scam?",
-      heroLine: "Paste a message before you pay, tap a link or share a code.",
-      paste: "Paste & check",
-      pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
-      screenshot: "Check a screenshot",
-      document: "Check a document",
-      payRow: "About to pay someone?",
-      checkingLabel: "Checking the message",
-      checkingNote: "This can take up to a minute. You can keep this screen open.",
-      week: {
-        title: "This week",
-        checks: (n: number) => `${n} ${n === 1 ? "check" : "checks"}`,
-        caught: (n: number) => ({ strong: `${n} ${n === 1 ? "scam" : "scams"}`, rest: "caught" }),
-        nothing: "nothing caught",
+    check: DRAFT_KREOL({
+      greeting: (h: number) => (h < 12 ? "Bonzour" : h < 18 ? "Bon apremidi" : "Bonswar"),
+      question: "Eski sa enn eskrokri?",
+      heroLine: "Kol enn mesaz avan ou pey, klik enn lien ouswa partaz enn kod.",
+      paste: "Kol ek verifie",
+      pasteFallback: "Nanye pou kole ankor. Tap mesaz la, ouswa kol li isi.",
+      screenshot: "Verifie enn kopi lekran",
+      document: TODO_KREOL("Check a document"),
+      payRow: "Verifie avan ou pey",
+      intro: {
+        title: "Ki sa fer",
+        points: [
+          "Li trouv bann eskrokri labank, koli ek pri kouma bann ki avoye dan Moris.",
+          "Li lir Kreol, Franse ek Angle, mem kan enn mesaz melanz zot.",
+          "Nimero telefonn ek nimero kont tire lor ou telefonn, avan nanye avoye.",
+        ],
       },
-      practice: { title: "Practice", streak: (n: number) => `${n}-day streak`, start: "Start a streak" },
+      checkingLabel: "Pe verifie mesaz la",
+      checkingNote: "Sa kapav pran ziska enn minit. Ou kapav les sa lekran la ouver.",
+      week: {
+        title: "Sa semenn la",
+        checks: (n: number) => `${n} verifikasion`,
+        caught: (n: number) => ({ strong: `${n} eskrokri`, rest: "trouve" }),
+        nothing: "nanye pa finn trouve",
+      },
+      practice: {
+        title: "Antrennman",
+        streak: (n: number) => `${n} zour ki swiv`,
+        start: "Koumans enn seri",
+      },
       install: {
-        body: "Keep FraudLens on your Home Screen, so it's there when the next message lands.",
-        add: "Add to Home Screen",
-        notNow: "Not now",
-        iosTitle: "On iPhone",
-        iosStep1: "Tap the Share button in Safari.",
-        iosStep2: 'Choose "Add to Home Screen".',
+        body: "Gard FraudLens lor ou lekran akey, pou li la kan prosen mesaz arive.",
+        add: "Azout lor lekran akey",
+        notNow: "Pa aster",
+        iosTitle: "Lor iPhone",
+        iosStep1: "Tap bouton Partaz dan Safari.",
+        iosStep2: 'Swazir "Add to Home Screen".',
       },
       recent: {
-        title: "Recent",
-        empty: "Your checks will show here.",
-        short: { safe: "Genuine", suspicious: "Careful", scam: "Scam" },
+        title: "Dernie",
+        empty: "Ou bann verifikasion pou paret isi.",
+        short: { safe: "Vre", suspicious: "Atansion", scam: "Eskrokri" },
       },
     }),
-    tools: TODO_KREOL({
-      title: "Tools",
-      batch: "Batch scan",
-      batchHint: "Several at once",
-      conversation: "Conversation",
-      conversationHint: "A whole thread",
-      sandbox: "Sandbox",
-      sandboxHint: "Practise safely",
-      document: "Check a document",
-      documentHint: "PDF or Word",
+    tools: DRAFT_KREOL({
+      title: "Zouti",
+      batch: "Verifie an gro",
+      batchHint: "Plizier enn sel kou",
+      conversation: "Konversasion",
+      conversationHint: "Tou enn diskision",
+      sandbox: "Similasion",
+      sandboxHint: "Antrenn ou san risk",
+      document: TODO_KREOL("Check a document"),
+      documentHint: TODO_KREOL("PDF or Word"),
     }),
-    settings: TODO_KREOL({
-      title: "Settings",
+    settings: DRAFT_KREOL({
+      title: "Paramet",
       theme: {
-        title: "Appearance",
-        system: "System",
-        light: "Light",
-        dark: "Dark",
-        note: "System follows your phone's own light or dark setting.",
+        title: "Laparans",
+        system: "Sistem",
+        light: "Kler",
+        dark: "Fonse",
+        note: "Sistem swiv reglaz kler ouswa fonse ou telefonn limem.",
       },
-      languageTitle: "Language",
-      languageNote: "Changes every screen, and tells the analysis which language to answer in.",
-      privacyTitle: "Privacy",
+      languageTitle: "Langaz",
+      languageNote: "Li sanz tou bann lekran, ek li dir lanaliz dan ki langaz pou reponn.",
+      privacyTitle: "Konfidansialite",
       privacyBody:
-        "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Your checks are kept on this device only.",
-      aboutTitle: "About",
-      aboutBody: "FraudLens helps you spot a scam message before you pay, tap a link or share a code. Built in Mauritius, for Mauritius.",
-      teamLogoAlt: "Dhruv and Friends logo",
+        "Nimero telefonn, email ek nimero kont tire dan ou navigater avan enn mesaz avoye pou lanaliz. Ou bann verifikasion res lor sa aparey la selman.",
+      aboutTitle: "Lor nou",
+      aboutBody:
+        "FraudLens ed ou rekonet enn mesaz eskrokri avan ou pey, klik enn lien ouswa partaz enn kod. Fer dan Moris, pou Moris.",
+      teamLogoAlt: "Logo Dhruv and Friends",
     }),
     trends: {
       title: "Bann eskrokri konplet dan Moris",
+      knownFormats: DRAFT_KREOL("Bann format koni"),
       intro:
-        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel — se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
+        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel, se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
       categories: [
         {
           title: "SMS ki imit enn labank",
@@ -1917,7 +1978,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       ],
       footerNote:
         "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
-      live: TODO_KREOL({
+      live: DRAFT_KREOL({
         heading: "What FraudLens has actually seen",
         reportedSenders: (n: number) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
         campaigns: (n: number) => (n === 1 ? "1 pattern tracked" : `${n} patterns tracked`),
@@ -1925,38 +1986,83 @@ export const COPY: Record<UiLanguage, Copy> = {
         topCampaignsTitle: "Most-observed patterns",
         reports: (n: number) => (n === 1 ? "1 report" : `${n} reports`),
         messages: (n: number) => (n === 1 ? "1 check" : `${n} checks`),
-        empty: "Not enough activity yet — check a message to be the first.",
+        empty: "Not enough activity yet: check a message to be the first.",
         loading: "Loading…",
         error: "Couldn't load this right now.",
       }),
     },
     // Result screen: reviewed by the frontend owner.
-    conversation: TODO_KREOL(CONVERSATION_EN),
+    conversation: DRAFT_KREOL({
+      title: "Get konversasion la deroule",
+      intro: "Azout bann mesaz dan lord ki ou finn gagn zot. Swiv bann siny danze pandan ki konversasion la avanse.",
+      thread: "Konversasion",
+      empty: "Koumans ar premie mesaz ki ou finn gagne.",
+      add: "Prosen mesaz",
+      submit: "Analiz mesaz la",
+      reset: "Efas konversasion",
+      progress: "Etap pli lwen detekte",
+      pending:
+        "Azout enn mesaz pou get so etap. Sak mesaz analize separeman; diskision la montre etap pli lwen ki finn detekte.",
+      message: "Mesaz",
+      unknownStage: "Etap pa idantifie",
+      verdicts: { safe: "Pena siny danze", suspicious: "Sispe", scam: "Eskrokri" },
+    }),
     result: {
-      journey: TODO_KREOL(JOURNEY_EN),
-      investigate: TODO_KREOL(INVESTIGATE_EN),
-      networkLink: TODO_KREOL("View fraud network"),
+      journey: DRAFT_KREOL({
+        title: "Parkour eskrokri",
+        whatNextTitle: "Seki kapav arive apre",
+        youAreHere: "Ou isi",
+        caveat:
+          "Enn progresion posib, pa enn predision. Sa mesaz la pa konfirm bann etap avan.",
+        labels: {
+          INITIAL_CONTACT: "Premie kontak",
+          TRUST_BUILDING: "Pe gagn ou konfians",
+          AUTHORITY_CLAIM: "Pe fer krwar li ena lotorite",
+          URGENCY: "Pe met presion letan",
+          CREDENTIAL_REQUEST: "Pe dimann ou bann idantifian",
+          OTP_REQUEST: "Pe dimann enn kod OTP",
+          PAYMENT_REQUEST: "Pe dimann enn pelman",
+          PAYMENT_PRESSURE: "Pe fors ou pou pey",
+          ACCOUNT_TAKEOVER: "Pe pran kontrol ou kont",
+        },
+      }),
+      investigate: DRAFT_KREOL({
+        heading: "FraudLens finn verifie",
+        messageRead: "Mesaz la lir",
+        claimedIdentity: (name: string) => `Lenstitision ki li dir: ${name}`,
+        linksChecked: "Bann lien verifie kont domenn labank ek telekom koni",
+        linkFlagged: (host: string) => `Lien sispe trouve: ${host}`,
+        identityChecked: "Idantite sann ki avoye verifie",
+        identityMismatch: "Idantite pa koresponn",
+        communityNew: "Pa finn rapporte avan",
+        communityFlagged: (n: number) =>
+          n === 1 ? "Rapporte par enn lot itilizater avan" : `Rapporte par ${n} lezot itilizater avan`,
+        stageIdentified: (stage: string) => `Etap eskrokri idantifie: ${stage}`,
+        campaignNew: "Nouvo model: pena kanpagn ki koresponn ankor",
+        campaignMatched: "Li koresponn ar enn kanpagn eskrokri koni",
+      }),
+      networkLink: DRAFT_KREOL("Get rezo eskrokri"),
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
       back: "Retour",
       warningSigns: (n) => (n === 0 ? "Pena okenn siny danze" : `${n} siny danze`),
       risk: (s) => `Risk ${s} / 100`,
-      hero: TODO_KREOL({
-        riskScore: "Risk score",
+      hero: DRAFT_KREOL({
+        riskScore: "Nivo risk",
         outOf: "/ 100",
-        warningSignsLabel: "Warning signs",
-        signsFound: (n: number) => `${n} found`,
-        linkMadeLabel: "Link made",
-        daysAgo: (n: number) => (n === 0 ? "today" : n === 1 ? "1 day ago" : `${n} days ago`),
+        warningSignsLabel: "Siny danze",
+        signsFound: (n: number) => `${n} trouve`,
+        linkMadeLabel: "Lien fer",
+        daysAgo: (n: number) => (n === 0 ? "zordi" : n === 1 ? "ena 1 zour" : `ena ${n} zour`),
       }),
-      whatsWrong: TODO_KREOL("What's wrong"),
+      whatsWrong: DRAFT_KREOL("Ki pa bon"),
       signsUnit: (n: number) => (n === 1 ? "siny" : "siny"),
-      theLink: TODO_KREOL("The link"),
+      theLink: DRAFT_KREOL("Lien la"),
       daysOld: (n: number) => (n === 1 ? "zour" : "zour"),
       realSite: (d: string) => `Vre sit: ${d}`,
-      linksTitle: TODO_KREOL("Links"),
-      linksToTap: TODO_KREOL(() => "to tap"),
-      noLinkBody: TODO_KREOL("Nothing here can open a fake page."),
+      linksTitle: DRAFT_KREOL("Bann lien"),
+      linksToTap: DRAFT_KREOL(() => "pou klike"),
+      noLinkBody: DRAFT_KREOL("Nanye isi pa kapav ouver enn fos paz."),
       scamAdvice: "Pa pey, pa ouver lien la, ek zame partaz enn kod ki ou gagn lor ou telefonn.",
       messageYouSent: "Mesaz ki ou finn avoye",
       documentText: TODO_KREOL(RESULT_EN.documentText),
@@ -1974,9 +2080,25 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       genericSignal: "Ena kiksoz ki pa bon",
       severity: { low: "Ba", medium: "Mwayen", high: "O" },
-      xrayHint: TODO_KREOL(RESULT_EN.xrayHint),
-      identity: TODO_KREOL(RESULT_EN.identity),
-      evidence: TODO_KREOL(RESULT_EN.evidence),
+      xrayHint: DRAFT_KREOL("Tap lor enn fraz sirliyne pou get kifer li finn siyale."),
+      identity: DRAFT_KREOL({
+        title: "Seki li dir kont seki li ete",
+        claimsToBe: "Li dir li",
+        recognized: "Lenstitision rekonet",
+        linksTo: "Me lien la ale lor",
+        paysTo: "Me pelman la ale kot",
+        officialSite: "Sit ofisiel",
+        unverified: "Pa verifie",
+        caveat: "Parski li resanble, sa pa prouve ki enn lien ouswa enn kont vre.",
+      }),
+      evidence: DRAFT_KREOL({
+        title: "Kifer FraudLens finn siyal sa",
+        aiTitle: "Lanaliz AI",
+        deterministicTitle: "Verifikasion regleman",
+        communityTitle: "Lenformasion kominote",
+        communityLine: (n: number) => (n === 1 ? "Rapporte par lezot 1 fwa" : `Rapporte par lezot ${n} fwa`),
+        sourcesAgree: (n: number) => `${n} sours prev endepandan dakor`,
+      }),
       lookalikeDomain: (h, d) => `${h} resanble ${d}, me se pa vre sit la.`,
       lookalikeBrand: (h, b) => `${h} servi nom ${b}, me se pa enn vre sit ${b}.`,
       linkCheck: {
@@ -2010,9 +2132,9 @@ export const COPY: Record<UiLanguage, Copy> = {
       checksShort: {
         no_link: "Pena lien",
         no_lookalike: "Pena fo lien",
-        informs_not_asks: TODO_KREOL("Nothing to do"),
-        last_four_only: TODO_KREOL("Last 4 digits only"),
-        no_pressure: TODO_KREOL("No code, no rush"),
+        informs_not_asks: DRAFT_KREOL("Nanye pou fer"),
+        last_four_only: DRAFT_KREOL("Zis 4 dernie sif"),
+        no_pressure: DRAFT_KREOL("Pa dimann kod, pa presse"),
       },
       safeCaveat:
         "Nou pa kapav garanti ki enn mesaz vre. Si ena larzan ladan ek ou ena enn dout, apel ou labank lor nimero ki lor ou kart.",
@@ -2036,28 +2158,71 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analize par",
         local: "Model AI lokal (self-hosted, lor aparey)",
         fallback: "AI backup lor cloud ({provider})",
-        unavailable: "AI pa disponib — zis verifikasion deterministik",
+        unavailable: "AI pa disponib, zis verifikasion deterministik",
       },
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
     },
-    replay: TODO_KREOL(REPLAY_EN),
-    simple: TODO_KREOL(SIMPLE_EN),
-    card: TODO_KREOL(CARD_EN),
-    // Learn tab: reviewed by the frontend owner. TODO_KREOL marks strings that
-    // have no Kreol translation yet (they show English until one is written).
+    replay: DRAFT_KREOL({
+      title: "Rekonstitision eskrokri",
+      subtitle: "Kouma sa mesaz la finn fer pou marse, rakonte kouma enn zistwar olie enn rapor.",
+      openReplay: "Get kouma sa eskrokri la marse",
+      back: "Retourn lor rezilta",
+      stepContact: "Kontak la",
+      stepWanted: "Seki li ti pe rod kot ou",
+      stepJourney: "Kot sa pe ale",
+      experienceSafely: "Viv sa san risk",
+      stepPattern: "Model pli larz",
+      patternMatched: (reports: number, senders: number, domains: number) =>
+        `Li koresponn ar bann rapor avan: ${reports} rapor lor ${senders} nimero ek ${domains} domenn.`,
+      stepStop: "Aret la",
+      belief: {
+        sender_mismatch:
+          "Enn mesaz paret pli fiab kan li sanble sorti kot enn nimero ouswa enn kont ki ou rekonet.",
+        lookalike_url: "Enn lien ki preske bon fasil pou rate kan ou pe prese.",
+        urgency_language: "Presion letan koup tan ki ou ti pou pran pou verifie.",
+        spoofed_identity: "Servi enn nom ki dimounn fer konfians fer demann la paret ofisiel.",
+        credential_request:
+          "Enn kod ouswa enn modpas kapav paret san danze pou partaze kan demann la paret normal.",
+        payment_request:
+          "Prezant li kouma enn fre ouswa enn ranbursman fer pelman la paret kouma prosen etap normal.",
+        prize_offer: "Enn rekonpans inatandi bes ou vizilans avan ou verifie kisannla pe dimande.",
+        secrecy: "Kan dir ou gard sa sekre, personn lot pa kapav dekouver trik la.",
+        document_integrity: TODO_KREOL(REPLAY_EN.belief.document_integrity),
+      },
+    }),
+    simple: DRAFT_KREOL({
+      turnOn: "Mod senp",
+      turnOff: "Montre tou detay",
+      stopScam: "Pa avoy larzan ankor",
+      stopSuspicious: "Fer atansion",
+      claims: (name: string) => `Sa mesaz la dir li sorti kot ${name}.`,
+      but: "Me",
+      issueFallback: "FraudLens finn trouv bann siny danze dan sa mesaz la.",
+      readAloud: "Lir sa afot",
+      stopReading: "Aret lir",
+    }),
+    card: DRAFT_KREOL({
+      cardTitle: "Verifikasion sekirite FraudLens",
+      whyHeading: "Kifer nou inkiet",
+      helpMeExplain: "Ed mwa explik sa",
+      share: "Partaze",
+      copyText: "Kopye text la",
+      copied: "Kopie",
+    }),
+    // Learn tab: reviewed by the frontend owner.
     learn: {
       headline: "Aprann rekonet zot",
       streak: (d) => `${d} zour ki swiv`,
       cards: {
         todayTitle: "Zordi",
         todayCount: (done: number, goal: number) => `${done} lor ${goal}`,
-        more: TODO_KREOL((n: number) => `${n} more to keep your streak`),
-        doneToday: TODO_KREOL("Today's practice is done"),
-        streakTitle: TODO_KREOL("Streak"),
+        more: DRAFT_KREOL((n: number) => `Ankor ${n} pou gard ou seri`),
+        doneToday: DRAFT_KREOL("Antrennman zordi fini"),
+        streakTitle: DRAFT_KREOL("Seri"),
         days: (n: number) => (n === 1 ? "zour" : "zour"),
-        noStreak: TODO_KREOL("Answer 5 to start"),
+        noStreak: DRAFT_KREOL("Reponn 5 pou koumanse"),
       },
       quizLabel: "Eskrokri ouswa vre?",
       scam: "Eskrokri",
@@ -2116,7 +2281,34 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
-    safepay: TODO_KREOL(SAFEPAY_EN),
+    safepay: DRAFT_KREOL({
+      title: "Avan ou pey",
+      intro:
+        "De-trwa kestion rapid avan ou avoy larzan. Nou pou verifie seki nou kapav ek dir ou ki pou fer apre.",
+      requesterLabel: "Kisannla pe dimann ou pey?",
+      requesterPlaceholder: "par ex. MCB, enn konpagni livrezon, enn dimounn ou konne",
+      channelLabel: "Kouma zot finn kontakte ou?",
+      channelPlaceholder: "par ex. SMS, WhatsApp, enn apel",
+      recipientLabel: "Kisannla ou pe peye?",
+      recipientPlaceholder: "Nimero telefonn, nimero kont ouswa nom",
+      amountLabel: "Montan (opsionel)",
+      amountPlaceholder: "par ex. Rs 12,500",
+      amountHeading: "Montan",
+      messageLabel: "Mesaz ki ou finn gagne (opsionel, me li ed boukou)",
+      messagePlaceholder: "Kol mesaz ki finn dimann ou pey, si ou ena li",
+      submit: "Verifie avan mo pey",
+      missingInput: "Dir nou kisannla pe dimande, ouswa kol mesaz la, pou nou ena kiksoz pou verifie.",
+      pauseTitle: "Aret enn kou avan ou pey",
+      okTitle: "Pena siny danze trouve",
+      okBody:
+        "Nou pa finn trouv enn rezon presi pou inkiet, me nou pa kapav konfirm ki sa demann la vre. Si ou ena dout, verifie direk ar lorganizasion lor enn nimero ouswa enn app ki ou deza fer konfians.",
+      recipientReportedLine: (n: number) =>
+        n === 1 ? "Sa benefisier la finn rapporte 1 fwa" : `Sa benefisier la finn rapporte ${n} fwa`,
+      verifyCta: "Verifie par kanal ofisiel",
+      reportCta: "Rapport sa",
+      checkAnother: "Verifie enn lot pelman",
+      back: "Verifie enn mesaz plito",
+    }),
     document: TODO_KREOL(DOCUMENT_EN),
   },
 };

@@ -51,7 +51,7 @@ export function WhatsWrongCard({
   const seg = circumference / n - gap;
 
   return (
-    <section className="card col-span-7 flex flex-col gap-3 px-3.5 pt-[18px] pb-3.5">
+    <section className="card reveal reveal-2 col-span-7 flex flex-col gap-3 px-3.5 pt-[18px] pb-3.5">
       <h2 className="micro px-1 text-ink-muted">{copy.result.whatsWrong}</h2>
 
       <div className="relative size-35 self-center">
@@ -113,7 +113,7 @@ export function LinkCard({ response, copy }: { response: AnalyzeResponse; copy: 
   const hasAge = typeof age === "number" && Number.isFinite(age) && age >= 0;
 
   return (
-    <section className="card col-span-5 flex flex-col gap-1.5">
+    <section className="card reveal reveal-3 col-span-5 flex flex-col gap-1.5">
       <h2 className="micro text-ink-muted">{copy.result.theLink}</h2>
       {hasAge && (
         <p className="mt-1.5 flex items-baseline gap-1.5">

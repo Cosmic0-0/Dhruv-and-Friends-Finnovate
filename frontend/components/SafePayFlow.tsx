@@ -197,7 +197,7 @@ export default function SafePayFlow() {
         <button
           type="button"
           onClick={checkAnother}
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
+          className="btn pressable  hover:bg-surface-dark-2"
         >
           {c.checkAnother}
         </button>
@@ -234,7 +234,7 @@ export default function SafePayFlow() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className={`pressable font-heading relative flex min-h-14 items-center justify-center overflow-hidden bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+          className={`btn pressable relative  ${
             loading ? "cursor-progress" : "hover:bg-surface-dark-2"
           }`}
         >
@@ -253,7 +253,7 @@ export default function SafePayFlow() {
           <button
             type="button"
             onClick={cancel}
-            className="pressable micro -mr-1 min-h-9 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
+            className="pressable micro -mr-1 min-h-11 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
           >
             {copy.wait.cancel}
           </button>
@@ -266,7 +266,7 @@ export default function SafePayFlow() {
           <button
             type="button"
             onClick={() => void submit()}
-            className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
+            className="pressable micro flex min-h-11 w-fit items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
           >
             <RetryIcon className="size-3.5" strokeWidth={2} />
             {copy.retry}

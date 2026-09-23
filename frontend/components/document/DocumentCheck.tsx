@@ -234,7 +234,7 @@ export default function DocumentCheck() {
             </div>
           ) : file && (phase.kind === "selected" || !failure?.isInput) ? (
             // A picked file, or a service failure on it: checking again is the way forward.
-            <button type="button" onClick={() => void check(file)} className="pill pressable w-full bg-primary text-on-primary">
+            <button type="button" onClick={() => void check(file)} className="btn pressable w-full bg-primary text-on-primary">
               {phase.kind === "error" ? (
                 <>
                   <RetryIcon className="size-4" strokeWidth={2} />
@@ -245,7 +245,7 @@ export default function DocumentCheck() {
               )}
             </button>
           ) : (
-            <button type="button" onClick={() => inputRef.current?.click()} className="pill pressable w-full bg-primary text-on-primary">
+            <button type="button" onClick={() => inputRef.current?.click()} className="btn pressable w-full bg-primary text-on-primary">
               {d.choose}
             </button>
           )}

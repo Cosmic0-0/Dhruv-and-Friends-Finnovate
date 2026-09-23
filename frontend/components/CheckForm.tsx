@@ -355,14 +355,14 @@ export default function CheckForm({
           />
 
           <div className="flex gap-2.5 px-5 py-4">
-            {/* While waiting this stays the primary pill and shows a compact
+            {/* While waiting this stays the primary btn and shows a compact
                 version of the wait (same stage, same fill), not a separate
                 spinner. The row below carries the live announcements. */}
             <button
               type="submit"
               disabled={!canSubmit}
               aria-busy={loading}
-              className={`pill pressable relative grow overflow-hidden bg-primary text-on-primary ${
+              className={`btn pressable relative grow overflow-hidden bg-primary text-on-primary ${
                 loading ? "cursor-progress" : "disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
               }`}
             >
@@ -434,7 +434,7 @@ function ErrorCard({ error, copy, onRetry }: { error: ApiError; copy: Copy; onRe
         <p className={`micro ${isInputProblem ? "text-caution-ink" : "text-danger-ink"}`}>{title}</p>
         <p className="text-[1.0625rem] leading-[1.4375rem] text-ink">{body}</p>
       </div>
-      <button type="button" onClick={onRetry} className="pill-sm pressable w-fit bg-primary text-on-primary">
+      <button type="button" onClick={onRetry} className="btn-sm pressable w-fit bg-primary text-on-primary">
         <RetryIcon className="size-4" strokeWidth={2} />
         {copy.retry}
       </button>

@@ -248,7 +248,7 @@ export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
     <Link
       href="/"
-      className="pill pressable w-full bg-primary text-on-primary"
+      className="btn pressable w-full bg-primary text-on-primary"
     >
       {copy.result.checkAnother}
     </Link>

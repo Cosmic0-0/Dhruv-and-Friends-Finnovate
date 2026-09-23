@@ -107,9 +107,6 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
         </div>
       )}
 
-        </div>
-
-        <div className="flex flex-col gap-4">
           {state && ready && quizLang && (
             <div aria-live="polite">
               <StreakCards
@@ -120,9 +117,11 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
             </div>
           )}
 
-          <Trends trends={trends} copy={copy} />
-
           <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Trends trends={trends} copy={copy} />
         </div>
 
       {process.env.NODE_ENV === "development" && (
@@ -159,7 +158,7 @@ function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy
           <button
             type="button"
             onClick={onAccept}
-            className="pill pressable w-full bg-white text-[#111113]"
+            className="btn pressable w-full bg-white text-[#111113]"
           >
             {L.offerOther(L.languageName[pool.fallback])}
           </button>
@@ -183,14 +182,14 @@ function DevTools({ copy, onReset, onSeed }: { copy: Copy; onReset: () => void; 
         <button
           type="button"
           onClick={onReset}
-          className="pressable micro min-h-10 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
+          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
         >
           {copy.learn.dev.reset}
         </button>
         <button
           type="button"
           onClick={onSeed}
-          className="pressable micro min-h-10 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
+          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
         >
           {copy.learn.dev.seed}
         </button>
@@ -269,7 +268,7 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="pill pressable mt-1 w-full bg-white text-[#111113]"
+          className="btn pressable mt-1 w-full bg-white text-[#111113]"
         >
           {L.playAgain}
         </button>
@@ -328,7 +327,7 @@ function Quiz({
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
               aria-pressed={chosen}
-              className={`pill pressable transition-opacity ${
+              className={`btn pressable transition-opacity ${
                 isScamButton ? "bg-white text-[#111113]" : "bg-white/[0.14] text-white"
               } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white/70" : ""}`}
             >
@@ -349,7 +348,7 @@ function Quiz({
           ref={nextRef}
           type="button"
           onClick={next}
-          className="pill pressable w-full bg-white text-[#111113]"
+          className="btn pressable w-full bg-white text-[#111113]"
         >
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>

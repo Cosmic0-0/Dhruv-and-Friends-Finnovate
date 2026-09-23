@@ -13,6 +13,7 @@ import ScreenTitle from "../ScreenTitle";
 import CheckHero from "./CheckHero";
 import CheckingHero, { ResultSkeleton } from "./CheckingHero";
 import InstallCard from "./InstallCard";
+import IntroCard from "./IntroCard";
 import PayRow from "./PayRow";
 import { PracticeCard, WeekCard } from "./WeekCard";
 
@@ -69,6 +70,16 @@ export default function CheckScreen() {
   // While checking, the cards give way to the result placeholders either way.
   const hidden = loading || (open && !desktop);
 
+  // A first-time user has no history and no practice, so every card below the
+  // hero would be an empty placeholder. Show what the app does instead, and
+  // let the real cards take over as soon as there is anything in them.
+  const hasHistory = checks !== null && checks.length > 0;
+  const hasPractice = practice !== null && (practice.answered > 0 || practice.streak > 0);
+  // `checks === null` means storage has not been read yet: render neither, so
+  // nothing flashes before the answer is known.
+  const settled = checks !== null;
+  const firstRun = settled && !hasHistory && !hasPractice;
+
   return (
     <>
       <ScreenTitle tabKey="check" />
@@ -104,6 +115,11 @@ export default function CheckScreen() {
           <CheckForm ref={form} onStateChange={setFormState} />
 
           {!hidden && <PayRow copy={copy} />}
+
+          {/* Recent joins the left column: with only the hero and the pay row
+              there, desktop left half the screen empty while the stats
+              column carried everything. */}
+          {!hidden && hasHistory && <RecentChecks checks={checks} now={now} />}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -111,18 +127,18 @@ export default function CheckScreen() {
 
           {!hidden && (
             <>
-              {(week !== null && week.total > 0) || practice !== null ? (
-                <div className="grid grid-cols-12 items-start gap-3.5">
+              {firstRun && <IntroCard copy={copy} />}
+
+              {((week !== null && week.total > 0) || hasPractice) && (
+                <div className="grid grid-cols-12 items-stretch gap-3.5">
                   {week !== null && week.total > 0 && <WeekCard stats={week} copy={copy} />}
-                  {practice !== null && (
+                  {hasPractice && practice !== null && (
                     <PracticeCard answered={practice.answered} streak={practice.streak} copy={copy} />
                   )}
                 </div>
-              ) : null}
+              )}
 
               <InstallCard copy={copy} />
-
-              {checks !== null && <RecentChecks checks={checks} now={now} />}
             </>
           )}
         </div>

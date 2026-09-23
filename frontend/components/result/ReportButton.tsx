@@ -88,7 +88,7 @@ export default function ReportButton({
           <button
             type="submit"
             disabled={!value.trim() || sending}
-            className="pill pressable m-5 mt-0 bg-primary text-on-primary disabled:bg-surface-dark/25"
+            className="btn pressable m-5 mt-0 bg-primary text-on-primary disabled:bg-surface-dark/25"
           >
             {sending && <Spinner className="size-4" />}
             {sending ? r.sending : r.submit}
@@ -99,7 +99,7 @@ export default function ReportButton({
           type="button"
           disabled={sending}
           onClick={() => (sender ? void send(sender) : setStatus("form"))}
-          className="pill pressable w-full bg-danger-soft text-danger-ink hover:bg-danger-soft disabled:opacity-60"
+          className="btn pressable w-full bg-danger-soft text-danger-ink hover:bg-danger-soft disabled:opacity-60"
         >
           {sending ? <Spinner className="size-4" /> : <FlagIcon className="size-4" strokeWidth={2} />}
           {sending ? r.sending : sender ? r.reportSender : r.reportMessage}

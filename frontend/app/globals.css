@@ -40,9 +40,19 @@
      really does invert. */
   --color-surface-dark: var(--c-surface-dark);
   --color-surface-dark-2: var(--c-surface-dark-2);
-  /* Primary pill button on a light page: ink in light mode, light in dark. */
-  --color-primary: var(--c-primary);
-  --color-on-primary: var(--c-on-primary);
+  /* Primary action. Indigo in both modes, lifted in dark so it stays legible
+     on a near-black page. */
+  --color-primary: var(--c-brand);
+  --color-on-primary: var(--c-on-brand);
+  --color-brand: var(--c-brand);
+  --color-brand-deep: var(--c-brand-deep);
+  --color-brand-soft: var(--c-brand-soft);
+  /* Warm accent: highlights, the streak flame, the one hot spot on a cool
+     page. Far from the verdict hues so it never reads as a warning. */
+  --color-glow: var(--c-glow);
+  --color-glow-soft: var(--c-glow-soft);
+  /* The warm accent as TEXT on a light card: the raw hue fails AA at this size. */
+  --color-glow-ink: var(--c-glow-ink);
   --color-skeleton: var(--c-skeleton);
   --color-track: var(--c-track);
 
@@ -60,11 +70,11 @@
   --color-line-strong: var(--c-line-strong);
 
   /* ---- Accent ----
-     The palette has no brand hue: the accent IS the ink. Kept as its own
-     token so "this is interactive" stays separable from "this is text". */
-  --color-accent: var(--c-ink);
-  --color-accent-deep: var(--c-ink);
-  --color-accent-ink: var(--c-ink);
+     Now the brand hue. Kept as its own token so "this is interactive" stays
+     separable from "this is text". */
+  --color-accent: var(--c-brand);
+  --color-accent-deep: var(--c-brand-deep);
+  --color-accent-ink: var(--c-brand-ink);
 
   /* ---- Verdict tones ----
      Each has a full-chroma value (fills, icons, large type) and an -ink
@@ -105,12 +115,26 @@
      sites keep compiling until they are swept. */
   --tracking-micro: 0em;
 
+  /* ---- Easing ----
+     The built-in CSS curves are weak. ease-out is used for anything entering
+     or leaving, because it moves immediately, which is the moment the user is
+     watching most closely. ease-in is never used for UI: it delays the start
+     and reads as sluggish at the same duration. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
   /* ---- Shape ---- */
   --radius-card: 28px;
+  /* Buttons and inputs are soft rectangles; full-round is kept for things that
+     really are chips or circles (tab bar, icon badges, status dots, verdict
+     chips). That split is what stops the UI reading as a field of ovals. */
+  --radius-button: 14px;
+  --radius-field: 16px;
   --radius-pill: 9999px;
-  --shadow-card: 0 1px 1px rgb(28 28 40 / 2%), 0 14px 30px rgb(28 28 40 / 7%);
-  --shadow-hero: 0 16px 34px rgb(28 28 40 / 22%);
-  --shadow-tabbar: 0 12px 34px rgb(28 28 40 / 14%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 20px rgb(0 0 0 / 5%);
+  --shadow-hero: 0 10px 28px rgb(0 0 0 / 14%);
+  --shadow-tabbar: 0 10px 30px rgb(0 0 0 / 12%);
+  --shadow-lift: 0 8px 24px rgb(0 0 0 / 8%);
 
   /* ---- Layout ---- */
   --container-app: 430px;
@@ -123,29 +147,41 @@
     color-scheme: light dark;
 
     /* Light (DESIGN.md "Tokens (light)"). */
-    --c-page: #f2f2f3;
-    --c-card: #fcfcfc;
-    --c-card-gradient: linear-gradient(180deg, #fcfcfc 0%, #f6f6f7 100%);
-    --c-card-edge: rgb(255 255 255 / 95%);
-    --c-muted: rgb(0 0 0 / 6%);
-    --c-suggestion: #e8e8ea;
-    --c-surface-dark: #111113;
-    --c-surface-dark-2: #2a2a2d;
-    --c-primary: #111113;
-    --c-on-primary: #ffffff;
-    --c-hero: linear-gradient(180deg, #2a2a2d 0%, #111113 55%, #0b0b0c 100%);
+    --c-page: #f2f2f4;
+    --c-card: #ffffff;
+    /* Flat, not a gradient. */
+    --c-card-gradient: #ffffff;
+    --c-card-edge: rgb(0 0 0 / 5%);
+    --c-muted: rgb(0 0 0 / 5%);
+    --c-suggestion: #ebebee;
+
+    /* No brand hue. "Brand" resolves to the ink tone so the token names still
+       mean something, and nothing on screen is coloured but a verdict. */
+    --c-brand: #1c1c1e;
+    --c-brand-deep: #000000;
+    --c-brand-soft: #ebebee;
+    --c-brand-ink: #1c1c1e;
+    --c-on-brand: #ffffff;
+    /* Kept for the streak flame only, which is a fire. */
+    --c-glow: #ff8a3d;
+    --c-glow-soft: #fff0e4;
+    --c-glow-ink: #b4521a;
+
+    --c-surface-dark: #1c1c1e;
+    --c-surface-dark-2: #2c2c2e;
+    --c-hero: #1c1c1e;
     --c-hero-edge: transparent;
-    --c-skeleton: #e7e7ea;
-    --c-track: #e5e5ea;
+    --c-skeleton: #e8e8ea;
+    --c-track: #e4e4e7;
 
     --c-ink: #1c1c1e;
-    --c-ink-soft: #3c3c3e;
-    --c-ink-muted: #6e6e73;
+    --c-ink-soft: #3c3c3f;
+    --c-ink-muted: #6e6e75;
     --c-on-ink: #ffffff;
     --c-icon-idle: #8e8e93;
 
-    --c-hairline: rgb(60 60 67 / 12%);
-    --c-line-strong: rgb(60 60 67 / 22%);
+    --c-hairline: rgb(0 0 0 / 9%);
+    --c-line-strong: rgb(0 0 0 / 18%);
 
     --c-red: #ff3b30;
     --c-red-ink: #c4221a;
@@ -161,14 +197,18 @@
        than the tint's own -ink to stay AA under the 2px underline. */
     --c-mark-ink: #8a0f09;
 
-    /* Floating tab bar. */
-    --c-tabbar: rgb(255 255 255 / 82%);
-    --c-tabbar-edge: rgb(255 255 255 / 95%);
+    /* Floating tab bar, as glass. */
+    --c-tabbar: rgb(255 255 255 / 76%);
+    --c-tabbar-edge: rgb(255 255 255 / 70%);
+    --c-glass-top: rgb(255 255 255 / 90%);
+    --c-glass-rim: rgb(255 255 255 / 45%);
+    --c-glass-inner: rgb(0 0 0 / 22%);
+    --c-glass-sheen: rgb(255 255 255 / 55%);
 
-    --c-scrim: rgb(12 12 14 / 50%);
+    --c-scrim: rgb(12 12 14 / 55%);
 
-    /* Reserve the floating bar's height (66px) plus its 28px bottom inset. */
-    --tabbar-height: 6.125rem;
+    /* Reserve the floating bar's height (72px) plus its 24px bottom inset. */
+    --tabbar-height: 6rem;
   }
 
   /*
@@ -183,26 +223,34 @@
    */
   :root {
     --d-page: #0c0c0d;
-    --d-card: #1c1c1e;
-    --d-card-gradient: linear-gradient(180deg, #1f1f21 0%, #1a1a1c 100%);
-    --d-card-edge: rgb(255 255 255 / 6%);
+    --d-card: #1a1a1c;
+    --d-card-gradient: #1a1a1c;
+    --d-card-edge: rgb(255 255 255 / 7%);
     --d-muted: rgb(255 255 255 / 8%);
-    --d-suggestion: #1f1f21;
-    --d-surface-dark: #1c1c1e;
-    --d-surface-dark-2: #2c2c2e;
-    --d-primary: #f5f5f7;
-    --d-on-primary: #111113;
-    --d-hero: linear-gradient(180deg, #3a3a3c 0%, #232325 100%);
+    --d-suggestion: #202022;
+
+    --d-brand: #f2f2f4;
+    --d-brand-deep: #ffffff;
+    --d-brand-soft: #232325;
+    --d-brand-ink: #f2f2f4;
+    --d-on-brand: #111113;
+    --d-glow: #ff9e5c;
+    --d-glow-soft: #33220f;
+    --d-glow-ink: #ffb079;
+
+    --d-surface-dark: #1a1a1c;
+    --d-surface-dark-2: #2a2a2c;
+    --d-hero: #242426;
     --d-hero-edge: rgb(255 255 255 / 8%);
-    --d-skeleton: #2c2c2e;
-    --d-track: #3a3a3c;
-    --d-ink: #f5f5f7;
-    --d-ink-soft: #c7c7cc;
-    --d-ink-muted: #98989f;
+    --d-skeleton: #262628;
+    --d-track: #303033;
+    --d-ink: #f2f2f4;
+    --d-ink-soft: #c6c6ca;
+    --d-ink-muted: #94949c;
     --d-on-ink: #ffffff;
     --d-icon-idle: #8e8e93;
-    --d-hairline: rgb(84 84 88 / 45%);
-    --d-line-strong: rgb(84 84 88 / 65%);
+    --d-hairline: rgb(255 255 255 / 12%);
+    --d-line-strong: rgb(255 255 255 / 22%);
     --d-red: #ff6961;
     --d-red-ink: #ff6961;
     --d-red-tint: #3a1512;
@@ -213,9 +261,13 @@
     --d-orange-ink: #ffb340;
     --d-orange-tint: #3a2610;
     --d-mark-ink: #ffb4ae;
-    --d-tabbar: rgb(30 30 32 / 82%);
-    --d-tabbar-edge: rgb(255 255 255 / 10%);
-    --d-scrim: rgb(0 0 0 / 60%);
+    --d-tabbar: rgb(28 28 32 / 72%);
+    --d-tabbar-edge: rgb(255 255 255 / 14%);
+    --d-glass-top: rgb(255 255 255 / 22%);
+    --d-glass-rim: rgb(255 255 255 / 9%);
+    --d-glass-inner: rgb(0 0 0 / 45%);
+    --d-glass-sheen: rgb(255 255 255 / 9%);
+    --d-scrim: rgb(0 0 0 / 62%);
   }
 
   /* System preference, unless Settings has explicitly chosen light. */
@@ -227,10 +279,16 @@
       --c-card-edge: var(--d-card-edge);
       --c-muted: var(--d-muted);
       --c-suggestion: var(--d-suggestion);
+      --c-brand: var(--d-brand);
+      --c-brand-deep: var(--d-brand-deep);
+      --c-brand-soft: var(--d-brand-soft);
+      --c-brand-ink: var(--d-brand-ink);
+      --c-on-brand: var(--d-on-brand);
+      --c-glow: var(--d-glow);
+      --c-glow-soft: var(--d-glow-soft);
+      --c-glow-ink: var(--d-glow-ink);
       --c-surface-dark: var(--d-surface-dark);
       --c-surface-dark-2: var(--d-surface-dark-2);
-      --c-primary: var(--d-primary);
-      --c-on-primary: var(--d-on-primary);
       --c-hero: var(--d-hero);
       --c-hero-edge: var(--d-hero-edge);
       --c-skeleton: var(--d-skeleton);
@@ -254,6 +312,10 @@
       --c-mark-ink: var(--d-mark-ink);
       --c-tabbar: var(--d-tabbar);
       --c-tabbar-edge: var(--d-tabbar-edge);
+      --c-glass-top: var(--d-glass-top);
+      --c-glass-rim: var(--d-glass-rim);
+      --c-glass-inner: var(--d-glass-inner);
+      --c-glass-sheen: var(--d-glass-sheen);
       --c-scrim: var(--d-scrim);
     }
   }
@@ -267,40 +329,50 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
-      --c-page: var(--d-page);
-      --c-card: var(--d-card);
-      --c-card-gradient: var(--d-card-gradient);
-      --c-card-edge: var(--d-card-edge);
-      --c-muted: var(--d-muted);
-      --c-suggestion: var(--d-suggestion);
-      --c-surface-dark: var(--d-surface-dark);
-      --c-surface-dark-2: var(--d-surface-dark-2);
-      --c-primary: var(--d-primary);
-      --c-on-primary: var(--d-on-primary);
-      --c-hero: var(--d-hero);
-      --c-hero-edge: var(--d-hero-edge);
-      --c-skeleton: var(--d-skeleton);
-      --c-track: var(--d-track);
-      --c-ink: var(--d-ink);
-      --c-ink-soft: var(--d-ink-soft);
-      --c-ink-muted: var(--d-ink-muted);
-      --c-on-ink: var(--d-on-ink);
-      --c-icon-idle: var(--d-icon-idle);
-      --c-hairline: var(--d-hairline);
-      --c-line-strong: var(--d-line-strong);
-      --c-red: var(--d-red);
-      --c-red-ink: var(--d-red-ink);
-      --c-red-tint: var(--d-red-tint);
-      --c-green: var(--d-green);
-      --c-green-ink: var(--d-green-ink);
-      --c-green-tint: var(--d-green-tint);
-      --c-orange: var(--d-orange);
-      --c-orange-ink: var(--d-orange-ink);
-      --c-orange-tint: var(--d-orange-tint);
-      --c-mark-ink: var(--d-mark-ink);
-      --c-tabbar: var(--d-tabbar);
-      --c-tabbar-edge: var(--d-tabbar-edge);
-      --c-scrim: var(--d-scrim);
+    --c-page: var(--d-page);
+    --c-card: var(--d-card);
+    --c-card-gradient: var(--d-card-gradient);
+    --c-card-edge: var(--d-card-edge);
+    --c-muted: var(--d-muted);
+    --c-suggestion: var(--d-suggestion);
+    --c-brand: var(--d-brand);
+    --c-brand-deep: var(--d-brand-deep);
+    --c-brand-soft: var(--d-brand-soft);
+    --c-brand-ink: var(--d-brand-ink);
+    --c-on-brand: var(--d-on-brand);
+    --c-glow: var(--d-glow);
+    --c-glow-soft: var(--d-glow-soft);
+    --c-glow-ink: var(--d-glow-ink);
+    --c-surface-dark: var(--d-surface-dark);
+    --c-surface-dark-2: var(--d-surface-dark-2);
+    --c-hero: var(--d-hero);
+    --c-hero-edge: var(--d-hero-edge);
+    --c-skeleton: var(--d-skeleton);
+    --c-track: var(--d-track);
+    --c-ink: var(--d-ink);
+    --c-ink-soft: var(--d-ink-soft);
+    --c-ink-muted: var(--d-ink-muted);
+    --c-on-ink: var(--d-on-ink);
+    --c-icon-idle: var(--d-icon-idle);
+    --c-hairline: var(--d-hairline);
+    --c-line-strong: var(--d-line-strong);
+    --c-red: var(--d-red);
+    --c-red-ink: var(--d-red-ink);
+    --c-red-tint: var(--d-red-tint);
+    --c-green: var(--d-green);
+    --c-green-ink: var(--d-green-ink);
+    --c-green-tint: var(--d-green-tint);
+    --c-orange: var(--d-orange);
+    --c-orange-ink: var(--d-orange-ink);
+    --c-orange-tint: var(--d-orange-tint);
+    --c-mark-ink: var(--d-mark-ink);
+    --c-tabbar: var(--d-tabbar);
+    --c-tabbar-edge: var(--d-tabbar-edge);
+    --c-glass-top: var(--d-glass-top);
+    --c-glass-rim: var(--d-glass-rim);
+    --c-glass-inner: var(--d-glass-inner);
+    --c-glass-sheen: var(--d-glass-sheen);
+    --c-scrim: var(--d-scrim);
   }
 
   html {
@@ -425,10 +497,22 @@
      * that reads as a phone page; two columns is what makes the width useful.
      * Capped so the content does not sprawl on an ultra-wide display.
      */
+    /*
+     * Equal columns and a shared row baseline. Unequal fractions plus
+     * align-items:start meant no two cards ever lined up, which is what made
+     * the page read as scattered boxes rather than a grid.
+     */
     .screen-grid {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      align-items: start;
-      max-width: 1500px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 1.25rem;
+      max-width: 1320px;
+    }
+
+    /* A column's own blocks keep their natural heights; it is the columns
+       themselves that share a top and a width. */
+    .screen-grid > * {
+      min-width: 0;
     }
 
     /* A block that should span both columns, such as a result hero. */
@@ -466,13 +550,32 @@
     border-top: 1px solid var(--color-card-border);
   }
 
-  /* The one dark card per screen, carrying the screen's main question. */
+  /*
+   * The one brand-coloured card per screen, carrying its main question.
+   * The gradient is the base; ::before bleeds a warm glow in from the top
+   * right so the surface has a light source instead of being a flat fill.
+   */
+  /* The one dark card per screen, carrying its main question. Flat fill. */
   .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     background: var(--c-hero);
     border: 1px solid var(--c-hero-edge);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-hero);
     color: #ffffff;
+  }
+
+  /*
+   * Minimal parallax: the hero drifts a little slower than the page as it
+   * scrolls away. --parallax is written by components/useParallax, and stays 0
+   * under reduced motion and wherever the hook is not used, so this is inert
+   * by default rather than something every hero opts out of.
+   */
+  .parallax {
+    transform: translate3d(0, var(--parallax, 0px), 0);
+    will-change: transform;
   }
 
   /* The flat #E8E8EA card: suggestions and the "what to do" action panel. */
@@ -511,9 +614,12 @@
     letter-spacing: 0;
   }
 
-  /* Every button is a full pill. .pill is the 50px primary/secondary size,
-     .pill-sm the 42px size used inside cards. */
-  .pill {
+  /*
+   * Buttons are soft rectangles, not pills. .btn is the 50px primary size,
+   * .btn-sm the compact size used inside cards. .pill below is kept for the
+   * things that really are chips.
+   */
+  .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -521,45 +627,100 @@
     min-height: 50px;
     padding-inline: 22px;
     border: 0;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-button);
     font-size: 1.0625rem;
     font-weight: 600;
     white-space: nowrap;
   }
 
-  .pill-sm {
+  .btn-sm {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 42px;
-    padding-inline: 20px;
+    /* 44px is the touch-target floor. */
+    min-height: 44px;
+    padding-inline: 18px;
     border: 0;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-button);
     font-size: 0.9375rem;
     font-weight: 600;
     white-space: nowrap;
   }
 
-  /* Floating frosted tab bar. The -webkit- prefix is required on iOS. */
-  .tabbar {
-    background: var(--c-tabbar);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--c-tabbar-edge);
-    border-radius: 33px;
-    box-shadow: var(--shadow-tabbar);
+  /* Genuinely round: verdict chips, counts, status markers. Small label-like
+     things, where a full curve still reads as a chip rather than an oval. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--radius-pill);
+    padding: 5px 11px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
+  /*
+   * Floating tab bar, treated as glass rather than a panel: a heavy blur with
+   * saturation so colour bleeds through from behind, a specular highlight
+   * along the top edge, an inner rim that catches light all the way round,
+   * and a soft shadow so it floats above the page.
+   *
+   * The -webkit- prefix is required on iOS. Where backdrop-filter is
+   * unsupported the background colour alone still gives a legible bar.
+   */
+  .tabbar {
+    position: relative;
+    background: var(--c-tabbar);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 1px solid var(--c-tabbar-edge);
+    border-radius: 33px;
+    box-shadow:
+      inset 0 1px 0 var(--c-glass-top),
+      inset 0 0 0 1px var(--c-glass-rim),
+      inset 0 -8px 20px -12px var(--c-glass-inner),
+      var(--shadow-tabbar);
+  }
+
+  /* The sheen: a soft light running across the upper half, the way a curved
+     glass surface catches a highlight. Purely decorative. */
+  .tabbar::before {
+    content: "";
+    position: absolute;
+    inset: 1px 1px auto 1px;
+    height: 55%;
+    border-radius: 32px 32px 50% 50% / 32px 32px 18px 18px;
+    background: linear-gradient(180deg, var(--c-glass-sheen), transparent);
+    pointer-events: none;
+  }
+
+  /* The verdict entrance: the one orchestrated moment on the result screen. */
+  .reveal {
+    animation: fl-reveal 260ms var(--ease-out) both;
+  }
+
+  .reveal-2 { animation-delay: 70ms; }
+  .reveal-3 { animation-delay: 140ms; }
+
   .pressable {
+    /* Explicit properties, never `all`: a retargeted interaction must not
+       animate layout. 140ms sits in the band where a press still reads as
+       instant feedback. */
     transition-property: background-color, color, border-color, opacity, transform, box-shadow;
-    transition-duration: 180ms;
-    transition-timing-function: ease-out;
+    transition-duration: 140ms;
+    transition-timing-function: var(--ease-out);
   }
 
   .pressable:active:not(:disabled) {
     transform: scale(0.98);
   }
+}
+
+@keyframes fl-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -572,6 +733,17 @@
 
   .pressable:active:not(:disabled) {
     transform: none;
+  }
+
+  /* No drift, and the reveal lands already in place. */
+  .parallax {
+    transform: none !important;
+  }
+
+  .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
@@ -595,8 +767,9 @@
   70% { opacity: 1; transform: scale(1.02); }
   100% { opacity: 1; transform: scale(1); }
 }
+/* Not scale(0): nothing in the real world appears from nothing. */
 @keyframes fl-flame-grow {
-  from { opacity: 0; transform: scale(0.4); }
+  from { opacity: 0; transform: scale(0.82); }
   to { opacity: 1; transform: scale(1); }
 }
 @keyframes fl-flame-flicker {
@@ -614,11 +787,11 @@
 }
 
 .fl-scrim { animation: fl-fade-in 200ms ease-out both; }
-.fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both; }
-.fl-card { animation: fl-card-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms both; }
-.fl-card[data-closing] { animation: fl-fade-out 200ms ease-in both; }
+.fl-scrim[data-closing] { animation: fl-fade-out 160ms var(--ease-out) both; }
+.fl-card { animation: fl-card-in 420ms var(--ease-out) 80ms both; }
+.fl-card[data-closing] { animation: fl-fade-out 160ms var(--ease-out) both; }
 
-.fl-flame-grow { animation: fl-flame-grow 500ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both; transform-origin: 50% 100%; }
+.fl-flame-grow { animation: fl-flame-grow 500ms var(--ease-out) 250ms both; transform-origin: 50% 100%; }
 .fl-flame-outer { animation: fl-flame-flicker 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 .fl-flame-inner { animation: fl-flame-core 1.1s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
 
@@ -627,9 +800,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fl-scrim { animation: fl-fade-in 200ms ease-out both !important; }
-  .fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both !important; }
+  .fl-scrim[data-closing] { animation: fl-fade-out 160ms var(--ease-out) both !important; }
   .fl-card { animation: fl-fade-in 200ms ease-out both !important; }
-  .fl-card[data-closing] { animation: fl-fade-out 200ms ease-in both !important; }
+  .fl-card[data-closing] { animation: fl-fade-out 160ms var(--ease-out) both !important; }
   .fl-flame-grow,
   .fl-flame-outer,
   .fl-flame-inner,

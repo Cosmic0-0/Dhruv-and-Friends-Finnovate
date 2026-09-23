@@ -72,7 +72,7 @@ export function PracticeCard({
     <Link href="/learn" // only:col-span-12 — with no week card beside it, it takes the row
       className="card pressable col-span-5 only:col-span-12 flex flex-col items-start gap-2">
       <h2 className="micro text-ink-muted">{c.title}</h2>
-      <div className="relative size-21">
+      <div className={`relative size-21 rounded-full ${streak > 0 ? "bg-glow-soft" : ""}`}>
         <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
           <circle cx="42" cy="42" r={R} fill="none" stroke="var(--color-track)" strokeWidth="7" />
           {/* Only when there is progress: a round linecap on a zero-length
@@ -83,7 +83,7 @@ export function PracticeCard({
               cy="42"
               r={R}
               fill="none"
-              stroke="var(--color-ink)"
+              stroke="var(--color-glow)"
               strokeWidth="7"
               strokeLinecap="round"
               strokeDasharray={`${filled} ${circumference}`}

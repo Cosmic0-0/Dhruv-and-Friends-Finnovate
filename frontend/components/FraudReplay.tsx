@@ -35,11 +35,12 @@ export default function FraudReplay() {
     return (
       <div>
         <ResultHeader copy={copy} />
-        <div className="gutter pt-6">
-          <div className="sheet flex flex-col gap-3 p-5">
-            <h1 className="text-title">{copy.result.missingTitle}</h1>
-            <p>{copy.result.missingBody}</p>
-            <Link href="/" className="micro mt-1 w-fit text-accent-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
+        <div className="gutter pt-4">
+          {/* Same shape as /result's missing state, so the two read alike. */}
+          <div className="card flex flex-col items-start gap-3">
+            <h2>{copy.result.missingTitle}</h2>
+            <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
+            <Link href="/" className="btn-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
@@ -82,7 +83,7 @@ export default function FraudReplay() {
       <ResultHeader copy={copy} />
       <div className="gutter flex flex-col gap-4 pt-5">
         <header className="flex flex-col gap-2 border-b border-line-strong pb-5">
-          <p className="micro text-accent-ink">{r.title}</p>
+          <p className="micro text-ink">{r.title}</p>
           <h1 className="text-title">{label}</h1>
           <p className="max-w-[60ch] leading-relaxed text-ink-soft">{r.subtitle}</p>
         </header>
@@ -121,7 +122,7 @@ export default function FraudReplay() {
               <div className="border-t border-card-border px-5 py-4">
                 <Link
                   href="/sandbox"
-                  className="pressable inline-flex items-center gap-3 text-sm font-semibold text-accent-ink underline underline-offset-4"
+                  className="pressable inline-flex items-center gap-3 text-sm font-semibold text-ink underline underline-offset-4"
                 >
                   {r.experienceSafely}
                   <span aria-hidden="true">↗</span>
@@ -146,7 +147,7 @@ export default function FraudReplay() {
                   </p>
                   <Link
                     href={`/network/${encodeURIComponent(scamDna.fingerprintId)}`}
-                    className="pressable inline-flex w-fit items-center gap-3 text-sm font-semibold text-accent-ink underline underline-offset-4"
+                    className="pressable inline-flex w-fit items-center gap-3 text-sm font-semibold text-ink underline underline-offset-4"
                   >
                     {copy.result.networkLink}
                     <span aria-hidden="true">↗</span>
@@ -164,7 +165,7 @@ export default function FraudReplay() {
 
         <Link
           href="/result"
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
+          className="btn pressable bg-primary text-on-primary"
         >
           {r.back}
         </Link>

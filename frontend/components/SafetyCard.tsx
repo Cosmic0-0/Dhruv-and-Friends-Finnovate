@@ -75,7 +75,7 @@ export default function SafetyCard({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="pill-sm pressable w-fit bg-muted-surface font-medium text-ink-muted hover:bg-muted-surface hover:text-ink"
+        className="btn-sm pressable w-fit bg-muted-surface font-medium text-ink-muted hover:bg-muted-surface hover:text-ink"
       >
         {copy.card.helpMeExplain}
       </button>
@@ -114,7 +114,7 @@ export default function SafetyCard({
         <button
           type="button"
           onClick={() => void share()}
-          className="pill-sm pressable bg-primary text-on-primary"
+          className="btn-sm pressable bg-primary text-on-primary"
         >
           {copied ? copy.card.copied : canShare ? copy.card.share : copy.card.copyText}
         </button>

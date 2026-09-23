@@ -63,7 +63,7 @@ export default function ResultView() {
           <div className="card flex flex-col items-start gap-3">
             <h2>{copy.result.missingTitle}</h2>
             <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
-            <Link href="/" className="pill-sm pressable mt-1 bg-primary text-on-primary">
+            <Link href="/" className="btn-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
@@ -130,7 +130,7 @@ export default function ResultView() {
               <ResultHero response={response} label={label} copy={copy} />
             </div>
             {documentPanel && <div className="span-2">{documentPanel}</div>}
-            <div className="grid grid-cols-12 items-start gap-3.5">
+            <div className="grid grid-cols-12 items-stretch gap-3.5">
               <div className="col-span-7">
                 <SafeChecklist
                   checks={safeChecks(response.signals, original, redactions)}
@@ -149,7 +149,7 @@ export default function ResultView() {
               type="button"
               onClick={toggleSimple}
               aria-pressed={simple}
-              className="pill-sm pressable w-fit self-end bg-muted-surface font-medium text-ink-muted"
+              className="btn-sm pressable w-fit self-end bg-muted-surface font-medium text-ink-muted"
             >
               {simple ? copy.simple.turnOff : copy.simple.turnOn}
             </button>
@@ -172,7 +172,7 @@ export default function ResultView() {
 
                 <div className="flex flex-col gap-4">
                   {documentPanel}
-                  <div className="grid grid-cols-12 items-start gap-3.5">
+                  <div className="grid grid-cols-12 items-stretch gap-3.5">
                     <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
                     <LinkCard response={response} copy={copy} />
                   </div>

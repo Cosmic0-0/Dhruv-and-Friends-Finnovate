@@ -12,7 +12,7 @@ import { useLanguage } from "./LanguageProvider";
  *
  * It exists because the phone layout, centred in a browser window, gives a
  * visitor no idea the app has more than one screen: the tab bar is a 326px
- * pill at the bottom of a 1440px window, and everything it leads to is a tap
+ * btn at the bottom of a 1440px window, and everything it leads to is a tap
  * away rather than in view. This rail says what is in the app without changing
  * a single phone pixel.
  *
@@ -46,14 +46,14 @@ export default function SideNav() {
         <img
           src="/brand/dhruv-and-friends.png"
           alt={copy.settings.teamLogoAlt}
-          width={32}
-          height={32}
-          className="size-8 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
+          width={40}
+          height={40}
+          className="size-10 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
         />
         <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
       </div>
 
-      <Link href={NEW_CHECK_HREF} className="pill pressable mx-1 px-4 text-[0.9375rem] bg-primary text-on-primary">
+      <Link href={NEW_CHECK_HREF} className="btn pressable mx-1 px-4 text-[0.9375rem] bg-primary text-on-primary">
         <PlusIcon className="size-[19px]" />
         {copy.tabs.newCheck}
       </Link>
@@ -87,7 +87,7 @@ export default function SideNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`pressable flex min-h-10 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
+              className={`pressable flex min-h-11 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
                 active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
               }`}
             >

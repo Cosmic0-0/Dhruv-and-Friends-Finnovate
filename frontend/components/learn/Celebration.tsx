@@ -102,7 +102,17 @@ export default function Celebration({
   };
 
   return createPortal(
-    <div ref={rootRef} className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      ref={rootRef}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      // The card is centred in a full-screen layer, so on a notched phone it
+      // needs the insets itself or it can sit under the notch or the home
+      // indicator on a short screen.
+      style={{
+        paddingTop: "max(1rem, env(safe-area-inset-top))",
+        paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
+      }}
+    >
       {/* Swallows clicks so nothing behind can be reached; dismissal is Esc or the button only. */}
       <div
         className="fl-scrim absolute inset-0 bg-[var(--c-scrim)] backdrop-blur-[6px] [-webkit-backdrop-filter:blur(6px)]"
@@ -156,7 +166,7 @@ export default function Celebration({
           ref={buttonRef}
           type="button"
           onClick={close}
-          className="pill pressable mt-4 w-full bg-primary text-on-primary"
+          className="btn pressable mt-4 w-full bg-primary text-on-primary"
         >
           {L.celebrate.keepGoing}
         </button>

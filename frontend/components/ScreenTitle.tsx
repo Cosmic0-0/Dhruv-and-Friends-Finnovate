@@ -55,9 +55,9 @@ export default function ScreenTitle({
         <img
           src="/brand/dhruv-and-friends.png"
           alt={copy.settings.teamLogoAlt}
-          width={36}
-          height={36}
-          className="size-9 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)] lg:hidden"
+          width={44}
+          height={44}
+          className="size-11 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)] lg:hidden"
         />
       </div>
       {subtitle && <p className="text-[0.9375rem] leading-5 text-ink-muted">{subtitle}</p>}
