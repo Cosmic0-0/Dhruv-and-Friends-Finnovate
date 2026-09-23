@@ -34,7 +34,10 @@ export default function SideNav() {
   return (
     <nav
       aria-label="Sections"
-      className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 py-8 pr-6 lg:flex"
+      // Its own surface against the page, with a hairline edge: the standard
+      // desktop-app chrome, and it keeps the rail from floating in the
+      // background colour the cards also sit on.
+      className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 border-r border-card-border bg-card px-4 py-8 lg:flex"
       style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
     >
       <div className="flex items-center gap-2.5 px-3">
@@ -49,7 +52,7 @@ export default function SideNav() {
         <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
       </div>
 
-      <Link href={NEW_CHECK_HREF} className="pill pressable mx-1 bg-primary text-on-primary">
+      <Link href={NEW_CHECK_HREF} className="pill pressable mx-1 px-4 text-[0.9375rem] bg-primary text-on-primary">
         <PlusIcon className="size-[19px]" />
         {copy.tabs.newCheck}
       </Link>

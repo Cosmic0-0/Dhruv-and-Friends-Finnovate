@@ -58,7 +58,7 @@ export default function CheckForm({
    * thing that should grey out the hero's screenshot button.
    */
   onStateChange?: (s: {
-    busy: boolean;
+    open: boolean;
     shotBusy: boolean;
     loading: boolean;
     phase: WaitPhase;
@@ -100,6 +100,14 @@ export default function CheckForm({
 
   // Cancel an in-flight check if the user leaves the screen.
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Desktop starts with the field open: the hero and the field share a column
+  // there, and leaving it collapsed left that column empty below the hero. On
+  // a phone the hero's two buttons are the way in, as designed. Read after
+  // mount so the server and first client render agree.
+  useEffect(() => {
+    if (window.matchMedia("(min-width: 64rem)").matches) setOpen(true);
+  }, []);
 
   /**
    * Open the field and try the clipboard.
@@ -156,7 +164,7 @@ export default function CheckForm({
   const stage = useWaitStage(loading);
 
   useEffect(() => {
-    onStateChange?.({ busy: open || loading, shotBusy: shot.busy, loading, phase: waitPhase, stage, reveal });
+    onStateChange?.({ open, shotBusy: shot.busy, loading, phase: waitPhase, stage, reveal });
   }, [open, loading, shot.busy, waitPhase, stage, reveal, onStateChange]);
 
   // Handoff from the browser extension ("Open in FraudLens", "Check selected

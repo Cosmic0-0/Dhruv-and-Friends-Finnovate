@@ -114,8 +114,10 @@ export default function ResultView() {
         {response.verdict === "safe" ? (
           // A safe verdict has nothing to investigate across regions — one
           // continuous report sheet, same as before.
-          <>
-            <ResultHero response={response} label={label} copy={copy} />
+          <div className="screen-grid flex flex-col gap-4 lg:grid">
+            <div className="span-2">
+              <ResultHero response={response} label={label} copy={copy} />
+            </div>
             <div className="grid grid-cols-12 items-start gap-3.5">
               <div className="col-span-7">
                 <SafeChecklist
@@ -128,7 +130,7 @@ export default function ResultView() {
               <LinksCard text={original} copy={copy} />
             </div>
             <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
-          </>
+          </div>
         ) : (
           <>
             <button
@@ -143,19 +145,29 @@ export default function ResultView() {
             {simple ? (
               <SimpleMode response={response} claimedIdentity={claimedIdentity} topIssue={topIssue} copy={copy} lang={lang} show={show} />
             ) : (
-              <>
-                {/* Order as drawn (design/mockup/Result-Scam.png): the
-                    verdict, then what is wrong and the link, then the message
-                    with its evidence, then the evidence detail and what to do. */}
-                <ResultHero response={response} label={label} copy={copy} />
-
-                <div className="grid grid-cols-12 items-start gap-3.5">
-                  <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
-                  <LinkCard response={response} copy={copy} />
+              /*
+               * Phone: one column, in the order drawn
+               * (design/mockup/Result-Scam.png). Desktop: the verdict spans
+               * the top, the message and its cards take the left, and the
+               * analysis behind them sits on the right — so the width carries
+               * a second column instead of stretching the message to an
+               * unreadable line length.
+               */
+              <div className="screen-grid flex flex-col gap-4 lg:grid">
+                <div className="span-2">
+                  <ResultHero response={response} label={label} copy={copy} />
                 </div>
 
-                <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+                <div className="flex flex-col gap-4">
+                  <div className="grid grid-cols-12 items-start gap-3.5">
+                    <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
+                    <LinkCard response={response} copy={copy} />
+                  </div>
 
+                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} />
+                </div>
+
+                <div className="flex flex-col gap-4">
                 <div className="sheet">
                   {/* Collapsed by default: the cards above already answer
                       "what is wrong", and this is the detail behind them. */}
@@ -198,7 +210,8 @@ export default function ResultView() {
                     domain-matching output, and showing both listed the host,
                     the site it imitates and its age twice on one screen. */}
                 <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
-              </>
+                </div>
+              </div>
             )}
 
             <ActionDock response={response} hasReportSection copy={copy} />

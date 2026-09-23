@@ -36,14 +36,17 @@ export default function CheckScreen() {
   const [week, setWeek] = useState<WeekStats | null>(null);
   const [practice, setPractice] = useState<{ answered: number; streak: number } | null>(null);
   const [now, setNow] = useState(0);
-  const [{ busy, shotBusy, loading, phase, stage, reveal }, setFormState] = useState<{
-    busy: boolean;
+  const [{ open, shotBusy, loading, phase, stage, reveal }, setFormState] = useState<{
+    open: boolean;
     shotBusy: boolean;
     loading: boolean;
     phase: WaitPhase;
     stage: number;
     reveal: string[];
-  }>({ busy: false, shotBusy: false, loading: false, phase: "running", stage: 0, reveal: [] });
+  }>({ open: false, shotBusy: false, loading: false, phase: "running", stage: 0, reveal: [] });
+  // On a phone an open field takes over the screen and the cards step aside;
+  // on desktop the field lives in its own column and nothing needs to move.
+  const [desktop, setDesktop] = useState(false);
 
   useEffect(() => {
     const list = getRecentChecks();
@@ -51,6 +54,8 @@ export default function CheckScreen() {
     setChecks(list);
     setWeek(weekStats(list, at));
     setNow(at);
+
+    setDesktop(window.matchMedia("(min-width: 64rem)").matches);
 
     const today = localDay();
     const streak = getStreakState(today);
@@ -61,53 +66,66 @@ export default function CheckScreen() {
     return () => clearInterval(tick);
   }, []);
 
+  // While checking, the cards give way to the result placeholders either way.
+  const hidden = loading || (open && !desktop);
+
   return (
     <>
       <ScreenTitle tabKey="check" />
 
-      <div className="gutter flex flex-col gap-4 pt-4">
-        {/* The hero becomes the wait while a check runs, rather than the
-            screen navigating to a separate checking route: the abort and
-            cancel behaviour all lives in CheckForm, which stays mounted. */}
-        {loading ? (
-          <CheckingHero
-            copy={copy}
-            phase={phase}
-            stage={stage}
-            reveal={reveal}
-            progressLabel={copy.wait.progressLabel}
-          />
-        ) : (
-          <CheckHero
-            copy={copy}
-            onPaste={() => form.current?.pasteAndFocus()}
-            onScreenshot={() => form.current?.pickScreenshot()}
-            screenshotBusy={shotBusy}
-          />
-        )}
+      {/*
+        * Phone: one column, in the order drawn. Desktop (.screen-grid, lg+):
+        * the check itself on the left, the standing information — this week,
+        * practice, install, recent — on the right, so the width carries a
+        * second column instead of stretching one.
+        */}
+      <div className="gutter screen-grid flex flex-col gap-4 pt-4 lg:grid">
+        <div className="flex flex-col gap-4">
+          {/* The hero becomes the wait while a check runs, rather than the
+              screen navigating to a separate checking route: the abort and
+              cancel behaviour all lives in CheckForm, which stays mounted. */}
+          {loading ? (
+            <CheckingHero
+              copy={copy}
+              phase={phase}
+              stage={stage}
+              reveal={reveal}
+              progressLabel={copy.wait.progressLabel}
+            />
+          ) : (
+            <CheckHero
+              copy={copy}
+              onPaste={() => form.current?.pasteAndFocus()}
+              onScreenshot={() => form.current?.pickScreenshot()}
+              screenshotBusy={shotBusy}
+            />
+          )}
 
-        <CheckForm ref={form} onStateChange={setFormState} />
+          <CheckForm ref={form} onStateChange={setFormState} />
 
-        {loading && <ResultSkeleton />}
+          {!hidden && <PayRow copy={copy} />}
+        </div>
 
-        {!busy && (
-          <>
-            <PayRow copy={copy} />
+        <div className="flex flex-col gap-4">
+          {loading && <ResultSkeleton />}
 
-            {(week !== null && week.total > 0) || practice !== null ? (
-              <div className="grid grid-cols-12 items-start gap-3.5">
-                {week !== null && week.total > 0 && <WeekCard stats={week} copy={copy} />}
-                {practice !== null && (
-                  <PracticeCard answered={practice.answered} streak={practice.streak} copy={copy} />
-                )}
-              </div>
-            ) : null}
+          {!hidden && (
+            <>
+              {(week !== null && week.total > 0) || practice !== null ? (
+                <div className="grid grid-cols-12 items-start gap-3.5">
+                  {week !== null && week.total > 0 && <WeekCard stats={week} copy={copy} />}
+                  {practice !== null && (
+                    <PracticeCard answered={practice.answered} streak={practice.streak} copy={copy} />
+                  )}
+                </div>
+              ) : null}
 
-            <InstallCard copy={copy} />
+              <InstallCard copy={copy} />
 
-            {checks !== null && <RecentChecks checks={checks} now={now} />}
-          </>
-        )}
+              {checks !== null && <RecentChecks checks={checks} now={now} />}
+            </>
+          )}
+        </div>
       </div>
     </>
   );

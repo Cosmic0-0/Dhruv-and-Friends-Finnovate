@@ -385,39 +385,55 @@
     display: block;
   }
 
-  /* 64rem, not 48rem: the rail plus a 600px column needs about 1000px before
-     it stops being cramped. Below that a tablet keeps the phone layout, which
-     is the design, rather than a squeezed desktop one. */
+  /*
+   * Desktop, from 64rem. The phone column stops being a column: the rail is
+   * pinned to the left edge on its own surface and the content region takes
+   * the rest of the window, the way a desktop app is laid out rather than a
+   * phone page centred in a browser.
+   *
+   * 64rem, not 48rem: a rail plus a usable content region needs about 1000px.
+   * Below that a tablet keeps the phone layout, which is the design rather
+   * than a squeezed desktop one.
+   */
   @media (min-width: 64rem) {
     :root {
       /* No floating bar at this width: the rail is the navigation. */
       --tabbar-height: 0rem;
-      /* The content column grows a little, but stays near the phone
-         proportions the cards were designed against. */
-      --container-app: 600px;
+      /* The content region is the frame's second column, so the column cap
+         that constrained the phone layout no longer applies. */
+      --container-app: none;
+      --spacing-gutter: 2.5rem;
     }
 
     .app-frame {
-      display: flex;
-      align-items: flex-start;
-      justify-content: center;
-      gap: 2.5rem;
-      margin-inline: auto;
-      /* Capped so the pair sits together on a wide monitor rather than
-         drifting to opposite edges. */
-      max-width: 1060px;
-      padding-inline: 2rem;
+      display: grid;
+      grid-template-columns: 264px minmax(0, 1fr);
+      align-items: start;
+      min-height: 100dvh;
     }
 
     .app-shell {
+      max-width: none;
       margin-inline: 0;
-      /* Shrinkable, so the pair never overflows its frame at the narrow end
-         of this range; min-width:0 is what lets a flex item go below its
-         content width. */
-      flex: 1 1 auto;
       min-width: 0;
-      /* The rail carries the safe-area inset itself. */
       padding-bottom: 4rem;
+    }
+
+    /*
+     * Screens whose blocks are independent enough to sit side by side. One
+     * column of phone-width cards stretched across a monitor is the thing
+     * that reads as a phone page; two columns is what makes the width useful.
+     * Capped so the content does not sprawl on an ultra-wide display.
+     */
+    .screen-grid {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+      align-items: start;
+      max-width: 1500px;
+    }
+
+    /* A block that should span both columns, such as a result hero. */
+    .screen-grid > .span-2 {
+      grid-column: 1 / -1;
     }
   }
 
