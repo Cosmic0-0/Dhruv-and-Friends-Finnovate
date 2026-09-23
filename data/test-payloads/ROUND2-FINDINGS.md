@@ -64,8 +64,8 @@ match the expected verdict (round 1: 9, 11, 10).
   flip between runs).
 - **Read aloud** is inside Simple mode: on a scam or suspicious result,
   press **Simple mode**, then **Read this aloud** under the steps.
-- **AI host:** Ollama runs on `kshitij-fedora` (100.91.27.102:11434).
-  `bigdaddylegion` is offline. Check `tailscale status` on the day.
+- **AI host:** Ollama runs on the team's tailnet Ollama host (see `backend/README.md` Local LLM Setup).
+  Check `tailscale status` on the day; hosts move.
 
 ---
 
@@ -383,8 +383,12 @@ Checked in a real browser on `04ae58f`:
 Run from `data/test-payloads/` with Node 22+ and Git Bash on Windows.
 One-time: `npm install --no-save puppeteer`.
 
-1. **Backend:** `sh restart-backend.sh` starts it on :4000 with the AI host
-   and resets its limits (it doesn't touch `backend/.env`).
+1. **Backend:** `AI_URL=http://<tailnet-ollama-host>:11434 sh restart-backend.sh`
+   starts it on :4000 with the AI host and resets its limits (it doesn't touch
+   `backend/.env`). The script has no default host: set `AI_URL`, or export
+   `OLLAMA_URL`, to the team's tailnet Ollama host (see `backend/README.md`
+   Local LLM Setup). The two scripts below call it too, so export
+   `OLLAMA_URL` in the shell you run them from.
 2. **Web app:** in `frontend/`, `BACKEND_URL=http://localhost:4000 npm run dev`
    (PowerShell: `$env:BACKEND_URL="http://localhost:4000"; npm run dev`).
 3. Then:

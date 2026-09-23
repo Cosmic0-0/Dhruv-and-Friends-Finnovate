@@ -167,7 +167,7 @@ doesn't apply), using backend/.env's model settings. If your `.env` says
 there for the run (PowerShell):
 
 ```
-$env:OLLAMA_URL = "http://100.91.27.102:11434"; node data/test-payloads/consistency.mjs --set seed
+$env:OLLAMA_URL = "http://<tailnet-ollama-host>:11434"; node data/test-payloads/consistency.mjs --set seed
 ```
 
 A full run is 216 AI calls at about 11s each (roughly 40 minutes); the
