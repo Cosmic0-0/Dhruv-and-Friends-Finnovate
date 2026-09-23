@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "test": "node --test lib/*.test.ts"
+    "test": "node --test lib/*.test.ts",
+    "kreol:check": "node scripts/kreol-check.mjs"
   },
   "dependencies": {
     "next": "^15.5.25",
