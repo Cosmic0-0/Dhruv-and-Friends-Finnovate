@@ -40,6 +40,10 @@
           <span>Report this site</span>
           <span aria-hidden="true">⚑</span>
         </button>
+        <button id="security-report-btn" type="button">
+          <span>Security Report</span>
+          <span aria-hidden="true">⛨</span>
+        </button>
         <a id="open-fraudlens-link" class="btn-link" href="#" target="_blank" rel="noopener noreferrer">
           <span>Open full analysis in FraudLens</span>
           <span aria-hidden="true">↗</span>
@@ -51,6 +55,19 @@
     <section id="scan-result-section" hidden>
       <p class="section-label">Page scan result</p>
       <div id="scan-result"></div>
+    </section>
+
+    <section id="security-report-section" hidden>
+      <p class="section-label">Site security report</p>
+      <div class="site-row">
+        <span id="security-grade" class="state-pill" data-state="neutral">
+          <span class="dot"></span>
+          <span id="security-grade-text">—</span>
+        </span>
+        <span id="security-summary" class="state-text"></span>
+      </div>
+      <ul id="security-findings-list" class="signals-list"></ul>
+      <p id="security-findings-empty" class="empty-note" hidden>No findings — nothing to flag passively.</p>
     </section>
 
     <section id="recent-section">

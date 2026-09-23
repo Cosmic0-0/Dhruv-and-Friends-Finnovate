@@ -198,6 +198,9 @@ section:last-of-type {
 .signal-item[data-severity="low"] {
   border-left-color: var(--accent);
 }
+.signal-item[data-severity="info"] {
+  border-left-color: var(--neutral);
+}
 
 .signal-type {
   font-family: var(--font-mono);

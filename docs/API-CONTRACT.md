@@ -413,6 +413,63 @@ above, not a silent break.
 | `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
 | `429` | `{ "error": "too many check-url requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min) |
 
+## `POST /api/analyze-site`
+
+Not in the original placeholder contract — added for the extension's
+**Security Report** feature (`extension/README.md`). Passive-only: this
+route never sends crafted payloads, fuzzes, or brute-forces the target
+site — see `backend/src/services/site-security/index.js`'s header comment
+for the exact constraint. `url` is attacker-influenced input (this is a
+public route), so it's validated against an SSRF guard
+(`backend/src/services/site-security/url-safety.js`) before any outbound
+request; a malformed or private/internal-resolving URL is a `400`, not a
+silent no-op. This is an **additive** change to the locked contract (new
+route, no existing route's shape changed) — flagged to Oleg/Dhruv per the
+lock policy above, not a silent break.
+
+### Request
+
+```json
+{
+  "url": "string, required, non-empty — a full http(s) URL, e.g. \"https://example.com/\"",
+  "clientSignals": "object, optional — client-collected signals from extension/collect-signals.js (DOM sinks, reflected params, mixed content, insecure forms, vulnerable libraries, third-party scripts, API surface). Loosely validated and capped server-side; omit if none collected."
+}
+```
+
+### Response — `200 OK`
+
+```json
+{
+  "url": "string — echoed back from the request",
+  "finalUrl": "string | null — the URL actually reached after following redirects, or null if the site could not be reached at all",
+  "grade": "\"A\" | \"B\" | \"C\" | \"D\" | \"F\" | \"N/A\" — N/A only when the site could not be reached",
+  "score": "number | null — 0-100, null only alongside grade \"N/A\"",
+  "scannedAt": "string — ISO timestamp",
+  "findings": [
+    {
+      "category": "string — e.g. \"headers\" | \"tls\" | \"cookies\" | \"exposed-artifacts\" | \"injection-signal\" | \"client-dom\" | \"mixed-content\" | \"forms\" | \"vulnerable-library\" | \"third-party\" | \"api-surface\" | \"network\"",
+      "severity": "\"info\" | \"low\" | \"medium\" | \"high\"",
+      "title": "string",
+      "description": "string",
+      "evidence": "string, optional — the specific header/cookie name/path/match that triggered this finding"
+    }
+  ]
+}
+```
+
+A site that's reachable but merely fails to load a *sub*-check (e.g. TLS
+probe times out) still returns `200` with a partial report, not an error —
+same "never a naked 5xx for a well-formed request" convention as the other
+routes. Only a genuinely unsafe/malformed `url` is a `400`.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "url is required and must be a non-empty string" }` | `url` missing, not a string, or empty/whitespace-only |
+| `400` | `{ "error": "<SSRF-guard message>" }` | `url` isn't http(s), resolves to a private/loopback/reserved address, or can't be resolved at all |
+| `429` | `{ "error": "too many security-report requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min — tighter than check-url since each call makes roughly a dozen outbound requests to the target site) |
+
 ## `GET /health/llm`
 
 Not in the original placeholder contract, but load-bearing for the demo —
