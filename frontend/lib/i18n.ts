@@ -105,6 +105,11 @@ export interface Copy {
     pasteFallback: string;
     screenshot: string;
     payRow: string;
+    /**
+     * Shown only before the first check. A new user otherwise lands on a
+     * dashboard of empty cards with nothing saying what the app is for.
+     */
+    intro: { title: string; points: readonly string[] };
     /** Checking state (design/mockup/Checking.png). */
     checkingLabel: string;
     checkingNote: string;
@@ -850,7 +855,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Paste & check",
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
-      payRow: "About to pay someone?",
+      payRow: "Check before you pay",
+      intro: {
+        title: "What this does",
+        points: [
+          "Spots bank, parcel and prize scams of the kind sent in Mauritius.",
+          "Reads Kreol, French and English, including messages that mix them.",
+          "Phone numbers and account numbers are removed on your phone, before anything is sent.",
+        ],
+      },
       checkingLabel: "Checking the message",
       checkingNote: "This can take up to a minute. You can keep this screen open.",
       week: {
@@ -1043,7 +1056,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Coller et vérifier",
       pasteFallback: "Rien à coller pour l'instant. Saisissez le message, ou collez-le.",
       screenshot: "Vérifier une capture d'écran",
-      payRow: "Sur le point de payer ?",
+      payRow: "Vérifier avant de payer",
+      intro: {
+        title: "À quoi ça sert",
+        points: [
+          "Repère les arnaques bancaires, de colis et de faux gains telles qu'on les reçoit à Maurice.",
+          "Comprend le kreol, le français et l'anglais, même mélangés dans un même message.",
+          "Les numéros de téléphone et de compte sont retirés sur votre téléphone, avant tout envoi.",
+        ],
+      },
       checkingLabel: "Analyse du message",
       checkingNote: "Cela peut prendre jusqu'à une minute. Vous pouvez laisser cet écran ouvert.",
       week: {
@@ -1504,7 +1525,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       paste: "Paste & check",
       pasteFallback: "Nothing to paste yet. Type the message, or paste it in.",
       screenshot: "Check a screenshot",
-      payRow: "About to pay someone?",
+      payRow: TODO_KREOL("Check before you pay"),
+      intro: TODO_KREOL({
+        title: "What this does",
+        points: [
+          "Spots bank, parcel and prize scams of the kind sent in Mauritius.",
+          "Reads Kreol, French and English, including messages that mix them.",
+          "Phone numbers and account numbers are removed on your phone, before anything is sent.",
+        ],
+      }),
       checkingLabel: "Checking the message",
       checkingNote: "This can take up to a minute. You can keep this screen open.",
       week: {

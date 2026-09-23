@@ -196,8 +196,8 @@
 
     --c-scrim: rgb(12 12 14 / 55%);
 
-    /* Reserve the floating bar's height (66px) plus its 28px bottom inset. */
-    --tabbar-height: 6.125rem;
+    /* Reserve the floating bar's height (72px) plus its 24px bottom inset. */
+    --tabbar-height: 6rem;
   }
 
   /*
