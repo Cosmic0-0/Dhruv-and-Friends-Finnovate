@@ -69,7 +69,9 @@ LLM prompt as a hint string.
   "explanation": "string, localized to the input language",
   "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range. Unchanged by this update.",
   "sender": "string, optional — identity the message claims to be from (phone number, short code, or name), as extracted by the LLM. Omitted if none was apparent.",
-  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present.",
+  "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present AND trackable: omitted for a redaction placeholder like `[phone 1]` and for an official institution identity like `MCB` (see Community cluster/wave evidence below).",
+  "adjustedRiskScore": "number, optional, NEW — `riskScore` plus the community-evidence delta, capped at 100. Only present when a community rule fired AND `riskScore` is present. `riskScore` itself is never modified.",
+  "riskAdjustments": "array, optional, NEW — ledger of community-evidence adjustments; see Community cluster/wave evidence below. Only present when a rule fired.",
   "riskCategories": "object, NEW — see below. Always present.",
   "scamProfile": "object, optional, NEW (P1) — see below. Only present when the LLM supplied a valid `stage` (see below); `type` inside it may still be null.",
   "journey": "object, optional, NEW (P1) — see below. Present under the same condition as `scamProfile`."
@@ -100,7 +102,54 @@ in the pipeline it came from:
 | `"llm_analysis"` | LLM signal that doesn't match a message-text pattern — the LLM's own inferential scam-pattern reasoning (e.g. `sender_mismatch`, `spoofed_identity`). Default bucket when `message_text` doesn't match. |
 | `"url_parser"` | Signal appended by the non-LLM domain-matching module (`checkUrls`, `backend/src/services/domain-matching/index.js`) — currently only `lookalike_url`. |
 | `"identity_check"` | Signal appended by the new non-LLM identity-consistency module (`checkIdentityConsistency`, `backend/src/services/identity-consistency/index.js`) — currently only `IDENTITY_MISMATCH`. |
-| `"community_reports"` | Reserved for a signal derived from the crowdsourced sender-reputation store (`backend/src/db/index.js`). Not currently emitted by any code path — the report count is still only exposed via the existing top-level `senderReports` field, not as a `signals[]` item. Documented here so the value is reserved if/when that changes. |
+| `"community_reports"` | Signal derived from timestamped community report evidence (`backend/src/services/community-signals`) — type `community_cluster` (rule CW-1) or `community_wave` (rule CW-2). At most one per result. See Community cluster/wave evidence below. |
+
+#### Community cluster/wave evidence (NEW)
+
+Applied to `/api/analyze`, `/api/analyze/screenshot`, and each successful
+`/api/batch-scan` result (never to `analysisFailed` results). Full rules and
+compliance controls: `backend/src/services/community-signals/README.md`.
+
+When a message matches (same normalized template, near-duplicate SimHash,
+shared lookalike host, or same trackable sender) enough recent reports from
+**distinct** pseudonymous reporters, one signal is appended:
+
+```ts
+{
+  type: "community_cluster" | "community_wave",
+  description: string,          // English, e.g. "Matches a message pattern reported by 8 different people ..."
+  severity: "medium" | "high",  // cluster | wave
+  source: "community_reports",
+  communityEvidence: {
+    ruleId: "CW-1" | "CW-2",
+    rulesVersion: string,       // e.g. "wave-rules-v1"
+    matchedBy: { template?: number, near_duplicate?: number, lookalike_host?: number, sender?: number },
+    distinctReporters: number,  // last 7 days
+    distinctReporters24h: number,
+    humanReports: number,       // explicit /api/report submissions among the evidence
+    burstRatio: number,         // last-24h weight vs 14-day daily baseline
+    windowDays: number,
+    firstSeen: string | null,   // ISO 8601
+    lastSeen: string | null
+  }
+}
+```
+
+plus `riskAdjustments: [{ ruleId, rulesVersion, riskDelta, verdictFrom, verdictTo, evidenceCount, auditRef }]`
+(`auditRef` = id of the server-side `risk_audit_log` row) and, if
+`riskScore` was present, `adjustedRiskScore`.
+
+**`verdict` may be escalated** by this step — this is the one existing field
+whose value can now differ from the LLM's output:
+- `safe` → `suspicious` on any community rule; crowd evidence alone never goes further;
+- `suspicious` → `scam` only on CW-2 **and** a deterministic high-severity
+  `url_parser`/`identity_check` signal on the same message;
+- never lowered. `verdictFrom` in `riskAdjustments` always carries the pre-escalation verdict.
+
+`explanation`/`suggestedAction` are still the LLM's and are **not** rewritten
+on escalation — the UI should surface the community signal's `description`
+alongside them. `riskCategories` is computed before this step and does not
+include the community signal.
 
 #### `IDENTITY_MISMATCH` (NEW evidence type)
 
@@ -352,7 +401,7 @@ arbitrary identifier instead of only one the LLM extracted.
 ```json
 {
   "sender": "string, required, non-empty",
-  "message": "string, optional — accepted but currently unused server-side",
+  "message": "string, optional — the (client-redacted) message text. NEW: when present and ≤ 5000 chars, it is re-redacted server-side and reduced to one-way fingerprints (template hash + SimHash + lookalike hosts) for community cluster/wave detection. The text itself is never stored. Oversized/non-string values are ignored, not rejected.",
   "reportedBy": "string, optional — accepted but currently unused server-side"
 }
 ```
@@ -373,6 +422,13 @@ arbitrary identifier instead of only one the LLM extracted.
 |---|---|---|
 | `400` | `{ "error": "sender is required and must be a non-empty string" }` | `sender` missing, not a string, or empty/whitespace-only |
 | `429` | `{ "error": "too many report submissions from this address, try again later" }` | per-IP rate limit exceeded (5 req/hour — deliberately tighter than the other routes, see checklist.md "Add bot protection") |
+
+**Evidence note (no shape change):** each report is also stored as a
+timestamped `report_events` row with a pseudonymous reporter id (HMAC of the
+client IP; raw IP never stored) and deleted after 90 days
+(`COMMUNITY_EVENT_RETENTION_DAYS`). Reports keyed on an official identity
+(`MCB`, `my.t`, ...) or a redaction placeholder still increment `reportCount`
+as before, but never count toward that sender's community reputation.
 
 **Normalization note (no shape change):** `reportCount` now deduplicates
 internally via a normalized, digits-only canonical key (`backend/src/db/index.js`),

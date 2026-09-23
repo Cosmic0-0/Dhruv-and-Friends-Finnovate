@@ -1,6 +1,7 @@
 import { nextSandboxTurn, MAX_SANDBOX_TURNS } from "../services/sandbox/index.js";
 import { PLAYBOOKS, normalizeScamType, normalizeStage } from "../services/playbooks/index.js";
 import { attachScamDna, getFingerprintMatches } from "../services/scam-dna/index.js";
+import { applyCommunityEvidence, communitySenderKey, recordUserReport } from "../services/community-signals/index.js";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { analyzeMessage } from "../services/analysis/index.js";
@@ -83,13 +84,21 @@ function isNonEmptyString(value) {
 
 // Looks up the crowdsourced report count for the LLM-extracted `sender`
 // (see services/analysis/index.js). Only attached when a sender was
-// identified - senderReports is meaningless without a sender to key on.
-function withSenderReports(result) {
+// identified AND is trackable (communitySenderKey): a redaction placeholder
+// like "[phone 1]" would otherwise normalize to one shared "2301" bucket,
+// and an official identity like "MCB" would show a genuine bank as
+// community-flagged because scammers impersonate it.
+//
+// Then applies community cluster/wave evidence (services/community-signals),
+// which may add a `community_*` signal, `adjustedRiskScore` and
+// `riskAdjustments`. riskCategories is deliberately computed BEFORE this by
+// each caller, so it keeps describing the message content only.
+function withSenderReports(result, message, req) {
   attachScamDna(result);
-  if (typeof result.sender === "string") {
+  if (communitySenderKey(result.sender) !== null) {
     result.senderReports = getReportCount(result.sender);
   }
-  return result;
+  return applyCommunityEvidence(result, message, { ip: req.ip });
 }
 
 router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, res) => {
@@ -114,7 +123,7 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
     // Structured risk-category breakdown, derived from the full signal set
     // above. Additive alongside `riskScore` — see docs/API-CONTRACT.md.
     result.riskCategories = computeRiskCategories(result.signals);
-    res.json(withSenderReports(result));
+    res.json(withSenderReports(result, message, req));
   } catch (err) {
     console.error(err);
     res.status(502).json({ error: "analysis failed, try again shortly" });
@@ -174,7 +183,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
     result.signals.push(...urlSignals);
     result.signals.push(...checkIdentityConsistency(redactedText));
     result.riskCategories = computeRiskCategories(result.signals);
-    res.json({ extractedText: redactedText, ...withSenderReports(result) });
+    res.json({ extractedText: redactedText, ...withSenderReports(result, redactedText, req) });
   } catch (err) {
     console.error(err);
     res.status(502).json({ error: "analysis failed, try again shortly" });
@@ -220,7 +229,7 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
       result.signals.push(...urlSignals);
       result.signals.push(...checkIdentityConsistency(message));
       result.riskCategories = computeRiskCategories(result.signals);
-      return withSenderReports(result);
+      return withSenderReports(result, message, req);
     } catch (err) {
       // Same rationale as urlSignals above: identity-consistency and the
       // risk-category rollup are both deterministic and don't depend on
@@ -278,6 +287,21 @@ router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {
     return res.status(400).json({ error: "sender is required and must be a non-empty string" });
   }
   const reportCount = reportSender(sender);
+  // Also recorded as a timestamped evidence event for cluster/wave
+  // detection (services/community-signals). Best-effort: the response
+  // shape and the legacy count above don't depend on it. An oversized or
+  // non-string `message` is simply not fingerprinted, rather than turning
+  // a previously-valid report into a 400.
+  const { message } = req.body;
+  try {
+    recordUserReport({
+      sender,
+      message: typeof message === "string" && message.length <= MAX_MESSAGE_LENGTH ? message : undefined,
+      ip: req.ip,
+    });
+  } catch (err) {
+    console.error(`[community-signals] report event not recorded: ${err.message}`);
+  }
   res.json({ sender, reportCount, recorded: true });
 });
 
