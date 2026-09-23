@@ -43,11 +43,11 @@ semantic status as unavailable.
 
 ## Analysis flow
 
-All text paths eventually call `backend/src/services/pipeline/runPipeline`. A
-PDF/DOCX upload to `/api/analyze/document` also does (see "Document forensics"
-below): its structural findings join the deterministic evidence through
-`extraSignals`. An image upload to `/api/documents` does not; it returns
-forensic indicators only.
+All text paths eventually call `runPipeline()` in
+`backend/src/services/pipeline/index.js`. A PDF/DOCX upload to
+`/api/analyze/document` also does (see "Document forensics" below): its
+structural findings join the deterministic evidence through `extraSignals`. An
+image upload to `/api/documents` does not; it returns forensic indicators only.
 
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
