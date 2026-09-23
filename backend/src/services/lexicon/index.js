@@ -185,6 +185,28 @@ function isSafetyContact(text, start) {
   return SAFETY_CONTACT_RE.test(clauseWindowBefore(text, start, 80));
 }
 
+const SEC01_SHARE_RE = compile(new RegExp(`\\b${SHARE_VERB}\\b[^.!?\\n]{0,30}?\\b${CREDENTIAL_NOUN}`, "iu"));
+
+/**
+ * Sanity-checks a semantic-model (LLM) SEC-01/ID-04/SOC-04 signal against the
+ * same negation/safety-contact logic the deterministic lexicon rules already
+ * use - a small local model doesn't reliably apply negation itself, so
+ * "Never share this code" or "contact MCB immediately" can otherwise slip
+ * through as a false positive even though the equivalent lexicon rule (with
+ * `negatable`/`checkSafetyContact`) would correctly stay silent on it.
+ * `evidence` is the model's own quoted span; `start` is its offset in `text`.
+ */
+export function isBenignCredentialOrContactLanguage(code, text, evidence, start) {
+  if (code === "SEC-01") {
+    const m = SEC01_SHARE_RE.exec(evidence);
+    if (m && isNegated(text, start + m.index)) return true;
+  }
+  if (code === "ID-04" || code === "SOC-04") {
+    if (SAFETY_CONTACT_RE.test(evidence)) return true;
+  }
+  return false;
+}
+
 // "A transfer of Rs 2,000 was made ..." / "... has already been processed" -
 // a bank stating a transaction happened, not a request to make one.
 const PASSIVE_NOTIFICATION_RE = /^[^.!?\n]{0,20}?\b(?:was|were|has been|had been|have been)\b[^.!?\n]{0,20}?\b(?:made|completed|done|processed|effected|carried out|received|credited|debited|initiated|authorised|authorized)\b/iu;
