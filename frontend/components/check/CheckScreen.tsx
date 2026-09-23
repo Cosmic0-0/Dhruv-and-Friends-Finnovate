@@ -115,6 +115,11 @@ export default function CheckScreen() {
           <CheckForm ref={form} onStateChange={setFormState} />
 
           {!hidden && <PayRow copy={copy} />}
+
+          {/* Recent joins the left column: with only the hero and the pay row
+              there, desktop left half the screen empty while the stats
+              column carried everything. */}
+          {!hidden && hasHistory && <RecentChecks checks={checks} now={now} />}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -134,8 +139,6 @@ export default function CheckScreen() {
               )}
 
               <InstallCard copy={copy} />
-
-              {hasHistory && <RecentChecks checks={checks} now={now} />}
             </>
           )}
         </div>
