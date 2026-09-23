@@ -9,8 +9,10 @@
 
 import { makeSignal } from "../signals/registry.js";
 import { institutionForHost } from "../institutions/index.js";
+import { normalizeKreol } from "../kreol/normalizer.js";
+import { detectExplanationLanguage } from "../kreol/language.js";
 
-export const LEXICON_VERSION = "lexicon-1.0";
+export const LEXICON_VERSION = "lexicon-1.1";
 
 // JS \b only knows ASCII word characters, so /bloqué\b/ never matches
 // "bloqué " and /\bà/ misbehaves. Every pattern below is compiled with \b
@@ -51,7 +53,7 @@ function onlySoftWraps(matched) {
  */
 const RULES = [
   // SEC-01 - asks the user to share a credential
-  { code: "SEC-01", lang: "mixed", negatable: true, re: new RegExp(`\\b${SHARE_VERB}\\b[^.!?\\n]{0,30}?\\b${CREDENTIAL_NOUN}`, "iu") },
+  { code: "SEC-01", lang: "mixed", negatable: true, checkInnerNegation: true, re: new RegExp(`\\b${SHARE_VERB}\\b[^.!?\\n]{0,30}?\\b${CREDENTIAL_NOUN}`, "iu") },
   { code: "SEC-01", lang: "en", negatable: true, re: /\bwhat (?:is|was) (?:the |your )?(?:otp|pin|password|code)\b/iu },
 
   // SEC-03 - asks you to log in via a link and enter your password. Distinct
@@ -102,7 +104,7 @@ const RULES = [
   // PAY-04 - fee before release
   { code: "PAY-04", lang: "en", re: /\b(?:processing|release|clearance|customs|delivery|admin(?:istration)?|activation|registration|handling|verification|unlock(?:ing)?) fee\b|\bfee (?:to|before) (?:release|receive|claim|unlock)\b|\bstarter kit\b/iu },
   { code: "PAY-04", lang: "fr", re: /\bfrais (?:de |d')(?:dossier|douane|d[ée]douanement|livraison|d[ée]blocage|traitement|v[ée]rification|inscription)\b/iu },
-  { code: "PAY-04", lang: "mfe", re: /\b(?:fre|frais) (?:douane|dwann|livrezon|livraison|inscription|lenskripsion|verification|verifikasion)\b/iu },
+  { code: "PAY-04", lang: "mfe", re: /\b(?:fre|frais) (?:douane|dwann|livrezon|livraison|inscription|lenskripsion|verification|verifikasion)\b|\b(?:fre|frais) (?:pou|pu) (?:debloke|libere|resevwar|reklam|aktive|reaktive|ranbours|delivre|retir)\b/iu },
 
   // PAY-07 - payment details changed (invoice / supplier fraud)
   { code: "PAY-07", lang: "en", re: /\b(?:bank(?:ing)?|account|payment) details (?:have |has )?(?:changed|been (?:changed|updated))\b|\bnew (?:bank )?account (?:details|number)\b|\bupdated (?:bank|payment) details\b/iu },
@@ -115,9 +117,11 @@ const RULES = [
   // nouns, so the bare verb match alone can't tell an imperative demand from
   // a passive notification (see EN-14 in data/test-payloads, a genuine debit
   // alert this used to misfire on).
-  { code: "PAY-01", lang: "en", checkPassive: true, re: /\b(?:pay|send|transfer|deposit|remit|wire)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\s?\d|€\s?\d|\$\s?\d|\bmoney\b|\bfunds?\b|\bamount\b|\bfee\b)|\bmake (?:a|the) payment\b|\bpay (?:now|the (?:fee|amount))\b/iu },
+  { code: "PAY-01", lang: "en", checkPassive: true, checkNounUse: true, re: /\b(?:pay|send|transfer|deposit|remit|wire)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\s?\d|€\s?\d|\$\s?\d|\bmoney\b|\bfunds?\b|\bamount\b|\bfee\b)|\bmake (?:a|the) payment\b|\bpay (?:now|the (?:fee|amount))\b/iu },
   { code: "PAY-01", lang: "fr", re: /\b(?:payez|payer|r[ée]glez|r[ée]gler|envoyez|envoyer|m'envoyer|virez|versez|verser)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\bmur\b|€|\bargent\b|\bmontant\b|\bfrais\b)|\beffectuer le paiement\b|\bfaire un virement\b/iu },
-  { code: "PAY-01", lang: "mfe", re: /\b(?:pey|peye|avoy(?:e)?|reavoy+|envoye|fer (?:enn )?transfer|depoz(?:e)?|investi)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\blarzan\b|\bkas\b|\bfre\b|\bfrais\b)|\bavoy(?:e)? lor sa (?:numero|nimero)\b|\bbizin rs\.?\s?\d/iu },
+  // checkPerfective: "Ou finn fer enn transfer Rs 2,000" (you made a transfer) is a notice of a
+  // completed action - a perfective marker (finn/inn/pann/ti) just before the verb.
+  { code: "PAY-01", lang: "mfe", checkPerfective: true, re: /\b(?:pey|peye|avoy(?:e)?|reavoy+|envoye|fer (?:enn )?transfer|depoz(?:e)?|investi)\b[^.!?\n]{0,30}?(?:\brs\.?\s?\d|\blarzan\b|\bkas\b|\bfre\b|\bfrais\b)|\bavoy(?:e)? lor sa (?:numero|nimero)\b|\bbizin rs\.?\s?\d/iu },
 
   // SOC-03 - secrecy
   { code: "SOC-03", lang: "en", re: /\b(?:don'?t|do not|never) tell (?:anyone|anybody|your|dad|mum|mom)\b|\btell no ?one\b|\bkeep (?:this|it) (?:secret|confidential|between us|to yourself)\b|\bdon'?t (?:inform|contact|call) (?:your )?(?:bank|family|anyone)\b|\bbetween (?:you and me|us)\b/iu },
@@ -134,7 +138,10 @@ const RULES = [
   // SOC-02 - threats
   { code: "SOC-02", lang: "en", re: /\bsuspend(?:ed|sion)?\b|\b(?:will be|has been|be) (?:blocked|locked|frozen|closed|deactivated|terminated|restricted)\b|\blegal action\b|\bprosecut(?:ion|ed)\b|\barrest(?:ed)?\b|\bpenalt(?:y|ies)\b|\bbe fined\b|\bpermanent(?:ly)? (?:lock|block|closure|freeze)\b|\blose access\b/iu },
   { code: "SOC-02", lang: "fr", re: /\bsuspendu(?:e)?\b|\bbloqu[ée](?:e)?\b|\bgel[ée]\b|\bd[ée]sactiv[ée]\b|\bpoursuites\b|\bp[ée]nalit[ée]\b|\bamende\b/iu },
-  { code: "SOC-02", lang: "mfe", re: /\bbloke\b|\bsispann\b|\bsispandi\b|\bpenalite\b|\bprosekision\b|\blapolis\b/iu },
+  // "sispann" is also the plain verb "to stop" ("Si ou sispann resevwar mesaz"): it only counts as
+  // a suspension after a perfective/future marker ("inn/finn/pou sispann") or after the thing
+  // being suspended ("kont/kart ... sispann").
+  { code: "SOC-02", lang: "mfe", re: /\bbloke\b|\b(?:inn|finn|in|pe|pou|ti)\s+(?:sispann|sispandi)\b|\b(?:kont|kart|servis|akse)\b[^.!?\n]{0,25}?\b(?:sispann|sispandi)\b|\bsispandi\b|\bpenalite\b|\bprosekision\b|\blapolis\b/iu },
 
   // SOC-01 - urgency. checkSafetyContact: "contact MCB immediately" in a
   // genuine "if this wasn't you" alert is the bank telling the reader to
@@ -156,7 +163,7 @@ const RULES = [
   // SOC-04 - move to another channel / number
   { code: "SOC-04", lang: "en", re: /\b(?:whatsapp|telegram|viber) (?:me|us)\b|\b(?:contact|message|text|chat with) (?:me|us) (?:on|via) (?:whatsapp|telegram|signal|viber)\b|\bcall (?:this|the following|our) number\b|\breply to this number\b/iu },
   { code: "SOC-04", lang: "fr", re: /\bcontactez(?:-nous|-moi)? (?:sur|via|par) (?:whatsapp|telegram)\b|\bappelez (?:ce|le) num[ée]ro\b/iu },
-  { code: "SOC-04", lang: "mfe", re: /\b(?:apel|telefonn) (?:lor )?sa nimero\b|\bkontakte? (?:mwa|nou) lor (?:whatsapp|telegram)\b/iu },
+  { code: "SOC-04", lang: "mfe", re: /\b(?:apel|telefonn) (?:lor )?sa nimero\b|\bkontakte? (?:mwa|nou) lor (?:whatsapp|telegram)\b|\b(?:whatsapp|telegram|viber) (?:mwa|nou)\b/iu },
 
   // SOC-05 - prize / refund / unexpected money
   { code: "SOC-05", lang: "en", re: /\byou(?:'ve| have)? won\b|\b(?:lucky )?winner\b|\bprize\b|\blottery\b|\bjackpot\b|\beligible for a (?:tax )?refund\b|\b(?:refund|cashback) (?:of|is|pending|available|ready)\b/iu },
@@ -336,11 +343,36 @@ function isPassiveNotification(text, end) {
   return PASSIVE_NOTIFICATION_RE.test(text.slice(end, end + 60));
 }
 
+// A negation between the verb and the credential ("dir ou pa partaz ou kod" - "tell you not to
+// share your code") negates the request even though nothing negative precedes the match.
+// A conditional ("Si ou pa konfirm ...") still turns it back into a threat.
+function hasInnerNegation(text, start, matched) {
+  if (!NEGATION_RE.test(matched)) return false;
+  return !CONDITIONAL_RE.test(`${clauseWindowBefore(text, start, 40)} ${matched}`);
+}
+
+// "Ou finn fer enn transfer Rs 2,000": a perfective marker right before the verb makes it a
+// completed action, i.e. a notice, not a request to pay.
+const PERFECTIVE_BEFORE_RE = /\b(?:finn|inn|in|pann|ti)\s+$/iu;
+function isCompletedAction(text, start) {
+  return PERFECTIVE_BEFORE_RE.test(text.slice(Math.max(0, start - 12), start));
+}
+
+// "a transfer of Rs 2,000", "enn transfer Rs 2,000": preceded by a determiner, "transfer" /
+// "deposit" is a noun (something that happened or exists), not a verb asking the reader to act.
+const DETERMINER_BEFORE_RE = /\b(?:a|an|the|this|that|your|my|enn|sa)\s+$/iu;
+function isNounUse(text, start) {
+  return DETERMINER_BEFORE_RE.test(text.slice(Math.max(0, start - 10), start));
+}
+
 const COMPILED = RULES.map((rule) => ({ ...rule, re: compile(rule.re, "g") }));
 
 function firstMatch(text, rule) {
   for (const m of text.matchAll(rule.re)) {
     if (rule.negatable && isNegated(text, m.index)) continue;
+    if (rule.checkInnerNegation && hasInnerNegation(text, m.index, m[0])) continue;
+    if (rule.checkNounUse && isNounUse(text, m.index)) continue;
+    if (rule.checkPerfective && isCompletedAction(text, m.index)) continue;
     if (rule.checkPassive && isPassiveNotification(text, m.index + m[0].length)) continue;
     if (rule.checkSafetyContact && isSafetyContact(text, m.index)) continue;
     if (rule.checkDisclaimerFooter && isDisclaimerFooter(text, m.index)) continue;
@@ -369,6 +401,29 @@ export function detectLexicon(text) {
         metadata: { lang: rule.lang, detector: LEXICON_VERSION },
       })
     );
+  }
+
+  // Second pass over a spelling-normalised copy (nu/nou, u/ou, "inn"/"finn", accents...) for the
+  // codes the original text did not already produce. Every rule of every language still runs -
+  // a message is never forced into one language. The signal's evidence and span are cut from
+  // the ORIGINAL text, so what FraudLens quotes is exactly what the sender wrote.
+  const normalised = normalizeKreol(text);
+  if (normalised.changed) {
+    for (const rule of COMPILED) {
+      if (byCode.has(rule.code)) continue;
+      const m = firstMatch(normalised.normalizedText, rule);
+      if (!m) continue;
+      const [start, end] = normalised.toOriginal(m.index, m.index + m[0].length);
+      byCode.set(
+        rule.code,
+        makeSignal(rule.code, {
+          sourceType: "lexicon",
+          evidence: text.slice(start, end),
+          span: [start, end],
+          metadata: { lang: rule.lang, detector: LEXICON_VERSION, matchedOnNormalizedText: true },
+        })
+      );
+    }
   }
   return [...byCode.values()];
 }
@@ -436,9 +491,11 @@ export function languageScores(text) {
   return { kreol: count(KREOL_MARKERS), fr: count(FRENCH_MARKERS), en: count(ENGLISH_MARKERS) };
 }
 
-/** Coarse deterministic language guess for explanation templates: "en" | "fr" | "kreol". */
+/**
+ * Coarse deterministic language guess for explanation templates: "en" | "fr" | "kreol".
+ * The richer result (mixed messages, per-language evidence) is kreol/language.js
+ * detectLanguageMix(); this keeps the shape the pipeline already uses.
+ */
 export function detectLanguage(text) {
-  const scores = languageScores(text);
-  const best = Object.entries(scores).sort((a, b) => b[1] - a[1])[0];
-  return best[1] === 0 ? "en" : best[0];
+  return detectExplanationLanguage(text);
 }

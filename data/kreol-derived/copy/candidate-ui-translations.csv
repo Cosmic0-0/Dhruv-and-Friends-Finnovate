@@ -1,0 +1,32 @@
+source_file,line,snippet,status,proposed_kreol,reviewed_by,review_decision,notes
+frontend/lib/i18n.ts,1417,"home: TODO_KREOL(HOME_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1493,"settings: TODO_KREOL(""Settings""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1494,"newCheck: TODO_KREOL(""Check a new message""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1496,check: TODO_KREOL({,english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1527,tools: TODO_KREOL({,english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1536,settings: TODO_KREOL({,english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1577,live: TODO_KREOL({,english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1591,"conversation: TODO_KREOL(CONVERSATION_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1593,"journey: TODO_KREOL(JOURNEY_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1594,"investigate: TODO_KREOL(INVESTIGATE_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1595,"networkLink: TODO_KREOL(""View fraud network""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1601,hero: TODO_KREOL({,english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1609,"whatsWrong: TODO_KREOL(""What's wrong""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1611,"theLink: TODO_KREOL(""The link""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1614,"linksTitle: TODO_KREOL(""Links""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1615,"linksToTap: TODO_KREOL(() => ""to tap""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1616,"noLinkBody: TODO_KREOL(""Nothing here can open a fake page.""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1632,"xrayHint: TODO_KREOL(RESULT_EN.xrayHint),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1633,"identity: TODO_KREOL(RESULT_EN.identity),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1634,"evidence: TODO_KREOL(RESULT_EN.evidence),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1668,"informs_not_asks: TODO_KREOL(""Nothing to do""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1669,"last_four_only: TODO_KREOL(""Last 4 digits only""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1670,"no_pressure: TODO_KREOL(""No code, no rush""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1699,"replay: TODO_KREOL(REPLAY_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1700,"simple: TODO_KREOL(SIMPLE_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1701,"card: TODO_KREOL(CARD_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1710,"more: TODO_KREOL((n: number) => `${n} more to keep your streak`),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1711,"doneToday: TODO_KREOL(""Today's practice is done""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1712,"streakTitle: TODO_KREOL(""Streak""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1714,"noStreak: TODO_KREOL(""Answer 5 to start""),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.
+frontend/lib/i18n.ts,1773,"safepay: TODO_KREOL(SAFEPAY_EN),",english_fallback,,,,TODO_KREOL: the Kreol screen shows English here until a Kreol string is written and reviewed.

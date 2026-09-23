@@ -1,0 +1,182 @@
+[
+ {
+  "a": "ou",
+  "b": "u",
+  "fraudlens_reviewed": [
+   37,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   468,
+   751
+  ]
+ },
+ {
+  "a": "nou",
+  "b": "nu",
+  "fraudlens_reviewed": [
+   5,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   513,
+   672
+  ]
+ },
+ {
+  "a": "pou",
+  "b": "pu",
+  "fraudlens_reviewed": [
+   21,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   1554,
+   1588
+  ]
+ },
+ {
+  "a": "finn",
+  "b": "inn",
+  "fraudlens_reviewed": [
+   7,
+   6
+  ],
+  "morisienmt_train_mfe_en": [
+   954,
+   82
+  ]
+ },
+ {
+  "a": "lien",
+  "b": "lyen",
+  "fraudlens_reviewed": [
+   1,
+   5
+  ],
+  "morisienmt_train_mfe_en": [
+   1,
+   11
+  ]
+ },
+ {
+  "a": "to",
+  "b": "ou",
+  "fraudlens_reviewed": [
+   7,
+   37
+  ],
+  "morisienmt_train_mfe_en": [
+   251,
+   468
+  ]
+ },
+ {
+  "a": "kont",
+  "b": "konte",
+  "fraudlens_reviewed": [
+   9,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   133,
+   5
+  ]
+ },
+ {
+  "a": "modpas",
+  "b": "password",
+  "fraudlens_reviewed": [
+   1,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   0,
+   0
+  ]
+ },
+ {
+  "a": "kod",
+  "b": "code",
+  "fraudlens_reviewed": [
+   1,
+   1
+  ],
+  "morisienmt_train_mfe_en": [
+   0,
+   0
+  ]
+ },
+ {
+  "a": "sekirite",
+  "b": "sekurite",
+  "fraudlens_reviewed": [
+   2,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   17,
+   0
+  ]
+ },
+ {
+  "a": "labank",
+  "b": "banque",
+  "fraudlens_reviewed": [
+   6,
+   2
+  ],
+  "morisienmt_train_mfe_en": [
+   24,
+   0
+  ]
+ },
+ {
+  "a": "larzan",
+  "b": "kass",
+  "fraudlens_reviewed": [
+   2,
+   1
+  ],
+  "morisienmt_train_mfe_en": [
+   38,
+   0
+  ]
+ },
+ {
+  "a": "eskrok",
+  "b": "larnak",
+  "fraudlens_reviewed": [
+   0,
+   1
+  ],
+  "morisienmt_train_mfe_en": [
+   0,
+   0
+  ]
+ },
+ {
+  "a": "pa",
+  "b": "pann",
+  "fraudlens_reviewed": [
+   10,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   1244,
+   1
+  ]
+ },
+ {
+  "a": "zame",
+  "b": "zamai",
+  "fraudlens_reviewed": [
+   0,
+   0
+  ],
+  "morisienmt_train_mfe_en": [
+   64,
+   0
+  ]
+ }
+]

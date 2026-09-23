@@ -1,0 +1,413 @@
+{
+  "label": "baseline",
+  "node": "v24.14.1",
+  "fixtures": {
+    "fraudCases": 88,
+    "languageCases": 36,
+    "status": "draft_generated/synthetic_claude - not human reviewed"
+  },
+  "fraud": {
+    "all": {
+      "cases": 88,
+      "casesPassed": 71,
+      "casePassRate": 80.7,
+      "expectedSignalRecall": 88.3,
+      "forbiddenSignalViolations": "4/42",
+      "legitCases": 29,
+      "legitLevelFalsePositiveRate": 6.9
+    },
+    "bySplit": {
+      "dev": {
+        "cases": 54,
+        "casesPassed": 45,
+        "casePassRate": 83.3,
+        "expectedSignalRecall": 91.7,
+        "forbiddenSignalViolations": "3/26",
+        "legitCases": 18,
+        "legitLevelFalsePositiveRate": 5.6
+      },
+      "heldout": {
+        "cases": 34,
+        "casesPassed": 26,
+        "casePassRate": 76.5,
+        "expectedSignalRecall": 82.1,
+        "forbiddenSignalViolations": "1/16",
+        "legitCases": 11,
+        "legitLevelFalsePositiveRate": 9.1
+      }
+    },
+    "kreolSubset": {
+      "cases": 80,
+      "casesPassed": 63,
+      "casePassRate": 78.8,
+      "expectedSignalRecall": 87.3,
+      "forbiddenSignalViolations": "4/37",
+      "legitCases": 25,
+      "legitLevelFalsePositiveRate": 8
+    },
+    "englishFrenchControls": {
+      "cases": 8,
+      "casesPassed": 8,
+      "casePassRate": 100,
+      "expectedSignalRecall": 100,
+      "forbiddenSignalViolations": "0/5",
+      "legitCases": 4,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "byFamily": {
+      "scam_request": {
+        "cases": 24,
+        "casesPassed": 21,
+        "casePassRate": 87.5,
+        "expectedSignalRecall": 93.3,
+        "forbiddenSignalViolations": "0/0",
+        "legitCases": 0,
+        "legitLevelFalsePositiveRate": null
+      },
+      "legitimate_warning": {
+        "cases": 12,
+        "casesPassed": 9,
+        "casePassRate": 75,
+        "expectedSignalRecall": null,
+        "forbiddenSignalViolations": "3/17",
+        "legitCases": 12,
+        "legitLevelFalsePositiveRate": 16.7
+      },
+      "legitimate_notice": {
+        "cases": 6,
+        "casesPassed": 5,
+        "casePassRate": 83.3,
+        "expectedSignalRecall": null,
+        "forbiddenSignalViolations": "1/12",
+        "legitCases": 6,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "negation": {
+        "cases": 10,
+        "casesPassed": 10,
+        "casePassRate": 100,
+        "expectedSignalRecall": 100,
+        "forbiddenSignalViolations": "0/6",
+        "legitCases": 6,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "conditional_threat": {
+        "cases": 8,
+        "casesPassed": 7,
+        "casePassRate": 87.5,
+        "expectedSignalRecall": 92.9,
+        "forbiddenSignalViolations": "0/0",
+        "legitCases": 0,
+        "legitLevelFalsePositiveRate": null
+      },
+      "code_switch": {
+        "cases": 10,
+        "casesPassed": 9,
+        "casePassRate": 90,
+        "expectedSignalRecall": 88.9,
+        "forbiddenSignalViolations": "0/5",
+        "legitCases": 3,
+        "legitLevelFalsePositiveRate": 0
+      },
+      "orthographic_variant": {
+        "cases": 18,
+        "casesPassed": 10,
+        "casePassRate": 55.6,
+        "expectedSignalRecall": 79.5,
+        "forbiddenSignalViolations": "0/2",
+        "legitCases": 2,
+        "legitLevelFalsePositiveRate": 0
+      }
+    },
+    "negation": {
+      "cases": 10,
+      "casesPassed": 10,
+      "casePassRate": 100,
+      "expectedSignalRecall": 100,
+      "forbiddenSignalViolations": "0/6",
+      "legitCases": 6,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "conditionalThreat": {
+      "cases": 8,
+      "casesPassed": 7,
+      "casePassRate": 87.5,
+      "expectedSignalRecall": 92.9,
+      "forbiddenSignalViolations": "0/0",
+      "legitCases": 0,
+      "legitLevelFalsePositiveRate": null
+    },
+    "codeSwitch": {
+      "cases": 10,
+      "casesPassed": 9,
+      "casePassRate": 90,
+      "expectedSignalRecall": 88.9,
+      "forbiddenSignalViolations": "0/5",
+      "legitCases": 3,
+      "legitLevelFalsePositiveRate": 0
+    },
+    "orthographicVariantGroups": {
+      "groups": 6,
+      "consistent": 4,
+      "consistentAndCorrect": 3,
+      "detail": [
+        {
+          "group": "var-01",
+          "split": "dev",
+          "members": 4,
+          "consistent": false,
+          "allPass": false
+        },
+        {
+          "group": "var-02",
+          "split": "dev",
+          "members": 3,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-03",
+          "split": "dev",
+          "members": 3,
+          "consistent": true,
+          "allPass": false
+        },
+        {
+          "group": "var-04",
+          "split": "heldout",
+          "members": 4,
+          "consistent": false,
+          "allPass": false
+        },
+        {
+          "group": "var-05",
+          "split": "heldout",
+          "members": 2,
+          "consistent": true,
+          "allPass": true
+        },
+        {
+          "group": "var-06",
+          "split": "heldout",
+          "members": 2,
+          "consistent": true,
+          "allPass": true
+        }
+      ]
+    }
+  },
+  "languageClassification": {
+    "all": {
+      "cases": 36,
+      "primaryAccuracy": 100,
+      "mixedDetectionAccuracy": "no baseline implementation (detector cannot represent 'mixed')",
+      "languageSetAccuracy": "no baseline implementation",
+      "kreolRecall": 100
+    },
+    "dev": {
+      "cases": 22,
+      "primaryAccuracy": 100,
+      "mixedDetectionAccuracy": "no baseline implementation (detector cannot represent 'mixed')",
+      "languageSetAccuracy": "no baseline implementation",
+      "kreolRecall": 100
+    },
+    "heldout": {
+      "cases": 14,
+      "primaryAccuracy": 100,
+      "mixedDetectionAccuracy": "no baseline implementation (detector cannot represent 'mixed')",
+      "languageSetAccuracy": "no baseline implementation",
+      "kreolRecall": 100
+    }
+  },
+  "entityPreservation": "no baseline implementation",
+  "failures": [
+    {
+      "id": "KE-S10",
+      "split": "dev",
+      "family": "scam_request",
+      "message": "Mo finn perdi mo phone, sa mo nouvo number. Whatsapp mwa vit vit.",
+      "missing": [
+        "SOC-04"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-S17",
+      "split": "heldout",
+      "family": "scam_request",
+      "message": "Sef, mo dan enn problem. Kapav ou avoy mwa Rs 4,000 lor sa nimero la? Pa dir mo fami.",
+      "missing": [
+        "SOC-03"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-S21",
+      "split": "heldout",
+      "family": "scam_request",
+      "message": "Dernie avertisman: ou pou pey enn penalite si ou pa reponn.",
+      "missing": [
+        "SOC-01"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-L02",
+      "split": "dev",
+      "family": "legitimate_warning",
+      "message": "MCB pe dir ou pa partaz ou kod avek personn.",
+      "missing": [],
+      "forbidden": [
+        "SEC-01"
+      ],
+      "level": "high"
+    },
+    {
+      "id": "KE-L07",
+      "split": "dev",
+      "family": "legitimate_warning",
+      "message": "Si ou sispann resevwar mesaz, kontakte labank lor nimero ki lor ou kart.",
+      "missing": [],
+      "forbidden": [
+        "SOC-02"
+      ],
+      "level": "low"
+    },
+    {
+      "id": "KE-L08",
+      "split": "dev",
+      "family": "legitimate_notice",
+      "message": "Ou finn fer enn transfer Rs 2,000 depi ou kont. Si pa ou, kontakte labank.",
+      "missing": [],
+      "forbidden": [
+        "PAY-01"
+      ],
+      "level": "low"
+    },
+    {
+      "id": "KE-L18",
+      "split": "heldout",
+      "family": "legitimate_warning",
+      "message": "Eskrok pou dir ou partaz ou kod. Pa fer sa.",
+      "missing": [],
+      "forbidden": [
+        "SEC-01"
+      ],
+      "level": "elevated"
+    },
+    {
+      "id": "KE-C06",
+      "split": "heldout",
+      "family": "conditional_threat",
+      "message": "Si ou pa reponn, nou pou fer aksion legal kont ou.",
+      "missing": [
+        "SOC-02"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-M07",
+      "split": "heldout",
+      "family": "code_switch",
+      "message": "Ou compte inn bloké. Envoyez mwa ou code de vérification.",
+      "missing": [
+        "SOC-02"
+      ],
+      "forbidden": [],
+      "level": "elevated"
+    },
+    {
+      "id": "KE-V01b",
+      "split": "dev",
+      "family": "orthographic_variant",
+      "message": "Ou inn gagn enn prix Rs 50,000. Pey frais douane avan minwi.",
+      "missing": [
+        "SOC-05"
+      ],
+      "forbidden": [],
+      "level": "elevated"
+    },
+    {
+      "id": "KE-V01c",
+      "split": "dev",
+      "family": "orthographic_variant",
+      "message": "U finn gagn enn prix Rs 50,000. Pey frais douane avan minwi.",
+      "missing": [
+        "SOC-05"
+      ],
+      "forbidden": [],
+      "level": "elevated"
+    },
+    {
+      "id": "KE-V03a",
+      "split": "dev",
+      "family": "orthographic_variant",
+      "message": "Pey Rs 900 frais pou debloke ou kont.",
+      "missing": [
+        "PAY-04"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-V03b",
+      "split": "dev",
+      "family": "orthographic_variant",
+      "message": "Peye Rs 900 frais pou debloke ou kont.",
+      "missing": [
+        "PAY-04"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-V03c",
+      "split": "dev",
+      "family": "orthographic_variant",
+      "message": "Pey Rs 900 fre pu debloke u kont.",
+      "missing": [
+        "PAY-04"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-V04b",
+      "split": "heldout",
+      "family": "orthographic_variant",
+      "message": "Ou inn gagn Rs 8,400 depi MRA. Klik lien la avan 24h.",
+      "missing": [
+        "SOC-05"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-V04c",
+      "split": "heldout",
+      "family": "orthographic_variant",
+      "message": "U finn gagn Rs 8,400 depi MRA. Klik lien la avan 24h.",
+      "missing": [
+        "SOC-05"
+      ],
+      "forbidden": [],
+      "level": "low"
+    },
+    {
+      "id": "KE-V04d",
+      "split": "heldout",
+      "family": "orthographic_variant",
+      "message": "U inn gagne Rs 8,400 depi MRA. Klik lien la avan 24h.",
+      "missing": [
+        "SOC-05"
+      ],
+      "forbidden": [],
+      "level": "low"
+    }
+  ],
+  "languageMisses": []
+}

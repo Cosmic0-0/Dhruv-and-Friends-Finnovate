@@ -1,0 +1,8 @@
+{
+  "suite": "generation",
+  "node": "v24.14.1",
+  "status": "pending_model_access",
+  "direction": "mixed",
+  "message": "Generation runtime implemented but live quality evaluation pending model access.",
+  "detail": "fetch failed"
+}
