@@ -118,7 +118,7 @@ export default function ResultView() {
             <div className="span-2">
               <ResultHero response={response} label={label} copy={copy} />
             </div>
-            <div className="grid grid-cols-12 items-start gap-3.5">
+            <div className="grid grid-cols-12 items-stretch gap-3.5">
               <div className="col-span-7">
                 <SafeChecklist
                   checks={safeChecks(response.signals, original, redactions)}
@@ -159,7 +159,7 @@ export default function ResultView() {
                 </div>
 
                 <div className="flex flex-col gap-4">
-                  <div className="grid grid-cols-12 items-start gap-3.5">
+                  <div className="grid grid-cols-12 items-stretch gap-3.5">
                     <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
                     <LinkCard response={response} copy={copy} />
                   </div>

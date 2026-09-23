@@ -112,7 +112,7 @@ export default function CheckScreen() {
           {!hidden && (
             <>
               {(week !== null && week.total > 0) || practice !== null ? (
-                <div className="grid grid-cols-12 items-start gap-3.5">
+                <div className="grid grid-cols-12 items-stretch gap-3.5">
                   {week !== null && week.total > 0 && <WeekCard stats={week} copy={copy} />}
                   {practice !== null && (
                     <PracticeCard answered={practice.answered} streak={practice.streak} copy={copy} />

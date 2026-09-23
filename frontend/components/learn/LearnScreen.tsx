@@ -107,9 +107,6 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
         </div>
       )}
 
-        </div>
-
-        <div className="flex flex-col gap-4">
           {state && ready && quizLang && (
             <div aria-live="polite">
               <StreakCards
@@ -120,9 +117,11 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
             </div>
           )}
 
-          <Trends trends={trends} copy={copy} />
-
           <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Trends trends={trends} copy={copy} />
         </div>
 
       {process.env.NODE_ENV === "development" && (

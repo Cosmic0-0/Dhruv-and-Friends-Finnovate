@@ -186,9 +186,13 @@
        than the tint's own -ink to stay AA under the 2px underline. */
     --c-mark-ink: #8a0f09;
 
-    /* Floating tab bar. */
-    --c-tabbar: rgb(255 255 255 / 82%);
-    --c-tabbar-edge: rgb(255 255 255 / 95%);
+    /* Floating tab bar, as glass. */
+    --c-tabbar: rgb(255 255 255 / 76%);
+    --c-tabbar-edge: rgb(255 255 255 / 70%);
+    --c-glass-top: rgb(255 255 255 / 90%);
+    --c-glass-rim: rgb(255 255 255 / 45%);
+    --c-glass-inner: rgb(0 0 0 / 22%);
+    --c-glass-sheen: rgb(255 255 255 / 55%);
 
     --c-scrim: rgb(12 12 14 / 55%);
 
@@ -245,8 +249,12 @@
     --d-orange-ink: #ffb340;
     --d-orange-tint: #3a2610;
     --d-mark-ink: #ffb4ae;
-    --d-tabbar: rgb(28 28 30 / 82%);
-    --d-tabbar-edge: rgb(255 255 255 / 10%);
+    --d-tabbar: rgb(28 28 32 / 72%);
+    --d-tabbar-edge: rgb(255 255 255 / 14%);
+    --d-glass-top: rgb(255 255 255 / 22%);
+    --d-glass-rim: rgb(255 255 255 / 9%);
+    --d-glass-inner: rgb(0 0 0 / 45%);
+    --d-glass-sheen: rgb(255 255 255 / 9%);
     --d-scrim: rgb(0 0 0 / 62%);
   }
 
@@ -291,6 +299,10 @@
       --c-mark-ink: var(--d-mark-ink);
       --c-tabbar: var(--d-tabbar);
       --c-tabbar-edge: var(--d-tabbar-edge);
+      --c-glass-top: var(--d-glass-top);
+      --c-glass-rim: var(--d-glass-rim);
+      --c-glass-inner: var(--d-glass-inner);
+      --c-glass-sheen: var(--d-glass-sheen);
       --c-scrim: var(--d-scrim);
     }
   }
@@ -342,6 +354,10 @@
     --c-mark-ink: var(--d-mark-ink);
     --c-tabbar: var(--d-tabbar);
     --c-tabbar-edge: var(--d-tabbar-edge);
+    --c-glass-top: var(--d-glass-top);
+    --c-glass-rim: var(--d-glass-rim);
+    --c-glass-inner: var(--d-glass-inner);
+    --c-glass-sheen: var(--d-glass-sheen);
     --c-scrim: var(--d-scrim);
   }
 
@@ -467,10 +483,22 @@
      * that reads as a phone page; two columns is what makes the width useful.
      * Capped so the content does not sprawl on an ultra-wide display.
      */
+    /*
+     * Equal columns and a shared row baseline. Unequal fractions plus
+     * align-items:start meant no two cards ever lined up, which is what made
+     * the page read as scattered boxes rather than a grid.
+     */
     .screen-grid {
-      grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-      align-items: start;
-      max-width: 1500px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: stretch;
+      gap: 1.25rem;
+      max-width: 1320px;
+    }
+
+    /* A column's own blocks keep their natural heights; it is the columns
+       themselves that share a top and a width. */
+    .screen-grid > * {
+      min-width: 0;
     }
 
     /* A block that should span both columns, such as a result hero. */
@@ -619,14 +647,39 @@
     white-space: nowrap;
   }
 
-  /* Floating frosted tab bar. The -webkit- prefix is required on iOS. */
+  /*
+   * Floating tab bar, treated as glass rather than a panel: a heavy blur with
+   * saturation so colour bleeds through from behind, a specular highlight
+   * along the top edge, an inner rim that catches light all the way round,
+   * and a soft shadow so it floats above the page.
+   *
+   * The -webkit- prefix is required on iOS. Where backdrop-filter is
+   * unsupported the background colour alone still gives a legible bar.
+   */
   .tabbar {
+    position: relative;
     background: var(--c-tabbar);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
     border: 1px solid var(--c-tabbar-edge);
     border-radius: 33px;
-    box-shadow: var(--shadow-tabbar);
+    box-shadow:
+      inset 0 1px 0 var(--c-glass-top),
+      inset 0 0 0 1px var(--c-glass-rim),
+      inset 0 -8px 20px -12px var(--c-glass-inner),
+      var(--shadow-tabbar);
+  }
+
+  /* The sheen: a soft light running across the upper half, the way a curved
+     glass surface catches a highlight. Purely decorative. */
+  .tabbar::before {
+    content: "";
+    position: absolute;
+    inset: 1px 1px auto 1px;
+    height: 55%;
+    border-radius: 32px 32px 50% 50% / 32px 32px 18px 18px;
+    background: linear-gradient(180deg, var(--c-glass-sheen), transparent);
+    pointer-events: none;
   }
 
   /* The verdict entrance: the one orchestrated moment on the result screen. */

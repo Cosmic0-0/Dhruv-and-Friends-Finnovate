@@ -32,7 +32,7 @@ export default function StreakCards({
   const filled = (done / DAILY_GOAL) * circumference;
 
   return (
-    <div className="grid grid-cols-12 items-start gap-3.5">
+    <div className="grid grid-cols-12 items-stretch gap-3.5">
       <section className="card col-span-7 flex flex-col gap-1">
         <h2 className="micro text-ink-muted">{c.todayTitle}</h2>
         <p className="data mt-1 text-[1.75rem] leading-8 font-bold text-ink">{c.todayCount(done, DAILY_GOAL)}</p>
