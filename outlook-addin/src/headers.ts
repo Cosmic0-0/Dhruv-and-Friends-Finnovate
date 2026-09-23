@@ -1,4 +1,5 @@
-import type { AuthResult, MailboxAddress } from "./types";
+import { cleanAddress, cleanName, LIMITS } from "./contract";
+import type { AuthResult, ReplyToAddress } from "./types";
 
 const AUTH_RESULTS = new Set<AuthResult>(["pass", "fail", "softfail", "neutral", "none", "temperror", "permerror", "unknown"]);
 
@@ -37,17 +38,16 @@ function splitAddresses(value: string): string[] {
   return parts;
 }
 
-export function parseMailbox(value: string): MailboxAddress | null {
+export function parseMailbox(value: string): ReplyToAddress | null {
   const angle = /^(.*?)<([^<>\s]+@[^<>\s]+)>$/.exec(value.trim());
-  const address = (angle?.[2] ?? value.trim()).replace(/^<|>$/g, "").trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(address)) return null;
-  const rawName = angle?.[1]?.trim().replace(/^"|"$/g, "") || null;
-  return { name: rawName, address: address.toLowerCase() };
+  const address = cleanAddress(angle?.[2] ?? value);
+  if (!address) return null;
+  return { name: cleanName(angle?.[1]), address };
 }
 
 export function parseInternetHeaders(raw: string): {
   authentication: { spf: AuthResult; dkim: AuthResult; dmarc: AuthResult };
-  replyTo: MailboxAddress[];
+  replyTo: ReplyToAddress[];
   returnPath: string | null;
 } {
   const authHeaders = values(raw, "Authentication-Results");
@@ -62,8 +62,8 @@ export function parseInternetHeaders(raw: string): {
   const replyTo = values(raw, "Reply-To")
     .flatMap(splitAddresses)
     .map(parseMailbox)
-    .filter((entry): entry is MailboxAddress => Boolean(entry))
-    .slice(0, 10);
+    .filter((entry): entry is ReplyToAddress => Boolean(entry))
+    .slice(0, LIMITS.replyTo);
   const returnPath = parseMailbox(values(raw, "Return-Path")[0] ?? "")?.address ?? null;
 
   return {

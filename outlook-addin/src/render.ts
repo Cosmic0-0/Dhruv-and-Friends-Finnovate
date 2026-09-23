@@ -31,7 +31,8 @@ function comparisonRows(comparison: SignalComparison): Array<{ label: string; va
 function signalItem(signal: FraudSignal): HTMLElement {
   const article = el("article", "finding");
   const top = el("div", "finding__top");
-  top.append(el("span", "finding__code", signal.code), el("span", `finding__severity finding__severity--${signal.severity}`, humanize(signal.severity)));
+  const severityClass = signal.severity.toLowerCase().replace(/[^a-z]/g, "");
+  top.append(el("span", "finding__code", signal.code), el("span", `finding__severity finding__severity--${severityClass}`, humanize(signal.severity)));
   article.append(top, el("h3", "finding__title", signal.description));
   if (signal.evidence) article.append(el("p", "finding__evidence", `“${signal.evidence}”`));
 
@@ -149,7 +150,16 @@ function lowRiskEvidence(result: AnalyzeResponse): HTMLElement | null {
   return block;
 }
 
-export function renderResult(root: HTMLElement, result: AnalyzeResponse, extraction?: ExtractionReport): void {
+function analysedEmail(extraction: ExtractionReport, analysedAt: Date): HTMLElement {
+  const block = el("section", "analysed");
+  block.append(el("p", "micro", "Analysed email"));
+  block.append(el("p", "analysed__subject", extraction.subject || "(no subject)"));
+  const time = analysedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  block.append(el("p", "analysed__meta", `${extraction.fromAddress ?? "Sender address unavailable"} · checked ${time}`));
+  return block;
+}
+
+export function renderResult(root: HTMLElement, result: AnalyzeResponse, extraction?: ExtractionReport, analysedAt: Date = new Date(), onReanalyze?: () => void): void {
   root.replaceChildren();
   const shell = el("div", `result result--${result.risk.level}`);
   const masthead = el("header", "masthead masthead--compact");
@@ -162,7 +172,9 @@ export function renderResult(root: HTMLElement, result: AnalyzeResponse, extract
   const measure = el("div", "verdict__measure");
   measure.append(el("span", "verdict__score", `${result.risk.score}`), el("span", "verdict__denominator", "/ 100"), el("span", "verdict__confidence", `${humanize(result.risk.confidence)} confidence`));
   verdict.append(measure);
-  shell.append(masthead, verdict, actions(result));
+  shell.append(masthead);
+  if (extraction) shell.append(analysedEmail(extraction, analysedAt));
+  shell.append(verdict, actions(result));
 
   const semanticUnavailable = result.analysis.semantic.status !== "ok";
   if (semanticUnavailable) {
@@ -186,15 +198,23 @@ export function renderResult(root: HTMLElement, result: AnalyzeResponse, extract
   if (inferredSection) shell.append(inferredSection);
 
   shell.append(trace(result));
-  if (extraction && (extraction.bodyTruncated || extraction.quotedContextRemoved || extraction.unavailable.length)) {
+  if (extraction && (extraction.bodyTruncated || extraction.quotedContextRemoved || extraction.urlsOmitted || extraction.urlsShortened || extraction.unavailable.length)) {
     const details = el("details", "extraction");
     details.append(el("summary", "extraction__summary", "Outlook evidence availability"));
     const list = el("ul", "extraction__list");
     if (extraction.bodyTruncated) list.append(el("li", undefined, "Long body trimmed after preserving the current message."));
     if (extraction.quotedContextRemoved) list.append(el("li", undefined, "Quoted historical thread removed from the submitted body."));
+    if (extraction.urlsShortened) list.append(el("li", undefined, `${extraction.urlsShortened} very long link${extraction.urlsShortened === 1 ? "" : "s"} checked without the query string.`));
+    if (extraction.urlsOmitted) list.append(el("li", undefined, `${extraction.urlsOmitted} very long link${extraction.urlsOmitted === 1 ? "" : "s"} not submitted for checking.`));
     for (const missing of extraction.unavailable) list.append(el("li", undefined, `${humanize(missing)} unavailable; no suspicion was inferred from it.`));
     details.append(list);
     shell.append(details);
+  }
+  if (onReanalyze) {
+    const again = el("button", "secondary-button", "Analyse again");
+    again.type = "button";
+    again.addEventListener("click", onReanalyze);
+    shell.append(again);
   }
   shell.append(el("footer", "result-footer", "Score calculated by FraudLens rules. AI did not calculate this score."));
   root.append(shell);
@@ -204,9 +224,9 @@ export function renderIdle(root: HTMLElement, onAnalyze: () => void): void {
   root.replaceChildren();
   const shell = el("div", "idle");
   const masthead = el("header", "masthead");
-  masthead.append(el("span", "brand-mark", "FL"), el("div", "brand-lockup"));
-  const lockup = masthead.querySelector(".brand-lockup")!;
+  const lockup = el("div", "brand-lockup");
   lockup.append(el("span", "brand-name", "FraudLens"), el("span", "brand-subtitle", "Email intelligence"));
+  masthead.append(el("span", "brand-mark", "FL"), lockup);
   const intro = el("section", "idle__intro");
   intro.append(el("p", "micro", "Current message"));
   intro.append(el("h1", "idle__title", "Check the evidence before you act."));

@@ -32,6 +32,7 @@ button { touch-action: manipulation; }
 button:focus-visible, summary:focus-visible { outline: 2px solid var(--steel); outline-offset: 3px; }
 
 #app {
+  overflow-wrap: anywhere; /* long URLs, evidence quotes and subjects must never force sideways scroll */
   container-type: inline-size;
   min-height: 100dvh;
   background-image:
@@ -221,6 +222,25 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--steel); o
 .loading__line { height: 2px; overflow: hidden; background: var(--line); }
 .loading__fill { display: block; width: 52%; height: 100%; background: var(--steel); animation: scan 1.25s cubic-bezier(.22, 1, .36, 1) infinite; }
 .retry-button { width: 100%; }
+
+.analysed { padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--line); }
+.analysed__subject, .analysed__meta { margin: var(--space-xs) 0 0; overflow-wrap: anywhere; }
+.analysed__subject { color: var(--ink); font-size: .9rem; font-weight: 700; line-height: 1.35; }
+.analysed__meta { color: var(--ink-muted); font-size: .75rem; }
+.secondary-button {
+  display: block;
+  width: calc(100% - 2 * var(--space-lg));
+  min-height: 2.75rem;
+  margin: var(--space-lg);
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font-family: "Archivo Variable", sans-serif;
+  font-size: .85rem;
+  font-weight: 700;
+}
+.secondary-button:hover { background: var(--line); }
 
 @container (min-width: 28rem) {
   .masthead, .idle__intro, .privacy-note, .verdict, .actions-block, .verification, .campaign-notice, .low-evidence, .finding, .section-heading, .status-note, .result-footer { padding-inline: var(--space-xl); }

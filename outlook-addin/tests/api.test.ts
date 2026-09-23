@@ -32,6 +32,19 @@ describe("analysis API client", () => {
     await expect(analyzeCurrentEmail({ ...payload, message: "" })).rejects.toThrow(/both message text and email metadata/i);
   });
 
+  test("rejects an unknown risk level and explains network failures plainly", async () => {
+    expect(validResponse({ ...result, risk: { ...result.risk, level: "apocalyptic" } })).toBe(false);
+    const offline = vi.fn(async () => { throw new TypeError("Failed to fetch"); }) as unknown as typeof fetch;
+    await expect(analyzeCurrentEmail(payload, { fetchImpl: offline })).rejects.toThrow(/Could not reach FraudLens/);
+  });
+
+  test("times out with a retryable message", async () => {
+    const hang = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => new Promise((_res, rej) => {
+      init?.signal?.addEventListener("abort", () => rej(new DOMException("aborted", "AbortError")));
+    })) as unknown as typeof fetch;
+    await expect(analyzeCurrentEmail(payload, { fetchImpl: hang, timeoutMs: 10 })).rejects.toThrow(/took too long/);
+  });
+
   test("rejects malformed and failed backend responses", async () => {
     expect(validResponse({})).toBe(false);
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ error: "bad context" }), { status: 400 })) as unknown as typeof fetch;

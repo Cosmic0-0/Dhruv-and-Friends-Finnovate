@@ -65,4 +65,24 @@ describe("existing pipeline contract", () => {
     expect(codes.has("PAY-01")).toBe(true);
     expect(codes.has("SOC-08")).toBe(true);
   });
+
+  test("hostile Outlook values are sanitised into a payload the backend validator accepts", async () => {
+    const hostile: OutlookBridge = {
+      recipient: "not an address",
+      headersSupported: true,
+      item: {
+        body: { getAsync(format, callback) {
+          callback(format === "text" ? { status: "succeeded", value: "Pay now." } : { status: "failed", value: "" });
+        } },
+        from: { displayName: "Ω".repeat(500), emailAddress: "/O=EXCHANGE/CN=LEGACY" },
+        subject: "s".repeat(2000),
+        internetMessageId: "<" + "m".repeat(999) + ">",
+        attachments: [{ name: "a".repeat(999), size: 1 }],
+        getAllInternetHeadersAsync: (callback) => callback({ status: "succeeded", value: "Reply-To: bad address, <ok@x.example>\r\nReturn-Path: <>" }),
+      },
+    };
+    const { payload } = await buildAnalyzePayload(hostile);
+    const validated = validateEmailContext(payload.emailContext);
+    expect(validated.error).toBeUndefined();
+  });
 });
