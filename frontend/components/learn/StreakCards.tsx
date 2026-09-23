@@ -35,10 +35,12 @@ export default function StreakCards({
     <div className="grid grid-cols-12 items-stretch gap-3.5">
       <section className="card col-span-7 flex flex-col gap-1">
         <h2 className="micro text-ink-muted">{c.todayTitle}</h2>
-        <p className="data mt-1 text-[1.75rem] leading-8 font-bold text-ink">{c.todayCount(done, DAILY_GOAL)}</p>
+        <p className={`data mt-1 text-[1.75rem] leading-8 font-bold ${done > 0 ? "text-glow-ink" : "text-ink"}`}>
+          {c.todayCount(done, DAILY_GOAL)}
+        </p>
         <div aria-hidden="true" className="mt-2 flex gap-1.5">
           {Array.from({ length: DAILY_GOAL }, (_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-[3px] ${i < done ? "bg-ink" : "bg-track"}`} />
+            <span key={i} className={`h-1.5 flex-1 rounded-[3px] ${i < done ? "bg-glow" : "bg-track"}`} />
           ))}
         </div>
         <p className="mt-2 text-[0.9375rem] leading-5 text-ink-muted">{left > 0 ? c.more(left) : c.doneToday}</p>
@@ -46,7 +48,9 @@ export default function StreakCards({
 
       <section className="card col-span-5 flex flex-col items-start gap-2">
         <h2 className="micro text-ink-muted">{c.streakTitle}</h2>
-        <div className="relative size-21">
+        {/* A soft warm halo behind the ring, so the card has a centre of
+            gravity rather than a grey donut. Only once there is a streak. */}
+        <div className={`relative size-21 rounded-full ${streak > 0 ? "bg-glow-soft" : ""}`}>
           <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
             <circle cx="42" cy="42" r={R} fill="none" stroke="var(--color-track)" strokeWidth="7" />
             {done > 0 && (
@@ -55,7 +59,7 @@ export default function StreakCards({
                 cy="42"
                 r={R}
                 fill="none"
-                stroke="var(--color-ink)"
+                stroke="var(--color-glow)"
                 strokeWidth="7"
                 strokeLinecap="round"
                 strokeDasharray={`${filled} ${circumference}`}
@@ -63,7 +67,7 @@ export default function StreakCards({
               />
             )}
           </svg>
-          <span className="data absolute inset-0 flex items-center justify-center text-[1.375rem] font-bold text-ink">
+          <span className={`data absolute inset-0 flex items-center justify-center text-[1.375rem] font-bold ${streak > 0 ? "text-glow-ink" : "text-ink"}`}>
             {streak}
           </span>
         </div>

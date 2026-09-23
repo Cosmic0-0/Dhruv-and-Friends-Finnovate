@@ -51,6 +51,8 @@
      page. Far from the verdict hues so it never reads as a warning. */
   --color-glow: var(--c-glow);
   --color-glow-soft: var(--c-glow-soft);
+  /* The warm accent as TEXT on a light card: the raw hue fails AA at this size. */
+  --color-glow-ink: var(--c-glow-ink);
   --color-skeleton: var(--c-skeleton);
   --color-track: var(--c-track);
 
@@ -155,6 +157,7 @@
     /* Kept for the streak flame only, which is a fire. */
     --c-glow: #ff8a3d;
     --c-glow-soft: #fff0e4;
+    --c-glow-ink: #b4521a;
 
     --c-surface-dark: #1c1c1e;
     --c-surface-dark-2: #2c2c2e;
@@ -225,6 +228,7 @@
     --d-on-brand: #111113;
     --d-glow: #ff9e5c;
     --d-glow-soft: #33220f;
+    --d-glow-ink: #ffb079;
 
     --d-surface-dark: #1a1a1c;
     --d-surface-dark-2: #2a2a2c;
@@ -274,6 +278,7 @@
       --c-on-brand: var(--d-on-brand);
       --c-glow: var(--d-glow);
       --c-glow-soft: var(--d-glow-soft);
+      --c-glow-ink: var(--d-glow-ink);
       --c-surface-dark: var(--d-surface-dark);
       --c-surface-dark-2: var(--d-surface-dark-2);
       --c-hero: var(--d-hero);
@@ -329,6 +334,7 @@
     --c-on-brand: var(--d-on-brand);
     --c-glow: var(--d-glow);
     --c-glow-soft: var(--d-glow-soft);
+    --c-glow-ink: var(--d-glow-ink);
     --c-surface-dark: var(--d-surface-dark);
     --c-surface-dark-2: var(--d-surface-dark-2);
     --c-hero: var(--d-hero);
