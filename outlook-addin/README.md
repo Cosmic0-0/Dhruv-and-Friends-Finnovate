@@ -79,6 +79,27 @@ The fixtures cover obvious phishing, executive BEC, supplier bank-detail
 change, suspicious language from a legitimate authenticated supplier mailbox,
 and a legitimate supplier invoice. They use `.example` identities only.
 
+## Testing the live deployment
+
+The backend owner already has this running on a VPS behind Tailscale
+(single-hostname setup, see Option B below). To test without setting up
+anything locally:
+
+1. Get added to the team's tailnet (ask the backend owner for an invite)
+   and confirm you're connected: `tailscale status` should show the VPS
+   node.
+2. Get `dist/manifest.xml` from the backend owner — it's rendered for the
+   live VPS hostname, so it isn't in git; ask for the file directly rather
+   than building your own.
+3. Go to `https://aka.ms/olksideload` → **My add-ins** → **Custom Addins**
+   → **Add a custom add-in** → **Add from File** → pick that manifest.
+4. Open a received email (Read form only) and check the ribbon (including
+   the `...` overflow menu) for **FraudLens** → **Analyse email**.
+
+School/work Microsoft 365 accounts often block custom add-in sideloading by
+tenant policy — if step 3 shows no **Custom Addins** option, use a personal
+`outlook.com` account instead.
+
 ## Production / VPS deployment
 
 The Office task pane and API must be served over HTTPS. Two options:
