@@ -1,6 +1,4 @@
-# Browser extension (stretch goal)
-
-See `CLAUDE.md` → Role gating and Scope boundaries for ownership.
+# Browser extension
 
 Manifest V3. Calls the existing backend routes (`docs/API-CONTRACT.md`) for
 every check — `POST /api/check-url`, `POST /api/analyze`, `POST
@@ -76,24 +74,43 @@ only the page's own JS context can see) versus what stays server-side.
     fetch itself; this file only assembles what the page's own JS context
     already saw.
 - `content.js` — **not** auto-run (see manifest note above). Injected only
-  on explicit user action. On injection it immediately reads
-  `document.body.innerText` (capped at 4000 chars) as its completion value
-  — `innerText` never includes `<input>`/`<textarea>` values, so password
-  and hidden-field content is never read, by construction, not by filtering.
-  It then stays resident to handle a later `FRAUDLENS_SHOW_BANNER` message,
-  building the banner with `createElement`/`textContent` only (no
-  `innerHTML`) so nothing in an analysis result can execute as markup.
+  on explicit user action. On injection it reads `document.body.innerText`
+  (capped at 4000 chars) as its completion value — `innerText` never
+  includes `<input>`/`<textarea>` values, so password and hidden-field
+  content is never read, by construction, not by filtering. Reading is not
+  instantaneous: a real page can still be client-rendering its visible
+  content (e.g. a product-info table hydrated after load) at the exact
+  moment of injection, so `waitForRenderedText()` polls for up to 1.2s
+  (150ms steps) until at least a plausible amount of text (40 chars) shows
+  up, before giving up - a live-observed bug (a page with clearly visible
+  text extracted as empty) was this race, not a wrong selector; see
+  `background.js#scanActiveTab`'s `"No readable text found on this page."`
+  path and `popup.js#renderScanInconclusive` for what happens if it still
+  comes back empty (an explicit inconclusive state, never rendered as
+  "Safe" - see `popup.test.js`). It then stays resident to handle a later
+  `FRAUDLENS_SHOW_BANNER` message, building the banner with
+  `createElement`/`textContent` only (no `innerHTML`) so nothing in an
+  analysis result can execute as markup.
 - `popup.html` / `popup.js` (14A) — redesigned, ~380px wide, dark
   "instrument" surface matching the main app's severity palette (steel /
   brass / brick — see `styles.css`). Sections: current site + state pill,
-  strongest evidence (top signals), actions (Scan This Page / Report this
-  site / Security Report / Open in FraudLens), a page-scan result panel
-  that appears after a scan, a security-report panel (grade pill + sorted
-  findings list) that appears after a security scan, recent checks, and the
-  privacy line (14L). There is no separate "Simple/full mode" toggle in
-  this extension (that split, if it exists, is a frontend-app concept, not
-  one already present here) — the Security Report action follows the same
-  single-popup pattern as the existing actions instead of introducing one.
+  automatic domain check (top signals from the per-tab `/api/check-url`
+  call only - explicitly labelled as such, not "strongest evidence for this
+  page", so it can never be read as contradicting the separate page-scan
+  result below it; a real bug found in live testing, see `popup.test.js`),
+  actions (Scan This Page / Report this site / Security Report / Open in
+  FraudLens), a page-scan result panel that appears after a scan, a
+  security-report panel (grade pill + sorted findings list) that appears
+  after a security scan, recent checks, and the privacy line (14L). There is
+  no separate "Simple/full mode" toggle in this extension (that split, if it
+  exists, is a frontend-app concept, not one already present here) — the
+  Security Report action follows the same single-popup pattern as the
+  existing actions instead of introducing one.
+- `popup.test.js` — UI-state regression tests for the popup (initial load /
+  scan with a finding / scan clean), run with `npm test` (`node --test`) from
+  this directory. Uses a small hand-rolled fake DOM (no jsdom dependency) -
+  see that file's header comment. First test file for the extension; nothing
+  else here is automated yet (see "Manual verification checklist" below).
 - `result.html` / `result.js` — small extension page for context-menu
   results, same visual language as the popup, reads the one-shot
   `chrome.storage.local["fraudlens.contextResult"]` entry `background.js`

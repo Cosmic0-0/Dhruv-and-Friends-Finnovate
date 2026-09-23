@@ -270,6 +270,23 @@ async function onSecurityReportClick() {
   renderRecent();
 }
 
+// A failed or empty extraction (see content.js) is a DIFFERENT fact from a
+// scan that ran and found nothing - it must never render as "Safe". This is
+// the only path that shows the scan-result section on a !response.ok scan;
+// renderScanResult() (the "Safe" / findings path) is never reachable from a
+// failure, by construction, not by a check someone could forget to add.
+function renderScanInconclusive(reasonText) {
+  els.scanSection.hidden = false;
+  els.scanResult.innerHTML = "";
+  const p = document.createElement("p");
+  p.className = "state-text";
+  p.textContent = reasonText || STATE_LABEL.inconclusive;
+  els.scanResult.appendChild(p);
+
+  setStatePill("inconclusive");
+  els.stateText.textContent = `${STATE_LABEL.inconclusive} (from full-page scan)`;
+}
+
 async function onScanClick() {
   els.scanBtn.disabled = true;
   els.actionStatus.className = "status-msg";
@@ -289,6 +306,7 @@ async function onScanClick() {
   if (!response?.ok) {
     els.actionStatus.className = "status-msg error";
     els.actionStatus.textContent = response?.error || "Scan failed.";
+    renderScanInconclusive(response?.error);
     return;
   }
 

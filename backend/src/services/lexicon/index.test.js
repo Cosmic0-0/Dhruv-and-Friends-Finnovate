@@ -136,3 +136,27 @@ test("SOC-08 bypass-controls: EN / FR / Kreol, and a policy reminder is not a re
   assert.ok(!codes("Never bypass the approval process for supplier payments.").includes("SOC-08"));
   assert.ok(!codes("Please follow the normal approval process.").includes("SOC-08"));
 });
+
+// SOC-09 - deliberately brand-agnostic: only the distribution-bait wording,
+// never which company is claimed as the source (that stays with the
+// semantic model's ID-04 read; see services/analysis).
+test("SOC-09 piracy/cracked-download bait: fires on distribution-bait phrasing, never on an ordinary free-software download", () => {
+  assert.ok(codes("Full PC version, no survey, direct download link.").includes("SOC-09"));
+  assert.ok(codes("Includes crack and keygen for instant activation.").includes("SOC-09"));
+  assert.ok(codes("Use this serial key to unlock the full version.").includes("SOC-09"));
+  assert.ok(codes("Free full version download available now.").includes("SOC-09"));
+  // A real free-software download page ("free" + "download" alone, no
+  // piracy-specific marker) must never be flagged - that pair is far too
+  // common on legitimate sites to be a signal by itself.
+  assert.ok(!codes("Download Firefox for free from the official Mozilla site.").includes("SOC-09"));
+  assert.ok(!codes("This open-source app is free to download and use.").includes("SOC-09"));
+});
+
+test("SOC-09 evidence is grounded in the matched phrase, sourced as lexicon", () => {
+  const text = "Grand Theft Auto GTA 6 Free Download For PC (2026)\nDownload now before the link expires! Full PC version, no survey, direct download link.";
+  const [s] = detectLexicon(text).filter((x) => x.code === "SOC-09");
+  assert.ok(s, "expected SOC-09");
+  assert.equal(s.sourceType, "lexicon");
+  assert.equal(s.tier, "L");
+  assert.equal(text.slice(...s.span), s.evidence);
+});

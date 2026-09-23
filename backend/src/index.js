@@ -48,7 +48,7 @@ app.get("/health/llm", async (_req, res) => {
 // route it's meant to catch, per Express's error-middleware rules). Without
 // this, a body that fails express.json() parsing (e.g. malformed JSON) falls
 // through to Express's default handler, which returns an HTML stack trace
-// with absolute filesystem paths — see data/test-payloads/FINDINGS.md #5.
+// with absolute filesystem paths (a regression caught during the first QA pass).
 app.use((err, req, res, next) => {
   if (err.type === "entity.parse.failed" || err instanceof SyntaxError) {
     return res.status(400).json({ error: "invalid JSON body" });

@@ -1,9 +1,8 @@
 # Backend
 
-See `../CLAUDE.md` → Role gating for ownership.
-
-Node.js REST API: routes, LLM analysis (local Ollama + hosted fallback),
-domain matching, and the reports/batch-history DB.
+Node.js REST API for the deterministic analysis pipeline, bounded semantic
+analysis (local Ollama plus hosted fallback), OCR, campaign intelligence,
+passive site-security checks, and SQLite persistence.
 
 ## Getting started
 
@@ -95,10 +94,10 @@ wherever the backend runs (the VPS, or your own machine for local dev).
    `FALLBACK_PROVIDER` (`anthropic`, `openai`, or `openrouter`) and
    `FALLBACK_API_KEY` in `.env`, with `LLM_MODE=auto`, so the backend fails
    over to a hosted API if Ollama is unreachable or times out
-   (`LLM_TIMEOUT_MS`, default 15s). `openrouter` is a single key that can
-   route to many underlying models (set `OPENROUTER_MODEL`, default
-   `openai/gpt-4o-mini`) — a reasonable choice if a direct Anthropic/OpenAI
-   key isn't on hand. Fallback stays inactive until a key is set — never
+   (`LLM_TIMEOUT_MS`, currently 60s in `.env.example`). `openrouter` is a
+   single key that can route to different models (set `OPENROUTER_MODEL`;
+   see `.env.example` for the current tested default and its latency warning).
+   Fallback stays inactive until a key is set — never
    commit a real key, `.env` is gitignored. After setting it, run
    `npm run test:fallback` (see below) to confirm it actually works, on
    whichever machine will run the backend during the demo.

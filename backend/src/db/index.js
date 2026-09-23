@@ -91,7 +91,7 @@ export function cacheDomainRegistration(domain, registeredAtIso) {
 // the 230 Mauritius country code for 8-digit local numbers) so the same
 // number submitted in different formats ("+230 5789 1234", "+23057891234",
 // "57891234") dedupes to one row instead of three (see
-// data/test-payloads/FINDINGS.md #4). This is purely an internal DB key —
+// This normalization closed an early QA finding. It is purely an internal DB key —
 // the API still echoes back the raw string the client submitted.
 export function normalizeSender(raw) {
   const digits = raw.replace(/\D/g, "");

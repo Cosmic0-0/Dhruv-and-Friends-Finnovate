@@ -84,7 +84,7 @@ async function scanActiveTab(tabId) {
 
   let analysis;
   try {
-    analysis = await analyzeText(extracted.text);
+    analysis = await analyzeText(extracted.text, undefined, extracted.pageUrl);
   } catch (err) {
     return { ok: false, error: err.message, extracted };
   }

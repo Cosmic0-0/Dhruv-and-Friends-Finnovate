@@ -139,6 +139,52 @@ test("semantic-only evidence is bounded and labelled as inferred", async (t) => 
   }
 });
 
+// Live repro (see bug report): a fake-download-aggregator page claiming to
+// be the official publisher of a real, well-known product scored Safe with
+// zero signals - no deterministic check owns "is this company really the
+// source of this product" (that requires world knowledge, not a fixed
+// brand/domain list), and the semantic prompt's ID-04 guidance didn't cover
+// this pattern either. Fixed by broadening ID-04's guidance (services/
+// analysis) to cover an implausible claim of official authorship/publishing
+// by a real, named organization - judged per-message by the model, so it
+// generalizes to any brand, not just this fixture.
+const FAKE_AGGREGATOR_PAGE_TEXT = `Grand Theft Auto GTA 6 Free Download For PC (2026)
+Download now before the link expires! Full PC version, no survey, direct download link.
+
+Product Information
+Title: Grand Theft Auto GTA 6
+Publisher: Rockstar Games
+Created By: Rockstar Games
+Platform: PC (Windows)
+File Size: 42 GB`;
+
+test("a false official-publisher claim (fake download aggregator) is no longer scored Safe", async (t) => {
+  mockTransport(async () =>
+    anthropicReply({
+      signals: [
+        { code: "ID-04", evidence: "Publisher: Rockstar Games", confidence: 0.85 },
+        { code: "SOC-01", evidence: "Download now before the link expires!", confidence: 0.7 },
+      ],
+    })
+  );
+  const post = await startServer(t);
+  const { status, body } = await post("/analyze", { message: FAKE_AGGREGATOR_PAGE_TEXT, pageUrl: "https://example-file-aggregator.test/gta-6-download" });
+  assert.equal(status, 200);
+  assert.ok(body.signals.some((s) => s.code === "ID-04" && s.sourceType === "semantic_model"));
+  // SOC-09 (free/cracked-download bait) fires deterministically on "no
+  // survey" / "direct download link" regardless of the LLM - brand-agnostic,
+  // same fixture text would fire it for any company name in the Publisher line.
+  assert.ok(body.signals.some((s) => s.code === "SOC-09" && s.sourceType === "lexicon"));
+  assert.ok(body.trace.some((t) => t.id === "IX-6"));
+  assert.equal(body.verdict, "suspicious");
+  assert.equal(body.risk.level, "elevated");
+  // Bait language + an unverified claim, with no actual payment/credential
+  // ask on this exact fixture, is real but not yet a bank-grade fact - see
+  // risk-engine/index.test.js for the same page WITH a monetization step
+  // (a download-unlock fee) reaching "high" through the existing IX-1.
+  assert.notEqual(body.decision, "do_not_pay");
+});
+
 test("an official subdomain link is low risk, not an impersonation", async (t) => {
   mockTransport(async () => anthropicReply({ signals: [] }));
   const post = await startServer(t);

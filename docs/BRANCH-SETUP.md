@@ -1,19 +1,13 @@
 # Branch Setup
 
-Convention (see `CLAUDE.md` → Role gating): everyone except the backend
-owner works on their own branch and opens a PR into `main`; the backend
-owner reviews and merges. This is a convention, not an enforced GitHub
-rule — no branch protection is configured, so it only works if everyone
-actually pushes to their own branch instead of `main`.
-
-Branches already exist on the remote for each teammate: `joshua`, `oleg`,
-`dhruv`, `caellum`. You don't need to create one — just check yours out.
+Use a feature branch and open a PR into `main`. Branch protection is not
+configured, so this remains a team convention rather than an enforced rule.
 
 ## One-time setup
 
 ```bash
 git fetch origin
-git checkout <your-branch>   # joshua | oleg | dhruv | caellum
+git checkout -b <your-branch>
 ```
 
 Confirm you're on the right branch and it's tracking the remote:
@@ -33,19 +27,15 @@ git status
    git fetch origin
    git merge origin/main
    ```
-2. **Only edit files inside your gated directory** (see `CLAUDE.md` → Role
-   gating table). If you need something in someone else's directory — e.g.
-   Oleg wiring up `POST /api/analyze` — that's expected (it's a consumer of
-   the interface), but don't edit another owner's implementation files
-   directly; flag it to them instead.
+2. **Coordinate cross-area changes.** If an API shape changes, update
+   `docs/API-CONTRACT.md`, the frontend client, and the extension together.
 3. **Commit and push to your own branch**, never `main`:
    ```bash
    git add <files>
    git commit -m "..."
    git push origin <your-branch>
    ```
-4. **Open a PR into `main`** when your change is ready for the backend
-   owner to review:
+4. **Open a PR into `main`** when your change is ready for review:
    ```bash
    gh pr create --base main --head <your-branch> --title "..." --body "..."
    ```
@@ -61,7 +51,5 @@ git status
 ## If your branch and `main` conflict
 
 Resolve conflicts locally on your branch before opening/updating the PR —
-don't resolve them by overwriting `main`. If a conflict touches a file
-outside your gated directory (e.g. the API contract in
-`docs/API-CONTRACT.md`), flag it in the PR rather than resolving it
-unilaterally — the shape may have changed for a reason.
+don't resolve them by overwriting `main`. If a conflict touches the API
+contract, verify the implementation and all clients before choosing a side.

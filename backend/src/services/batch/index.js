@@ -1,5 +1,5 @@
 // Single source of truth for the max batch size (see
-// data/test-payloads/FINDINGS.md #9 — this used to drift out of sync with a
+// Shared route/service limit; this used to drift out of sync with a
 // separate MAX_BATCH_MESSAGES constant in routes/index.js). Exported so the
 // route imports this instead of duplicating it.
 export const MAX_BATCH_SIZE = 50;
@@ -7,7 +7,7 @@ export const MAX_BATCH_SIZE = 50;
 /**
  * Runs `fn` over `items` with at most `limit` calls in flight at once, in
  * place of Promise.all's unbounded concurrency (see
- * data/test-payloads/FINDINGS.md #8 — firing a whole batch at once against
+ * Firing a whole batch at once against
  * a single self-hosted LLM over Tailscale risks mass timeouts). Results are
  * returned in the original input order regardless of completion order.
  * @template T, R

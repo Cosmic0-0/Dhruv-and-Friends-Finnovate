@@ -69,12 +69,12 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   const body = await res.json();
 
   // URL-02 (30, rule) + SOC-01 (6, lexicon, corroborated by the model) = 36
-  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.2, not the LLM.
+  // -> elevated -> legacy verdict "suspicious". Computed by rs-1.3, not the LLM.
   assert.equal(body.riskScore, 36);
   assert.deepEqual(body.risk, { score: 36, level: "elevated", confidence: "high" });
   assert.equal(body.verdict, "suspicious");
   assert.equal(body.decision, "verify_first");
-  assert.equal(body.analysis.rulesetVersion, "rs-1.2");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.3");
   assert.equal(body.analysis.semantic.status, "ok");
   assert.ok(Array.isArray(body.signals) && body.signals.length > 0);
   assert.equal(typeof body.suggestedAction, "string");
@@ -90,6 +90,57 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   const lookalike = body.signals.find((s) => s.type === "lookalike_url");
   assert.ok(lookalike, "expected a lookalike_url signal for mcb-secure.top");
   assert.equal("domainAgeDays" in lookalike, false);
+});
+
+test("POST /api/analyze: pageUrl keeps the scanned page's own domain out of URL-08, without weakening a real lookalike of it", async (t) => {
+  globalThis.fetch = routedFetch;
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  const pageText = "badssl.com click through dh480.badssl.com to test an old cipher suite.";
+
+  const withPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText, pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(!withPageUrl.signals.some((s) => s.code === "URL-08"), "badssl.com must not be flagged as an unofficial link on its own page");
+
+  const withoutPageUrl = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: pageText }),
+    })
+  ).json();
+  assert.ok(withoutPageUrl.signals.some((s) => s.code === "URL-08"), "same text with no page context keeps prior behaviour");
+
+  const lookalikePage = await (
+    await originalFetch(`${base}/analyze`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message: "click through badssl.com.evil-login.net to continue", pageUrl: "https://badssl.com/" }),
+    })
+  ).json();
+  assert.ok(lookalikePage.signals.some((s) => s.code === "URL-08"), "a genuine lookalike of the page's own domain must still be flagged");
+
+  // A malformed pageUrl is ignored, not rejected - the request still succeeds.
+  const malformed = await originalFetch(`${base}/analyze`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message: pageText, pageUrl: "not a url" }),
+  });
+  assert.equal(malformed.status, 200);
 });
 
 test("POST /api/check-sender looks up an existing report count without incrementing it", async (t) => {

@@ -12,11 +12,11 @@ Outlook / email client (future add-in)
   -> services/pipeline runPipeline()   the SAME pipeline as SMS/screenshot
        -> email-signals detectEmailSignals()   EMAIL-* (this module, no scoring)
        -> URL / identity / lexicon / payment detectors, one semantic call (body only)
-  -> signal registry -> dedupe -> risk engine rs-1.2 -> interventions-1.1
+  -> signal registry -> dedupe -> risk engine rs-1.3 -> interventions-1.1
 ```
 
 - **No scoring here.** Points, interactions (EX-1..EX-6), the EX-2 floor and
-  the SOC-07 policy live in `services/risk-engine` (rs-1.1, carried into rs-1.2).
+  the SOC-07 policy live in `services/risk-engine` (rs-1.1, carried into rs-1.2/rs-1.3 unchanged).
 - **No fabricated certainty.** Each code needs its evidence: no thread
   history -> no EMAIL-04; no account on record -> no EMAIL-06; missing auth
   results -> no EMAIL-03. `analysis.email.checks` reports what actually ran.

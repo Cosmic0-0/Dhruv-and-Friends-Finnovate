@@ -136,6 +136,17 @@ const RULES = [
   { code: "SOC-05", lang: "en", re: /\byou(?:'ve| have)? won\b|\b(?:lucky )?winner\b|\bprize\b|\blottery\b|\bjackpot\b|\beligible for a (?:tax )?refund\b|\b(?:refund|cashback) (?:of|is|pending|available|ready)\b/iu },
   { code: "SOC-05", lang: "fr", re: /\bvous avez gagn[ée]\b|\bgagnant\b|\bloterie\b|\bremboursement\b/iu },
   { code: "SOC-05", lang: "mfe", re: /\bou(?:'nn| finn|nn) gagn(?:e)?\b|\bloterie\b|\branbours(?:e)?man\b|\bremboursement\b/iu },
+
+  // SOC-09 - free/cracked-download bait. Deliberately brand-agnostic: these
+  // phrases are near-universal on pirated-software distribution pages
+  // ("no survey", "direct download link" as a stand-alone selling point,
+  // "crack"/"keygen"/"serial key"/"activation key"/"repack" - all rare on a
+  // legitimate free/open-source download page) and say nothing about which
+  // company is claimed as the source; that's a separate judgement left to
+  // the semantic model's ID-04 read (see services/analysis). "free download"
+  // alone is deliberately NOT matched - too common on legitimate software
+  // sites (browsers, PDF readers) to be a signal by itself.
+  { code: "SOC-09", lang: "en", re: /\bno survey\b|\bdirect download link\b|\bkeygen\b|\bserial key\b|\bactivation key\b|\brepack\b|\bcrack(?:ed)?(?: version)?\b|\bfree\b[^.!?\n]{0,40}?\bfull (?:pc )?version\b|\bfull (?:pc )?version\b[^.!?\n]{0,40}?\bfree\b/iu },
 ];
 
 // Instructions aimed at an automated checker - never legitimate in a bank or
@@ -178,11 +189,15 @@ function isNegated(text, start) {
 // A named institution reached through a real channel, not the message
 // pushing you toward its own number/link - "call this number now" stays
 // flagged, "contact MCB immediately" (a genuine alert's footer) doesn't.
+// 30 chars was too tight for real footers - "contactez immédiatement le
+// service client SBM" has 33 chars between "contactez" and "sbm" alone, so
+// the genuine "if this wasn't you" alert fell through the gap and false-
+// positived on SOC-01/ID-04/SOC-04. Widened to 50 for headroom.
 const SAFETY_CONTACT_RE = new RegExp(
   [
-    "\\b(?:call|contact|notify|report to)\\b[^.!?\\n]{0,30}?\\b(?:us|your bank|the bank|customer service|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
-    "\\bcontactez\\b[^.!?\\n]{0,30}?\\b(?:mcb|sbm|absa|bank ?one|emtel|myt|la banque)\\b",
-    "\\b(?:kontakte|apel)\\b[^.!?\\n]{0,30}?\\b(?:labank|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
+    "\\b(?:call|contact|notify|report to)\\b[^.!?\\n]{0,50}?\\b(?:us|your bank|the bank|customer service|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
+    "\\bcontactez\\b[^.!?\\n]{0,50}?\\b(?:mcb|sbm|absa|bank ?one|emtel|myt|la banque)\\b",
+    "\\b(?:kontakte|apel)\\b[^.!?\\n]{0,50}?\\b(?:labank|mcb|sbm|absa|bank ?one|emtel|myt)\\b",
   ].join("|"),
   "iu"
 );
@@ -190,6 +205,65 @@ const SAFETY_CONTACT_RE = new RegExp(
 /** True when the match sits right after a "contact <real bank>" phrase, same clause. */
 function isSafetyContact(text, start) {
   return SAFETY_CONTACT_RE.test(clauseWindowBefore(text, start, 80));
+}
+
+// French/Kreol object pronouns front the verb ("Ne le partagez jamais", "Ne le
+// communiquez à personne") instead of naming the credential again, unlike
+// English ("share it" keeps "it" after the verb, already covered by the
+// [^.!?\n]{0,30} gap allowing non-noun filler up to the real noun elsewhere
+// in the same clause). Matched as its own alternative rather than folded into
+// CREDENTIAL_NOUN because the pronoun sits before SHARE_VERB, not after it.
+const FR_CREDENTIAL_PRONOUN = "(?:\\ble\\b|\\bla\\b|\\bles\\b|\\bl['’])";
+const SEC01_SHARE_RE = compile(
+  new RegExp(`\\b${SHARE_VERB}\\b[^.!?\\n]{0,30}?\\b${CREDENTIAL_NOUN}|${FR_CREDENTIAL_PRONOUN}\\s*${SHARE_VERB}\\b`, "iu")
+);
+
+// A factual past-tense account notice ("your card has been blocked", "your
+// password was changed", "a été modifié") is the exact carve-out the semantic
+// prompt already states for ID-04 (a bank naming itself while reporting a
+// fact is not impersonation), but qwen3:8b doesn't reliably apply it - seen
+// live on "SunCoast Bank: ... has been temporarily blocked after 3 incorrect
+// PIN attempts" and on the French "a été modifié" equivalent, both flagged
+// ID-04 despite matching the prompt's own "a card was blocked" example.
+// Future tense ("will be blocked unless...") is a threat, not a completed
+// notice, so it's deliberately excluded here.
+const FACTUAL_ACCOUNT_NOTICE_RE = compile(
+  new RegExp(
+    [
+      "\\b(?:was|were|has been|had been|have been)\\b[^.!?\\n]{0,40}?\\b(?:changed|updated|blocked|locked|suspended|received|made|processed|credited|debited)\\b",
+      "\\b(?:a|ont) [ée]t[ée]\\b[^.!?\\n]{0,40}?\\b(?:modifi[ée]s?|chang[ée]s?|bloqu[ée]s?|suspendu(?:e|s|es)?|mis(?:e)? [àa] jour|re[çc]u(?:e|s|es)?|effectu[ée]s?|d[ée]bit[ée]s?|cr[ée]dit[ée]s?)\\b",
+      "\\b(?:inn|finn)\\b[^.!?\\n]{0,40}?\\b(?:sanze|bloke|sispann|modifye|ranplase)\\b",
+    ].join("|"),
+    "i"
+  )
+);
+
+/**
+ * Sanity-checks a semantic-model (LLM) SEC-01/ID-04/SOC-04 signal against the
+ * same negation/safety-contact logic the deterministic lexicon rules already
+ * use - a small local model doesn't reliably apply negation itself, so
+ * "Never share this code" or "contact MCB immediately" can otherwise slip
+ * through as a false positive even though the equivalent lexicon rule (with
+ * `negatable`/`checkSafetyContact`) would correctly stay silent on it.
+ * `evidence` is the model's own quoted span; `start` is its offset in `text`.
+ */
+export function isBenignCredentialOrContactLanguage(code, text, evidence, start) {
+  if (code === "SEC-01") {
+    const m = SEC01_SHARE_RE.exec(evidence);
+    if (m && isNegated(text, start + m.index)) return true;
+  }
+  if (code === "ID-04" || code === "SOC-04") {
+    // The model's quoted evidence can be a fragment that trails the real
+    // "contactez SBM via l'application officielle" clause - e.g. evidence
+    // "pas en répondant à ce message" (not by replying to this message) from
+    // "...contactez SBM via l'application officielle..., pas en répondant à
+    // ce message.". Testing the evidence text alone misses this, so also
+    // check the same-clause window before it, exactly like the lexicon's own
+    // checkSafetyContact rules do.
+    if (SAFETY_CONTACT_RE.test(evidence) || isSafetyContact(text, start)) return true;
+  }
+  if (code === "ID-04" && FACTUAL_ACCOUNT_NOTICE_RE.test(evidence)) return true;
+  return false;
 }
 
 // "A transfer of Rs 2,000 was made ..." / "... has already been processed" -

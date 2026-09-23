@@ -1,12 +1,9 @@
 # API Contract (as implemented)
 
-**Status: LOCKED.** This documents the backend routes exactly as implemented
-in `backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`,
-and `backend/src/index.js` — not the original placeholder contract in
-`CLAUDE.md` (kept there only as a superseded historical sketch). Build
-against this. Any shape change here must be flagged to Oleg (frontend),
-Dhruv (OCR/batch), and the extension owner *before* merging — treat it as
-frozen for the rest of the hackathon otherwise.
+**Status: LOCKED.** This documents the backend routes as implemented in
+`backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`, and
+`backend/src/index.js`. Update this file and every consumer together when a
+request or response shape changes.
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
@@ -46,6 +43,7 @@ assessment**; `analysis.semantic.status` says which.
 {
   "message": "string, required, 1-5000 characters",
   "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
+  "pageUrl": "string, optional — the URL of the page `message` was extracted from (e.g. the extension's \"Scan This Page\"). Used ONLY to derive a hostname so links to the scanned page's own site are not flagged as \"not an official domain\" relative to itself (URL-08); never fetched, never treated as a claim about the message, and a malformed value is silently ignored rather than rejected.",
   "paymentContext": {
     "amount": "number >= 0, optional",
     "currency": "string <= 200, optional",
@@ -93,7 +91,7 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.2",
+    "rulesetVersion": "rs-1.3",
     "source": "pasted_text" | "screenshot" | "batch" | "email",
     "inputHash": "sha256 of the normalised (already redacted) text",
     "detectorVersions": { "url": "url-2.0", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.1", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0" },
@@ -156,6 +154,7 @@ and never shown or scored.
 | SOC-01..06 | Urgency, threat, secrecy, off-platform, prize/refund, relationship/investment manipulation | lexicon (EN/FR/Kreol) and/or semantic |
 | SOC-07 | Instructions aimed at an automated checker (prompt injection) | rule (and semantic) |
 | SOC-08 | Asks to bypass normal approval / verification ("skip the usual sign-off", "no need to call to confirm") | lexicon (EN/FR/Kreol) and/or semantic |
+| SOC-09 | Free/cracked-download distribution bait ("no survey", "direct download link", "crack"/"keygen"/"serial key"). Brand-agnostic - says nothing about who is claimed as the source; combines with ID-04 (an implausible official-publisher claim) via `rs-1.3`'s IX-6 | lexicon |
 | PAY-01..04, PAY-07 | Payment request, unusual method, "safe account", advance fee, bank-details change | lexicon and/or semantic |
 | PAY-05, PAY-06 | Recipient mismatch, active coaching | rule (paymentContext) |
 | SEC-01, SEC-02 | Share OTP/PIN/password/CVV (negation-aware), remote-access app | lexicon and/or semantic |
@@ -164,7 +163,7 @@ and never shown or scored.
 | REP-04, REP-05 | Confirmed scam template / known-malicious URL (reserved for intel feeds; floors exist) | intel |
 | EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.2`)
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.3`)
 
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
@@ -178,6 +177,13 @@ ORG-05 40; ORG-06 10. OX-1 adds 15 once for organisation impersonation plus
 payment/credential evidence. OX-2 adds 10 once when campaign evidence
 corroborates an independent identity/payment/credential fact. Confirmed
 organisation fraud has a high floor (`FLOOR-ORG05-CONFIRMED`, score 45).
+
+`rs-1.3` keeps `rs-1.0`/`rs-1.1`/`rs-1.2` frozen and adds SOC-09 (weight 8)
+and IX-6 (+15 once, ID-04 + SOC-09 - an implausible official-publisher
+claim combined with free/cracked-download bait language). Deliberately not
+inflated to reach "high" on its own: that still needs an actual technical
+or payment/credential fact (e.g. a download-unlock fee reaching "high"
+through the existing IX-1, since ID-04 is already in its `a` list).
 
 1. **Dedupe:** signals about the same link (URL-01..04, URL-08, ID-01 on one
    host) are one finding; the same code from lexicon + semantic is one
@@ -209,7 +215,7 @@ A matching pattern reported by enough **distinct** pseudonymous reporters
 adds one `REP-01` (cluster, CW-1) or `REP-02` (wave, CW-2) signal with a
 `communityEvidence` object (unchanged fields; `rulesVersion` is now
 `"wave-rules-v2"`). Its points come from the risk engine, and a
-`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.2`),
+`risk_audit_log` row records the rule, versions (`wave-rules-v2+rs-1.3`),
 evidence ids and the level with and without it (`levelFrom`/`levelTo` in
 `riskAdjustments`). The old verdict-escalation logic is gone — crowd
 evidence alone is worth 10/20 points (elevated at most) and only the
@@ -281,7 +287,7 @@ Reference data is **demonstration data** (`data/demo-supplier-registry.json`,
 real deployment replaces them with the organisation's vendor master and
 directory. Ready-made request bodies: `backend/fixtures/email-demo.json`.
 
-| Code | Emitted when (evidence required) | rs-1.2 points |
+| Code | Emitted when (evidence required) | rs-1.3 points |
 |---|---|---|
 | EMAIL-01 | A Reply-To's registrable domain differs from From's (not when both belong to the same known supplier / our org). Return-Path is never a signal. | 8 |
 | EMAIL-02 | Email claims a known supplier (display name, or subject when the sender is external, or a look-alike of its domain) but From is not on the supplier's domains | lookalike 30 / unrelated 20 |
@@ -539,8 +545,7 @@ exactly as submitted; only the counting behavior changed.
 
 ## `POST /api/check-url`
 
-Not in the original placeholder contract — added for the browser extension
-(`extension/`, stretch goal). A bare hostname/URL isn't a scam "message" to
+Used by the browser extension. A bare hostname/URL isn't a scam "message" to
 run through the LLM, and the extension needs a fast, synchronous
 per-navigation check, so this route calls only the non-LLM domain-matching
 check (`checkUrls()`, `backend/src/services/domain-matching/index.js`) — the

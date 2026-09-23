@@ -1,8 +1,9 @@
 # Extension fixes: how to check them before handing back to QA
 
 For the **backend/extension owner**. This covers findings #19–#30 from the
-extension test (full write-ups in `FINDINGS.md` → "Extension test
-(2026-09-23)").
+extension test on 2026-09-23. The full write-ups with evidence are in git
+history: `git show 8fa64d8:data/test-payloads/FINDINGS.md` (section
+"Extension test"). `FINDINGS.md` itself was retired on `main`.
 
 Run `verify-extension-fixes.mjs` on your branch. When everything you meant to
 fix shows **PASS** (and the `guard` lines still pass), send it to QA. Anything
@@ -90,7 +91,7 @@ been too many checks, not "Backend unreachable". Restart the backend afterwards.
 
 ## Where things are
 
-- Findings with evidence: `FINDINGS.md` → "Extension test (2026-09-23)"
+- Findings with evidence: `git show 8fa64d8:data/test-payloads/FINDINGS.md`
 - Test pages: `extension-pages/` (`scam.html`, `safe.html`,
   `bank-advice.html`, `privacy.html`, `long.html`)
 - Full manual click-through (for QA after your hand-off): `EXTENSION-CHECKLIST.md`

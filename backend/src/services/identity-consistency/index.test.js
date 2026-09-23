@@ -33,7 +33,7 @@ test("checkIdentityConsistency does not flag when the beneficiary references the
   assert.deepEqual(signals, []);
 });
 
-// ---- Regression (docs/ARCHITECTURE-REVIEW.md C1/C2) ----
+// ---- Regression: official domains and shortened links. ----
 test("an official subdomain is not an identity mismatch", () => {
   assert.deepEqual(checkIdentityConsistency("MCB: log in at https://internet.mcb.mu to view your statement"), []);
 });

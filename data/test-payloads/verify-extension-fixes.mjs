@@ -1,4 +1,4 @@
-// Re-checks the extension findings (#19-#30 in FINDINGS.md) and prints
+// Re-checks the extension findings #19-#30 (round 1, see EXTENSION-FIX-CHECKS.md) and prints
 // PASS / FAIL / MANUAL for each. See EXTENSION-FIX-CHECKS.md for what each
 // check means and how to run it.
 //
@@ -6,7 +6,7 @@
 //   node verify-extension-fixes.mjs --browser  also drives the real extension in Chrome for Testing
 //
 // Env: API_BASE (default http://localhost:4000).
-// Uses about 3 analyze calls, 2 reports and ~40 link checks (more with --browser).
+// API mode uses about 15 link checks, 2 analyses and 1 report; --browser adds about 75, 4 and 1.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

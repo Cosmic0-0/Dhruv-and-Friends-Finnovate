@@ -1,7 +1,5 @@
 # Kreol scam dataset
 
-Owner: **Joshua**. See `CLAUDE.md` → Role gating.
-
 Kreol / French / English (and code-switched) scam message samples used to
 tune prompts in `backend/src/services/analysis`. Drop raw samples here as
 `.json` or `.csv`; note the source and language mix for each.
@@ -157,9 +155,10 @@ streamlit run data/kreol-dataset/review/review_app.py
 
 - Only 24 seed corpus rows — intentionally small so conventions get fixed
   before scaling. Do not bulk-generate more until these are reviewed.
-- No retrieval/prompt-grounding integration yet (`CLAUDE.md` P3) and no
-  evaluation harness yet (P4) — both come after this seed corpus is
-  reviewed.
+- Reviewed rows are integrated into semantic prompt grounding through
+  `backend/src/services/analysis/kreolGrounding.js`. The payload consistency
+  runner in `data/test-payloads/consistency.mjs` measures live model variance;
+  broader language-quality evaluation is still needed.
 - Draft rows (translation memory and corpus alike) are unverified
   machine-drafted content — treat every one as wrong until Joshua reviews
   it.

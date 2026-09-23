@@ -83,9 +83,12 @@ are weighted against.
       no false positives on payloads that don't expect one).
 
 ## Impact & Problem Solving — 25 marks
-- [ ] Vulnerable-user protection mode working
-- [ ] Crowdsourced threat feed has seeded demo data
-- [ ] Scalability story ready to state verbally (local inference cost/privacy argument)
+- [x] Vulnerable-user protection mode implemented as the result screen's
+      action-first Simple mode, including read-aloud support when available.
+- [x] Crowdsourced threat-feed seed data and loader exist under
+      `data/sender-reputation-seed/`; load and verify it on the demo database.
+- [x] Scalability and privacy trade-offs are documented in `EXPLAINER.md`;
+      the presenter still needs to rehearse the short version.
 
 ## Presentation & Demonstration — 15 marks
 - [ ] Presenter roles assigned per team member
