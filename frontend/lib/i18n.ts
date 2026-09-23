@@ -98,11 +98,49 @@ export interface Copy {
     intro: string;
     categories: { title: string; body: string; example: string }[];
     footerNote: string;
+    /**
+     * Real aggregate counts from GET /api/trends (components/TrendsContent.tsx)
+     * — genuine usage, never seeded/fabricated numbers (root CLAUDE.md's "no
+     * fake live statistics" rule), so there is no "demonstration dataset"
+     * label here the way a seeded version of this page would need.
+     */
+    live: {
+      heading: string;
+      reportedSenders: (n: number) => string;
+      campaigns: (n: number) => string;
+      topSendersTitle: string;
+      topCampaignsTitle: string;
+      reports: (n: number) => string;
+      messages: (n: number) => string;
+      empty: string;
+      loading: string;
+      error: string;
+    };
   };
   conversation: { title: string; intro: string; thread: string; empty: string; add: string; submit: string; reset: string; progress: string; pending: string; message: string; unknownStage: string; verdicts: Record<"safe" | "suspicious" | "scam", string> };
   result: {
     networkLink: string;
     journey: { title: string; whatNextTitle: string; youAreHere: string; caveat: string; labels: Record<ScamStage, string> };
+    /**
+     * The reveal checklist shown right after a response arrives (see
+     * lib/result.ts's revealSteps + components/InvestigationReveal.tsx).
+     * Every line is built from a field actually present on that response —
+     * never shown for data the backend didn't return.
+     */
+    investigate: {
+      heading: string;
+      messageRead: string;
+      claimedIdentity: (name: string) => string;
+      linksChecked: string;
+      linkFlagged: (host: string) => string;
+      identityChecked: string;
+      identityMismatch: string;
+      communityNew: string;
+      communityFlagged: (n: number) => string;
+      stageIdentified: (stage: string) => string;
+      campaignNew: string;
+      campaignMatched: string;
+    };
     title: string;
     fromSender: (sender: string) => string;
     back: string;
@@ -171,6 +209,58 @@ export interface Copy {
     checkAnother: string;
     missingTitle: string;
     missingBody: string;
+  };
+  /**
+   * Fraud Replay (components/FraudReplay.tsx, app/replay/page.tsx): the same
+   * stored analysis result as the result screen, retold as a chronological
+   * story instead of a stacked report. Reuses result.* copy wherever a
+   * concept is shared (identity, journey, campaign match) — this only adds
+   * the narrative framing and the per-signal "why this works" line.
+   */
+  replay: {
+    title: string;
+    subtitle: string;
+    openReplay: string;
+    back: string;
+    stepContact: string;
+    stepWanted: string;
+    stepJourney: string;
+    experienceSafely: string;
+    stepPattern: string;
+    patternMatched: (reports: number, senders: number, domains: number) => string;
+    stepStop: string;
+    /** One line of general scam psychology per signal kind — never a claim about this specific sender. */
+    belief: Record<SignalKind, string>;
+  };
+  /**
+   * Simple mode (components/SimpleMode.tsx): an action-first, plain-language
+   * replacement for the detailed result — short sentences, no jargon, one
+   * decision at a time. Toggled from the result screen, remembered across
+   * visits (lib/storage.ts's loadSimpleMode/saveSimpleMode).
+   */
+  simple: {
+    turnOn: string;
+    turnOff: string;
+    stopScam: string;
+    stopSuspicious: string;
+    claims: (name: string) => string;
+    but: string;
+    issueFallback: string;
+    readAloud: string;
+    stopReading: string;
+  };
+  /**
+   * Shareable safety card (components/SafetyCard.tsx): a compact summary a
+   * user can copy or share with someone else, reusing simple.* for the
+   * headline/claim text rather than duplicating it.
+   */
+  card: {
+    cardTitle: string;
+    whyHeading: string;
+    helpMeExplain: string;
+    share: string;
+    copyText: string;
+    copied: string;
   };
   learn: {
     headline: string;
@@ -348,8 +438,24 @@ const CONVERSATION_FR: Copy["conversation"] = {
   thread: "Conversation", empty: "Commencez par le premier message reçu.", add: "Message suivant", submit: "Analyser le message", reset: "Effacer la conversation", progress: "Étape la plus avancée détectée", pending: "Ajoutez un message pour identifier son étape. Chaque message est analysé séparément ; le fil affiche l’étape la plus avancée détectée.", message: "Message", unknownStage: "Étape non identifiée", verdicts: { safe: "Aucun signal d’alerte", suspicious: "Suspect", scam: "Arnaque" },
 };
 
+const INVESTIGATE_EN: Copy["result"]["investigate"] = {
+  heading: "FraudLens investigated",
+  messageRead: "Message read",
+  claimedIdentity: (name) => `Claimed institution: ${name}`,
+  linksChecked: "Links checked against known bank and telecom domains",
+  linkFlagged: (host) => `Suspicious link found: ${host}`,
+  identityChecked: "Sender identity checked",
+  identityMismatch: "Identity mismatch found",
+  communityNew: "Not reported before",
+  communityFlagged: (n) => (n === 1 ? "Reported by another user before" : `Reported by ${n} other users before`),
+  stageIdentified: (stage) => `Scam stage identified: ${stage}`,
+  campaignNew: "New pattern — no matching campaign yet",
+  campaignMatched: "Matches a known scam campaign",
+};
+
 const RESULT_EN: Copy["result"] = {
   journey: JOURNEY_EN,
+  investigate: INVESTIGATE_EN,
   networkLink: "View fraud network",
   title: "Result",
   fromSender: (s) => `SMS from ${s}`,
@@ -440,6 +546,52 @@ const RESULT_EN: Copy["result"] = {
   checkAnother: "Check another message",
   missingTitle: "No check to show",
   missingBody: "Paste a message on the Check screen to see a result here.",
+};
+
+const REPLAY_EN: Copy["replay"] = {
+  title: "Fraud Replay",
+  subtitle: "How this message was built to work, told as a story instead of a report.",
+  openReplay: "See how this scam works",
+  back: "Back to result",
+  stepContact: "The contact",
+  stepWanted: "What it wanted from you",
+  stepJourney: "Where this is heading",
+  experienceSafely: "Experience this safely",
+  stepPattern: "The wider pattern",
+  patternMatched: (reports, senders, domains) =>
+    `Matches earlier reports: ${reports} report${reports === 1 ? "" : "s"} across ${senders} sender${senders === 1 ? "" : "s"} and ${domains} domain${domains === 1 ? "" : "s"}.`,
+  stepStop: "Stop here",
+  belief: {
+    sender_mismatch: "A message feels more trustworthy when it looks like it's from a number or account you recognise.",
+    lookalike_url: "A link that looks almost right is easy to miss when you're moving fast.",
+    urgency_language: "Urgency shortens the time you'd normally spend checking.",
+    spoofed_identity: "Borrowing a trusted name makes the request feel official.",
+    credential_request: "A code or password can feel harmless to share when the request sounds routine.",
+    payment_request: "Framing it as a fee or refund makes paying feel like the normal next step.",
+    prize_offer: "An unexpected reward lowers your guard before you check who's actually asking.",
+    secrecy: "Being told to keep it quiet removes the chance for someone else to catch the trick.",
+  },
+};
+
+const SIMPLE_EN: Copy["simple"] = {
+  turnOn: "Simple mode",
+  turnOff: "Show full details",
+  stopScam: "Don't send money yet",
+  stopSuspicious: "Be careful",
+  claims: (name) => `This message says it's from ${name}.`,
+  but: "But",
+  issueFallback: "FraudLens found warning signs in this message.",
+  readAloud: "Read this aloud",
+  stopReading: "Stop reading",
+};
+
+const CARD_EN: Copy["card"] = {
+  cardTitle: "FraudLens safety check",
+  whyHeading: "Why we're concerned",
+  helpMeExplain: "Help me explain this",
+  share: "Share",
+  copyText: "Copy text",
+  copied: "Copied",
 };
 
 // Screenshot upload copy (English), held in constants so Kreol can fall back via TODO_KREOL.
@@ -574,7 +726,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     trends: {
       title: "Known scam patterns in Mauritius",
       intro:
-        "FraudLens doesn't have a live report feed yet, so this isn't a ranked trend chart — it's the scam formats reported often enough in Mauritius to be worth knowing by sight.",
+        "The scam formats reported often enough in Mauritius to be worth knowing by sight, plus what FraudLens has actually seen reported below.",
       categories: [
         {
           title: "Bank impersonation SMS",
@@ -593,10 +745,25 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        'The closest thing to real trend data today: when you check a message, the result screen shows "reported by others" if that sender has been flagged before.',
+        "The list above is a reference, not a live feed. The numbers below are FraudLens's actual usage — real checks and reports, not a demonstration dataset.",
+      live: {
+        heading: "What FraudLens has actually seen",
+        reportedSenders: (n) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
+        campaigns: (n) => (n === 1 ? "1 pattern tracked" : `${n} patterns tracked`),
+        topSendersTitle: "Most-reported senders",
+        topCampaignsTitle: "Most-observed patterns",
+        reports: (n) => (n === 1 ? "1 report" : `${n} reports`),
+        messages: (n) => (n === 1 ? "1 check" : `${n} checks`),
+        empty: "Not enough activity yet — check a message to be the first.",
+        loading: "Loading…",
+        error: "Couldn't load this right now.",
+      },
     },
     conversation: CONVERSATION_EN,
     result: RESULT_EN,
+    replay: REPLAY_EN,
+    simple: SIMPLE_EN,
+    card: CARD_EN,
     learn: LEARN_EN,
     safepay: SAFEPAY_EN,
   },
@@ -693,7 +860,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     trends: {
       title: "Arnaques connues à Maurice",
       intro:
-        "FraudLens n'a pas encore de flux de signalements en direct, ce n'est donc pas un classement en temps réel — ce sont les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil.",
+        "Les formats d'arnaque assez souvent signalés à Maurice pour être reconnus du premier coup d'œil, ainsi que ce que FraudLens a réellement vu signalé ci-dessous.",
       categories: [
         {
           title: "SMS usurpant une banque",
@@ -712,11 +879,37 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
       ],
       footerNote:
-        "Ce qui se rapproche le plus d'une donnée de tendance aujourd'hui : quand vous vérifiez un message, l'écran de résultat indique si cet expéditeur a déjà été signalé par d'autres.",
+        "La liste ci-dessus est une référence, pas un flux en direct. Les chiffres ci-dessous sont l'usage réel de FraudLens — de vraies vérifications et signalements, pas un jeu de données de démonstration.",
+      live: {
+        heading: "Ce que FraudLens a réellement observé",
+        reportedSenders: (n) => (n === 1 ? "1 expéditeur signalé" : `${n} expéditeurs signalés`),
+        campaigns: (n) => (n === 1 ? "1 schéma suivi" : `${n} schémas suivis`),
+        topSendersTitle: "Expéditeurs les plus signalés",
+        topCampaignsTitle: "Schémas les plus observés",
+        reports: (n) => (n === 1 ? "1 signalement" : `${n} signalements`),
+        messages: (n) => (n === 1 ? "1 vérification" : `${n} vérifications`),
+        empty: "Pas encore assez d'activité — vérifiez un message pour être le premier.",
+        loading: "Chargement…",
+        error: "Impossible de charger ceci pour le moment.",
+      },
     },
     conversation: CONVERSATION_FR,
     result: {
       journey: JOURNEY_FR,
+      investigate: {
+        heading: "FraudLens a vérifié",
+        messageRead: "Message lu",
+        claimedIdentity: (name) => `Institution revendiquée : ${name}`,
+        linksChecked: "Liens vérifiés par rapport aux domaines bancaires et télécoms connus",
+        linkFlagged: (host) => `Lien suspect détecté : ${host}`,
+        identityChecked: "Identité de l'expéditeur vérifiée",
+        identityMismatch: "Incohérence d'identité détectée",
+        communityNew: "Jamais signalé auparavant",
+        communityFlagged: (n) => (n === 1 ? "Déjà signalé par un autre utilisateur" : `Déjà signalé par ${n} autres utilisateurs`),
+        stageIdentified: (stage) => `Étape de l'arnaque identifiée : ${stage}`,
+        campaignNew: "Nouveau schéma — aucune campagne correspondante pour l'instant",
+        campaignMatched: "Correspond à une campagne d'arnaque connue",
+      },
       networkLink: "Voir le réseau de fraude",
       title: "Résultat",
       fromSender: (s) => `SMS de ${s}`,
@@ -809,6 +1002,49 @@ export const COPY: Record<UiLanguage, Copy> = {
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
       missingBody: "Collez un message dans l'onglet Vérifier pour voir un résultat ici.",
+    },
+    replay: {
+      title: "Fraud Replay",
+      subtitle: "Comment ce message a été conçu pour fonctionner, raconté comme une histoire plutôt qu'un rapport.",
+      openReplay: "Voir comment fonctionne cette arnaque",
+      back: "Retour au résultat",
+      stepContact: "Le contact",
+      stepWanted: "Ce qu'on voulait de vous",
+      stepJourney: "Vers où cela se dirige",
+      experienceSafely: "Vivre cela en sécurité",
+      stepPattern: "Le schéma plus large",
+      patternMatched: (reports, senders, domains) =>
+        `Correspond à des signalements antérieurs : ${reports} signalement${reports === 1 ? "" : "s"} auprès de ${senders} expéditeur${senders === 1 ? "" : "s"} et ${domains} domaine${domains === 1 ? "" : "s"}.`,
+      stepStop: "Arrêtez-vous ici",
+      belief: {
+        sender_mismatch: "Un message inspire plus confiance quand il semble venir d'un numéro ou d'un compte que vous reconnaissez.",
+        lookalike_url: "Un lien presque correct est facile à manquer quand on va vite.",
+        urgency_language: "L'urgence réduit le temps que vous prendriez normalement pour vérifier.",
+        spoofed_identity: "Emprunter un nom de confiance rend la demande crédible.",
+        credential_request: "Un code ou un mot de passe peut sembler anodin à partager quand la demande paraît habituelle.",
+        payment_request: "Présenter cela comme des frais ou un remboursement rend le paiement naturel.",
+        prize_offer: "Une récompense inattendue baisse votre vigilance avant que vous vérifiiez qui demande vraiment.",
+        secrecy: "Demander la discrétion empêche quelqu'un d'autre de repérer la supercherie.",
+      },
+    },
+    simple: {
+      turnOn: "Mode simple",
+      turnOff: "Voir tous les détails",
+      stopScam: "N'envoyez pas d'argent",
+      stopSuspicious: "Soyez prudent",
+      claims: (name) => `Ce message dit venir de ${name}.`,
+      but: "Mais",
+      issueFallback: "FraudLens a trouvé des signaux d'alerte dans ce message.",
+      readAloud: "Lire à voix haute",
+      stopReading: "Arrêter la lecture",
+    },
+    card: {
+      cardTitle: "Vérification de sécurité FraudLens",
+      whyHeading: "Pourquoi nous sommes préoccupés",
+      helpMeExplain: "Aidez-moi à expliquer",
+      share: "Partager",
+      copyText: "Copier le texte",
+      copied: "Copié",
     },
     learn: {
       headline: "Apprenez à les repérer",
@@ -1002,11 +1238,24 @@ export const COPY: Record<UiLanguage, Copy> = {
       ],
       footerNote:
         "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
+      live: TODO_KREOL({
+        heading: "What FraudLens has actually seen",
+        reportedSenders: (n: number) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
+        campaigns: (n: number) => (n === 1 ? "1 pattern tracked" : `${n} patterns tracked`),
+        topSendersTitle: "Most-reported senders",
+        topCampaignsTitle: "Most-observed patterns",
+        reports: (n: number) => (n === 1 ? "1 report" : `${n} reports`),
+        messages: (n: number) => (n === 1 ? "1 check" : `${n} checks`),
+        empty: "Not enough activity yet — check a message to be the first.",
+        loading: "Loading…",
+        error: "Couldn't load this right now.",
+      }),
     },
     // Result screen: reviewed by the frontend owner.
     conversation: TODO_KREOL(CONVERSATION_EN),
     result: {
       journey: TODO_KREOL(JOURNEY_EN),
+      investigate: TODO_KREOL(INVESTIGATE_EN),
       networkLink: TODO_KREOL("View fraud network"),
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
@@ -1082,6 +1331,9 @@ export const COPY: Record<UiLanguage, Copy> = {
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
     },
+    replay: TODO_KREOL(REPLAY_EN),
+    simple: TODO_KREOL(SIMPLE_EN),
+    card: TODO_KREOL(CARD_EN),
     // Learn tab: reviewed by the frontend owner. TODO_KREOL marks strings that
     // have no Kreol translation yet (they show English until one is written).
     learn: {

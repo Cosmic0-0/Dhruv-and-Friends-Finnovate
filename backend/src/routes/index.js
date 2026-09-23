@@ -11,7 +11,7 @@ import { computeRiskCategories } from "../services/risk-categories/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { redact } from "../services/redact/index.js";
-import { reportSender, saveBatchHistory, getReportCount } from "../db/index.js";
+import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 
 export const router = Router();
 
@@ -286,6 +286,38 @@ router.get("/campaign/:fingerprintId", checkSenderLimiter, (req, res) => {
   const campaign = getFingerprintMatches(req.params.fingerprintId);
   if (!campaign) return res.status(404).json({ error: "campaign not found" });
   res.json(campaign);
+});
+
+// A phone-number-shaped sender is masked to its last 4 digits for this
+// PUBLIC leaderboard (unlike /check-sender's exact-match lookup, this
+// exposes senders nobody specifically searched for). A brand/identity name
+// ("MCB", "Emtel Prize Team") isn't personally identifying, so it's shown
+// as-is - same distinction the frontend already draws in lib/result.ts's
+// "last_four_only" SAFE check.
+function maskSender(raw) {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 6) return raw;
+  return `•••• ${digits.slice(-4)}`;
+}
+
+// Real aggregate counts only - see db/index.js's getTrendSummary() doc
+// comment. Cheap indexed reads, same cost class as /check-sender.
+router.get("/trends", checkSenderLimiter, (_req, res) => {
+  const { topSenders, topCampaigns, scamTypeCounts, totals } = getTrendSummary();
+  res.json({
+    totals,
+    // A blank/whitespace-only sender can exist in old report rows from
+    // before input validation tightened - never surface it as a leaderboard
+    // entry with nothing to show.
+    topSenders: topSenders.filter((r) => r.sender.trim() !== "").map((r) => ({ sender: maskSender(r.sender), reportCount: r.report_count })),
+    topCampaigns: topCampaigns.map((c) => ({
+      fingerprintId: c.fingerprint_id,
+      scamType: c.scam_type,
+      claimedIdentity: c.claimed_identity,
+      messageCount: c.message_count,
+    })),
+    scamTypeCounts: scamTypeCounts.map((s) => ({ scamType: s.scam_type, campaigns: s.campaigns, messages: s.messages })),
+  });
 });
 
 const sandboxLimiter = rateLimited("too many simulation requests, try again shortly", { windowMs: 15 * 60 * 1000, limit: 30 });

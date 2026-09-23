@@ -126,6 +126,39 @@ test("POST /api/check-sender returns 0 for a sender with no reports", async (t) 
   assert.equal(body.reportCount, 0);
 });
 
+test("GET /api/trends returns real aggregate counts with phone-shaped senders masked to their last 4 digits", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  // A sender unique to this test - other tests in this file share the same
+  // in-memory DB and report their own senders, so totals must be read as
+  // "at least" this test's own contribution, not an exact global count.
+  const uniqueSender = "+230 5111 9876";
+  await originalFetch(`${base}/report`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sender: uniqueSender }),
+  });
+  await originalFetch(`${base}/report`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sender: uniqueSender }),
+  });
+
+  const res = await originalFetch(`${base}/trends`);
+  const body = await res.json();
+  assert.equal(res.status, 200);
+  assert.ok(body.totals.reportedSenders >= 1);
+  assert.ok(body.totals.totalReports >= 2);
+  const row = body.topSenders.find((s) => s.reportCount === 2 && s.sender === "•••• 9876");
+  assert.ok(row, "the reported sender should appear in topSenders, masked to its last 4 digits");
+  assert.ok(!row.sender.includes("5111"), "only the last 4 digits should be visible");
+});
+
 test("campaign API merges observed checks, preserves graph nodes, and returns 404 for unknown IDs", async (t) => {
   const app = express(); app.use("/api", router);
   const server = app.listen(0);

@@ -1,0 +1,326 @@
+/*
+ * Shared styling for popup.html and result.html.
+ *
+ * Manually mirrors the palette/type direction from frontend/app/globals.css
+ * (the "forensic instrument" system: steel/brass/brick severity hues at
+ * muted chroma, condensed uppercase micro-labels, monospace for machine
+ * data like domains, zero border-radius, hairline rules instead of cards).
+ * Extension pages can't import that Tailwind theme directly, so the tokens
+ * below are copied by hand — keep them in sync if the app's palette changes.
+ * Read-only reference, frontend/app/globals.css itself is never edited from
+ * here.
+ *
+ * The popup runs on the dark "instrument surface" (--color-ink) rather than
+ * the app's light paper background — a compact toolbar popup reads more like
+ * a security HUD in dark mode, and the app's own design doc calls the ink
+ * surface out as "a dark instrument surface for real layering".
+ */
+
+:root {
+  --page: #15181c;
+  --panel: #1b1f24;
+  --panel-2: #21262d;
+  --ink: #eef0ef;
+  --ink-soft: rgb(238 240 239 / 78%);
+  --ink-muted: rgb(238 240 239 / 52%);
+  --line: rgb(238 240 239 / 12%);
+  --line-strong: rgb(238 240 239 / 22%);
+
+  --accent: #5980a6;
+  --accent-soft: rgb(89 128 166 / 16%);
+  --caution: #c99a3f;
+  --caution-soft: rgb(201 154 63 / 16%);
+  --danger: #c1594a;
+  --danger-soft: rgb(193 89 74 / 18%);
+  --neutral: #7a828c;
+
+  --font-heading: "Arial Narrow", "IBM Plex Sans Condensed", sans-serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 380px;
+  background: var(--page);
+  color: var(--ink-soft);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+body.result-page {
+  width: 100%;
+  min-width: 380px;
+}
+
+header.app-header {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+header.app-header h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+header.app-header .tagline {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+section {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+section:last-of-type {
+  border-bottom: none;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-muted);
+  margin: 0 0 8px;
+}
+
+.site-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hostname {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink);
+  word-break: break-all;
+  flex: 1;
+}
+
+.state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid var(--line-strong);
+  white-space: nowrap;
+}
+
+.state-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.state-pill[data-state="safe"] {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.state-pill[data-state="safe"] .dot {
+  background: var(--accent);
+}
+
+.state-pill[data-state="suspicious"] {
+  color: var(--caution);
+  background: var(--caution-soft);
+  border-color: var(--caution);
+}
+.state-pill[data-state="suspicious"] .dot {
+  background: var(--caution);
+}
+
+.state-pill[data-state="high-risk"] {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
+.state-pill[data-state="high-risk"] .dot {
+  background: var(--danger);
+}
+
+.state-pill[data-state="neutral"],
+.state-pill[data-state="unreachable"] {
+  color: var(--neutral);
+  background: rgb(122 130 140 / 12%);
+  border-color: var(--line-strong);
+}
+.state-pill[data-state="neutral"] .dot,
+.state-pill[data-state="unreachable"] .dot {
+  background: var(--neutral);
+}
+
+.state-text {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.signals-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.signal-item {
+  padding: 8px 10px;
+  background: var(--panel);
+  border-left: 3px solid var(--neutral);
+}
+
+.signal-item[data-severity="high"] {
+  border-left-color: var(--danger);
+}
+.signal-item[data-severity="medium"] {
+  border-left-color: var(--caution);
+}
+.signal-item[data-severity="low"] {
+  border-left-color: var(--accent);
+}
+
+.signal-type {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+}
+
+.signal-desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.empty-note {
+  font-size: 12px;
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+button, .btn-link {
+  font: inherit;
+  cursor: pointer;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 12px;
+  text-align: left;
+  border-radius: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+button:hover, .btn-link:hover {
+  background: var(--panel-2);
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+button.primary {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+button.danger-outline {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+a.btn-link {
+  text-decoration: none;
+  font-size: 12px;
+}
+
+.recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--ink-muted);
+}
+
+.recent-item .domain {
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-item .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.recent-item[data-state="safe"] .dot { background: var(--accent); }
+.recent-item[data-state="suspicious"] .dot { background: var(--caution); }
+.recent-item[data-state="high-risk"] .dot { background: var(--danger); }
+.recent-item[data-state="unreachable"] .dot,
+.recent-item[data-state="neutral"] .dot { background: var(--neutral); }
+
+.privacy-note {
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  padding: 10px 16px 14px;
+  line-height: 1.5;
+}
+
+.status-msg {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+.status-msg.error {
+  color: var(--danger);
+}
+
+.status-msg.success {
+  color: var(--accent);
+}

@@ -84,6 +84,15 @@ export function TrendIcon(p: IconProps) {
   );
 }
 
+export function LayersIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="m12 3 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 13 9 5 9-5" />
+    </Svg>
+  );
+}
+
 export function RetryIcon(p: IconProps) {
   return (
     <Svg {...p}>

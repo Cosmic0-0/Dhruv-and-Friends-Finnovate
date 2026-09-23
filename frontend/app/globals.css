@@ -114,8 +114,25 @@
     }
   }
 
+  /* True desktop and up: fill the viewport — no fixed max-width at all, so
+     the frame actually reaches the edges of the window on any monitor
+     instead of stopping at some arbitrary px cap with dead margin on either
+     side (confirmed against a live wide browser window: a fixed cap here
+     reads as a form stranded in the middle of the screen). --spacing-gutter
+     is the only inset, and it grows with viewport so large screens still get
+     breathing room without a hard stop. Inner blocks (Hero copy, evidence
+     prose) carry their own ch-based max-widths for line length, so this only
+     controls how much of the frame the instrument itself occupies. */
   @media (min-width: 80rem) {
-    :root { --container-app: 1200px; --spacing-gutter: 2rem; }
+    :root { --container-app: 100%; --spacing-gutter: 2.5rem; }
+  }
+
+  @media (min-width: 120rem) {
+    :root { --spacing-gutter: 4rem; }
+  }
+
+  @media (min-width: 160rem) {
+    :root { --spacing-gutter: 6rem; }
   }
 
   html {

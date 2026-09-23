@@ -38,7 +38,7 @@ export function signalTitle(type: string, copy: Copy, lang: UiLanguage): string 
  * developer wording ("contains brand token …"), always in English. When they
  * parse, show a plain localized sentence; otherwise keep the original text.
  */
-function signalDescription(s: Signal, copy: Copy, show: (t: string) => string): string {
+export function signalDescription(s: Signal, copy: Copy, show: (t: string) => string): string {
   if (signalKind(s.type) === "lookalike_url") {
     const { host, resembles } = parseLinkCheck(s);
     if (host && resembles?.kind === "domain") return copy.result.lookalikeDomain(host, resembles.value);

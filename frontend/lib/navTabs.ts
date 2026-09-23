@@ -6,7 +6,7 @@ export const NAV_TABS = [
     href: "/",
     key: "check",
     Icon: SearchIcon,
-    match: (p: string) => p === "/" || p.startsWith("/result") || p.startsWith("/safepay") || p.startsWith("/conversation") || p.startsWith("/sandbox") || p.startsWith("/network"),
+    match: (p: string) => p === "/" || p.startsWith("/result") || p.startsWith("/replay") || p.startsWith("/safepay") || p.startsWith("/conversation") || p.startsWith("/sandbox") || p.startsWith("/network") || p.startsWith("/batch"),
   },
   { href: "/learn", key: "learn", Icon: BookIcon, match: (p: string) => p.startsWith("/learn") },
   { href: "/trends", key: "trends", Icon: TrendIcon, match: (p: string) => p.startsWith("/trends") },

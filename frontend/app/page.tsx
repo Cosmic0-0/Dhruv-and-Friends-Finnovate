@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AppHeader from "@/components/AppHeader";
 import CheckForm from "@/components/CheckForm";
 import IntelligenceTools from "@/components/IntelligenceTools";
@@ -26,7 +27,9 @@ export default function CheckPage() {
               <h2 className="text-[1.875rem] leading-tight"><T k="headline" /></h2>
               <p className="max-w-[46ch] text-sm leading-relaxed text-ink-soft"><T k="subline" /></p>
             </div>
-            <CheckForm />
+            <Suspense fallback={null}>
+              <CheckForm />
+            </Suspense>
           </section>
         </div>
         <IntelligenceTools />

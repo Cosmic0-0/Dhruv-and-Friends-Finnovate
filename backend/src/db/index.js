@@ -98,3 +98,35 @@ export function saveBatchHistory(summary) {
     `INSERT INTO batch_history (total, scam_count, suspicious_count, safe_count) VALUES (?, ?, ?, ?)`
   ).run(summary.total, summary.scamCount, summary.suspiciousCount, summary.safeCount);
 }
+
+// Real aggregate counts for the Radar/trends page (GET /api/trends) - every
+// number here comes from an actual report or a real recorded ScamDNA
+// observation (services/scam-dna), never synthesized. An empty/near-empty
+// demo database returns empty arrays and zero totals; the route/frontend
+// must show that honestly rather than padding it with invented activity
+// (see CLAUDE.md "Do not create fake live Mauritius statistics").
+export function getTrendSummary(limit = 5) {
+  const topSenders = db
+    .prepare("SELECT sender, report_count FROM reports ORDER BY report_count DESC LIMIT ?")
+    .all(limit);
+  const topCampaigns = db
+    .prepare(
+      "SELECT fingerprint_id, scam_type, claimed_identity, message_count FROM scam_dna ORDER BY message_count DESC LIMIT ?"
+    )
+    .all(limit);
+  const scamTypeCounts = db
+    .prepare(
+      "SELECT scam_type, COUNT(*) AS campaigns, SUM(message_count) AS messages FROM scam_dna GROUP BY scam_type ORDER BY messages DESC"
+    )
+    .all();
+  const totals = db
+    .prepare(
+      `SELECT
+        (SELECT COUNT(*) FROM reports) AS reportedSenders,
+        (SELECT COALESCE(SUM(report_count), 0) FROM reports) AS totalReports,
+        (SELECT COUNT(*) FROM scam_dna) AS campaigns,
+        (SELECT COUNT(DISTINCT domain) FROM scam_dna_domains) AS domains`
+    )
+    .get();
+  return { topSenders, topCampaigns, scamTypeCounts, totals };
+}

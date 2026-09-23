@@ -587,6 +587,33 @@ must belong to that type's `typicalStages`. `turnIndex` is a non-negative safe
 integer, starting at zero. Invalid input returns 400. Body limit 10kb;
 30 requests / 15 minutes / IP, 429 when exceeded.
 
+### GET /api/trends
+
+Read-only, non-LLM, no request body. Real aggregate counts for the Radar
+page — every number comes from the `reports` and `scam_dna*` tables
+(`backend/src/db/index.js`'s `getTrendSummary()`); nothing here is
+synthesized or seeded for demo effect. On a fresh/empty database every array
+is `[]` and every total is `0` — the frontend must render that honestly
+(see `checklist.md` / root `CLAUDE.md`'s "no fake live statistics" rule),
+not pad it with invented activity.
+
+```ts
+{
+  totals: { reportedSenders: number; totalReports: number; campaigns: number; domains: number };
+  topSenders: { sender: string; reportCount: number }[]; // top 5 by reportCount
+  topCampaigns: { fingerprintId: string; scamType: string; claimedIdentity: string | null; messageCount: number }[]; // top 5 by messageCount
+  scamTypeCounts: { scamType: string; campaigns: number; messages: number }[]; // one row per scamType observed, no fixed order guarantee beyond messages DESC
+}
+```
+
+`topSenders.sender` is masked to its last 4 digits (`"•••• 1234"`) when the
+underlying identifier is phone-number-shaped (6+ digits); a brand/identity
+name (`"MCB"`) is shown as-is, since it isn't personally identifying. This is
+a public leaderboard, unlike `POST /api/check-sender`'s exact-match lookup —
+it surfaces senders nobody specifically searched for, hence the masking.
+Shares the 120 requests / 15 minutes / IP read limiter used by
+`/check-sender` and `/campaign/:fingerprintId`.
+
 ```ts
 {
   simulated: true;

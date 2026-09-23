@@ -18,6 +18,7 @@ import type { AnalyzeResponse, Verdict } from "./types";
 const RECENT_KEY = "fraudlens.recent.v1";
 const RESULT_KEY = "fraudlens.result.v1";
 const LANGUAGE_KEY = "fraudlens.language.v1";
+const SIMPLE_MODE_KEY = "fraudlens.simpleMode.v1";
 export const RECENT_LIMIT = 5;
 
 export interface RecentCheck {
@@ -104,6 +105,15 @@ export function loadLanguage(): UiLanguage | null {
 
 export function saveLanguage(lang: UiLanguage): void {
   write(local, LANGUAGE_KEY, lang);
+}
+
+/** Simple mode (components/SimpleMode.tsx): a remembered preference, same storage pattern as language. */
+export function loadSimpleMode(): boolean {
+  return read<unknown>(local, SIMPLE_MODE_KEY) === true;
+}
+
+export function saveSimpleMode(on: boolean): void {
+  write(local, SIMPLE_MODE_KEY, on);
 }
 
 // ---------- Learn tab (daily streak + best score) ----------

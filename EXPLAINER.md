@@ -245,6 +245,9 @@ truth, this is an index:
 | `POST /api/report` | Increment a sender's report count |
 | `POST /api/check-sender` | **NEW (this session)** — read-only report-count lookup, no increment |
 | `POST /api/check-url` | Non-LLM domain check only (built for the browser extension) |
+| `GET /api/campaign/:fingerprintId` | ScamDNA campaign detail (Fraud Network graph) |
+| `GET /api/sandbox/playbooks` / `POST /api/sandbox/next` | Scam Sandbox simulation |
+| `GET /api/trends` | **NEW** — real aggregate counts for Radar (never seeded) |
 | `GET /health/llm` | Pre-demo check of which LLM provider is currently live |
 
 ## 5. Frontend
@@ -567,3 +570,71 @@ held off on those and worked on visual-only refinement elsewhere
   above); one real copy bug found and fixed via that testing. Next up
   (P1, not started): Scam Journey, ScamDNA, Fraud Network graph,
   Conversation Mode, Scam Sandbox.
+- **2026-09-23** — P1 shipped (Scam Journey, ScamDNA, Fraud Network graph,
+  Conversation Mode, Scam Sandbox); see `changes.md` for that pass's log.
+- **2026-09-23** — "Fraud Replay" UI overhaul, pass 1 (in progress; see
+  `changes.md` for the running log and what's still deferred). Frontend:
+  a response-driven "investigation reveal" checklist between submit and
+  the result screen (`components/InvestigationReveal.tsx`,
+  `lib/result.ts`'s `revealSteps` — every line gated on a field the
+  response actually returned); the result screen's non-safe layout is now
+  multi-region on desktop instead of one long column
+  (`components/ResultView.tsx`); a sticky action dock
+  (`components/result/ActionDock.tsx`) for SafePay/Sandbox/Network/Report;
+  `?scan=` query-param handoff from the extension into `CheckForm`
+  (pre-fills for review, never auto-submits). Extension: a major
+  functionality pass (popup redesign, badge states, Scan-this-page,
+  right-click context-menu checks, local recent-checks history, site
+  reporting) — see `extension/README.md`. Deferred this pass: mobile-
+  specific layouts, the dedicated Fraud Replay narrative page, ScamDNA/
+  Network UX upgrades, education features (Simple mode, Red Team
+  Yourself, shareable card), batch/Radar polish, full a11y/i18n QA.
+- **2026-09-23** — "Fraud Replay" UI overhaul, pass 2: widened the desktop
+  container (`--container-app` now scales to 1680px on ultra-wide monitors
+  instead of capping at 1200px — a real screenshot on a wide window showed
+  the app stranded in empty margin); fixed a bug where the sticky action
+  dock could sit hidden behind the mobile `TabBar` (both had `bottom:0`);
+  added mobile progressive disclosure to the result screen
+  (`components/MobileCollapsible.tsx` — evidence/identity and journey
+  collapse on a phone, open by default on desktop); closed the extension
+  handoff loop (`CheckForm` now consumes the `?scan=` param); and added the
+  dedicated Fraud Replay page (`app/replay/page.tsx`,
+  `components/FraudReplay.tsx`) retelling a stored result as a numbered
+  story, reusing `ScamJourney`/`IdentityCompare`/`WhatToDo` rather than
+  reimplementing them. Self-inflicted incident this pass: ran `next build`
+  against a live `next dev` process sharing the same `.next/` dir, which
+  corrupted its cache (several routes 500ing) — recovered by restarting the
+  dev server; see `changes.md` for the full note. See `changes.md` for what
+  in the 23-phase brief is still deferred.
+- **2026-09-23** — "Fraud Replay" UI overhaul, pass 3: fixed the desktop
+  container width for real (the pass-2 fix still wasn't enough on a real
+  wide monitor — `--container-app` is now `100%` at 80rem+, no fixed cap at
+  all, gutter scales instead); added the Batch Scan investigation workspace
+  (`app/batch/page.tsx`, `components/BatchScan.tsx`, reusing the
+  already-built but previously unused `batchScan()` API client and
+  `batch_*` validation copy); added Simple mode
+  (`components/SimpleMode.tsx` — an action-first alternate layout with
+  read-aloud, not a font-size toggle) and a shareable safety card
+  (`components/SafetyCard.tsx`, Web Share API with clipboard fallback, no
+  new image-export dependency); a small accessibility self-review pass
+  (missing form label, `aria-pressed` on new toggles). **Live finding, not
+  fixed**: `scamProfile`/`journey`/`scamDna` did not populate in 5/5 live
+  test requests against the local LLM, including an unambiguous scam
+  message — the backend code path looks correct, so this is prompt/model
+  behavior in `backend/src/services/analysis/`, flagged for that owner
+  rather than debugged here. See `changes.md` for full detail and the
+  current honest status against all 23 phases.
+- **2026-09-23** — "Fraud Replay" UI overhaul, pass 4 (closing): added
+  `GET /api/trends` (`backend/src/routes/index.js`, `db/index.js`'s new
+  `getTrendSummary()`) — real aggregate counts (reported senders, top
+  senders masked to last 4 digits, observed campaigns) from the existing
+  `reports`/`scam_dna*` tables, never seeded. Wired into the Radar page
+  (`components/TrendsContent.tsx`, `lib/intelligence-api.ts`'s new
+  `getTrends()`); an empty database shows an honest "not enough activity
+  yet" state. Backend test added (95/95 passing). Also cleaned up two stray
+  `node --watch` backend processes found running but not bound to any port
+  (pre-existing, not from this session) while restarting the backend to
+  pick up the new route. This closes out the 23-phase brief for this
+  session — see `changes.md`'s "Final status" section for the complete
+  built/judged-satisfied/deliberately-not-built/environment-blocked
+  breakdown.

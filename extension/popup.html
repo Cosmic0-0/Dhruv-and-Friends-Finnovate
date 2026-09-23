@@ -3,46 +3,67 @@
   <head>
     <meta charset="utf-8" />
     <title>FraudLens AI</title>
-    <style>
-      body {
-        font-family: system-ui, sans-serif;
-        width: 280px;
-        margin: 0;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 14px;
-        margin: 0 0 8px;
-      }
-      .status {
-        padding: 8px;
-        border-radius: 6px;
-        font-size: 13px;
-        word-break: break-word;
-      }
-      .status.safe {
-        background: #e6f4ea;
-        color: #1a7431;
-      }
-      .status.flagged {
-        background: #fdecea;
-        color: #b3261e;
-      }
-      .status.unknown {
-        background: #f1f1f1;
-        color: #555;
-      }
-      ul {
-        margin: 8px 0 0;
-        padding-left: 18px;
-        font-size: 12px;
-      }
-    </style>
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <h1>FraudLens AI — Link Guard</h1>
-    <div id="status" class="status unknown">Checking this site…</div>
-    <ul id="signals"></ul>
+    <header class="app-header">
+      <h1>FraudLens AI</h1>
+      <div class="tagline">Link Guard</div>
+    </header>
+
+    <section id="site-section">
+      <p class="section-label">Current site</p>
+      <div class="site-row">
+        <span id="hostname" class="hostname">—</span>
+        <span id="state-pill" class="state-pill" data-state="neutral">
+          <span class="dot"></span>
+          <span id="state-pill-text">Checking…</span>
+        </span>
+      </div>
+      <p id="state-text" class="state-text">Checking this site…</p>
+    </section>
+
+    <section id="evidence-section">
+      <p class="section-label">Strongest evidence</p>
+      <ul id="signals-list" class="signals-list"></ul>
+      <p id="signals-empty" class="empty-note" hidden>No flagged signals for this site.</p>
+    </section>
+
+    <section id="actions-section">
+      <p class="section-label">Actions</p>
+      <div class="actions">
+        <button id="scan-page-btn" class="primary" type="button">
+          <span>Scan This Page</span>
+          <span aria-hidden="true">→</span>
+        </button>
+        <button id="report-btn" type="button">
+          <span>Report this site</span>
+          <span aria-hidden="true">⚑</span>
+        </button>
+        <a id="open-fraudlens-link" class="btn-link" href="#" target="_blank" rel="noopener noreferrer">
+          <span>Open full analysis in FraudLens</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+      <p id="action-status" class="status-msg" role="status"></p>
+    </section>
+
+    <section id="scan-result-section" hidden>
+      <p class="section-label">Page scan result</p>
+      <div id="scan-result"></div>
+    </section>
+
+    <section id="recent-section">
+      <p class="section-label">Recent checks</p>
+      <ul id="recent-list" class="recent-list"></ul>
+      <p id="recent-empty" class="empty-note" hidden>No checks yet.</p>
+    </section>
+
+    <p class="privacy-note">
+      FraudLens checks only the current URL automatically. Page text is analyzed only when you press
+      Scan Page.
+    </p>
+
     <script src="popup.js" type="module"></script>
   </body>
 </html>

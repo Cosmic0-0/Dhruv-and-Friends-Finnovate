@@ -7,6 +7,12 @@ export interface Campaign {
   senders: string[];
   domains: string[];
 }
+export interface TrendsSummary {
+  totals: { reportedSenders: number; totalReports: number; campaigns: number; domains: number };
+  topSenders: { sender: string; reportCount: number }[];
+  topCampaigns: { fingerprintId: string; scamType: string; claimedIdentity: string | null; messageCount: number }[];
+  scamTypeCounts: { scamType: string; campaigns: number; messages: number }[];
+}
 export interface SandboxPlaybook { scamType: string; label: string; typicalStages: string[] }
 export interface SandboxCatalog { playbooks: SandboxPlaybook[]; maxTurns: number }
 export interface SandboxTurn {
@@ -34,5 +40,6 @@ async function request<T>(path: string, valid: (x: unknown) => x is T, signal?: 
   } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
 }
 export const getCampaign = (id: string, signal?: AbortSignal) => request<Campaign>(`/api/campaign/${encodeURIComponent(id)}`, (x): x is Campaign => obj(x) && typeof x.fingerprintId === "string" && typeof x.scamType === "string" && (x.claimedIdentity === null || typeof x.claimedIdentity === "string") && typeof x.messageCount === "number" && strings(x.senders) && strings(x.domains), signal);
+export const getTrends = (signal?: AbortSignal) => request<TrendsSummary>("/api/trends", (x): x is TrendsSummary => obj(x) && obj(x.totals) && typeof x.totals.reportedSenders === "number" && typeof x.totals.totalReports === "number" && typeof x.totals.campaigns === "number" && typeof x.totals.domains === "number" && Array.isArray(x.topSenders) && x.topSenders.every(s => obj(s) && typeof s.sender === "string" && typeof s.reportCount === "number") && Array.isArray(x.topCampaigns) && x.topCampaigns.every(c => obj(c) && typeof c.fingerprintId === "string" && typeof c.scamType === "string" && (c.claimedIdentity === null || typeof c.claimedIdentity === "string") && typeof c.messageCount === "number") && Array.isArray(x.scamTypeCounts) && x.scamTypeCounts.every(s => obj(s) && typeof s.scamType === "string" && typeof s.campaigns === "number" && typeof s.messages === "number"), signal);
 export const getSandboxCatalog = (signal?: AbortSignal) => request<SandboxCatalog>("/api/sandbox/playbooks", (x): x is SandboxCatalog => obj(x) && typeof x.maxTurns === "number" && Array.isArray(x.playbooks) && x.playbooks.every(p => obj(p) && typeof p.scamType === "string" && typeof p.label === "string" && strings(p.typicalStages)), signal);
 export const nextSandboxTurn = (body: { scamType: string; stage: string; turnIndex: number }, signal?: AbortSignal) => request<SandboxTurn>("/api/sandbox/next", (x): x is SandboxTurn => obj(x) && x.simulated === true && typeof x.ended === "boolean" && typeof x.scamType === "string" && typeof x.stage === "string" && typeof x.turnIndex === "number" && (x.line === null || typeof x.line === "string") && obj(x.tactic) && typeof x.tactic.label === "string" && typeof x.tactic.explanation === "string" && ["llm", "scripted", "ended"].includes(String(x.source)) && (x.nextStage === null || typeof x.nextStage === "string") && strings(x.typicalStages), signal, body);

@@ -54,7 +54,30 @@ const french: Record<string, string> = {
   "Report count unavailable": "Nombre de signalements indisponible",
   "Scenario messages and tactic explanations are shown in the source language.": "Les messages du scénario et les explications des tactiques sont présentés dans leur langue d’origine.",
   "In a real conversation, stop before sharing a code or sending money. Verify through the institution’s official app or a number you already trust.": "Dans une vraie conversation, arrêtez-vous avant de partager un code ou d’envoyer de l’argent. Vérifiez via l’application officielle ou un numéro de confiance.",
-  "Tactics encountered": "Tactiques rencontrées"
+  "Tactics encountered": "Tactiques rencontrées",
+  // Batch investigation workspace (components/BatchScan.tsx).
+  "Batch investigation": "Analyse groupée",
+  "Scan several messages at once.": "Analysez plusieurs messages à la fois.",
+  "Paste each message separately, with a blank line between them — up to 50 at a time.": "Collez chaque message séparément, avec une ligne vide entre eux — jusqu’à 50 à la fois.",
+  "Messages to scan": "Messages à analyser",
+  "Message one…\n\nMessage two…\n\nMessage three…": "Premier message…\n\nDeuxième message…\n\nTroisième message…",
+  "Scanning…": "Analyse en cours…",
+  "Scan messages": "Analyser les messages",
+  "Messages": "Messages",
+  "Safe": "Sûr",
+  "Suspicious": "Suspect",
+  "Scam": "Arnaque",
+  "Possible campaigns": "Campagnes possibles",
+  "message": "message",
+  "messages": "messages",
+  "sender": "expéditeur",
+  "senders": "expéditeurs",
+  "domain": "domaine",
+  "domains": "domaines",
+  "Filter to this campaign": "Filtrer sur cette campagne",
+  "Clear filter": "Effacer le filtre",
+  "Results": "Résultats",
+  "filtered": "filtré",
 };
 
 // Some strings are built with an interpolated count before being passed to
@@ -67,6 +90,10 @@ const french: Record<string, string> = {
 const TEMPLATES: ReadonlyArray<[RegExp, (n: string) => string]> = [
   [/^(\d+) observed checks$/, (n) => `${n} vérification${n === "1" ? "" : "s"} observée${n === "1" ? "" : "s"}`],
   [/^(\d+) community reports$/, (n) => `${n} signalement${n === "1" ? "" : "s"} communautaire${n === "1" ? "" : "s"}`],
+  [
+    /^(\d+) messages? could not be analysed and should be treated with caution\.$/,
+    (n) => `${n} message${n === "1" ? "" : "s"} n’${n === "1" ? "a" : "ont"} pas pu être analysé${n === "1" ? "" : "s"} et devraient être traités avec prudence.`,
+  ],
 ];
 
 function translateFrench(english: string): string {

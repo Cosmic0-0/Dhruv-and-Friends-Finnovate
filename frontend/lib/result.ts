@@ -5,8 +5,9 @@
  * lib/result.test.ts.
  */
 
+import type { Copy } from "./i18n";
 import type { Redaction } from "./redact";
-import type { Severity, Signal, Verdict } from "./types";
+import type { AnalyzeResponse, Severity, Signal, Verdict } from "./types";
 
 // ---------- Signals ----------
 
@@ -188,4 +189,40 @@ export function safeChecks(
     checks.push("no_pressure");
   }
   return checks;
+}
+
+// ---------- Investigation reveal ----------
+
+/**
+ * The "FraudLens investigated" checklist shown right after a response
+ * arrives (components/InvestigationReveal.tsx), before the result screen
+ * takes over. Every line comes from a field this exact response actually
+ * has — nothing here is inferred or fabricated for effect. Order follows the
+ * backend's own documented pipeline (EXPLAINER.md §3.1): links, then
+ * identity, then community reports, then journey/ScamDNA (both additive,
+ * P1-only fields).
+ */
+export function revealSteps(
+  response: Pick<AnalyzeResponse, "signals" | "senderReports" | "journey" | "scamDna">,
+  copy: Copy,
+): string[] {
+  const t = copy.result.investigate;
+  const steps: string[] = [t.messageRead];
+
+  const identity = response.signals.find((s) => signalKind(s.type) === "sender_mismatch");
+  if (identity?.claimedIdentity) steps.push(t.claimedIdentity(identity.claimedIdentity));
+
+  const lookalike = response.signals.find((s) => signalKind(s.type) === "lookalike_url");
+  steps.push(lookalike?.domain ? t.linkFlagged(lookalike.domain) : t.linksChecked);
+
+  steps.push(identity ? t.identityMismatch : t.identityChecked);
+
+  if (typeof response.senderReports === "number") {
+    steps.push(response.senderReports > 0 ? t.communityFlagged(response.senderReports) : t.communityNew);
+  }
+
+  if (response.journey) steps.push(t.stageIdentified(copy.result.journey.labels[response.journey.currentStage]));
+  if (response.scamDna) steps.push(response.scamDna.matchStrength === "matched" ? t.campaignMatched : t.campaignNew);
+
+  return steps;
 }

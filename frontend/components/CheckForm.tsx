@@ -1,16 +1,21 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { analyzeMessage, type ApiError } from "@/lib/api";
 import { redact } from "@/lib/redact";
+import { revealSteps } from "@/lib/result";
 import { addRecentCheck, saveResult } from "@/lib/storage";
 import { MAX_MESSAGE_LENGTH } from "@/lib/types";
 import type { Copy } from "@/lib/i18n";
+import InvestigationReveal from "./InvestigationReveal";
 import { useLanguage } from "./LanguageProvider";
 import { ScreenshotRow, useScreenshot } from "./ScreenshotUpload";
 import { SUCCESS_DELAY_MS, useWaitStage, WaitFill, WaitStatus } from "./WaitProgress";
 import { ImageIcon, RetryIcon } from "./icons";
+
+/** Per-item reveal pace in InvestigationReveal, plus a beat to read the last line before navigating. */
+const REVEAL_HOLD_MS = (stepCount: number) => Math.min(2600, 500 + stepCount * 170);
 
 /** Show the live character count once the message gets close to the API's limit. */
 const COUNT_FROM = 4500;
@@ -29,10 +34,14 @@ type Status = "idle" | "loading" | "finishing" | "error";
  */
 export default function CheckForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { lang, copy } = useLanguage();
   const [text, setText] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<ApiError | null>(null);
+  // Lines revealed during "finishing", each backed by a field the response
+  // actually has (lib/result.ts's revealSteps). Empty while loading.
+  const [reveal, setReveal] = useState<string[]>([]);
   // True while the textarea holds text that came from a screenshot: the image
   // itself went to the server, so the typed-text privacy promise doesn't apply.
   const [textFromImage, setTextFromImage] = useState(false);
@@ -55,6 +64,19 @@ export default function CheckForm() {
 
   // Cancel an in-flight check if the user leaves the screen.
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // Handoff from the browser extension ("Open in FraudLens", "Check selected
+  // text"): a scanned/selected snippet arrives as ?scan=, pre-fills the
+  // textarea for the user to review — same pattern as OCR text — and is
+  // never auto-submitted. Consumed once, then stripped from the URL so a
+  // refresh or back-navigation doesn't re-fill it.
+  useEffect(() => {
+    const scanned = searchParams.get("scan");
+    if (!scanned) return;
+    setText((prev) => (prev.trim() ? prev : scanned.slice(0, MAX_MESSAGE_LENGTH)));
+    router.replace("/", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Grow the textarea to fit its content (from 6 rows up to a cap), so the
   // whole message, including OCR text that needs checking, is visible without
@@ -127,9 +149,12 @@ export default function CheckForm() {
         source: textFromImage ? "screenshot" : "typed",
       });
       addRecentCheck({ text: redacted, verdict: res.data.verdict, at });
-      // Let the bar run to 100% and hold, then move on (stays "waiting" until the result screen takes over).
+      // Let the bar run to 100% and hold while the investigation checklist
+      // reveals what this exact response found, then move on.
+      const steps = revealSteps(res.data, copy);
+      setReveal(steps);
       setStatus("finishing");
-      setTimeout(() => router.push("/result"), SUCCESS_DELAY_MS);
+      setTimeout(() => router.push("/result"), steps.length > 0 ? REVEAL_HOLD_MS(steps.length) : SUCCESS_DELAY_MS);
       return;
     }
     if (res.error.kind === "aborted") return;
@@ -258,20 +283,27 @@ export default function CheckForm() {
         </div>
       </form>
 
-      {/* One slot: the wait row while checking, the error card if it fails. */}
-      {loading && (
-        <div className="flex items-start gap-4 border-l-2 border-l-accent bg-card px-4 py-3.5">
-          <WaitStatus phase={waitPhase} stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} />
-          {status === "loading" && (
-            <button
-              type="button"
-              onClick={cancel}
-              className="pressable micro -mr-1 min-h-9 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
-            >
-              {copy.wait.cancel}
-            </button>
-          )}
+      {/* One slot: the wait row while checking, the reveal checklist once the
+          response is in, or the error card if it fails. */}
+      {status === "finishing" && reveal.length > 0 ? (
+        <div className="border-l-2 border-l-accent bg-card px-4 py-3.5">
+          <InvestigationReveal heading={copy.result.investigate.heading} steps={reveal} />
         </div>
+      ) : (
+        loading && (
+          <div className="flex items-start gap-4 border-l-2 border-l-accent bg-card px-4 py-3.5">
+            <WaitStatus phase={waitPhase} stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} />
+            {status === "loading" && (
+              <button
+                type="button"
+                onClick={cancel}
+                className="pressable micro -mr-1 min-h-9 shrink-0 px-2 text-ink-muted hover:bg-muted-surface hover:text-ink"
+              >
+                {copy.wait.cancel}
+              </button>
+            )}
+          </div>
+        )
       )}
       {status === "error" && error && <ErrorCard error={error} copy={copy} onRetry={() => void submit()} />}
 

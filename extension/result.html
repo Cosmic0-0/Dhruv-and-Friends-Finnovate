@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>FraudLens AI — Result</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="result-page">
+    <header class="app-header">
+      <h1>FraudLens AI</h1>
+      <div class="tagline">Check result</div>
+    </header>
+
+    <section id="input-section">
+      <p class="section-label">Checked</p>
+      <p id="input-label" class="hostname">—</p>
+    </section>
+
+    <section id="result-section">
+      <p class="section-label">Result</p>
+      <div class="site-row">
+        <span id="state-pill" class="state-pill" data-state="neutral">
+          <span class="dot"></span>
+          <span id="state-pill-text">…</span>
+        </span>
+      </div>
+      <p id="state-text" class="state-text"></p>
+    </section>
+
+    <section id="evidence-section">
+      <p class="section-label">Signals</p>
+      <ul id="signals-list" class="signals-list"></ul>
+      <p id="signals-empty" class="empty-note" hidden>No flagged signals.</p>
+    </section>
+
+    <section id="actions-section">
+      <div class="actions">
+        <a id="open-fraudlens-link" class="btn-link" href="#" target="_blank" rel="noopener noreferrer">
+          <span>Open full analysis in FraudLens</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </section>
+
+    <p class="privacy-note">
+      FraudLens checks only the current URL automatically. Page text is analyzed only when you press
+      Scan Page or use a right-click FraudLens menu item.
+    </p>
+
+    <script src="result.js" type="module"></script>
+  </body>
+</html>

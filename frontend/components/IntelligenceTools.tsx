@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useLanguage } from "./LanguageProvider";
-import { ShieldIcon, BookIcon, SearchIcon } from "./icons";
+import { ShieldIcon, BookIcon, LayersIcon, SearchIcon } from "./icons";
 
 const EN = {
   eyebrow: "Your investigation workspace", title: "One message is only the beginning.",
@@ -10,6 +10,7 @@ const EN = {
     { title: "Before you pay", body: "Check the warning signs before money changes hands.", action: "Open SafePay" },
     { title: "Follow the conversation", body: "See how pressure builds, one message at a time.", action: "Start a conversation" },
     { title: "Recognise the playbook", body: "Practise spotting tactics in a guided scam simulation.", action: "Enter the sandbox" },
+    { title: "Scan several at once", body: "Paste a batch of messages and see which ones share a pattern.", action: "Open batch scan" },
   ],
 };
 const FR: typeof EN = {
@@ -18,11 +19,12 @@ const FR: typeof EN = {
     { title: "Avant de payer", body: "Vérifiez les signaux d'alerte avant de transférer de l'argent.", action: "Ouvrir SafePay" },
     { title: "Suivez la conversation", body: "Observez la pression monter, message après message.", action: "Commencer une conversation" },
     { title: "Repérez les tactiques", body: "Entraînez-vous avec une simulation d'arnaque guidée.", action: "Lancer la simulation" },
+    { title: "Analysez plusieurs messages", body: "Collez plusieurs messages et voyez lesquels partagent un même schéma.", action: "Ouvrir l'analyse groupée" },
   ],
 };
 const TODO_KREOL = <T,>(value: T): T => value;
-const routes = ["/safepay", "/conversation", "/sandbox"];
-const icons = [ShieldIcon, SearchIcon, BookIcon];
+const routes = ["/safepay", "/conversation", "/sandbox", "/batch"];
+const icons = [ShieldIcon, SearchIcon, BookIcon, LayersIcon];
 
 export default function IntelligenceTools() {
   const { lang } = useLanguage();
@@ -33,7 +35,7 @@ export default function IntelligenceTools() {
         <p className="micro mb-3 text-accent-ink">{c.eyebrow}</p>
         <h2 id="tools-title" className="text-title">{c.title}</h2>
       </div>
-      <div className="grid gap-px border border-card-border bg-card-border md:grid-cols-3">
+      <div className="grid gap-px border border-card-border bg-card-border sm:grid-cols-2 lg:grid-cols-4">
         {c.tools.map((tool, index) => {
           const Icon = icons[index];
           return <Link key={routes[index]} href={routes[index]} className="tool-link group flex flex-col bg-card p-5 focus-visible:relative">

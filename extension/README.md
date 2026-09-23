@@ -2,48 +2,203 @@
 
 See `CLAUDE.md` → Role gating and Scope boundaries for ownership.
 
-**Scaffolded ahead of the core app being demo-stable** — `frontend/` is
-still the bare Next.js default with no verdict UI wired up. This was a
-deliberate call to start the extension in parallel rather than the
-CLAUDE.md-recommended sequencing; flag to Oleg that the core UI still needs
-to land for the app to be demo-ready end to end.
-
-Manifest V3, no content script yet (badge + popup only — see below). Calls
-`POST /api/check-url` (`docs/API-CONTRACT.md`) for every domain check —
-never reimplements `checkUrls()` locally, per the project rule.
+Manifest V3. Calls the existing backend routes (`docs/API-CONTRACT.md`) for
+every check — `POST /api/check-url`, `POST /api/analyze`, `POST
+/api/report` — and never reimplements `checkUrls()` or the analysis
+pipeline locally, per the project rule.
 
 ## What's here
 
-- `manifest.json` — MV3 manifest. `host_permissions` is pinned to
-  `http://localhost:4000` (dev backend); update it alongside
-  `config.js#API_BASE_URL` for a deployed backend. Only requests the `tabs`
-  permission (needed for the background worker to read `tab.url` on every
-  tab's navigate/activate, not just a user-invoked one) — a separate
-  `activeTab` grant was redundant since the popup only ever reads `tab.id`.
-- `icons/` — toolbar/popup icons, reused from `frontend/public/icons` (same
-  brand mark as the PWA) so the extension doesn't ship a generic
-  puzzle-piece icon during the demo.
-- `background.js` — service worker. On tab activate/navigate, reads the
-  tab's URL and calls `/api/check-url`; sets a red badge (`!`) on the
-  extension icon if the domain is flagged. Fails open (no badge, no verdict
-  claimed) if the backend is unreachable — never blocks browsing.
-- `popup.js` / `popup.html` — clicking the icon shows the current tab's
-  hostname, safe/flagged state, and the flagged signal descriptions
-  (same `signals[].description`/`severity` shape as `/api/analyze`).
-- `config.js` — `API_BASE_URL`, the only place the backend origin is set.
+- `manifest.json` — MV3 manifest.
+  - `host_permissions`: `http://localhost:4000/*` (dev backend); update it
+    alongside `config.js#API_BASE_URL` for a deployed backend.
+  - `permissions`: `tabs` (background reads `tab.url` on every
+    navigate/activate for the automatic per-tab check), `contextMenus`
+    (right-click "Check selected text" / "Check link"), `storage` (recent
+    checks + the one-shot context-menu result, both in
+    `chrome.storage.local`), `activeTab` + `scripting` (only what's needed
+    to inject `content.js` on an explicit "Scan This Page" click — see
+    below).
+  - There is **no `content_scripts` entry.** `content.js` exists as a file
+    but is only ever injected programmatically via
+    `chrome.scripting.executeScript`, triggered by the "Scan This Page"
+    button — never automatically on page load. This was a deliberate choice
+    over registering it in `manifest.json`'s `content_scripts` (the task
+    brief left this open — "register in manifest ... or programmatic
+    injection on click — your call"): it keeps the extension's footprint on
+    every page at zero until the user explicitly asks for a scan, and needs
+    only `activeTab` rather than a broad host-permissions grant.
+- `icons/` — toolbar/popup icons, reused from `frontend/public/icons`.
+- `config.js` — `API_BASE_URL`, `FRONTEND_ORIGIN` (for the "Open in
+  FraudLens" handoff link), and the two size caps (`MAX_ANALYZE_CHARS`,
+  `MAX_HANDOFF_CHARS`) used everywhere text is sent somewhere.
+- `api.js` — the only place that calls the backend. Thin wrappers:
+  `checkUrl(url)`, `analyzeText(text, language?)`, `reportSender(sender)`.
+  Every other file imports from here instead of hand-rolling `fetch()`.
+- `state.js` — shared, pure helpers that turn an already-received backend
+  response into one of four UI states — `neutral` / `safe` / `suspicious` /
+  `high-risk` (plus `unreachable` for a failed backend call) — plus the
+  badge glyph/colour and the text label for each. This is UI classification
+  only; it never re-derives a verdict from raw text.
+- `history.js` — rolling "recent checks" list in `chrome.storage.local`
+  (max 15 entries). Stores **domain + timestamp + result state only, never
+  message text or page content.**
+- `background.js` — service worker.
+  - Preserves the original per-tab auto-check (14B): on
+    navigate/activate, calls `checkUrl()` for the tab's URL and caches the
+    result per `tabId`; the popup reads the cache instead of re-checking.
+  - Sets one of four badge states via `state.js` (14C): blank/neutral, `✓`
+    steel-blue safe, `?` amber suspicious, `!` red high-risk, `×` grey
+    unreachable — fails open on a backend error, exactly as before.
+  - `scanActiveTab(tabId)` (14D): injects `content.js`, sends the extracted
+    text to `/api/analyze`, records a recent-check entry, and — only for a
+    signal whose `source` is `identity_check` or `url_parser` (the
+    deterministic, non-LLM checks) at medium/high severity — asks
+    `content.js` to show a dismissible inline banner (14G).
+  - Registers the two context menu items (14E/14F) in `onInstalled` and
+    handles their clicks: selected text → `/api/analyze`, a right-clicked
+    link → `/api/check-url`. Either way the result is written to
+    `chrome.storage.local["fraudlens.contextResult"]` and a small
+    `result.html` popup window is opened to show it — nothing navigates,
+    nothing runs without the click.
+- `content.js` — **not** auto-run (see manifest note above). Injected only
+  on explicit user action. On injection it immediately reads
+  `document.body.innerText` (capped at 4000 chars) as its completion value
+  — `innerText` never includes `<input>`/`<textarea>` values, so password
+  and hidden-field content is never read, by construction, not by filtering.
+  It then stays resident to handle a later `FRAUDLENS_SHOW_BANNER` message,
+  building the banner with `createElement`/`textContent` only (no
+  `innerHTML`) so nothing in an analysis result can execute as markup.
+- `popup.html` / `popup.js` (14A) — redesigned, ~380px wide, dark
+  "instrument" surface matching the main app's severity palette (steel /
+  brass / brick — see `styles.css`). Sections: current site + state pill,
+  strongest evidence (top signals), actions (Scan This Page / Report this
+  site / Open in FraudLens), a page-scan result panel that appears after a
+  scan, recent checks, and the privacy line (14L).
+- `result.html` / `result.js` — small extension page for context-menu
+  results, same visual language as the popup, reads the one-shot
+  `chrome.storage.local["fraudlens.contextResult"]` entry `background.js`
+  wrote.
+- `styles.css` — shared by `popup.html` and `result.html`. Colour tokens
+  are **manually copied** from `frontend/app/globals.css`'s severity
+  palette (steel accent / brass caution / brick danger, zero border-radius,
+  monospace for domains) — extension pages can't import that Tailwind theme
+  directly, so keep this file in sync by hand if the app's palette changes.
+  `frontend/app/globals.css` itself is read-only reference and was never
+  edited for this work.
 
 ## Load it locally
 
 `chrome://extensions` → enable Developer mode → "Load unpacked" → select
 this `extension/` directory. Requires the backend running at
-`http://localhost:4000` (or wherever `config.js` points).
+`http://localhost:4000` (or wherever `config.js` points), and, for the "Open
+in FraudLens" link, the frontend running at `http://localhost:3000` (or
+wherever `config.js#FRONTEND_ORIGIN` points).
+
+## Feature status (Phase 14/15 of the project brief)
+
+| Item | Status | Notes |
+|---|---|---|
+| 14A popup redesign | Done | `popup.html`/`popup.js`/`styles.css` |
+| 14B automatic URL check | Preserved | Unchanged behaviour, new UI consumes it |
+| 14C badge states | Done | 4 states + a text explanation always shown, badge glyph never the only signal |
+| 14D Scan This Page | Done | `content.js` + `background.js#scanActiveTab` |
+| 14E context menu: selection | Done | `background.js` + `result.html` |
+| 14F context menu: link | Done | Reuses `/api/check-url`, same as the badge check |
+| 14G inline banner | Done, scoped down | Only for deterministic (`identity_check`/`url_parser`) signals, never LLM-only ones; dismissible, never blocks the page |
+| 14H financial-form warning | **Deferred, out of scope for this pass** | Too invasive for the time available, per the task brief — no code for this exists |
+| 14I report this site | Done | `POST /api/report` with the current hostname as `sender` — see limitation below |
+| 14J recent checks | Done | `history.js`, `chrome.storage.local`, 15-entry cap, no text ever stored |
+| 14K web app handoff | Partial, documented limitation below | |
+| 14L privacy copy | Done | Shown in both `popup.html` and `result.html` |
+
+### Known limitations
+
+- **Web app handoff (14K).** The frontend's `/result` page only reads its
+  own `sessionStorage` (`frontend/lib/storage.ts` → `loadResult()`), which
+  an extension running on a different origin cannot write into, and there is
+  no query-param entry point into that flow today. Rather than inventing new
+  frontend/backend state from the extension side, "Open in FraudLens" opens
+  `FRONTEND_ORIGIN/?scan=<capped text>` — a short, capped excerpt (see
+  `MAX_HANDOFF_CHARS` in `config.js`) is attached as a query param, but
+  **the frontend does not currently read it**, so today this link just opens
+  the FraudLens home page. Flag to the frontend owner if a `scan` query-param
+  entry point on the home page (prefill + optionally auto-run) is wanted;
+  this file was left untouched per the task's directory-gating rule.
+- **`/api/report`'s `sender` field.** The contract's `/api/report` only
+  ever stores a single free-form `sender` string plus a count
+  (`backend/src/db/index.js`); there's no dedicated "domain report" shape.
+  "Report this site" sends the current hostname as `sender`, which the
+  backend accepts (it's just a string identifier) but conflates with
+  phone-number/sender reports in the same table. This is a pre-existing
+  backend limitation, not something this extension pass changes — no
+  backend field was invented to work around it.
+- **14H (financial-form/payment warning) is explicitly skipped** for this
+  pass, per the task brief — no detection of payment forms, no code path
+  for it exists in `content.js` or elsewhere.
+- **14G banner** only fires from the "Scan This Page" flow, not from the
+  automatic per-tab URL check — the automatic check has no page text to
+  reason about beyond the domain itself, and the badge/popup already covers
+  that case.
+
+## Manual verification checklist (chrome://extensions)
+
+Since this environment can't load an unpacked extension into a real
+browser, the code was reviewed by hand instead of tested live. Before the
+demo, a human should walk through:
+
+1. **Load**: `chrome://extensions` → Developer mode → Load unpacked →
+   select `extension/`. Confirm no manifest/parse errors are reported.
+2. **Auto badge check (14B/14C)**: with the backend running, navigate to a
+   normal site (should badge `✓` safe) and to a known lookalike domain from
+   `backend/src/services/domain-matching/index.js`'s test fixtures (should
+   badge `!` red / `?` amber depending on severity). Stop the backend and
+   navigate again — badge should show grey `×`, popup text should say
+   "Backend unreachable", and the page must not be blocked (fail-open).
+3. **Popup layout (14A)**: open the popup on a couple of sites, confirm the
+   ~380px width, section layout, state pill, and privacy line all render
+   and don't overflow.
+4. **Scan This Page (14D)**: on a real page with visible text, click "Scan
+   This Page" in the popup; confirm a verdict/signals panel appears, and
+   that "Recent checks" gets a new entry. Confirm it does **not** fire on
+   plain page load — only on the click.
+5. **Inline banner (14G)**: scan a page containing a known lookalike-domain
+   link or an MCB/SBM/Absa/Bank-One-impersonation-style message (e.g. one of
+   `data/test-payloads/`'s samples, pasted into a scratch page) and confirm
+   the dismissible top banner appears and can be dismissed; confirm it does
+   *not* appear for a page whose only signals are LLM-only (no
+   `identity_check`/`url_parser` source).
+6. **Context menu — selection (14E)**: select some text on any page,
+   right-click, confirm "Check selected text with FraudLens" appears, click
+   it, confirm a small result window opens with a verdict and signals.
+7. **Context menu — link (14F)**: right-click a link (ideally a lookalike
+   test-fixture URL), confirm "Check link with FraudLens" appears and opens
+   a result window without navigating the page.
+8. **Report this site (14I)**: click "Report this site" in the popup,
+   confirm a success message with a report count appears, and that a
+   second click increments it.
+9. **Recent checks (14J)**: after a few checks of different kinds, confirm
+   the popup's "Recent checks" list shows domain + relative time + a state
+   dot for each, oldest entries drop off past 15.
+10. **Open in FraudLens (14K)**: click the link after a page scan or a
+    context-menu check; confirm it opens `FRONTEND_ORIGIN` with a `scan=`
+    query param (frontend doesn't consume it yet — this is the documented
+    limitation above, not a bug).
+11. **Permissions sanity**: in `chrome://extensions` → Details → confirm the
+    permissions list matches `manifest.json` (`tabs`, `contextMenus`,
+    `storage`, `activeTab`, `scripting`, plus the `localhost:4000` host
+    permission) — no unexpected broad host access.
 
 ## Demo note (differentiator: domain/lookalike-URL matching)
 
 Live demo path for this differentiator: navigate to a lookalike domain from
 `backend/src/services/domain-matching/index.js`'s test fixtures (e.g. a
-`mcb-secure.top`-style host), click the extension icon, and show the red
-badge + popup signal — same detection function the message-analysis flow
-uses, now running on the URL bar instead of pasted text. Coordinate with
-Caellum's demo script (`data/test-payloads/`) so this beat is sequenced with
-the rest of the walkthrough rather than improvised.
+`mcb-secure.top`-style host), open the popup, and show the red state pill +
+strongest-evidence signal — same detection function the message-analysis
+flow uses, now running on the URL bar instead of pasted text. For the newer
+Phase 14 features, follow with a right-click "Check link with FraudLens" on
+a lookalike link found on a page (no navigation needed), then a "Scan This
+Page" on a page containing a pasted scam-style message to show the inline
+banner. Coordinate with Caellum's demo script (`data/test-payloads/`) so
+this beat is sequenced with the rest of the walkthrough rather than
+improvised.
