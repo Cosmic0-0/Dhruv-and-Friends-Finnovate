@@ -114,3 +114,42 @@ test("analyzeMessage still returns a valid result when no grounding is relevant 
   assert.equal(result.verdict, "scam");
   assert.equal(typeof result.explanation, "string");
 });
+
+test("analyzeMessage attaches scamProfile/journey when the LLM supplies a valid scamType and stage", async () => {
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({
+        content: [{ text: JSON.stringify({ ...MOCK_LLM_RESULT, scamType: "mcb_impersonation", stage: "otp_request" }) }],
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  const result = await analyzeMessage("test message", "en");
+
+  assert.deepEqual(result.scamProfile, { type: "MCB_IMPERSONATION", stage: "OTP_REQUEST", claimedIdentity: "IslandTrust Bank" });
+  assert.equal(result.journey.currentStage, "OTP_REQUEST");
+  assert.ok(Array.isArray(result.journey.likelyNextStages) && result.journey.likelyNextStages.length > 0);
+});
+
+test("analyzeMessage omits scamProfile/journey (never fails) when scamType/stage are missing or invalid", async () => {
+  globalThis.fetch = async () =>
+    new Response(
+      JSON.stringify({ content: [{ text: JSON.stringify({ ...MOCK_LLM_RESULT, scamType: "not_a_real_type", stage: "also_not_real" }) }] }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+
+  const result = await analyzeMessage("test message", "en");
+
+  assert.equal("scamProfile" in result, false);
+  assert.equal("journey" in result, false);
+  assert.equal(result.verdict, "scam"); // the rest of the result is unaffected
+});
+
+test("observedSender must be present verbatim and is separate from claimed identity", async () => {
+ for (const observedSender of ["Sender-Alpha", "Invented sender", {bad:true}]) {
+  globalThis.fetch = async () => new Response(JSON.stringify({content:[{text:JSON.stringify({...MOCK_LLM_RESULT, observedSender})}]}));
+  const result = await analyzeMessage("From: Sender-Alpha. MCB: verify now");
+  assert.equal(result.observedSender, observedSender === "Sender-Alpha" ? observedSender : undefined);
+  assert.equal(result.sender,"IslandTrust Bank");
+ }
+});

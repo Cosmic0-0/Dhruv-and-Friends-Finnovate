@@ -70,7 +70,9 @@ LLM prompt as a hint string.
   "riskScore": "number, optional — LLM-supplied confidence 0-100 that the message is a scam. Omitted (not 0/null) if the LLM didn't supply a valid number in range. Unchanged by this update.",
   "sender": "string, optional — identity the message claims to be from (phone number, short code, or name), as extracted by the LLM. Omitted if none was apparent.",
   "senderReports": "number, optional — crowdsourced report count for `sender` (backend/src/db/index.js). Only present when `sender` is present.",
-  "riskCategories": "object, NEW — see below. Always present."
+  "riskCategories": "object, NEW — see below. Always present.",
+  "scamProfile": "object, optional, NEW (P1) — see below. Only present when the LLM supplied a valid `stage` (see below); `type` inside it may still be null.",
+  "journey": "object, optional, NEW (P1) — see below. Present under the same condition as `scamProfile`."
 }
 ```
 
@@ -142,6 +144,31 @@ categories (e.g. `lookalike_url`/`domain`-ish types → `technical_risk`,
 its matched signals, or `"LOW"` if none matched. **This is purely additive
 — `riskScore` (the existing single 0-100 LLM confidence number) is
 unchanged and still returned exactly as before.**
+
+#### `scamProfile` / `journey` (NEW, P1)
+
+```json
+{
+  "scamProfile": { "type": "MCB_IMPERSONATION" | ... | null, "stage": "OTP_REQUEST" | ..., "claimedIdentity": "string | null" },
+  "journey": { "currentStage": "OTP_REQUEST" | ..., "likelyNextStages": [ { "stage": "ACCOUNT_TAKEOVER" | ..., "reason": "string" } ] }
+}
+```
+
+Both objects are present only when the LLM supplied a `stage` that
+validates against the fixed `SCAM_STAGES` enum
+(`backend/src/services/playbooks/index.js`) — an invalid or missing value
+from the LLM omits both fields entirely, the same best-effort contract as
+`riskScore`/`sender`. `scamProfile.type` is validated the same way against
+`SCAM_TYPES` and can be `null` even when `scamProfile` itself is present
+(the message clearly represents a known stage of *some* scam, but doesn't
+match one of the known local playbooks). `journey.likelyNextStages` is
+**never LLM-generated** — it's a deterministic lookup,
+`getLikelyNextStages(scamType, stage)` in the same module, capped at 3
+entries — so "what may happen next" can never be an unsupported claim (see
+`CLAUDE.md`'s "Scam Stage Control"/"Scam Playbook Control" sections).
+Present on all three analyze routes (`/api/analyze`, `/api/batch-scan`,
+`/api/analyze/screenshot`), since all three call the same
+`analyzeMessage()`.
 
 ### Errors
 
@@ -494,3 +521,99 @@ versus what's likely to change before the demo:
   `services/ocr/index.js`'s comment, but isn't Kreol-tuned. Recheck with
   Joshua's dataset once real Kreol screenshots are available to test
   against.
+
+## P1 campaign intelligence (additive)
+
+The three analysis routes (`POST /api/analyze`, `/api/analyze/screenshot`,
+`/api/batch-scan` per-message results) optionally include:
+
+```ts
+observedSender?: string; // explicitly present verbatim in submitted text, separate from claimed sender
+scamDna?: {
+  fingerprintId: string;
+  matchStrength: "new" | "matched";
+  relatedReports: number;
+  relatedSenders: number;
+  relatedDomains: number;
+};
+```
+
+`scamDna` is only attached to non-safe results with a recognized
+`scamProfile.type`. The fingerprint combines the scam type and a normalized
+claimed-identity slug (for example `MCB_IMPERSONATION-mcb`). Counts are prior
+observations **before this check**: a first sighting has all three related
+counts zero and `matchStrength: "new"`. `relatedReports` counts prior analysis
+checks, **not** independent community reports or verified victims. Repeated
+checks of the same message increment the observation count. A matching type
+and identity is a pattern grouping, not proof of a coordinated criminal campaign.
+
+Only explicit observed sender identifiers become sender nodes; the claimed
+institution is not fabricated into a sender. Redacted phone placeholders are
+not stored as sender identifiers. Phone numbers redacted before analysis
+cannot be recovered by the graph. No raw message body is persisted.
+
+### GET /api/campaign/:fingerprintId
+
+Read-only, non-LLM. Returns 404 `{ "error": "campaign not found" }` for an
+unknown ID; 400 for IDs longer than 300 characters.
+
+```ts
+{
+  fingerprintId: string;
+  scamType: string;
+  claimedIdentity: string | null;
+  messageCount: number; // all observations, including the latest check
+  senders: string[]; // all distinct observed sender identifiers, sorted
+  domains: string[]; // all distinct deterministic lookalike domains, sorted
+}
+```
+
+Sender community report counts remain a separate lookup through
+`POST /api/check-sender`; graph observations never increment those counts.
+Campaign and playbook reads share the existing 120 requests / 15 minutes / IP
+read limiter. Campaign metadata is public in this unauthenticated demo, like
+the existing sender report counts; no per-user private campaign storage is claimed.
+
+### GET /api/sandbox/playbooks
+
+Returns `{ maxTurns: 5, playbooks: [{ scamType, label, typicalStages: string[] }] }`.
+This is the authoritative ordered stage list for the simulation UI.
+
+### POST /api/sandbox/next
+
+Request: `{ scamType: string, stage: string, turnIndex: number }`.
+The type and stage are normalized against the finite enums above; the stage
+must belong to that type's `typicalStages`. `turnIndex` is a non-negative safe
+integer, starting at zero. Invalid input returns 400. Body limit 10kb;
+30 requests / 15 minutes / IP, 429 when exceeded.
+
+```ts
+{
+  simulated: true;
+  ended: boolean;
+  scamType: string;
+  stage: string;
+  turnIndex: number;
+  typicalStages: string[];
+  nextStage: string | null;
+  line: string | null;
+  tactic: { label: string; explanation: string };
+  source: "llm" | "scripted" | "ended";
+}
+```
+
+`turnIndex >= 5` returns `ended: true`, `line: null`, `nextStage: null`,
+`source: "ended"` without an LLM call. Earlier turns return one line. A null
+`nextStage` indicates the last playbook stage or turn budget; the client then
+shows its simulation-ended recap. This endpoint is stateless: it does not
+track sessions or authorize communication. It **never enables real
+communication**. The UI must label every line as a simulation.
+
+Generation uses the same local/hosted-fallback `callLLM` transport as analysis,
+grounded in that stage's fixed example lines. Model JSON is validated, lines
+are limited to 240 characters, and contact details, links, multiline output,
+and markup are rejected. On transport failure or invalid output, the response
+uses a deterministic example selected by `turnIndex` (no 502). Tactic labels
+and explanations always come from the fixed playbook, never the model.
+Live LLM latency and hosted-fallback reachability still need a pre-demo check;
+the scripted fallback keeps the lesson available during an outage.

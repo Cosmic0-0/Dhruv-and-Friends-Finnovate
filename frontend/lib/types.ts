@@ -7,6 +7,10 @@
  * never synthesise them client-side.
  */
 
+export const SCAM_STAGES = ["INITIAL_CONTACT", "TRUST_BUILDING", "AUTHORITY_CLAIM", "URGENCY", "CREDENTIAL_REQUEST", "OTP_REQUEST", "PAYMENT_REQUEST", "PAYMENT_PRESSURE", "ACCOUNT_TAKEOVER"] as const;
+export type ScamStage = typeof SCAM_STAGES[number];
+export type ScamType = "MCB_IMPERSONATION" | "SBM_IMPERSONATION" | "ABSA_IMPERSONATION" | "BANK_ONE_IMPERSONATION" | "TELCO_PRIZE_SCAM" | "MOBILE_MONEY_FRAUD" | "FAKE_PARCEL" | "MARKETPLACE_PAYMENT_FRAUD";
+
 export type Verdict = "safe" | "suspicious" | "scam";
 
 export type Severity = "low" | "medium" | "high";
@@ -50,6 +54,10 @@ export interface AnalyzeRequest {
 }
 
 export interface AnalyzeResponse {
+  scamProfile?: { type: ScamType | null; stage: ScamStage; claimedIdentity: string | null };
+  journey?: { currentStage: ScamStage; likelyNextStages: { stage: ScamStage; reason: string }[] };
+  scamDna?: { fingerprintId: string; matchStrength: "new" | "matched"; relatedReports: number; relatedSenders: number; relatedDomains: number };
+
   verdict: Verdict;
   signals: Signal[];
   /** Free-form, NOT an enforced enum (e.g. "block_sender", "report_to_bank", "verify_official_channel"). */

@@ -1,14 +1,18 @@
 import { callLLM } from "./llmClient.js";
 import { getKreolGrounding } from "./kreolGrounding.js";
+import { SCAM_TYPES, SCAM_STAGES, normalizeScamType, normalizeStage, getLikelyNextStages } from "../playbooks/index.js";
 
 const VERDICTS = ["safe", "suspicious", "scam"];
 const SEVERITIES = ["low", "medium", "high"];
 
 const SYSTEM_PROMPT = `You are a fraud detection assistant for Mauritius. Analyze the message for scam signals (bank impersonation, urgency language, spoofed identity, mobile money fraud, telecom prize scams). Respond with ONLY valid JSON matching this schema:
-{"verdict": "safe"|"suspicious"|"scam", "signals": [{"type": string, "description": string, "severity": "low"|"medium"|"high", "evidence": string}], "suggestedAction": string, "explanation": string, "riskScore": number, "sender": string|null}
+{"verdict": "safe"|"suspicious"|"scam", "signals": [{"type": string, "description": string, "severity": "low"|"medium"|"high", "evidence": string}], "suggestedAction": string, "explanation": string, "riskScore": number, "sender": string|null, "observedSender": string|null, "scamType": string|null, "stage": string|null}
 - "evidence" on each signal is a short VERBATIM excerpt (exact text or URL) copied from the message that triggered that signal. Omit it if no specific excerpt applies.
 - "riskScore" is an integer 0-100: your overall confidence this message is a scam (0 = certainly safe, 100 = certainly a scam).
 - "sender" is the identity the message claims to be from (a phone number, short code, or name like "MCB" or "My.t" mentioned in or implied by the message), or null if none is apparent.
+- "observedSender" is the actual sender identifier explicitly shown in a From/Sender line (phone number or sender ID). Copy it verbatim; use null when not explicitly present or redacted. This is separate from the claimed institution in "sender".
+- "scamType" is one of: ${SCAM_TYPES.join(" | ")} — or null if the message is safe or doesn't match any of these known formats. Never invent a type outside this list.
+- "stage" is one of: ${SCAM_STAGES.join(" | ")} — the stage THIS message itself represents in a typical scam progression, or null if the message is safe or a stage isn't clearly apparent. Never invent a stage outside this list.
 The explanation must be written in the same language as the input message (English, French, or Kreol, including code-switched text).`;
 
 function validate(parsed) {
@@ -86,5 +90,24 @@ export async function analyzeMessage(message, language) {
   if (typeof parsed.sender === "string" && parsed.sender.trim() !== "") {
     result.sender = parsed.sender.trim();
   }
+
+  if (typeof parsed.observedSender === "string" && parsed.observedSender.trim() && parsed.observedSender.length <= 200 && message.includes(parsed.observedSender.trim())) {
+    result.observedSender = parsed.observedSender.trim();
+  }
+
+  // scamType/stage are LLM-supplied and validated against the fixed enums
+  // in services/playbooks - an invalid or missing value never fails the
+  // analysis, it's just omitted (same contract as riskScore/sender above).
+  // "What may happen next" is deliberately NOT LLM-generated: it's a
+  // deterministic lookup keyed by (scamType, stage), so it stays testable
+  // and can never invent an unsupported claim (see CLAUDE.md's "Scam Stage
+  // Control" / "Scam Playbook Control" sections).
+  const scamType = normalizeScamType(parsed.scamType);
+  const stage = normalizeStage(parsed.stage);
+  if (stage) {
+    result.scamProfile = { type: scamType, stage, claimedIdentity: result.sender ?? null };
+    result.journey = { currentStage: stage, likelyNextStages: getLikelyNextStages(scamType, stage) };
+  }
+
   return result;
 }

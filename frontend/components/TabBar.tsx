@@ -2,14 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NAV_TABS } from "@/lib/navTabs";
 import { useLanguage } from "./LanguageProvider";
-import { BookIcon, SearchIcon, TrendIcon } from "./icons";
-
-const TABS = [
-  { href: "/", key: "check", Icon: SearchIcon, match: (p: string) => p === "/" || p.startsWith("/result") },
-  { href: "/learn", key: "learn", Icon: BookIcon, match: (p: string) => p.startsWith("/learn") },
-  { href: "/trends", key: "trends", Icon: TrendIcon, match: (p: string) => p.startsWith("/trends") },
-] as const;
 
 export default function TabBar() {
   const pathname = usePathname() ?? "/";
@@ -20,10 +14,13 @@ export default function TabBar() {
       aria-label="Main"
       // Fully opaque (no /95, no backdrop-blur): a translucent bar let scrolled
       // content read through it. The strong top rule is the design system's.
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card pb-[env(safe-area-inset-bottom)]"
+      // md:hidden: a fixed bottom bar is a mobile/PWA convention — desktop
+      // gets DesktopNav in AppHeader instead (see globals.css for the
+      // matching --tabbar-height reset at the same breakpoint).
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
     >
       <ul className="mx-auto flex max-w-app items-stretch">
-        {TABS.map(({ href, key, Icon, match }) => {
+        {NAV_TABS.map(({ href, key, Icon, match }) => {
           const active = match(pathname);
           return (
             <li key={href} className="flex-1">

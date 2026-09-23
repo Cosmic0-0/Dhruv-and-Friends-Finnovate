@@ -249,22 +249,67 @@ truth, this is an index:
 
 ## 5. Frontend
 
-*(To be filled in with the same level of detail as §3 once the frontend
-conventions survey — copy/i18n system, navigation, existing `trends`/`learn`
-pages, design tokens — comes back. See §11 for what's being built on top of
-it this session.)*
+The frontend (`frontend/`, Next.js 15 App Router, shipped as an installable
+PWA) was considerably more built-out than the P0 task brief assumed before
+this session started: message analysis already rendered as a structured,
+indexed findings list (`components/result/sections.tsx`'s `WhySection`), not
+a bare percentage; a severity-shaded risk band *and* an optional numeric
+risk meter sit side by side (`components/result/parts.tsx`'s
+`VerdictBanner`); evidence excerpts were already highlighted inline in the
+original message text (`lib/highlight.ts` + `MessageCard`); a link-check
+panel already showed the deterministic domain-matching result as structured
+data (`LinkCheckPanel`); and screenshot upload was already fully wired into
+the same check form (`components/ScreenshotUpload.tsx` +
+`components/CheckForm.tsx`) — not disabled, contrary to the initial task
+brief.
 
-The frontend (`frontend/`, Next.js App Router, shipped as an installable
-PWA) is considerably more built-out than a bare "paste → score" tool
-already: message analysis already renders as a structured, indexed findings
-list (`components/result/sections.tsx`'s `WhySection`), not a bare
-percentage; a severity-shaded risk band *and* an optional numeric risk meter
-sit side by side (`components/result/parts.tsx`'s `VerdictBanner`); evidence
-excerpts are already highlighted inline in the original message text
-(`lib/highlight.ts` + `MessageCard`); a link-check panel already shows the
-deterministic domain-matching result as structured data
-(`LinkCheckPanel`); and screenshot upload is already fully wired into the
-same check form, not a separate/disabled flow.
+### Conventions worth knowing before touching this codebase
+
+- **i18n**: `lib/i18n.ts` is one large `Copy` interface plus three full
+  literal objects (`COPY.en`/`.fr`/`.kreol`). English and French are written
+  directly; new Kreol content that hasn't been reviewed yet is wrapped in
+  `TODO_KREOL(...)` — an identity function that shows the English string
+  until Joshua (the Kreol owner) reviews and replaces it (`grep
+  TODO_KREOL`). The `<T k="...">` helper only reaches **top-level,
+  string-typed** `Copy` keys (so server components can render static text
+  without becoming client components) — a nested key like `home.tagline` or
+  `safepay.title` needs a client component reading `useLanguage().copy`
+  directly.
+- **Evidence-source taxonomy**: `signals[].source` (`message_text` |
+  `llm_analysis` | `url_parser` | `identity_check` | `community_reports`,
+  see §3.1/API-CONTRACT.md) is the axis the Evidence Provenance UI groups
+  on — `message_text`/`llm_analysis` → "AI analysis",
+  `url_parser`/`identity_check` → "Deterministic checks". `lib/result.ts`'s
+  separate `SignalKind` taxonomy (`signalKind()`) is a different axis
+  (what the signal is *about* — lookalike URL, urgency, credential
+  request, ...) used for the human-readable title of each row, not for
+  grouping.
+- **Prose-parsing precedent**: `lib/result.ts`'s `parseLinkCheck()`
+  regex-parses the backend's English `description` sentences into
+  structured display data, predating this session's additive
+  `domain`/`officialDomain`/`claimedIdentity`/`actualDomain`/`beneficiary`
+  signal fields. Prefer consuming the new structured fields directly where
+  they exist (`components/result/sections.tsx`'s `IdentityCompare`) rather
+  than parsing prose, but the precedent is there if a future field isn't
+  backend-supported yet.
+- **Design tokens** (`app/globals.css`): a deliberately restrained 3-tone
+  palette — `accent` (muted blue-grey, also aliased as `safe`), `caution`
+  (muted gold), `danger` (muted brick red) — each with an `-ink` variant
+  documented as the AA-passing choice for text on a light surface. New UI
+  should draw from this set rather than introducing a 4th hue per category;
+  Scam X-Ray distinguishes signal *types* via their title/label text (shown
+  as a hover/tap hint) rather than a wider color vocabulary.
+- **Wait/progress pattern**: `components/WaitProgress.tsx`'s
+  `useWaitStage`/`WaitFill`/`WaitStatus` (staged copy at 4s/15s/40s, a
+  CSS-driven decelerating fill, never a percentage or time estimate) is the
+  one loading pattern in the app — reused as-is for SafePay rather than
+  inventing a second spinner.
+- **`app/trends/page.tsx`** is a static, hand-authored educational glossary
+  today (no live numbers, no aggregate report data) — the natural page to
+  evolve into a future "Scam Radar" (P3), not something already there.
+  **`app/learn/page.tsx`** is a binary scam-vs-genuine quiz with a daily
+  streak system and no API calls — no overlap with a future "Scam Sandbox"
+  simulated-conversation idea (P1); that would be new build.
 
 ## 6. Reliability & the judging rubric
 
@@ -393,27 +438,132 @@ only new optional fields/routes were added. `docs/API-CONTRACT.md` and
   has been reported N times" for a user-typed identifier without that
   lookup itself inflating the count.
 
+### Frontend — new UI built on the additive fields above
+
+- **Landing page** (`app/page.tsx` + new `components/Hero.tsx`): a
+  positioning section — tagline, one-paragraph pitch, four differentiator
+  bullets, and a second entry point ("I'm about to pay" → `/safepay`) —
+  added above the existing headline/CheckForm, which is unchanged.
+  `Hero.tsx` is a client component (unlike the server-rendered `page.tsx`)
+  because it needs `copy.home.*`, a nested `Copy` key the server-render-
+  friendly `<T>` helper can't reach.
+- **Scam X-Ray** (`lib/highlight.ts`, `components/result/parts.tsx`'s
+  `MessageCard`): each `EvidenceMark`/`Segment` now optionally carries an
+  `id` (the signal's original index) and a `label` (its human title). A
+  highlighted phrase in the message becomes a real `<a href="#sig-N"
+  title="...">` — clicking/tapping it jumps to and reveals that exact
+  finding in the Evidence Provenance list below, with the title as a
+  hover/tap hint. No new color vocabulary; distinction comes from the
+  label, not a 4th hue (see §5).
+- **Evidence Provenance** (`components/result/sections.tsx`'s `WhySection`,
+  reworked): signals are grouped by their existing `source` field into "AI
+  analysis" (`message_text`/`llm_analysis`) and "Deterministic checks"
+  (`url_parser`/`identity_check`) subsections, each numbered continuously
+  and labeled with its highest severity. A "Community intelligence" row
+  appears only when `senderReports > 0` (never fabricated). A "N
+  independent evidence sources agree" line appears only when 2+ of the
+  three groups actually have something to show. No "campaign intelligence"
+  section exists — there's no backend data for it yet, so nothing is shown
+  rather than invented.
+- **Claimed vs. actual identity** (`components/result/sections.tsx`'s new
+  `IdentityCompare`): renders directly from an `IDENTITY_MISMATCH` signal's
+  structured `claimedIdentity`/`officialDomain`/`actualDomain`/`beneficiary`
+  fields (this session's backend addition) — a comparison table, not prose
+  parsing. Renders nothing when no such signal is present.
+- **"Before you pay" / SafePay** (new `app/safepay/page.tsx` +
+  `components/SafePayFlow.tsx`): a 5-field form (requester, contact
+  channel, recipient, amount, message) that combines into one message
+  string and reuses `/api/analyze` unmodified, plus `/api/check-sender` for
+  the recipient's report count (looked up without incrementing it). The
+  result view **reuses** `VerdictBanner`, `MessageCard`, `WhySection`,
+  `IdentityCompare`, `LinkCheckPanel`, `WhatToDo`, and `ReportButton`
+  directly from the Check flow's own components — no parallel result-
+  rendering system. `VerdictBanner`'s `label` prop is overridden to "Pause
+  before paying" / "No warning signs found" for the SafePay framing.
+  Reuses `useWaitStage`/`WaitFill`/`WaitStatus` for the loading state (see
+  §5) rather than a new spinner.
+- **New `POST /api/check-sender` client call** (`lib/api.ts`,
+  `lib/types.ts`): `checkSender()`, following the exact same `postJson`/
+  runtime-shape-guard pattern as every other call in the file.
+
+### Live verification (real Ollama, real deterministic checks, isolated ports)
+
+Both dev servers on this machine were already occupied by other sessions
+(the user's own long-running instance, and the peer session's) sharing the
+repo's single `.next`/SQLite state — running a third instance against the
+same ports/build directory caused real webpack corruption
+(`__webpack_modules__[moduleId] is not a function`) before this was caught.
+Fixed by copying the frontend source to an isolated directory and running
+backend + frontend on dedicated ports (4009/3999) with their own SQLite DB,
+against the team's real Ollama instance reachable over Tailscale
+(`100.97.152.43:11434`, `qwen3:8b`) — not a mock. Verified live, end to end:
+
+- A real Kreol/English code-switched MCB phishing message (matching the
+  CLAUDE.md demo example almost verbatim) produced a correct `scam` verdict,
+  riskScore 95, 5 signals, and rendered: Scam X-Ray highlights with a
+  working click-to-jump (confirmed via the anchor's `href`/`hash`, not just
+  visually), Evidence Provenance's "3 independent evidence sources agree"
+  with correct AI/Deterministic/Community grouping, and a correct Claimed
+  vs. Actual card (MCB / mcb.mu / mcb-secure-login.top).
+- The full SafePay flow: submitting a fake "MCB Fraud Team" phone-call
+  payment request produced "Pause before paying" with the right risk
+  breakdown; reporting the recipient and re-submitting the same recipient
+  correctly surfaced "This recipient has been reported 1 time" — the
+  crowdsourced feedback loop working end to end through a real UI action,
+  not just the API.
+- Caught and fixed one real bug this way: the SafePay result screen's
+  "start over" button and the empty-form's "go to Check screen" link had
+  been given the same copy key (`safepay.back`), so the reset button
+  incorrectly read "Check a message instead" instead of describing what it
+  actually does. Split into `safepay.checkAnother` (resets the SafePay
+  form) and `safepay.back` (navigates to `/`, unchanged) across all three
+  languages.
+- English and French were verified rendering correctly (including all new
+  copy) via live language switching. Kreol was not conclusively verified
+  live in this session (a UI interaction with the language switch didn't
+  visibly register in the browser tooling used, on the second and third
+  attempt) — the same `TODO_KREOL`-wrapped-English rendering path is
+  already proven correct by every other Kreol string in the app that uses
+  it, so this is treated as very likely fine but not independently
+  confirmed; worth a 30-second spot check before the demo.
+- `npx tsc --noEmit` is clean after every change. Backend's `npm test`
+  (73 tests) passes, including 3 new tests for `checkUrls`'s field
+  additions being additive and `/api/check-sender`'s read-only behavior.
+  Frontend's own `npm test` could not run in this sandbox — its Node
+  version predates the `--experimental-strip-types` support Next 15's
+  `.test.ts` files need; `lib/api.test.ts` was still updated (a new
+  `checkSender` URL-pinning case) and typechecks cleanly, but wasn't
+  executed. Re-run `npm test` in `frontend/` on a newer Node before the
+  demo to confirm.
+
 ### Coordination note
 
 A second Claude Code session (`uom-hackathon-6e`) is concurrently doing a
 frontend-only visual-polish pass (markup/Tailwind only, no logic changes) on
 the same repo, based on the user's separate request. File ownership for this
-session's P0 work was confirmed directly with that session to avoid
-concurrent edits to the same lines: this session owns `app/page.tsx` (adding
-the hero/positioning section + SafePay CTA), `components/result/parts.tsx`
-and `sections.tsx` (Scam X-Ray + Evidence Provenance), and a new
-`app/safepay/` route; the peer session is doing visual-only refinement
-elsewhere and will hold off on those specific files.
+session's P0 work was confirmed directly with that session: this session
+owned `app/page.tsx`, `components/result/parts.tsx` and `sections.tsx`
+(plus, as necessary wiring neither session had explicitly claimed,
+`components/ResultView.tsx`), and new files (`components/Hero.tsx`,
+`components/SafePayFlow.tsx`, `app/safepay/page.tsx`); the peer session
+held off on those and worked on visual-only refinement elsewhere
+(`CheckForm.tsx`, `AppHeader.tsx`, `TabBar.tsx`, `RecentChecks.tsx`,
+`icons.tsx`, `globals.css`, `learn/`, `trends/`).
 
 ## 12. Changelog
 
-- **2026-09-23** — Initial version written: full backend architecture
-  documented from source; frontend section stubbed pending a conventions
-  survey; P0 scope (landing redesign, Scam X-Ray, Evidence Provenance,
-  SafePay, screenshot upload UI) confirmed with the user. Backend additive
-  changes landed: structured `domain`/`officialDomain` fields on
+- **2026-09-23** — P0 shipped: landing page hero + SafePay entry point,
+  Scam X-Ray (categorized, clickable evidence highlighting), Evidence
+  Provenance (AI/deterministic/community grouping), Claimed-vs-actual
+  identity comparison, and the full "Before you pay" / SafePay flow.
+  Backend additions: structured `domain`/`officialDomain` fields on
   `lookalike_url` signals, structured `claimedIdentity`/`officialDomain`/
   `actualDomain`/`beneficiary` fields on `IDENTITY_MISMATCH` signals, and
-  the new read-only `POST /api/check-sender` route. Discovered screenshot
-  upload UI was already fully wired (not disabled, contrary to the initial
-  task brief) — no work needed there.
+  the new read-only `POST /api/check-sender` route — all backward-
+  compatible, `docs/API-CONTRACT.md` and `frontend/lib/types.ts` updated in
+  lockstep. Discovered screenshot upload UI was already fully wired (not
+  disabled, contrary to the initial task brief) — no work needed there.
+  Live-verified end to end against the team's real Ollama instance (see
+  above); one real copy bug found and fixed via that testing. Next up
+  (P1, not started): Scam Journey, ScamDNA, Fraud Network graph,
+  Conversation Mode, Scam Sandbox.

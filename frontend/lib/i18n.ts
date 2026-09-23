@@ -13,7 +13,7 @@
 import type { ValidationReason } from "./api";
 import type { QuizLanguage, TrendCategory } from "./learn-content";
 import type { SafeCheckKey, SignalKind, StepKey } from "./result";
-import type { LanguageHint, Severity } from "./types";
+import type { LanguageHint, Severity, ScamStage } from "./types";
 
 /** One label per wait stage: 0–4s, 4–15s, 15–40s, 40s+ (see components/WaitProgress.tsx). */
 export type WaitStages = readonly [string, string, string, string];
@@ -99,7 +99,10 @@ export interface Copy {
     categories: { title: string; body: string; example: string }[];
     footerNote: string;
   };
+  conversation: { title: string; intro: string; thread: string; empty: string; add: string; submit: string; reset: string; progress: string; pending: string; message: string; unknownStage: string; verdicts: Record<"safe" | "suspicious" | "scam", string> };
   result: {
+    networkLink: string;
+    journey: { title: string; whatNextTitle: string; youAreHere: string; caveat: string; labels: Record<ScamStage, string> };
     title: string;
     fromSender: (sender: string) => string;
     back: string;
@@ -239,6 +242,9 @@ export interface Copy {
     recipientReportedLine: (n: number) => string;
     verifyCta: string;
     reportCta: string;
+    /** Resets the form for another payment check (shown under a result). */
+    checkAnother: string;
+    /** Navigates away to the normal Check screen (shown under the empty form). */
     back: string;
   };
 }
@@ -323,7 +329,28 @@ function relative(ms: number, words: { now: string; min: string; hour: string; d
 
 const fmt = (n: number, locale: string) => n.toLocaleString(locale);
 
+const JOURNEY_EN: Copy["result"]["journey"] = {
+  title: "Scam journey", whatNextTitle: "What may happen next", youAreHere: "You are here",
+  caveat: "A possible progression, not a prediction. Earlier stages are not confirmed by this message.",
+  labels: { INITIAL_CONTACT: "Initial contact", TRUST_BUILDING: "Building trust", AUTHORITY_CLAIM: "Claiming authority", URGENCY: "Creating urgency", CREDENTIAL_REQUEST: "Requesting credentials", OTP_REQUEST: "Requesting an OTP", PAYMENT_REQUEST: "Requesting payment", PAYMENT_PRESSURE: "Pressuring you to pay", ACCOUNT_TAKEOVER: "Account takeover" },
+};
+const JOURNEY_FR: Copy["result"]["journey"] = {
+  title: "Parcours de l’arnaque", whatNextTitle: "Ce qui pourrait suivre", youAreHere: "Vous êtes ici",
+  caveat: "Une progression possible, pas une prédiction. Ce message ne confirme pas les étapes précédentes.",
+  labels: { INITIAL_CONTACT: "Premier contact", TRUST_BUILDING: "Mise en confiance", AUTHORITY_CLAIM: "Autorité revendiquée", URGENCY: "Création d’urgence", CREDENTIAL_REQUEST: "Demande d’identifiants", OTP_REQUEST: "Demande de code OTP", PAYMENT_REQUEST: "Demande de paiement", PAYMENT_PRESSURE: "Pression pour payer", ACCOUNT_TAKEOVER: "Prise de contrôle du compte" },
+};
+const CONVERSATION_EN: Copy["conversation"] = {
+  title: "See the conversation unfold", intro: "Add messages in the order you received them. Follow the warning signs as the conversation develops.",
+  thread: "Conversation", empty: "Start with the first message you received.", add: "Next message", submit: "Analyze message", reset: "Clear conversation", progress: "Furthest stage detected", pending: "Add a message to reveal its stage. Each message is analyzed separately; the thread shows the furthest stage detected.", message: "Message", unknownStage: "Stage not identified", verdicts: { safe: "No warning signs", suspicious: "Suspicious", scam: "Scam" },
+};
+const CONVERSATION_FR: Copy["conversation"] = {
+  title: "Suivez la conversation", intro: "Ajoutez les messages dans l’ordre de réception. Suivez les signaux d’alerte au fil de la conversation.",
+  thread: "Conversation", empty: "Commencez par le premier message reçu.", add: "Message suivant", submit: "Analyser le message", reset: "Effacer la conversation", progress: "Étape la plus avancée détectée", pending: "Ajoutez un message pour identifier son étape. Chaque message est analysé séparément ; le fil affiche l’étape la plus avancée détectée.", message: "Message", unknownStage: "Étape non identifiée", verdicts: { safe: "Aucun signal d’alerte", suspicious: "Suspect", scam: "Arnaque" },
+};
+
 const RESULT_EN: Copy["result"] = {
+  journey: JOURNEY_EN,
+  networkLink: "View fraud network",
   title: "Result",
   fromSender: (s) => `SMS from ${s}`,
   back: "Back",
@@ -493,6 +520,7 @@ const SAFEPAY_EN: Copy["safepay"] = {
     n === 1 ? "This recipient has been reported 1 time" : `This recipient has been reported ${n} times`,
   verifyCta: "Verify through official channel",
   reportCta: "Report this",
+  checkAnother: "Check another payment",
   back: "Check a message instead",
 };
 
@@ -567,6 +595,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       footerNote:
         'The closest thing to real trend data today: when you check a message, the result screen shows "reported by others" if that sender has been flagged before.',
     },
+    conversation: CONVERSATION_EN,
     result: RESULT_EN,
     learn: LEARN_EN,
     safepay: SAFEPAY_EN,
@@ -685,7 +714,10 @@ export const COPY: Record<UiLanguage, Copy> = {
       footerNote:
         "Ce qui se rapproche le plus d'une donnée de tendance aujourd'hui : quand vous vérifiez un message, l'écran de résultat indique si cet expéditeur a déjà été signalé par d'autres.",
     },
+    conversation: CONVERSATION_FR,
     result: {
+      journey: JOURNEY_FR,
+      networkLink: "Voir le réseau de fraude",
       title: "Résultat",
       fromSender: (s) => `SMS de ${s}`,
       back: "Retour",
@@ -864,6 +896,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         n === 1 ? "Ce destinataire a été signalé 1 fois" : `Ce destinataire a été signalé ${n} fois`,
       verifyCta: "Vérifier via un canal officiel",
       reportCta: "Signaler ceci",
+      checkAnother: "Vérifier un autre paiement",
       back: "Vérifier un message à la place",
     },
   },
@@ -971,7 +1004,10 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
     },
     // Result screen: reviewed by the frontend owner.
+    conversation: TODO_KREOL(CONVERSATION_EN),
     result: {
+      journey: TODO_KREOL(JOURNEY_EN),
+      networkLink: TODO_KREOL("View fraud network"),
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
       back: "Retour",

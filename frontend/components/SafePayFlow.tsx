@@ -198,7 +198,7 @@ export default function SafePayFlow() {
           onClick={checkAnother}
           className="pressable font-heading flex min-h-14 items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
         >
-          {c.back}
+          {c.checkAnother}
         </button>
       </div>
     );

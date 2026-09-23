@@ -1,4 +1,6 @@
 import Link from "next/link";
+import IntelligenceNav from "./IntelligenceNav";
+import DesktopNav from "./DesktopNav";
 import LanguageSwitch from "./LanguageSwitch";
 import { ShieldIcon } from "./icons";
 
@@ -22,11 +24,15 @@ export default function AppHeader() {
             Fraud<span className="text-accent">Lens</span>
           </span>
         </Link>
-        <LanguageSwitch />
+        <div className="flex items-center gap-6">
+          <DesktopNav />
+          <LanguageSwitch />
+        </div>
       </div>
       <div className="gutter border-t border-white/10 py-2">
         <p className="micro text-on-ink/45">Scam &amp; phishing detector · Mauritius</p>
       </div>
+      <IntelligenceNav />
     </header>
   );
 }

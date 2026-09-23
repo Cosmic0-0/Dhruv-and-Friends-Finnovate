@@ -9,6 +9,7 @@ import { getVerdictCopy } from "@/lib/verdict";
 import { useLanguage } from "./LanguageProvider";
 import ReportButton from "./result/ReportButton";
 import { CheckAnotherButton, MessageCard, ResultHeader, SentPanel, VerdictBanner } from "./result/parts";
+import ScamJourney from "./result/ScamJourney";
 import { IdentityCompare, LinkCheckPanel, SafeChecklist, signalTitle, WhatToDo, WhySection } from "./result/sections";
 
 /**
@@ -109,6 +110,8 @@ export default function ResultView() {
                 show={show}
               />
               <IdentityCompare response={response} copy={copy} />
+              <ScamJourney response={response} copy={copy} />
+              {response.scamDna?.matchStrength === "matched" && <div className="border-t border-card-border px-5 py-4"><Link className="pressable inline-flex items-center gap-3 text-sm font-semibold text-accent-ink underline underline-offset-4" href={`/network/${encodeURIComponent(response.scamDna.fingerprintId)}`}>{copy.result.networkLink}<span aria-hidden="true">↗</span></Link></div>}
               <LinkCheckPanel response={response} copy={copy} />
               <WhatToDo verdict={response.verdict} suggestedAction={response.suggestedAction} copy={copy} show={show} />
             </>

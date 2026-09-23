@@ -222,5 +222,5 @@ export default function ParticleField() {
     };
   }, []);
 
-  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" />;
+  return <canvas ref={canvasRef} aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 opacity-30" />;
 }

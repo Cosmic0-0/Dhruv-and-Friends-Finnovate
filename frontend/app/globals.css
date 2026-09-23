@@ -96,11 +96,26 @@
   }
 
   /* Phone-width on small screens; widens past tablet so desktop isn't a phone
-     column stranded in empty space. */
+     column stranded in empty space. TabBar (the fixed bottom bar) is hidden
+     at this same breakpoint — md:hidden in TabBar.tsx, DesktopNav takes over
+     in AppHeader — so there's no bar height left to reserve either. */
   @media (min-width: 48rem) {
     :root {
       --container-app: 660px;
+      --tabbar-height: 0px;
     }
+  }
+
+  /* True desktop: wider still, but capped well short of full-bleed so body
+     copy doesn't run past a comfortable line length. */
+  @media (min-width: 64rem) {
+    :root {
+      --container-app: 840px;
+    }
+  }
+
+  @media (min-width: 80rem) {
+    :root { --container-app: 1200px; --spacing-gutter: 2rem; }
   }
 
   html {
@@ -376,3 +391,29 @@
     transform: scaleX(var(--wait-step, 0.25));
   }
 }
+
+/* Fine instrument grid gives the landing surface depth without obscuring text. */
+.hero-instrument::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(rgb(238 240 239 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(238 240 239 / 5%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(110deg, transparent 25%, black);
+}
+.hero-instrument::after {
+  content: "";
+  position: absolute;
+  right: -5rem;
+  top: -6rem;
+  width: 23rem;
+  height: 23rem;
+  border: 1px solid rgb(238 240 239 / 9%);
+  border-radius: 50%;
+  box-shadow: 0 0 0 48px rgb(238 240 239 / 3%), 0 0 0 96px rgb(238 240 239 / 2%);
+  z-index: -1;
+  pointer-events: none;
+}
+.tool-link { transition: background-color 160ms ease; }
+.tool-link:hover { background-color: var(--color-accent-soft); }

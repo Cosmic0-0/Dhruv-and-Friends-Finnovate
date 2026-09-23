@@ -1,8 +1,22 @@
 import Database from "better-sqlite3";
 
-const db = new Database(process.env.DATABASE_URL || "./fraudlens.db");
+export const db = new Database(process.env.DATABASE_URL || "./fraudlens.db");
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS scam_dna (
+    fingerprint_id TEXT PRIMARY KEY, scam_type TEXT NOT NULL, claimed_identity TEXT,
+    message_count INTEGER NOT NULL DEFAULT 0,
+    first_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS scam_dna_senders (
+    fingerprint_id TEXT NOT NULL, sender TEXT NOT NULL,
+    PRIMARY KEY (fingerprint_id, sender)
+  );
+  CREATE TABLE IF NOT EXISTS scam_dna_domains (
+    fingerprint_id TEXT NOT NULL, domain TEXT NOT NULL,
+    PRIMARY KEY (fingerprint_id, domain)
+  );
   CREATE TABLE IF NOT EXISTS reports (
     sender TEXT PRIMARY KEY,
     report_count INTEGER NOT NULL DEFAULT 0

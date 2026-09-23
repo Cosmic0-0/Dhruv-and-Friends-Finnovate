@@ -1,3 +1,6 @@
+import { nextSandboxTurn, MAX_SANDBOX_TURNS } from "../services/sandbox/index.js";
+import { PLAYBOOKS, normalizeScamType, normalizeStage } from "../services/playbooks/index.js";
+import { attachScamDna, getFingerprintMatches } from "../services/scam-dna/index.js";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { analyzeMessage } from "../services/analysis/index.js";
@@ -82,6 +85,7 @@ function isNonEmptyString(value) {
 // (see services/analysis/index.js). Only attached when a sender was
 // identified - senderReports is meaningless without a sender to key on.
 function withSenderReports(result) {
+  attachScamDna(result);
   if (typeof result.sender === "string") {
     result.senderReports = getReportCount(result.sender);
   }
@@ -275,4 +279,25 @@ router.post("/report", reportLimiter, json({ limit: "300kb" }), (req, res) => {
   }
   const reportCount = reportSender(sender);
   res.json({ sender, reportCount, recorded: true });
+});
+
+router.get("/campaign/:fingerprintId", checkSenderLimiter, (req, res) => {
+  if (req.params.fingerprintId.length > 300) return res.status(400).json({ error: "invalid fingerprint ID" });
+  const campaign = getFingerprintMatches(req.params.fingerprintId);
+  if (!campaign) return res.status(404).json({ error: "campaign not found" });
+  res.json(campaign);
+});
+
+const sandboxLimiter = rateLimited("too many simulation requests, try again shortly", { windowMs: 15 * 60 * 1000, limit: 30 });
+router.get("/sandbox/playbooks", checkSenderLimiter, (_req, res) => {
+  res.json({ maxTurns: MAX_SANDBOX_TURNS, playbooks: Object.entries(PLAYBOOKS).map(([scamType, p]) => ({ scamType, label: p.label, typicalStages: p.typicalStages })) });
+});
+router.post("/sandbox/next", sandboxLimiter, json({ limit: "10kb" }), async (req, res) => {
+  const scamType = normalizeScamType(req.body?.scamType);
+  const stage = normalizeStage(req.body?.stage);
+  const turnIndex = req.body?.turnIndex;
+  if (!scamType || !stage || !PLAYBOOKS[scamType].typicalStages.includes(stage) || !Number.isSafeInteger(turnIndex) || turnIndex < 0) {
+    return res.status(400).json({ error: "valid scamType, playbook stage and non-negative integer turnIndex are required" });
+  }
+  res.json(await nextSandboxTurn({ scamType, stage, turnIndex }));
 });
