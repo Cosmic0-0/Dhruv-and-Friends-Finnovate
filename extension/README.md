@@ -1,6 +1,4 @@
-# Browser extension (stretch goal)
-
-See `CLAUDE.md` → Role gating and Scope boundaries for ownership.
+# Browser extension
 
 Manifest V3. Calls the existing backend routes (`docs/API-CONTRACT.md`) for
 every check — `POST /api/check-url`, `POST /api/analyze`, `POST

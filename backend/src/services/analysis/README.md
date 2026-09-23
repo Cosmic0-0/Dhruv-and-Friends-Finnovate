@@ -1,7 +1,5 @@
 # Analysis service
 
-See `CLAUDE.md` → Role gating for ownership.
-
 Bounded **semantic** analysis for `POST /api/analyze` (called from
 `services/pipeline`). The model interprets language only: it returns
 enum-coded semantic signals (`SEMANTIC_CODES` in `services/signals/registry.js`)
