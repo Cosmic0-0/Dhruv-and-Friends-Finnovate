@@ -83,7 +83,7 @@ export function PracticeCard({
               cy="42"
               r={R}
               fill="none"
-              stroke="var(--color-ink)"
+              stroke="var(--color-brand)"
               strokeWidth="7"
               strokeLinecap="round"
               strokeDasharray={`${filled} ${circumference}`}

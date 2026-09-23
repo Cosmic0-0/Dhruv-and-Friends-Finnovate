@@ -166,7 +166,7 @@ export default function Celebration({
           ref={buttonRef}
           type="button"
           onClick={close}
-          className="pill pressable mt-4 w-full bg-primary text-on-primary"
+          className="btn pressable mt-4 w-full bg-primary text-on-primary"
         >
           {L.celebrate.keepGoing}
         </button>

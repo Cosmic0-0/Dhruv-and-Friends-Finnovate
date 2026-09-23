@@ -86,7 +86,7 @@ export default function ConversationFlow() {
           <p className="data mt-1 text-right text-[0.8125rem] text-ink-muted">{copy.charCount(message.length, MAX_MESSAGE_LENGTH)}</p>
           <p id="conversation-privacy" className="mt-3 text-[0.9375rem] leading-5 text-ink-muted">{copy.privacyNote}</p>
           {errorText && <p role="alert" className="mt-4 rounded-2xl bg-danger-soft px-3.5 py-3 text-[0.9375rem] text-danger-ink">{errorText}</p>}
-          {loading ? <div className="mt-5 flex items-center gap-4"><WaitStatus phase="running" stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} /><button type="button" onClick={cancel} className="pressable min-h-11 shrink-0 px-2 text-[0.9375rem] text-ink-muted">{copy.wait.cancel}</button></div> : <button type="submit" disabled={!message.trim()} className="pill pressable mt-4 w-full bg-primary text-on-primary disabled:opacity-40">{error ? copy.retry : c.submit}</button>}
+          {loading ? <div className="mt-5 flex items-center gap-4"><WaitStatus phase="running" stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} /><button type="button" onClick={cancel} className="pressable min-h-11 shrink-0 px-2 text-[0.9375rem] text-ink-muted">{copy.wait.cancel}</button></div> : <button type="submit" disabled={!message.trim()} className="btn pressable mt-4 w-full bg-primary text-on-primary disabled:opacity-40">{error ? copy.retry : c.submit}</button>}
         </form>
       </section>
       <aside className="sheet xl:sticky xl:top-6" aria-label={c.progress}>

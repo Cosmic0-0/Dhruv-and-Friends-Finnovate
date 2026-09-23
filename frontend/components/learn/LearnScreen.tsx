@@ -159,7 +159,7 @@ function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy
           <button
             type="button"
             onClick={onAccept}
-            className="pill pressable w-full bg-white text-[#111113]"
+            className="btn pressable w-full bg-white text-[#111113]"
           >
             {L.offerOther(L.languageName[pool.fallback])}
           </button>
@@ -269,7 +269,7 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="pill pressable mt-1 w-full bg-white text-[#111113]"
+          className="btn pressable mt-1 w-full bg-white text-[#111113]"
         >
           {L.playAgain}
         </button>
@@ -328,7 +328,7 @@ function Quiz({
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
               aria-pressed={chosen}
-              className={`pill pressable transition-opacity ${
+              className={`btn pressable transition-opacity ${
                 isScamButton ? "bg-white text-[#111113]" : "bg-white/[0.14] text-white"
               } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white/70" : ""}`}
             >
@@ -349,7 +349,7 @@ function Quiz({
           ref={nextRef}
           type="button"
           onClick={next}
-          className="pill pressable w-full bg-white text-[#111113]"
+          className="btn pressable w-full bg-white text-[#111113]"
         >
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>

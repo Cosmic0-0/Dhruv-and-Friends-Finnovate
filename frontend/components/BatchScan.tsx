@@ -107,7 +107,7 @@ export default function BatchScan() {
           type="button"
           onClick={() => void submit()}
           disabled={!canSubmit}
-          className="pill pressable bg-primary text-on-primary disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+          className="btn pressable bg-primary text-on-primary disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
         >
           {status === "loading" && <span className="size-4 animate-spin rounded-full border-2 border-on-ink/30 border-t-on-ink" />}
           {status === "loading" ? t("Scanning…") : t("Scan messages")}

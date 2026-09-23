@@ -83,16 +83,16 @@ export default function InstallCard({ copy }: { copy: Copy }) {
             {c.iosStep1}
           </p>
           <p className="text-[0.9375rem] text-ink-soft">{c.iosStep2}</p>
-          <button type="button" onClick={notNow} className="pill-sm pressable mt-1 w-fit bg-black/[0.06] text-ink-muted">
+          <button type="button" onClick={notNow} className="btn-sm pressable mt-1 w-fit bg-black/[0.06] text-ink-muted">
             {c.notNow}
           </button>
         </div>
       ) : (
         <div className="flex gap-2.5">
-          <button type="button" onClick={() => void add()} className="pill-sm pressable bg-primary text-on-primary">
+          <button type="button" onClick={() => void add()} className="btn-sm pressable bg-primary text-on-primary">
             {c.add}
           </button>
-          <button type="button" onClick={notNow} className="pill-sm pressable bg-black/[0.06] font-medium text-ink-muted">
+          <button type="button" onClick={notNow} className="btn-sm pressable bg-black/[0.06] font-medium text-ink-muted">
             {c.notNow}
           </button>
         </div>

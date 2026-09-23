@@ -197,7 +197,7 @@ export default function SafePayFlow() {
         <button
           type="button"
           onClick={checkAnother}
-          className="pill pressable  hover:bg-surface-dark-2"
+          className="btn pressable  hover:bg-surface-dark-2"
         >
           {c.checkAnother}
         </button>
@@ -234,7 +234,7 @@ export default function SafePayFlow() {
           type="submit"
           disabled={loading}
           aria-busy={loading}
-          className={`pill pressable relative  ${
+          className={`btn pressable relative  ${
             loading ? "cursor-progress" : "hover:bg-surface-dark-2"
           }`}
         >

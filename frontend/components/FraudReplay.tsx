@@ -40,7 +40,7 @@ export default function FraudReplay() {
           <div className="card flex flex-col items-start gap-3">
             <h2>{copy.result.missingTitle}</h2>
             <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
-            <Link href="/" className="pill-sm pressable mt-1 bg-primary text-on-primary">
+            <Link href="/" className="btn-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
@@ -165,7 +165,7 @@ export default function FraudReplay() {
 
         <Link
           href="/result"
-          className="pill pressable bg-primary text-on-primary"
+          className="btn pressable bg-primary text-on-primary"
         >
           {r.back}
         </Link>

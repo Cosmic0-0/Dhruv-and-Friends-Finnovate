@@ -40,9 +40,17 @@
      really does invert. */
   --color-surface-dark: var(--c-surface-dark);
   --color-surface-dark-2: var(--c-surface-dark-2);
-  /* Primary pill button on a light page: ink in light mode, light in dark. */
-  --color-primary: var(--c-primary);
-  --color-on-primary: var(--c-on-primary);
+  /* Primary action. Indigo in both modes, lifted in dark so it stays legible
+     on a near-black page. */
+  --color-primary: var(--c-brand);
+  --color-on-primary: var(--c-on-brand);
+  --color-brand: var(--c-brand);
+  --color-brand-deep: var(--c-brand-deep);
+  --color-brand-soft: var(--c-brand-soft);
+  /* Warm accent: highlights, the streak flame, the one hot spot on a cool
+     page. Far from the verdict hues so it never reads as a warning. */
+  --color-glow: var(--c-glow);
+  --color-glow-soft: var(--c-glow-soft);
   --color-skeleton: var(--c-skeleton);
   --color-track: var(--c-track);
 
@@ -60,11 +68,11 @@
   --color-line-strong: var(--c-line-strong);
 
   /* ---- Accent ----
-     The palette has no brand hue: the accent IS the ink. Kept as its own
-     token so "this is interactive" stays separable from "this is text". */
-  --color-accent: var(--c-ink);
-  --color-accent-deep: var(--c-ink);
-  --color-accent-ink: var(--c-ink);
+     Now the brand hue. Kept as its own token so "this is interactive" stays
+     separable from "this is text". */
+  --color-accent: var(--c-brand);
+  --color-accent-deep: var(--c-brand-deep);
+  --color-accent-ink: var(--c-brand-ink);
 
   /* ---- Verdict tones ----
      Each has a full-chroma value (fills, icons, large type) and an -ink
@@ -107,10 +115,16 @@
 
   /* ---- Shape ---- */
   --radius-card: 28px;
+  /* Buttons and inputs are soft rectangles; full-round is kept for things that
+     really are chips or circles (tab bar, icon badges, status dots, verdict
+     chips). That split is what stops the UI reading as a field of ovals. */
+  --radius-button: 14px;
+  --radius-field: 16px;
   --radius-pill: 9999px;
-  --shadow-card: 0 1px 1px rgb(28 28 40 / 2%), 0 14px 30px rgb(28 28 40 / 7%);
-  --shadow-hero: 0 16px 34px rgb(28 28 40 / 22%);
-  --shadow-tabbar: 0 12px 34px rgb(28 28 40 / 14%);
+  --shadow-card: 0 1px 1px rgb(20 20 60 / 3%), 0 12px 28px rgb(20 20 60 / 7%);
+  --shadow-hero: 0 18px 40px rgb(36 27 122 / 30%), 0 2px 6px rgb(36 27 122 / 16%);
+  --shadow-tabbar: 0 12px 34px rgb(20 20 60 / 16%);
+  --shadow-lift: 0 10px 30px rgb(20 20 60 / 10%);
 
   /* ---- Layout ---- */
   --container-app: 430px;
@@ -123,29 +137,36 @@
     color-scheme: light dark;
 
     /* Light (DESIGN.md "Tokens (light)"). */
-    --c-page: #f2f2f3;
-    --c-card: #fcfcfc;
-    --c-card-gradient: linear-gradient(180deg, #fcfcfc 0%, #f6f6f7 100%);
+    --c-page: #f4f4f7;
+    --c-card: #ffffff;
+    --c-card-gradient: linear-gradient(180deg, #ffffff 0%, #fafafd 100%);
     --c-card-edge: rgb(255 255 255 / 95%);
-    --c-muted: rgb(0 0 0 / 6%);
-    --c-suggestion: #e8e8ea;
-    --c-surface-dark: #111113;
-    --c-surface-dark-2: #2a2a2d;
-    --c-primary: #111113;
-    --c-on-primary: #ffffff;
-    --c-hero: linear-gradient(180deg, #2a2a2d 0%, #111113 55%, #0b0b0c 100%);
-    --c-hero-edge: transparent;
-    --c-skeleton: #e7e7ea;
-    --c-track: #e5e5ea;
+    --c-muted: rgb(20 20 40 / 5%);
+    --c-suggestion: #eceaf7;
 
-    --c-ink: #1c1c1e;
-    --c-ink-soft: #3c3c3e;
-    --c-ink-muted: #6e6e73;
+    --c-brand: #3b2fb5;
+    --c-brand-deep: #241b7a;
+    --c-brand-soft: #eeebff;
+    --c-brand-ink: #3b2fb5;
+    --c-on-brand: #ffffff;
+    --c-glow: #ff8a3d;
+    --c-glow-soft: #ffeede;
+
+    --c-surface-dark: #1a1630;
+    --c-surface-dark-2: #2a2450;
+    --c-hero: linear-gradient(155deg, #4a3cd0 0%, #3b2fb5 45%, #241b7a 100%);
+    --c-hero-edge: transparent;
+    --c-skeleton: #e9e9f0;
+    --c-track: #e6e6ee;
+
+    --c-ink: #14141b;
+    --c-ink-soft: #3a3a48;
+    --c-ink-muted: #6b6b7b;
     --c-on-ink: #ffffff;
     --c-icon-idle: #8e8e93;
 
-    --c-hairline: rgb(60 60 67 / 12%);
-    --c-line-strong: rgb(60 60 67 / 22%);
+    --c-hairline: rgb(20 20 40 / 10%);
+    --c-line-strong: rgb(20 20 40 / 20%);
 
     --c-red: #ff3b30;
     --c-red-ink: #c4221a;
@@ -165,7 +186,7 @@
     --c-tabbar: rgb(255 255 255 / 82%);
     --c-tabbar-edge: rgb(255 255 255 / 95%);
 
-    --c-scrim: rgb(12 12 14 / 50%);
+    --c-scrim: rgb(16 12 40 / 55%);
 
     /* Reserve the floating bar's height (66px) plus its 28px bottom inset. */
     --tabbar-height: 6.125rem;
@@ -182,27 +203,34 @@
    * duplicated — but the colours are not, which is what would otherwise drift.
    */
   :root {
-    --d-page: #0c0c0d;
-    --d-card: #1c1c1e;
-    --d-card-gradient: linear-gradient(180deg, #1f1f21 0%, #1a1a1c 100%);
-    --d-card-edge: rgb(255 255 255 / 6%);
+    --d-page: #0b0b12;
+    --d-card: #171722;
+    --d-card-gradient: linear-gradient(180deg, #1a1a27 0%, #15151f 100%);
+    --d-card-edge: rgb(255 255 255 / 7%);
     --d-muted: rgb(255 255 255 / 8%);
-    --d-suggestion: #1f1f21;
-    --d-surface-dark: #1c1c1e;
-    --d-surface-dark-2: #2c2c2e;
-    --d-primary: #f5f5f7;
-    --d-on-primary: #111113;
-    --d-hero: linear-gradient(180deg, #3a3a3c 0%, #232325 100%);
-    --d-hero-edge: rgb(255 255 255 / 8%);
-    --d-skeleton: #2c2c2e;
-    --d-track: #3a3a3c;
-    --d-ink: #f5f5f7;
-    --d-ink-soft: #c7c7cc;
-    --d-ink-muted: #98989f;
+    --d-suggestion: #1c1b2e;
+
+    --d-brand: #7c6ff5;
+    --d-brand-deep: #5b4fd6;
+    --d-brand-soft: #211d3f;
+    --d-brand-ink: #a79dff;
+    --d-on-brand: #ffffff;
+    --d-glow: #ff9e5c;
+    --d-glow-soft: #3a2415;
+
+    --d-surface-dark: #171722;
+    --d-surface-dark-2: #232334;
+    --d-hero: linear-gradient(155deg, #3f349e 0%, #2e2578 45%, #1d1755 100%);
+    --d-hero-edge: rgb(255 255 255 / 9%);
+    --d-skeleton: #242432;
+    --d-track: #2c2c3d;
+    --d-ink: #f4f4f7;
+    --d-ink-soft: #c5c5d2;
+    --d-ink-muted: #9595a6;
     --d-on-ink: #ffffff;
     --d-icon-idle: #8e8e93;
-    --d-hairline: rgb(84 84 88 / 45%);
-    --d-line-strong: rgb(84 84 88 / 65%);
+    --d-hairline: rgb(140 140 180 / 22%);
+    --d-line-strong: rgb(140 140 180 / 38%);
     --d-red: #ff6961;
     --d-red-ink: #ff6961;
     --d-red-tint: #3a1512;
@@ -213,9 +241,9 @@
     --d-orange-ink: #ffb340;
     --d-orange-tint: #3a2610;
     --d-mark-ink: #ffb4ae;
-    --d-tabbar: rgb(30 30 32 / 82%);
+    --d-tabbar: rgb(26 26 40 / 82%);
     --d-tabbar-edge: rgb(255 255 255 / 10%);
-    --d-scrim: rgb(0 0 0 / 60%);
+    --d-scrim: rgb(5 4 16 / 65%);
   }
 
   /* System preference, unless Settings has explicitly chosen light. */
@@ -227,10 +255,15 @@
       --c-card-edge: var(--d-card-edge);
       --c-muted: var(--d-muted);
       --c-suggestion: var(--d-suggestion);
+      --c-brand: var(--d-brand);
+      --c-brand-deep: var(--d-brand-deep);
+      --c-brand-soft: var(--d-brand-soft);
+      --c-brand-ink: var(--d-brand-ink);
+      --c-on-brand: var(--d-on-brand);
+      --c-glow: var(--d-glow);
+      --c-glow-soft: var(--d-glow-soft);
       --c-surface-dark: var(--d-surface-dark);
       --c-surface-dark-2: var(--d-surface-dark-2);
-      --c-primary: var(--d-primary);
-      --c-on-primary: var(--d-on-primary);
       --c-hero: var(--d-hero);
       --c-hero-edge: var(--d-hero-edge);
       --c-skeleton: var(--d-skeleton);
@@ -267,40 +300,45 @@
 
   :root[data-theme="dark"] {
     color-scheme: dark;
-      --c-page: var(--d-page);
-      --c-card: var(--d-card);
-      --c-card-gradient: var(--d-card-gradient);
-      --c-card-edge: var(--d-card-edge);
-      --c-muted: var(--d-muted);
-      --c-suggestion: var(--d-suggestion);
-      --c-surface-dark: var(--d-surface-dark);
-      --c-surface-dark-2: var(--d-surface-dark-2);
-      --c-primary: var(--d-primary);
-      --c-on-primary: var(--d-on-primary);
-      --c-hero: var(--d-hero);
-      --c-hero-edge: var(--d-hero-edge);
-      --c-skeleton: var(--d-skeleton);
-      --c-track: var(--d-track);
-      --c-ink: var(--d-ink);
-      --c-ink-soft: var(--d-ink-soft);
-      --c-ink-muted: var(--d-ink-muted);
-      --c-on-ink: var(--d-on-ink);
-      --c-icon-idle: var(--d-icon-idle);
-      --c-hairline: var(--d-hairline);
-      --c-line-strong: var(--d-line-strong);
-      --c-red: var(--d-red);
-      --c-red-ink: var(--d-red-ink);
-      --c-red-tint: var(--d-red-tint);
-      --c-green: var(--d-green);
-      --c-green-ink: var(--d-green-ink);
-      --c-green-tint: var(--d-green-tint);
-      --c-orange: var(--d-orange);
-      --c-orange-ink: var(--d-orange-ink);
-      --c-orange-tint: var(--d-orange-tint);
-      --c-mark-ink: var(--d-mark-ink);
-      --c-tabbar: var(--d-tabbar);
-      --c-tabbar-edge: var(--d-tabbar-edge);
-      --c-scrim: var(--d-scrim);
+    --c-page: var(--d-page);
+    --c-card: var(--d-card);
+    --c-card-gradient: var(--d-card-gradient);
+    --c-card-edge: var(--d-card-edge);
+    --c-muted: var(--d-muted);
+    --c-suggestion: var(--d-suggestion);
+    --c-brand: var(--d-brand);
+    --c-brand-deep: var(--d-brand-deep);
+    --c-brand-soft: var(--d-brand-soft);
+    --c-brand-ink: var(--d-brand-ink);
+    --c-on-brand: var(--d-on-brand);
+    --c-glow: var(--d-glow);
+    --c-glow-soft: var(--d-glow-soft);
+    --c-surface-dark: var(--d-surface-dark);
+    --c-surface-dark-2: var(--d-surface-dark-2);
+    --c-hero: var(--d-hero);
+    --c-hero-edge: var(--d-hero-edge);
+    --c-skeleton: var(--d-skeleton);
+    --c-track: var(--d-track);
+    --c-ink: var(--d-ink);
+    --c-ink-soft: var(--d-ink-soft);
+    --c-ink-muted: var(--d-ink-muted);
+    --c-on-ink: var(--d-on-ink);
+    --c-icon-idle: var(--d-icon-idle);
+    --c-hairline: var(--d-hairline);
+    --c-line-strong: var(--d-line-strong);
+    --c-red: var(--d-red);
+    --c-red-ink: var(--d-red-ink);
+    --c-red-tint: var(--d-red-tint);
+    --c-green: var(--d-green);
+    --c-green-ink: var(--d-green-ink);
+    --c-green-tint: var(--d-green-tint);
+    --c-orange: var(--d-orange);
+    --c-orange-ink: var(--d-orange-ink);
+    --c-orange-tint: var(--d-orange-tint);
+    --c-mark-ink: var(--d-mark-ink);
+    --c-tabbar: var(--d-tabbar);
+    --c-tabbar-edge: var(--d-tabbar-edge);
+    --c-scrim: var(--d-scrim);
   }
 
   html {
@@ -466,13 +504,52 @@
     border-top: 1px solid var(--color-card-border);
   }
 
-  /* The one dark card per screen, carrying the screen's main question. */
+  /*
+   * The one brand-coloured card per screen, carrying its main question.
+   * The gradient is the base; ::before bleeds a warm glow in from the top
+   * right so the surface has a light source instead of being a flat fill.
+   */
   .hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     background: var(--c-hero);
     border: 1px solid var(--c-hero-edge);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-hero);
     color: #ffffff;
+  }
+
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(120% 90% at 100% 0%, rgb(255 138 61 / 34%), transparent 58%),
+      radial-gradient(90% 70% at 0% 100%, rgb(124 111 245 / 32%), transparent 62%);
+    pointer-events: none;
+  }
+
+  /* A hairline of light along the top edge, the way a lit surface catches it. */
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 45%), transparent);
+    pointer-events: none;
+  }
+
+  /*
+   * Minimal parallax: the hero drifts a little slower than the page as it
+   * scrolls away. --parallax is written by components/useParallax, and stays 0
+   * under reduced motion and wherever the hook is not used, so this is inert
+   * by default rather than something every hero opts out of.
+   */
+  .parallax {
+    transform: translate3d(0, var(--parallax, 0px), 0);
+    will-change: transform;
   }
 
   /* The flat #E8E8EA card: suggestions and the "what to do" action panel. */
@@ -511,9 +588,12 @@
     letter-spacing: 0;
   }
 
-  /* Every button is a full pill. .pill is the 50px primary/secondary size,
-     .pill-sm the 42px size used inside cards. */
-  .pill {
+  /*
+   * Buttons are soft rectangles, not pills. .btn is the 50px primary size,
+   * .btn-sm the compact size used inside cards. .pill below is kept for the
+   * things that really are chips.
+   */
+  .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -521,25 +601,36 @@
     min-height: 50px;
     padding-inline: 22px;
     border: 0;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-button);
     font-size: 1.0625rem;
     font-weight: 600;
     white-space: nowrap;
   }
 
-  .pill-sm {
+  .btn-sm {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    /* The mockup draws 42px; DESIGN.md also sets a 44px floor for touch
-       targets, and the floor wins. Two pixels is imperceptible; a missed tap
-       is not. */
+    /* 44px is the touch-target floor. */
     min-height: 44px;
-    padding-inline: 20px;
+    padding-inline: 18px;
     border: 0;
-    border-radius: var(--radius-pill);
+    border-radius: var(--radius-button);
     font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Genuinely round: verdict chips, counts, status markers. Small label-like
+     things, where a full curve still reads as a chip rather than an oval. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: var(--radius-pill);
+    padding: 5px 11px;
+    font-size: 0.8125rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -554,6 +645,14 @@
     box-shadow: var(--shadow-tabbar);
   }
 
+  /* The verdict entrance: the one orchestrated moment on the result screen. */
+  .reveal {
+    animation: fl-reveal 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  .reveal-2 { animation-delay: 70ms; }
+  .reveal-3 { animation-delay: 140ms; }
+
   .pressable {
     transition-property: background-color, color, border-color, opacity, transform, box-shadow;
     transition-duration: 180ms;
@@ -563,6 +662,11 @@
   .pressable:active:not(:disabled) {
     transform: scale(0.98);
   }
+}
+
+@keyframes fl-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -575,6 +679,17 @@
 
   .pressable:active:not(:disabled) {
     transform: none;
+  }
+
+  /* No drift, and the reveal lands already in place. */
+  .parallax {
+    transform: none !important;
+  }
+
+  .reveal {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 

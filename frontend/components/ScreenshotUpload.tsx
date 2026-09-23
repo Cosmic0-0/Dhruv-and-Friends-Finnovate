@@ -236,7 +236,7 @@ export function ScreenshotRow({
               <button
                 type="button"
                 onClick={onRetry}
-                className="pill-sm pressable bg-primary text-on-primary"
+                className="btn-sm pressable bg-primary text-on-primary"
               >
                 <RetryIcon className="size-3.5" strokeWidth={2} />
                 {copy.retry}

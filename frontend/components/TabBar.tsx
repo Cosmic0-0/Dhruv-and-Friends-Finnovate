@@ -8,7 +8,7 @@ import { useLanguage } from "./LanguageProvider";
 
 /**
  * The floating frosted tab bar (frontend/design/mockup/Main.html): a 326x66
- * pill, 28px above the bottom plus the home-indicator inset, with five slots —
+ * btn, 28px above the bottom plus the home-indicator inset, with five slots —
  * Check, Learn, a 56px centre primary button, Radar, Settings.
  *
  * Shown at every width. The design is an iPhone app, so there is no separate
@@ -31,7 +31,7 @@ export default function TabBar() {
         aria-label={copy.tabs[key]}
         aria-current={active ? "page" : undefined}
         className={`pressable flex size-[50px] items-center justify-center rounded-full ${
-          active ? "text-ink" : "text-icon-idle"
+          active ? "text-brand" : "text-icon-idle"
         }`}
       >
         <Icon className="size-[26px]" strokeWidth={active ? 2.3 : 1.7} />
@@ -52,7 +52,7 @@ export default function TabBar() {
       <Link
         href={NEW_CHECK_HREF}
         aria-label={copy.tabs.newCheck}
-        className="pressable flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgb(28_28_40_/_26%)]"
+        className="pressable flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_22px_rgb(36_27_122_/_45%)]"
       >
         <PlusIcon className="size-[26px]" />
       </Link>

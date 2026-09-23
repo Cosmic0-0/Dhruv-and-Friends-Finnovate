@@ -94,7 +94,7 @@ export default function SimpleMode({
             type="button"
             onClick={speaking ? stopSpeaking : speak}
             aria-pressed={speaking}
-            className="pill pressable w-full bg-muted-surface text-ink"
+            className="btn pressable w-full bg-muted-surface text-ink"
           >
             {speaking ? s.stopReading : s.readAloud}
           </button>

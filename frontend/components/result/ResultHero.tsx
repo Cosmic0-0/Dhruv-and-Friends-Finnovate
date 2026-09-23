@@ -6,11 +6,11 @@ import { LinkChainIcon, WarningIcon } from "../icons";
 
 /**
  * The dark result hero (design/mockup/Result-Scam.png, Result-Genuine.png):
- * the verdict pill, the risk score, and a row of supporting stats.
+ * the verdict btn, the risk score, and a row of supporting stats.
  *
  * It has two shapes, because the backend does not always send a score:
  *  - with riskScore: the big number and "/ 100", as drawn.
- *  - without: the verdict pill and the explanation line, no number at all.
+ *  - without: the verdict btn and the explanation line, no number at all.
  * getRiskDisplay() is the only thing that decides which — a score is never
  * derived here from the signals, because a made-up number is worse than none.
  *
@@ -19,7 +19,7 @@ import { LinkChainIcon, WarningIcon } from "../icons";
  * actually carried domainAgeDays.
  */
 
-/** The pill's dot colour. Text on the pill stays ink, so the dot is the only hue. */
+/** The btn's dot colour. Text on the btn stays ink, so the dot is the only hue. */
 const DOT: Record<Severity | "safe", string> = {
   high: "bg-danger",
   medium: "bg-caution",
@@ -57,14 +57,14 @@ export default function ResultHero({
   const display = getVerdictDisplay(response.verdict);
 
   return (
-    <section className="hero flex flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="verdict-label">
+    <section className="hero reveal flex flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="verdict-label">
       <div className="flex items-center justify-between gap-3">
         <span className="text-[0.9375rem] font-semibold text-white/70">
           {risk.showScore ? h.riskScore : copy.result.title}
         </span>
         <span
           id="verdict-label"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-white px-2.5 py-1 text-[0.8125rem] font-semibold text-[#1C1C1E]"
+          className="pill bg-white text-[#14141B]"
         >
           <span aria-hidden="true" className={`size-[7px] rounded-full ${heroDot(response.verdict)}`} />
           {label}

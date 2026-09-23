@@ -12,7 +12,7 @@ export default function NotFound() {
         <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">
           That page doesn&apos;t exist. Check a message instead.
         </p>
-        <Link href="/" className="pill pressable mt-2 bg-primary text-on-primary">
+        <Link href="/" className="btn pressable mt-2 bg-primary text-on-primary">
           Back to FraudLens
         </Link>
       </section>
