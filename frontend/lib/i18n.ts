@@ -92,7 +92,24 @@ export interface Copy {
     unexpected: string;
   };
   relativeTime: (ms: number) => string;
-  tabs: { check: string; learn: string; trends: string };
+  /** Tab-bar accessible names. The bar itself is icons only (mockup/Main.html). */
+  tabs: { check: string; learn: string; trends: string; settings: string; newCheck: string };
+  /**
+   * The "Tools" list on Radar. Batch scan, Conversation and Sandbox have no
+   * tab of their own in the five-slot bar, so this card is their entry point.
+   */
+  tools: { title: string; batch: string; conversation: string; sandbox: string; batchHint: string; conversationHint: string; sandboxHint: string };
+  /** Settings screen: the language switch, the privacy note and an about section. */
+  settings: {
+    title: string;
+    languageTitle: string;
+    languageNote: string;
+    privacyTitle: string;
+    privacyBody: string;
+    aboutTitle: string;
+    aboutBody: string;
+    teamLogoAlt: string;
+  };
   trends: {
     title: string;
     intro: string;
@@ -722,7 +739,27 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
-    tabs: { check: "Check", learn: "Learn", trends: "Trends" },
+    tabs: { check: "Check", learn: "Learn", trends: "Radar", settings: "Settings", newCheck: "Check a new message" },
+    tools: {
+      title: "Tools",
+      batch: "Batch scan",
+      batchHint: "Several at once",
+      conversation: "Conversation",
+      conversationHint: "A whole thread",
+      sandbox: "Sandbox",
+      sandboxHint: "Practise safely",
+    },
+    settings: {
+      title: "Settings",
+      languageTitle: "Language",
+      languageNote: "Changes every screen, and tells the analysis which language to answer in.",
+      privacyTitle: "Privacy",
+      privacyBody:
+        "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Your checks are kept on this device only.",
+      aboutTitle: "About",
+      aboutBody: "FraudLens helps you spot a scam message before you pay, tap a link or share a code. Built in Mauritius, for Mauritius.",
+      teamLogoAlt: "Dhruv and Friends logo",
+    },
     trends: {
       title: "Known scam patterns in Mauritius",
       intro:
@@ -856,7 +893,27 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
-    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances" },
+    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Radar", settings: "Réglages", newCheck: "Vérifier un nouveau message" },
+    tools: {
+      title: "Outils",
+      batch: "Analyse groupée",
+      batchHint: "Plusieurs à la fois",
+      conversation: "Conversation",
+      conversationHint: "Tout un échange",
+      sandbox: "Simulation",
+      sandboxHint: "S'entraîner sans risque",
+    },
+    settings: {
+      title: "Réglages",
+      languageTitle: "Langue",
+      languageNote: "Change tous les écrans, et indique à l'analyse dans quelle langue répondre.",
+      privacyTitle: "Confidentialité",
+      privacyBody:
+        "Les numéros de téléphone, adresses e-mail et numéros de compte sont retirés dans votre navigateur avant l'envoi du message pour analyse. Vos vérifications restent sur cet appareil.",
+      aboutTitle: "À propos",
+      aboutBody: "FraudLens vous aide à repérer une arnaque avant de payer, d'ouvrir un lien ou de partager un code. Conçu à Maurice, pour Maurice.",
+      teamLogoAlt: "Logo de Dhruv and Friends",
+    },
     trends: {
       title: "Arnaques connues à Maurice",
       intro:
@@ -1214,7 +1271,33 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
-    tabs: { check: "Verifie", learn: "Aprann", trends: "Tandans" },
+    tabs: {
+      check: "Verifie",
+      learn: "Aprann",
+      trends: "Radar",
+      settings: TODO_KREOL("Settings"),
+      newCheck: TODO_KREOL("Check a new message"),
+    },
+    tools: TODO_KREOL({
+      title: "Tools",
+      batch: "Batch scan",
+      batchHint: "Several at once",
+      conversation: "Conversation",
+      conversationHint: "A whole thread",
+      sandbox: "Sandbox",
+      sandboxHint: "Practise safely",
+    }),
+    settings: TODO_KREOL({
+      title: "Settings",
+      languageTitle: "Language",
+      languageNote: "Changes every screen, and tells the analysis which language to answer in.",
+      privacyTitle: "Privacy",
+      privacyBody:
+        "Phone numbers, emails and account numbers are removed in your browser before a message is sent for analysis. Your checks are kept on this device only.",
+      aboutTitle: "About",
+      aboutBody: "FraudLens helps you spot a scam message before you pay, tap a link or share a code. Built in Mauritius, for Mauritius.",
+      teamLogoAlt: "Dhruv and Friends logo",
+    }),
     trends: {
       title: "Bann eskrokri konplet dan Moris",
       intro:

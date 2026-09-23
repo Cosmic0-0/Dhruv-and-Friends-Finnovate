@@ -5,7 +5,6 @@ import {
   buildRound,
   languagePool,
   localDay,
-  STREAK_PILL_MIN,
   type LanguagePool,
   type QuizItem,
   type QuizLanguage,
@@ -13,12 +12,13 @@ import {
 } from "@/lib/learn-content";
 import { redact } from "@/lib/redact";
 import { safeChecks } from "@/lib/result";
-import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState } from "@/lib/streak";
+import { DAILY_GOAL, recordAnswer, type Mistake, type StreakState } from "@/lib/streak";
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
 import { CheckIcon } from "../icons";
 import Celebration from "./Celebration";
+import ScreenTitle from "../ScreenTitle";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
@@ -50,19 +50,12 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
-  const streakShown = state ? visibleStreak(state, today) : 0;
   const doneToday = state?.lastCompletedDay === today;
 
   return (
-    <div className="flex flex-col gap-8">
-      <header className="flex items-start justify-between gap-4">
-        <h1>{copy.learn.headline}</h1>
-        {streakShown >= STREAK_PILL_MIN && (
-          <span className="micro mt-2 shrink-0 bg-caution-soft px-2.5 py-1 whitespace-nowrap text-caution-ink">
-            {copy.learn.streak(streakShown)}
-          </span>
-        )}
-      </header>
+    <>
+      <ScreenTitle tabKey="learn" />
+      <div className="gutter flex flex-col gap-4 pt-4">
 
       {/* Wait for the saved language so a wrong-language question never flashes. */}
       {!ready ? (
@@ -139,7 +132,8 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
       )}
 
       {celebration && <Celebration {...celebration} copy={copy} onClose={() => setCelebration(null)} />}
-    </div>
+      </div>
+    </>
   );
 }
 

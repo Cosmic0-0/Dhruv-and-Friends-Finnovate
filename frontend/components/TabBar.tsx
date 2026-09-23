@@ -2,45 +2,61 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_TABS } from "@/lib/navTabs";
+import { NAV_TABS, NEW_CHECK_HREF } from "@/lib/navTabs";
+import { PlusIcon } from "./icons";
 import { useLanguage } from "./LanguageProvider";
 
+/**
+ * The floating frosted tab bar (frontend/design/mockup/Main.html): a 326x66
+ * pill, 28px above the bottom plus the home-indicator inset, with five slots —
+ * Check, Learn, a 56px centre primary button, Radar, Settings.
+ *
+ * Shown at every width. The design is an iPhone app, so there is no separate
+ * desktop navigation; a browser window gets the same 430px column (see
+ * .app-shell in globals.css).
+ *
+ * The bar is icons only, as drawn. Each slot carries its label as an
+ * accessible name instead, and every target is at least 44px.
+ */
 export default function TabBar() {
   const pathname = usePathname() ?? "/";
   const { copy } = useLanguage();
 
+  const slot = ({ href, key, Icon, match }: (typeof NAV_TABS)[number]) => {
+    const active = match(pathname);
+    return (
+      <Link
+        key={href}
+        href={href}
+        aria-label={copy.tabs[key]}
+        aria-current={active ? "page" : undefined}
+        className={`pressable flex size-[50px] items-center justify-center rounded-full ${
+          active ? "text-ink" : "text-icon-idle"
+        }`}
+      >
+        <Icon className="size-[26px]" strokeWidth={active ? 2.3 : 1.7} />
+      </Link>
+    );
+  };
+
   return (
     <nav
       aria-label="Main"
-      // Fully opaque (no /95, no backdrop-blur): a translucent bar let scrolled
-      // content read through it. The strong top rule is the design system's.
-      // md:hidden: a fixed bottom bar is a mobile/PWA convention — desktop
-      // gets DesktopNav in AppHeader instead (see globals.css for the
-      // matching --tabbar-height reset at the same breakpoint).
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-line-strong bg-card pb-[env(safe-area-inset-bottom)] md:hidden"
+      className="tabbar fixed left-1/2 z-30 flex h-[66px] w-[326px] max-w-[calc(100%-2rem)] -translate-x-1/2 items-center justify-between px-3"
+      style={{ bottom: "calc(28px + env(safe-area-inset-bottom))" }}
     >
-      <ul className="mx-auto flex max-w-app items-stretch">
-        {NAV_TABS.map(({ href, key, Icon, match }) => {
-          const active = match(pathname);
-          return (
-            <li key={href} className="flex-1">
-              <Link
-                href={href}
-                aria-current={active ? "page" : undefined}
-                // The active tab is marked by a rule at the top edge, the way a
-                // selected tab is marked on an instrument, not by colour alone.
-                className={`pressable micro relative flex h-(--tabbar-height) flex-col items-center justify-center gap-1.5 ${
-                  active ? "text-ink" : "text-ink-muted hover:bg-muted-surface hover:text-ink"
-                }`}
-              >
-                {active && <span aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-accent" />}
-                <Icon className="size-5" strokeWidth={active ? 2.1 : 1.75} />
-                {copy.tabs[key]}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      {NAV_TABS.slice(0, 2).map(slot)}
+
+      {/* Not a tab: a shortcut into Check with the input already open. */}
+      <Link
+        href={NEW_CHECK_HREF}
+        aria-label={copy.tabs.newCheck}
+        className="pressable flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgb(28_28_40_/_26%)]"
+      >
+        <PlusIcon className="size-[26px]" />
+      </Link>
+
+      {NAV_TABS.slice(2).map(slot)}
     </nav>
   );
 }

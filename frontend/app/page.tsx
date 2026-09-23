@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import AppHeader from "@/components/AppHeader";
+import ScreenTitle from "@/components/ScreenTitle";
 import CheckForm from "@/components/CheckForm";
 import IntelligenceTools from "@/components/IntelligenceTools";
 import Hero from "@/components/Hero";
@@ -18,8 +18,8 @@ export default function CheckPage() {
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-      <AppHeader />
-      <div className="gutter flex flex-col gap-8 pt-6 md:gap-10 md:pt-8">
+      <ScreenTitle tabKey="check" />
+      <div className="gutter flex flex-col gap-8 pt-4">
         <div className="grid items-stretch border border-card-border bg-card lg:grid-cols-[0.95fr_1.05fr]">
           <Hero />
           <section id="check-message" className="flex scroll-mt-6 flex-col justify-center gap-5 p-5 md:p-7">

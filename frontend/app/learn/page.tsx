@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import AppHeader from "@/components/AppHeader";
 import LearnScreen from "@/components/learn/LearnScreen";
 import { loadLearnContent } from "@/lib/learn-data";
 
@@ -11,10 +10,7 @@ export default function LearnPage() {
   const { items, trends } = loadLearnContent();
   return (
     <main>
-      <AppHeader />
-      <div className="gutter pt-7">
         <LearnScreen items={items} trends={trends} />
-      </div>
     </main>
   );
 }

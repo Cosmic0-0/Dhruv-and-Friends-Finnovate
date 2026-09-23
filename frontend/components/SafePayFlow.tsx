@@ -11,6 +11,7 @@ import { MessageCard, VerdictBanner } from "./result/parts";
 import { IdentityCompare, LinkCheckPanel, signalTitle, WhatToDo, WhySection } from "./result/sections";
 import ReportButton from "./result/ReportButton";
 import { RetryIcon } from "./icons";
+import ScreenTitle from "./ScreenTitle";
 
 type Status = "idle" | "loading" | "error" | "done";
 
@@ -205,11 +206,10 @@ export default function SafePayFlow() {
   }
 
   return (
-    <div className="gutter flex flex-col gap-4 pt-7">
-      <section className="flex flex-col gap-3">
-        <h1>{c.title}</h1>
-        <p className="max-w-[46ch] text-[1.0625rem] leading-relaxed text-ink-soft">{c.intro}</p>
-      </section>
+    <>
+      <ScreenTitle title={c.title} back={{ href: "/", label: copy.tabs.check }} />
+      <div className="gutter flex flex-col gap-4 pt-4">
+        <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{c.intro}</p>
 
       <form
         onSubmit={(e) => {
@@ -274,10 +274,8 @@ export default function SafePayFlow() {
         </div>
       )}
 
-      <Link href="/" className="micro w-fit text-accent-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
-        {c.back}
-      </Link>
-    </div>
+      </div>
+    </>
   );
 }
 
