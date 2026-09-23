@@ -339,9 +339,104 @@ fix):**
   steady-state model speed — untested here, just a hypothesis worth
   ruling in or out before the demo.
 
+## Consistency run (2026-09-23)
+
+First full run of `consistency.mjs` against a real model: `qwen3:8b` on the
+VPS (`OLLAMA_URL=http://100.115.195.94:11434`), 72 messages × 3 runs = 216
+calls. Every call was answered by Ollama, with no errors and no fallback to
+OpenRouter. Median 5.7s per call, slowest 12.3s, whole run about 22 minutes.
+Full results are the baseline in
+`consistency-results/2026-09-23T08-43-48-781Z.json`.
+
+| Set | Same verdict every run | Majority verdict matches expected |
+|---|---|---|
+| EN (20) | 19/20 | 9/20 |
+| FR (20) | 17/20 | 11/20 |
+| KR (24) | 15/24 | 10/24 |
+| SEED (8) | 5/8 (0/8 once the sender check counts) | 4/8 |
+| **Total** | **52/72** | **34/72** |
+
+The model usually gives the same answer twice. Most of the time that answer
+is wrong in the same way on every run, not randomly.
+
+## 13. "Reported N times" never fires for the seed messages
+
+**Severity:** high, a demo feature fails without any error &nbsp;·&nbsp;
+`backend/src/routes/index.js:89`, `backend/src/services/analysis/index.js:12`
+
+`withSenderReports()` looks up the AI's `sender` field. The prompt defines
+`sender` as *who the message claims to be from*, so for all 8 seed messages
+the AI returned things like "Mum", "Douane", "Unknown" and "our anniversary
+draw". It never returned the `5900 00xx` number written in the message. 0 of
+24 runs picked out the number, so `senderReports` is always 0 for the demo
+senders. The lookup itself is fine: `normalizeSender()` would match
+`5900 0012` against the seeded `+230 5900 0012`.
+
+**Suggested direction:** also pull phone numbers out of the message text
+with a regex (no AI needed) and look those up.
+
+## 14. The model says `suspicious` when it means `scam`
+
+**Severity:** high
+
+27 of the 44 expected-`scam` messages got a majority of `suspicious`
+(EN 8/11, FR 5/11, KR 14/20, SEED 4/8). The risk score shows the model
+*thinks* they are scams:
+
+- every `scam` verdict came with a risk score of exactly 95
+- `suspicious` verdicts ranged from 65 to 95, many at 85–95
+
+So the label and the score disagree. **Suggested direction:** set the
+verdict from the risk score in code (e.g. 80 or above means `scam`), or
+tighten the prompt's definition of each verdict.
+
+## 15. Kreol answers change the most between runs
+
+**Severity:** medium, since Kreol support is a differentiator we show on stage
+
+9 of 24 Kreol messages changed verdict between runs, against 1/20 English
+and 3/20 French. Every change was between `scam` and `suspicious`, so fixing
+#14 should mostly fix this too. Re-run `--set payloads` after that fix to check.
+
+## 16. Real bank messages get flagged
+
+**Severity:** high, because it undermines trust if a judge tries one
+
+- `EN-13`/`FR-13` (a real MCB one-time code): `scam` 2/3, `suspicious` 1/3,
+  risk score 85–95. The comment at `llmClient.js:46` already notes this miss.
+- `EN-14`/`FR-14` (a real debit alert): `suspicious` 3/3.
+
+The other 8 safe EN/FR messages and all 3 safe Kreol messages were correct.
+
+## 17. Some sketchy opening messages get called safe
+
+**Severity:** medium
+
+`EN-20`, `FR-19` and `FR-20` (expected `suspicious`) came back `safe` 3/3.
+`FR-19` asks for the reader's ID card number, so rating it safe is a real miss.
+
+## 18. Signal names aren't consistent
+
+**Severity:** medium, since it breaks `expected.signals` checks and makes the signal breakdown look messy
+
+The AI mostly returns its own uppercase names (`URGENCY` 139 times,
+`PAYMENT_REQUEST` 98, `IMPERSONATION` 41, `SUSPICIOUS_URL` 34). It only
+rarely returns the names the contract and payloads use (`urgency_language`
+2, `spoofed_identity` 2), and the same idea comes back spelled several ways
+(`URGENCY`, `URGENCY_LANGUAGE`, `urgency`). So the subset match on
+`expected.signals` described in `README.md` would fail almost everywhere.
+**Suggested direction:** give the prompt a fixed list of signal names, or
+map the AI's names to one set in code.
+
+## Safe picks for the demo (until the above are fixed)
+
+Stable *and* correct on every run: `EN-01`, `EN-03`, `EN-05`, `FR-02`,
+`FR-03`, `FR-05`, `FR-08`, `FR-11`, `KR-11`, `KR-21`, plus the safe
+messages except `EN-13`/`EN-14`/`FR-13`/`FR-14`. Don't show "reported N
+times" until #13 is fixed.
+
 ## What I need to continue
 
-An LLM endpoint — either the Tailscale `OLLAMA_URL` or a `FALLBACK_API_KEY`.
-Everything above was reachable without one, but verdict accuracy, the
-cross-language payload set and the latency numbers in finding 8 all need a
-model that answers.
+Nothing blocking. The VPS model is reachable. Next step is re-running
+`consistency.mjs` after fixes to #13, #14 and #18 and comparing against the
+2026-09-23 baseline.
