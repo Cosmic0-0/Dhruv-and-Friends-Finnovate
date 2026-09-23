@@ -93,9 +93,8 @@ cd extension && npm test
 cd document-forensics && python -m pytest   # inside its Python 3.12 virtualenv
 ```
 
-`npm run lint` is not currently a usable check because ESLint has not been
-configured; it opens Next.js's interactive setup prompt. This is tracked as a
-project gap rather than presented as a passing check.
+ESLint is not configured yet, so there is no lint check and `frontend/` has no
+`lint` script. This is a known project gap.
 
 ## Documentation
 

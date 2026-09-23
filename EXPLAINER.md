@@ -349,8 +349,8 @@ so the setting must match the real topology before production use.
   backend. It still needs a load-unpacked browser smoke test.
 - Outlook support depends on what each client exposes through Office.js. Missing
   authentication headers remain unknown rather than being treated as failures.
-- ESLint is not configured. `npm run lint` prompts interactively and is not a CI
-  check.
+- ESLint is not configured, and `frontend/` has no `lint` script. There is no
+  lint check.
 - Node 22 is declared but not enforced: each Node project's `package.json` has
   `"engines": { "node": ">=22" }` and the root `.nvmrc` says `22`, but npm only
   warns on a mismatch. Frontend tests need it because they run TypeScript

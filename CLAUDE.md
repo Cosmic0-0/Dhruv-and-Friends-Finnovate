@@ -102,8 +102,8 @@ cd document-forensics && python -m pytest   # Python 3.12 venv, see its README
 
 Route tests bind temporary localhost servers and may need network-sandbox
 permission. Frontend tests do not run under Node 20 because they are TypeScript
-files executed directly by Node. ESLint is not configured yet, so `npm run lint`
-is currently interactive and must not be cited as a passing automated check.
+files executed directly by Node. ESLint is not configured yet, and `frontend/`
+has no `lint` script; do not cite linting as a passing check.
 
 Before a demo, also run `npm run test:fallback` in `backend/`, check
 `GET /health/llm`, exercise at least one real English/French/Kreol message, and
