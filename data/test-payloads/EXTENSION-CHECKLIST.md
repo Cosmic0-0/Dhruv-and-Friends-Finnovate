@@ -16,7 +16,7 @@ Use four terminals.
    when you start (this doesn't edit the file):
    ```
    cd backend
-   $env:OLLAMA_URL="http://100.115.195.94:11434"; npm start
+   $env:OLLAMA_URL="http://100.91.27.102:11434"; npm start
    ```
    Check it: open http://localhost:4000/health/llm. You should see `"reachable":true`.
    If `npm start` says `Cannot find package 'sharp'`, run `npm install` first.
