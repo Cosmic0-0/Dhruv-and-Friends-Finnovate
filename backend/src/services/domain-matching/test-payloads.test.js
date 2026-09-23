@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { checkUrls } from "./index.js";
 
-// Cross-references Caellum's QA fixtures (data/test-payloads/) against this
+// Cross-references the QA owner's fixtures (data/test-payloads/) against this
 // module directly - not the full LLM pipeline. Per data/test-payloads/
 // README.md "Matching semantics": lookalike_url is the one expected signal
 // type that's deterministic (not LLM-driven), so it's the only one this

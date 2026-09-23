@@ -398,6 +398,6 @@ flow uses, now running on the URL bar instead of pasted text. For the newer
 Phase 14 features, follow with a right-click "Check link with FraudLens" on
 a lookalike link found on a page (no navigation needed), then a "Scan This
 Page" on a page containing a pasted scam-style message to show the inline
-banner. Coordinate with Caellum's demo script (`data/test-payloads/`) so
+banner. Coordinate with the QA owner's demo script (`data/test-payloads/`) so
 this beat is sequenced with the rest of the walkthrough rather than
 improvised.

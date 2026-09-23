@@ -1,9 +1,9 @@
 # Web app: test checklist
 
-Owner: **Caellum**. Updated 2026-09-23 for round 2 against `caellum` @
-`04ae58f` (PR #12 merged: the UI owner's desktop layout with the side menu).
-The two unmerged commits on `oleg` ("Secondary screens", "iPhone pass") are
-not covered.
+Owner: **QA owner**. Updated 2026-09-23 for round 2 against `04ae58f`
+(PR #12 merged: the UI owner's desktop layout with the side menu). Two
+commits that were then still unmerged on the frontend/UI owner's branch
+("Secondary screens", "iPhone pass") are not covered.
 
 Tick each box as you go. **Expect** is what should happen. Items marked
 **(auto)** are covered by `webapp-ui.mjs` (see the end of this file), so you
