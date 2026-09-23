@@ -98,6 +98,13 @@ const RULES = [
   { code: "SOC-03", lang: "fr", re: /\bn'en parle(?:z)? pas\b|\bne (?:le |la |les )?dites (?:rien )?[àa] personne\b|\bgardez (?:ça|cela|le|la) (?:secret|pour vous)\b/iu },
   { code: "SOC-03", lang: "mfe", re: /\bpa dir (?:personn|papa|mama|dimounn|okenn)\b|\bpa koz(?:e)? (?:ar|avek) personn\b|\bgard sa (?:sekre|pou twa)\b/iu },
 
+  // SOC-08 - bypass normal approval / verification (BEC: "skip the usual
+  // sign-off", "no need to call to confirm"). Negatable: "never bypass the
+  // approval process" is a policy reminder, not a request.
+  { code: "SOC-08", lang: "en", negatable: true, re: /\bbypass (?:the |our |your )?(?:normal |usual |standard )?(?:process|procedure|approvals?|controls?|checks?|sign[- ]?off)\b|\b(?:skip|without) (?:the |our )?(?:usual|normal|standard) (?:approvals?|process|procedure|checks?|sign[- ]?off|verification)\b|\bdon'?t (?:go through|involve|copy|cc|loop in) (?:finance|accounts|procurement|the (?:finance|accounts|procurement) team|anyone else)\b|\bno need to (?:verify|call|check|confirm)\b/iu },
+  { code: "SOC-08", lang: "fr", negatable: true, re: /\bsans (?:passer par|la validation|l'approbation|validation)\b|\bcontourn(?:er|ez) (?:la |les )?(?:proc[ée]dure|validation|contr[ôo]les?)\b|\binutile de (?:v[ée]rifier|rappeler|confirmer)\b/iu },
+  { code: "SOC-08", lang: "mfe", re: /\bpa bizin (?:verifye|konfirme|apel|telefonn)\b|\bpa pas par (?:finans|kontabilite|lakontabilite)\b/iu },
+
   // SOC-02 - threats
   { code: "SOC-02", lang: "en", re: /\bsuspend(?:ed|sion)?\b|\b(?:will be|has been|be) (?:blocked|locked|frozen|closed|deactivated|terminated|restricted)\b|\blegal action\b|\bprosecut(?:ion|ed)\b|\barrest(?:ed)?\b|\bpenalt(?:y|ies)\b|\bbe fined\b|\bpermanent(?:ly)? (?:lock|block|closure|freeze)\b|\blose access\b/iu },
   { code: "SOC-02", lang: "fr", re: /\bsuspendu(?:e)?\b|\bbloqu[ée](?:e)?\b|\bgel[ée]\b|\bd[ée]sactiv[ée]\b|\bpoursuites\b|\bp[ée]nalit[ée]\b|\bamende\b/iu },

@@ -7,6 +7,9 @@ import rateLimit from "express-rate-limit";
 import { checkUrls } from "../services/domain-matching/index.js";
 import { runPipeline } from "../services/pipeline/index.js";
 import { validatePaymentContext } from "../services/payment-context/index.js";
+import { validateEmailContext } from "../services/email-context/index.js";
+import { listCampaigns, OUTCOME_LABELS, recordOutcome } from "../services/org-intel/index.js";
+import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { redact } from "../services/redact/index.js";
@@ -103,8 +106,15 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
   }
   const payment = validatePaymentContext(req.body.paymentContext);
   if (payment.error) return res.status(400).json({ error: payment.error });
+  // Optional workplace-email metadata (future Outlook add-in). `message` is
+  // the email body; when emailContext is present the source is "email" and
+  // the same runPipeline() runs the EMAIL-* detectors - no separate engine.
+  const email = validateEmailContext(req.body.emailContext);
+  if (email.error) return res.status(400).json({ error: email.error });
   try {
-    res.json(await runPipeline(message, { source: "pasted_text", language, paymentContext: payment.value, ip: req.ip }));
+    res.json(
+      await runPipeline(message, { source: "pasted_text", language, paymentContext: payment.value, emailContext: email.value, ip: req.ip })
+    );
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "analysis failed, try again shortly" });
@@ -281,6 +291,33 @@ router.get("/campaign/:fingerprintId", checkSenderLimiter, (req, res) => {
   const campaign = getFingerprintMatches(req.params.fingerprintId);
   if (!campaign) return res.status(404).json({ error: "campaign not found" });
   res.json(campaign);
+});
+
+// Organisation-scoped workplace intelligence. The demo has one configured
+// profile; callers cannot choose an arbitrary org id and cross tenant data.
+router.get("/org/campaigns", checkSenderLimiter, (_req, res) => {
+  res.json({
+    organisationId: DEMO_ORGANISATION.organisationId,
+    campaigns: listCampaigns(DEMO_ORGANISATION.organisationId),
+  });
+});
+
+router.post("/org/outcomes", reportLimiter, json({ limit: "10kb" }), (req, res) => {
+  const { observationId, label } = req.body ?? {};
+  if (typeof observationId !== "string" || !/^[a-f0-9]{64}$/.test(observationId)) {
+    return res.status(400).json({ error: "observationId must be a 64-character hexadecimal identifier" });
+  }
+  if (!OUTCOME_LABELS.includes(label)) {
+    return res.status(400).json({ error: `label must be one of: ${OUTCOME_LABELS.join(", ")}` });
+  }
+  const result = recordOutcome({
+    orgId: DEMO_ORGANISATION.organisationId,
+    inputHash: observationId,
+    analystId: req.ip,
+    label,
+  });
+  if (result.error === "not_found") return res.status(404).json({ error: "organisation observation not found" });
+  res.json(result);
 });
 
 // A phone-number-shaped sender is masked to its last 4 digits for this

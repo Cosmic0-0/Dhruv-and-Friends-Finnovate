@@ -35,6 +35,7 @@ export const SIGNAL_DEFS = Object.freeze({
   "SOC-05": { category: "social", severity: "low", legacyType: "prize_offer", label: "Unexpected prize, refund or money" },
   "SOC-06": { category: "social", severity: "medium", legacyType: "manipulation", label: "Relationship or investment manipulation" },
   "SOC-07": { category: "social", severity: "high", legacyType: "prompt_injection", label: "Contains instructions aimed at automated checkers" },
+  "SOC-08": { category: "social", severity: "medium", legacyType: "control_bypass", label: "Asks you to bypass normal approval or verification" },
 
   "PAY-01": { category: "payment", severity: "low", legacyType: "payment_request", label: "Asks you to send money" },
   "PAY-02": { category: "payment", severity: "high", legacyType: "payment_request", label: "Unusual payment method (gift card, crypto, courier)" },
@@ -53,6 +54,31 @@ export const SIGNAL_DEFS = Object.freeze({
   "REP-03": { category: "reputation", severity: "medium", legacyType: "sender_reported", label: "Sender reported by other users" },
   "REP-04": { category: "reputation", severity: "high", legacyType: "known_scam_template", label: "Matches a confirmed scam template" },
   "REP-05": { category: "reputation", severity: "high", legacyType: "known_malicious_url", label: "Link is on a known-malicious list" },
+
+  // Workplace email (services/email-signals). Produced ONLY by deterministic
+  // code from validated emailContext metadata plus the demo supplier registry
+  // / organisation directory - never by the semantic model. Each one is only
+  // emitted when the evidence it needs was actually supplied.
+  "EMAIL-01": { category: "email_identity", severity: "low", legacyType: "sender_mismatch", label: "Replies would go to a different domain than the sender's" },
+  "EMAIL-02": { category: "email_identity", severity: "medium", legacyType: "IDENTITY_MISMATCH", label: "Sender domain differs from the known supplier's domain" },
+  "EMAIL-03": { category: "email_auth", severity: "low", legacyType: "email_authentication", label: "Email authentication anomaly" },
+  "EMAIL-04": { category: "email_identity", severity: "medium", legacyType: "sender_mismatch", label: "Sender changed partway through the conversation" },
+  "EMAIL-05": { category: "email_attachment", severity: "low", legacyType: "suspicious_attachment", label: "Risky attachment type" },
+  "EMAIL-06": { category: "email_payment", severity: "high", legacyType: "payment_request", label: "Bank details differ from the supplier's details on record" },
+  "EMAIL-07": { category: "email_payment", severity: "high", legacyType: "payment_request", label: "Beneficiary differs from the supplier's known payee" },
+  "EMAIL-08": { category: "email_identity", severity: "medium", legacyType: "spoofed_identity", label: "Display name does not fit the sending address" },
+  "EMAIL-09": { category: "email_identity", severity: "high", legacyType: "spoofed_identity", label: "External sender using a colleague's or executive's identity" },
+  "EMAIL-10": { category: "email_identity", severity: "low", legacyType: "sender_mismatch", label: "Financial request from an address not on record for this supplier" },
+
+  // Organisation identity & intelligence (services/org-identity, services/org-intel).
+  // Deterministic only: organisation profile, analyst outcomes and the
+  // organisation's own observation store - never the semantic model.
+  "ORG-01": { category: "email_identity", severity: "high", legacyType: "spoofed_identity", label: "Sender domain imitates your organisation's domain" },
+  "ORG-02": { category: "technical", severity: "high", legacyType: "lookalike_url", label: "Link or reply address imitates your organisation's domain" },
+  "ORG-03": { category: "email_identity", severity: "medium", legacyType: "spoofed_identity", label: "Outsider posing as your finance, payroll or IT team" },
+  "ORG-04": { category: "email_identity", severity: "low", legacyType: "sender_mismatch", label: "First message from this sender" },
+  "ORG-05": { category: "reputation", severity: "high", legacyType: "known_scam_template", label: "Previously confirmed as fraud by your organisation" },
+  "ORG-06": { category: "reputation", severity: "medium", legacyType: "community_cluster", label: "Part of a campaign targeting your organisation" },
 });
 
 export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));
@@ -61,7 +87,7 @@ export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));
 // No URL, identity-vs-domain, reputation or payment-context codes: those are
 // facts code verifies.
 export const SEMANTIC_CODES = Object.freeze([
-  "ID-04", "SOC-01", "SOC-02", "SOC-03", "SOC-04", "SOC-05", "SOC-06", "SOC-07",
+  "ID-04", "SOC-01", "SOC-02", "SOC-03", "SOC-04", "SOC-05", "SOC-06", "SOC-07", "SOC-08",
   "PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-07", "SEC-01", "SEC-02",
 ]);
 

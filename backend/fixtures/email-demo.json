@@ -1,0 +1,128 @@
+{
+  "version": "email-demo-1.0",
+  "notes": [
+    "SYNTHETIC DEMO FIXTURES for the future Outlook add-in and for backend tests (src/services/pipeline/email.test.js).",
+    "Every organisation, person, domain, address and account here is fictional (.example TLD, RFC 2606). No real credentials or financial details.",
+    "Each fixture is a ready-made POST /api/analyze body plus the outcome the deterministic engine (semantic model off) must produce.",
+    "Suppliers and people referenced here exist only in data/demo-supplier-registry.json and data/demo-organisation-directory.json."
+  ],
+  "fixtures": [
+    {
+      "id": "legitimate-supplier-invoice",
+      "title": "Legitimate supplier invoice",
+      "demoTalkingPoint": "Known supplier, known address, DMARC pass, PDF invoice, the account on record: FraudLens stays quiet.",
+      "request": {
+        "message": "Dear Accounts Payable,\n\nPlease find attached invoice INV-1182 for September deliveries, total Rs 48,250, due by 30 October. As usual, payment goes to our account ending 4491.\n\nKind regards,\nFinance Team, ABC Supplies Ltd",
+        "emailContext": {
+          "from": { "name": "ABC Supplies Accounts", "address": "finance@abc-supplies.example" },
+          "replyTo": [{ "name": "ABC Supplies Accounts", "address": "finance@abc-supplies.example" }],
+          "returnPath": "bounce@abc-supplies.example",
+          "subject": "Invoice INV-1182 - September deliveries",
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+          "attachments": [{ "name": "Invoice-1182.pdf", "contentType": "application/pdf", "size": 124501 }]
+        }
+      },
+      "expect": { "levels": ["low"], "codes": [], "absentCodes": ["EMAIL-01", "EMAIL-02", "EMAIL-03", "EMAIL-05", "EMAIL-06", "EMAIL-07", "EMAIL-10"] }
+    },
+    {
+      "id": "reply-to-mismatch-only",
+      "title": "Reply-To differs, nothing else",
+      "demoTalkingPoint": "A different Reply-To is recorded as weak evidence - on its own it never makes an email 'dangerous'.",
+      "request": {
+        "message": "Your shipment MU-4471 has arrived at Port Louis and will be delivered on Thursday. Reply to this email if you need a different delivery slot.",
+        "emailContext": {
+          "from": { "name": "Island Freight", "address": "billing@islandfreight.example" },
+          "replyTo": [{ "address": "support@freight-helpdesk.example" }],
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" }
+        }
+      },
+      "expect": { "levels": ["low"], "codes": ["EMAIL-01"], "absentCodes": ["EMAIL-02"] }
+    },
+    {
+      "id": "obvious-credential-phishing",
+      "title": "Obvious credential phishing",
+      "demoTalkingPoint": "Password request + unofficial login link + replies redirected: the email-specific actions say not to enter a password.",
+      "request": {
+        "message": "Your mailbox password expires today. Verify your account immediately at https://m365-login-verify.example/secure and confirm your password, or you will lose access.",
+        "emailContext": {
+          "from": { "name": "IT Service Desk", "address": "no-reply@mailbox-alerts.example" },
+          "replyTo": [{ "address": "helpdesk.recovery@gmail.com" }],
+          "subject": "Action required: password expiry",
+          "authentication": { "spf": "softfail", "dkim": "none", "dmarc": "fail" }
+        }
+      },
+      "expect": { "levels": ["high", "critical"], "codes": ["EMAIL-01", "EMAIL-03", "SEC-01"], "actions": ["phish_no_password"] }
+    },
+    {
+      "id": "supplier-bank-change-fraud",
+      "title": "Supplier impersonation with changed bank details",
+      "demoTalkingPoint": "Look-alike supplier domain (suppiies), replies to Gmail, and an account that is not the one on record (****4491). Authentication PASSES - the attacker owns the look-alike domain.",
+      "request": {
+        "message": "Dear Accounts Payable,\n\nPlease note our bank details have changed. Kindly settle invoice INV-1182 (Rs 48,250) to our new account ending 6789 today.\n\nRegards,\nABC Supplies Accounts",
+        "emailContext": {
+          "from": { "name": "ABC Supplies Accounts", "address": "accounts@abc-suppiies.example" },
+          "replyTo": [{ "name": "ABC Accounts", "address": "abc.payments@gmail.com" }],
+          "subject": "Updated payment details",
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" },
+          "attachments": [{ "name": "Invoice-1182.pdf", "contentType": "application/pdf", "size": 118233 }]
+        }
+      },
+      "expect": { "levels": ["critical"], "codes": ["EMAIL-02", "EMAIL-01", "EMAIL-06"], "trace": ["EX-1"], "actions": ["supplier_dont_use_details"] }
+    },
+    {
+      "id": "bank-change-no-baseline",
+      "title": "Bank-change email for a supplier with no account on record",
+      "demoTalkingPoint": "Same wording, but FraudLens holds no previous account for this supplier - so it does NOT claim the details changed (no EMAIL-06). The wording alone is still flagged.",
+      "request": {
+        "message": "Please note our bank details have changed. Kindly settle the attached invoice to our new account ending 6789.",
+        "emailContext": {
+          "from": { "name": "Lagoon Office Supplies", "address": "accounts@lagoon-office.example" },
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" }
+        }
+      },
+      "expect": { "levels": ["elevated"], "codes": ["PAY-07"], "absentCodes": ["EMAIL-06"], "checks": { "bankDetails": "no_baseline_on_record" } }
+    },
+    {
+      "id": "ceo-bec-request",
+      "title": "CEO impersonation (BEC) from a personal address",
+      "demoTalkingPoint": "The display name is the CEO from the directory, the address is Gmail, and the request is urgent, secret and skips finance.",
+      "request": {
+        "message": "I need you to process an urgent transfer of Rs 850,000 to a new vendor today for a confidential acquisition. Keep this confidential and don't involve finance until it closes. I'm in meetings all day, so reply by email only.",
+        "emailContext": {
+          "from": { "name": "Jane Smith - CEO", "address": "janesmith.ceo@gmail.com" },
+          "subject": "Confidential - urgent",
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" }
+        }
+      },
+      "expect": { "levels": ["critical"], "codes": ["EMAIL-09", "SOC-08", "SOC-03", "PAY-01"], "trace": ["EX-3"], "actions": ["exec_hold_transfer"] }
+    },
+    {
+      "id": "compromised-legitimate-sender",
+      "title": "Compromised real supplier mailbox",
+      "demoTalkingPoint": "SPF, DKIM and DMARC all PASS and the address is the supplier's real one - a phishing filter lets it through. FraudLens still stops it: the account is not the one on record, and the language asks for secrecy and skipping verification.",
+      "request": {
+        "message": "Urgent: we are being audited, so please transfer the outstanding Rs 48,250 today to our temporary account number 0045 1123 6789 instead. This is confidential - keep this between us, and there is no need to call to confirm.",
+        "emailContext": {
+          "from": { "name": "ABC Supplies Accounts", "address": "finance@abc-supplies.example" },
+          "subject": "Re: Invoice INV-1182",
+          "authentication": { "spf": "pass", "dkim": "pass", "dmarc": "pass" }
+        }
+      },
+      "expect": { "levels": ["high", "critical"], "codes": ["EMAIL-06", "SOC-08", "SOC-03"], "absentCodes": ["EMAIL-02", "EMAIL-03"] }
+    },
+    {
+      "id": "conversation-hijack",
+      "title": "Conversation hijack with a look-alike domain",
+      "demoTalkingPoint": "Earlier replies came from abc-supplies.example; this one comes from abc-suppiies.example and changes the account. One fact (the look-alike sender) is scored once, corroborated by the thread check.",
+      "request": {
+        "message": "Further to our thread, please note our bank details have been updated. Use account ending 5521 for INV-1182.",
+        "emailContext": {
+          "from": { "name": "Finance", "address": "finance@abc-suppiies.example" },
+          "subject": "Re: Invoice INV-1182",
+          "threadContext": { "previousSenders": ["finance@abc-supplies.example", "ap@demo-company.example"] }
+        }
+      },
+      "expect": { "levels": ["critical"], "codes": ["EMAIL-02", "EMAIL-06"], "corroboratedBy": { "EMAIL-02": "EMAIL-04" }, "trace": ["EX-6"] }
+    }
+  ]
+}

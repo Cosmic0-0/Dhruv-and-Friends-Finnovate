@@ -18,6 +18,7 @@ process.env.DOMAIN_AGE_TIMEOUT_MS = process.env.DOMAIN_AGE_TIMEOUT_MS || "1";
 import { readFileSync } from "node:fs";
 
 const { runPipeline } = await import("../src/services/pipeline/index.js");
+const { ACTIVE_RULESET } = await import("../src/services/risk-engine/index.js");
 
 const full = process.argv.includes("--full");
 const root = new URL("../../data/", import.meta.url);
@@ -68,7 +69,7 @@ for (const c of cases) {
   rows.push({ ...c, predicted: result.risk.level !== "low", level: result.risk.level, score: result.risk.score, codes: result.signals.filter((s) => s.scored).map((s) => s.code) });
 }
 
-console.log(`FraudLens evaluation - ruleset rs-1.0 - mode: ${full ? "full (with semantic model)" : "deterministic (no LLM)"}`);
+console.log(`FraudLens evaluation - ruleset ${ACTIVE_RULESET.version} - mode: ${full ? "full (with semantic model)" : "deterministic (no LLM)"}`);
 console.log(line("ALL", tally(rows)));
 for (const lang of [...new Set(rows.map((r) => r.language))]) console.log(line(`  lang ${lang}`, tally(rows.filter((r) => r.language === lang))));
 console.log(line("  kreol owner_reviewed", tally(rows.filter((r) => r.status === "owner_reviewed"))));

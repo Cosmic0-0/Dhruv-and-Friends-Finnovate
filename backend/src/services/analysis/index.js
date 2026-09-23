@@ -18,7 +18,7 @@ import { SCAM_TYPES, SCAM_STAGES, normalizeScamType, normalizeStage } from "../p
 import { SEMANTIC_CODES, SIGNAL_DEFS, makeSignal } from "../signals/registry.js";
 import { locateEvidence } from "../normalize/index.js";
 
-export const SEMANTIC_PROMPT_VERSION = "semantic-1.0";
+export const SEMANTIC_PROMPT_VERSION = "semantic-1.1"; // 1.1: SOC-08 (bypass normal approval) added to the allowed codes
 const MAX_SIGNALS = 8;
 
 const CODE_GUIDE = SEMANTIC_CODES.map((c) => `  ${c}: ${SIGNAL_DEFS[c].label}`).join("\n");

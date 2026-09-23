@@ -21,6 +21,7 @@ Security/production-readiness checklist lives in [`checklist.md`](./checklist.md
 backend/    Node.js REST API — detection logic, domain matching, DB
 frontend/   Next.js UI
 extension/  Browser extension (stretch goal, built after the core app works)
+outlook-addin/ Outlook Office.js read-mode task pane
 data/       Scam datasets, test payloads, seed data
 ```
 
@@ -35,6 +36,7 @@ its own directory.
 ```bash
 cd backend && npm install && npm run dev   # http://localhost:4000/health
 cd frontend && npm install && npm run dev  # http://localhost:3000
+cd outlook-addin && npm install && npm run dev # https://localhost:3001
 ```
 
 The LLM used for message analysis runs **locally** (model TBD — see
