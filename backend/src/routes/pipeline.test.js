@@ -139,6 +139,47 @@ test("semantic-only evidence is bounded and labelled as inferred", async (t) => 
   }
 });
 
+// Live repro (see bug report): a fake-download-aggregator page claiming to
+// be the official publisher of a real, well-known product scored Safe with
+// zero signals - no deterministic check owns "is this company really the
+// source of this product" (that requires world knowledge, not a fixed
+// brand/domain list), and the semantic prompt's ID-04 guidance didn't cover
+// this pattern either. Fixed by broadening ID-04's guidance (services/
+// analysis) to cover an implausible claim of official authorship/publishing
+// by a real, named organization - judged per-message by the model, so it
+// generalizes to any brand, not just this fixture.
+const FAKE_AGGREGATOR_PAGE_TEXT = `Grand Theft Auto GTA 6 Free Download For PC (2026)
+Download now before the link expires! Full PC version, no survey, direct download link.
+
+Product Information
+Title: Grand Theft Auto GTA 6
+Publisher: Rockstar Games
+Created By: Rockstar Games
+Platform: PC (Windows)
+File Size: 42 GB`;
+
+test("a false official-publisher claim (fake download aggregator) is no longer scored Safe", async (t) => {
+  mockTransport(async () =>
+    anthropicReply({
+      signals: [
+        { code: "ID-04", evidence: "Publisher: Rockstar Games", confidence: 0.85 },
+        { code: "SOC-01", evidence: "Download now before the link expires!", confidence: 0.7 },
+      ],
+    })
+  );
+  const post = await startServer(t);
+  const { status, body } = await post("/analyze", { message: FAKE_AGGREGATOR_PAGE_TEXT, pageUrl: "https://example-file-aggregator.test/gta-6-download" });
+  assert.equal(status, 200);
+  assert.ok(body.signals.some((s) => s.code === "ID-04" && s.sourceType === "semantic_model"));
+  assert.notEqual(body.verdict, "safe");
+  assert.notEqual(body.risk.level, "low");
+  // Pure semantic evidence (no deterministic corroboration for THIS
+  // fixture) stays inside the semantic-only cap by design - it can raise
+  // suspicion, never alone reach a bank-grade "do_not_pay" (see
+  // risk-engine's RULESET_RS_1_0.caps.semanticOnly).
+  assert.notEqual(body.decision, "do_not_pay");
+});
+
 test("an official subdomain link is low risk, not an impersonation", async (t) => {
   mockTransport(async () => anthropicReply({ signals: [] }));
   const post = await startServer(t);
