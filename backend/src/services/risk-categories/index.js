@@ -44,6 +44,10 @@ const REGISTRY_CATEGORY_MAP = {
   credential: "payment_risk",
   social: "behavioral_risk",
   reputation: "verification_risk",
+  email_identity: "identity_risk",
+  email_auth: "technical_risk",
+  email_attachment: "technical_risk",
+  email_payment: "payment_risk",
 };
 
 function categoryOf(signal) {

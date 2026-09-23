@@ -16,7 +16,7 @@
 
 import { normalizeText, inputHash } from "../normalize/index.js";
 import { findClaimedInstitution, REGISTRY_VERSION } from "../institutions/index.js";
-import { checkUrls, checkLinkHygiene, DETECTOR_VERSION as URL_DETECTOR_VERSION } from "../domain-matching/index.js";
+import { checkUrls, checkLinkHygiene, registrableDomain, DETECTOR_VERSION as URL_DETECTOR_VERSION } from "../domain-matching/index.js";
 import { attachDomainAges } from "../domain-age/index.js";
 import { checkIdentityConsistency } from "../identity-consistency/index.js";
 import { detectLexicon, detectInjection, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
@@ -30,6 +30,12 @@ import { computeRiskCategories } from "../risk-categories/index.js";
 import { getLikelyNextStages } from "../playbooks/index.js";
 import { attachScamDna } from "../scam-dna/index.js";
 import { makeSignal } from "../signals/registry.js";
+import { availableEvidence } from "../email-context/index.js";
+import { detectEmailSignals, EMAIL_DETECTOR_VERSION } from "../email-signals/index.js";
+import { detectOrgSignals, ORG_DETECTOR_VERSION } from "../org-identity/index.js";
+import { extractIndicators, evaluateOrgIntel, observationId, pseudonym, recordOrgEmail } from "../org-intel/index.js";
+import { planVerification, VERIFICATION_POLICY_VERSION } from "../verification-workflows/index.js";
+import { DEMO_DIRECTORY, DEMO_ORGANISATION, DEMO_SUPPLIERS } from "../workplace-registry/index.js";
 import { getReportCount } from "../../db/index.js";
 
 export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch"]);
@@ -54,8 +60,34 @@ function extractObservedSender(text) {
 function derivedStage(codes) {
   if (codes.has("SEC-01")) return "OTP_REQUEST";
   if (codes.has("SEC-02")) return "CREDENTIAL_REQUEST";
-  if (["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-07"].some((c) => codes.has(c))) return "PAYMENT_REQUEST";
+  if (["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07"].some((c) => codes.has(c))) return "PAYMENT_REQUEST";
   return null;
+}
+
+// Deterministic "is this asking for money" - EMAIL-10 only fires with one.
+const FINANCIAL_CODES = new Set(["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-07"]);
+
+/**
+ * Email: the subject is part of what the recipient reads, so detectors and
+ * the semantic model see "Subject: <subject>", a blank line, then the body.
+ * Headers / addresses / authentication results are NOT added - they are
+ * compared by code only.
+ */
+function analysisText(rawText, emailContext) {
+  const body = normalizeText(rawText);
+  return emailContext?.subject ? normalizeText(`Subject: ${emailContext.subject}\n\n${body}`) : body;
+}
+
+function emailAnalysis(emailContext, checks) {
+  return {
+    status: "analysed",
+    detector: EMAIL_DETECTOR_VERSION,
+    availableEvidence: availableEvidence(emailContext),
+    checks,
+    // Reference data is DEMONSTRATION data - never presented as a real
+    // verified supplier / directory (data/demo-*.json).
+    referenceData: { suppliers: DEMO_SUPPLIERS.version, directory: DEMO_DIRECTORY.version, demo: true },
+  };
 }
 
 function explanationLanguage(language, text) {
@@ -93,11 +125,13 @@ function senderReputation(sender) {
  * @param {string} rawText the (already redacted) message text
  * @param {{ source?: string, language?: string, paymentContext?: object|null, emailContext?: object|null,
  *   ip?: string, now?: number, ocrQuality?: "low"|"ok", semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
- *   emailContext is accepted for a future email/Outlook client and not yet evaluated.
+ *   emailContext must already be validated (services/email-context validateEmailContext); when present,
+ *   the source is "email" and the EMAIL-* detectors run on it.
  */
 export async function runPipeline(rawText, context = {}) {
-  const { source = "pasted_text", language, paymentContext = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
-  const text = normalizeText(rawText);
+  const { language, paymentContext = null, emailContext = null, ip, now = Date.now(), ocrQuality, semantic: semanticOpts = {} } = context;
+  const source = emailContext ? "email" : context.source ?? "pasted_text";
+  const text = analysisText(rawText, emailContext);
 
   // Semantic analysis runs in parallel with the deterministic detectors.
   const semanticPromise =
@@ -105,39 +139,88 @@ export async function runPipeline(rawText, context = {}) {
       ? Promise.resolve({ status: "skipped", signals: [], rejected: [], scamType: null, stage: null, observedSender: null })
       : analyzeSemantics(text, { language, timeoutMs: semanticOpts.timeoutMs ?? SEMANTIC_TIMEOUT_MS, llm: semanticOpts.llm });
 
-  const claim = findClaimedInstitution(text) ?? (paymentContext?.claimedOrganisation ? findClaimedInstitution(paymentContext.claimedOrganisation) : null);
+  const claim =
+    findClaimedInstitution(text) ??
+    (paymentContext?.claimedOrganisation ? findClaimedInstitution(paymentContext.claimedOrganisation) : null) ??
+    (emailContext?.from?.name ? findClaimedInstitution(emailContext.from.name) : null);
   const claimedInstitution = claim?.institution ?? null;
 
-  const urlSignals = checkUrls(text);
+  // Links the email client extracted (href targets can differ from the
+  // visible text) are checked by the same URL rules; spans refer to the body
+  // only, so theirs are dropped.
+  const clientUrls = emailContext?.urls.length ? checkUrls(emailContext.urls.join("\n")).map(({ span, ...s }) => s) : [];
+  const urlSignals = [...checkUrls(text), ...clientUrls];
   const attachAges = attachDomainAges(urlSignals, urlSignals.map((s) => s.metadata.host));
+  const lexicon = detectLexicon(text);
+  const email = emailContext
+    ? detectEmailSignals(emailContext, { text, paymentContext, financialRequest: lexicon.some((s) => FINANCIAL_CODES.has(s.code)) || Boolean(paymentContext) })
+    : null;
+  const organisation = emailContext ? detectOrgSignals(emailContext, { text, now }) : null;
   const deterministic = [
     ...urlSignals,
     ...checkLinkHygiene(text),
     ...checkIdentityConsistency(text),
-    ...detectLexicon(text),
+    ...lexicon,
     ...detectInjection(text),
     ...evaluatePaymentContext(paymentContext),
+    ...(email?.signals ?? []),
+    ...(organisation?.signals ?? []),
   ];
 
   const semantic = await semanticPromise;
   attachAges();
 
-  const observedSender = extractObservedSender(text) ?? semantic.observedSender ?? null;
+  const observedSender = emailContext?.from?.address ?? extractObservedSender(text) ?? semantic.observedSender ?? null;
   const sender = observedSender ?? claimedInstitution?.display_name ?? null;
   const reputation = senderReputation(sender);
   const community = evaluateCommunitySignal(text, { sender: observedSender, now });
 
-  const withoutCommunity = [...deterministic, ...semantic.signals, ...reputation.signals];
+  const analysisInputHash = inputHash(text);
+  let orgIntel = null;
+  let orgObservationId = null;
+  let orgRecorded = false;
+  if (emailContext) {
+    const orgId = DEMO_ORGANISATION.organisationId;
+    const senderKey = pseudonym(orgId, emailContext.from?.address);
+    const recipientKey = pseudonym(orgId, emailContext.recipient?.address);
+    orgObservationId = observationId({ orgId, inputHash: analysisInputHash, messageId: emailContext.messageId, recipientKey });
+    const indicators = extractIndicators(emailContext, { text, paymentContext, signals: deterministic });
+    const preliminary = score([...deterministic, ...semantic.signals, ...reputation.signals], {
+      semanticStatus: semantic.status, claimedInstitution, ocrQuality,
+    });
+    orgIntel = evaluateOrgIntel({
+      orgId,
+      inputHash: orgObservationId,
+      indicators,
+      senderKey,
+      recipientKey,
+      senderDomain: emailContext.from?.domain ? registrableDomain(emailContext.from.domain) : null,
+      flagged: preliminary.level !== "low",
+      now,
+    });
+    orgIntel.indicators = indicators;
+    orgIntel.senderKey = senderKey;
+    orgIntel.recipientKey = recipientKey;
+  }
+
+  const withoutCommunity = [...deterministic, ...semantic.signals, ...reputation.signals, ...(orgIntel?.signals ?? [])];
   const signals = community.signal ? [...withoutCommunity, community.signal] : withoutCommunity;
   const engineContext = { semanticStatus: semantic.status, claimedInstitution, ocrQuality };
   const decision = score(signals, engineContext);
   const levelWithoutCommunity = community.signal ? score(withoutCommunity, engineContext).level : decision.level;
   const { riskAdjustment } = recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now });
 
-  const codes = new Set(decision.findings.map((f) => f.code));
+  // Every code in a finding, incl. merged ones (a PAY-07 absorbed into
+  // EMAIL-06 still means "payment details changed" to the policies below).
+  const codes = new Set(decision.findings.flatMap((f) => f.members.map((m) => m.code)));
   const stage = semantic.stage ?? derivedStage(codes);
   const scamType = semantic.scamType;
-  const interventions = planInterventions({ level: decision.level, codes, scamType, stage });
+  const interventions = planInterventions({ level: decision.level, codes, scamType, stage, source });
+  const verification = planVerification({
+    level: decision.level,
+    signals: decision.findings.flatMap((f) => f.members),
+    profile: DEMO_ORGANISATION,
+  });
   const inferredCount = decision.findings.filter((f) => f.sourceTypes.every((s) => s === "semantic_model")).length;
 
   const result = {
@@ -159,13 +242,15 @@ export async function runPipeline(rawText, context = {}) {
     analysis: {
       rulesetVersion: decision.rulesetVersion,
       source: SOURCES.includes(source) ? source : "pasted_text",
-      inputHash: inputHash(text),
+      inputHash: analysisInputHash,
       detectorVersions: {
         url: URL_DETECTOR_VERSION,
         lexicon: LEXICON_VERSION,
         institutions: REGISTRY_VERSION,
         community: WAVE_RULES.version,
         interventions: POLICY_VERSION,
+        ...(email ? { email: EMAIL_DETECTOR_VERSION } : {}),
+        ...(organisation ? { organisation: ORG_DETECTOR_VERSION, verification: VERIFICATION_POLICY_VERSION } : {}),
       },
       semantic: {
         status: semantic.status,
@@ -177,6 +262,31 @@ export async function runPipeline(rawText, context = {}) {
       },
     },
   };
+  if (email) {
+    orgRecorded = recordOrgEmail({
+      orgId: DEMO_ORGANISATION.organisationId,
+      inputHash: orgObservationId,
+      senderKey: orgIntel.senderKey,
+      senderDomain: emailContext.from?.domain ? registrableDomain(emailContext.from.domain) : null,
+      recipientKey: orgIntel.recipientKey,
+      level: decision.level,
+      flagged: decision.level !== "low",
+      indicators: orgIntel.indicators,
+      now,
+    });
+    result.analysis.email = emailAnalysis(emailContext, email.checks);
+    result.analysis.organisation = {
+      detector: ORG_DETECTOR_VERSION,
+      profile: DEMO_ORGANISATION.version,
+      observationId: orgObservationId,
+      recorded: orgRecorded,
+      senderRelation: organisation.senderRelation,
+      history: orgIntel.history,
+      reputation: orgIntel.reputation,
+      campaigns: orgIntel.campaigns,
+    };
+    result.verification = verification;
+  }
   if (sender) result.sender = sender;
   if (observedSender) result.observedSender = observedSender;
   if (reputation.reports !== undefined) result.senderReports = reputation.reports;

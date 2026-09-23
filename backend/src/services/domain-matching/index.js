@@ -16,6 +16,7 @@ import {
   isOfficialHost,
   normalizeHost,
 } from "../institutions/index.js";
+import { domainToUnicode } from "node:url";
 import { makeSignal } from "../signals/registry.js";
 
 export { BRAND_DOMAIN_MAP, BRAND_TOKENS, isOfficialHost };
@@ -207,8 +208,93 @@ function classifyLink(link) {
   return null;
 }
 
-function skeleton(host) {
+export function skeleton(host) {
   return [...host.toLowerCase()].map((ch) => CONFUSABLES[ch] ?? ch).join("");
+}
+
+/** Lower-cased host in Unicode form (xn-- punycode labels decoded), "" when unparsable. */
+export function unicodeHost(host) {
+  const h = normalizeHost(host);
+  if (!h) return "";
+  const decoded = domainToUnicode(h);
+  return decoded || h;
+}
+
+/** "finance.abc-supplies.example" -> "abc-supplies.example" (registrable label + public suffix). */
+export function registrableDomain(host) {
+  const { registrable, suffix } = splitHost(unicodeHost(host));
+  return registrable && suffix && registrable !== suffix ? `${registrable}.${suffix}` : unicodeHost(host);
+}
+
+/**
+ * Deterministic relation between two domains, used by the email detectors
+ * (services/email-signals) to compare a sender domain with a trusted one:
+ *   "same"      - identical, or a subdomain of the trusted domain
+ *   "sibling"   - same registrable domain, different subdomain (mail.x vs pay.x)
+ *   "lookalike" - different registrable domain whose label is visually or
+ *                 edit-distance close to the trusted one (abc-suppiies vs
+ *                 abc-supplies, Cyrillic/punycode skeleton match, or the same
+ *                 label under a different public suffix)
+ *   "different" - anything else
+ * Uses the same edit-distance scaling and confusable skeleton as URL-01/URL-04.
+ */
+export function compareDomains(candidate, trusted) {
+  const a = unicodeHost(candidate);
+  const b = unicodeHost(trusted);
+  if (!a || !b) return "different";
+  if (isOfficialHost(a, b)) return "same";
+  if (registrableDomain(a) === registrableDomain(b)) return "sibling";
+  const technique = impersonationTechnique(a, b);
+  return technique && technique !== "brand_embedded" ? "lookalike" : "different";
+}
+
+// Characters people misread for each other, folded to one representative
+// on BOTH sides before comparing (asp1re / aspIre / aspire -> asplre).
+const VISUAL_FOLDS = [
+  [/rn/g, "m"], [/vv/g, "w"], [/cl/g, "d"],
+  [/[il1|!]/g, "l"], [/[o0]/g, "o"], [/5/g, "s"], [/3/g, "e"], [/4/g, "a"], [/7/g, "t"], [/8/g, "b"], [/6/g, "g"],
+];
+function visualFold(label) {
+  return VISUAL_FOLDS.reduce((s, [re, to]) => s.replace(re, to), skeleton(label));
+}
+const suffixLabelCount = (parts) => parts.suffix.split(".").length;
+
+/**
+ * How `candidate` imitates the trusted domain, or null when it does not (or
+ * belongs to it). Deterministic; used for the organisation's own protected
+ * domains (ORG-01/ORG-02) and for supplier domains (EMAIL-02/EMAIL-04):
+ *   homoglyph        аspire.mu (Cyrillic а), xn--... decoded first
+ *   label_split      a.spire.mu, a-spire.mu (labels / hyphen join to the brand)
+ *   subdomain_abuse  aspire.mu.verify-login.com (brand as a label before an unrelated domain)
+ *   tld_swap         aspire.co, aspire.com.mu-style (same label, other suffix)
+ *   confusable       asp1re.mu, aspirne -> same after visual folding (1/l/i, 0/o, rn/m ...)
+ *   typo             edit distance scaled by length (same scale as URL-01)
+ *   brand_embedded   aspire-login.com, aspirepayroll.com (brand inside a longer label)
+ * `brand_embedded` is the weakest - common words can be brands - so callers
+ * decide whether it counts on its own.
+ */
+export function impersonationTechnique(candidate, trusted) {
+  const a = unicodeHost(candidate);
+  const b = unicodeHost(trusted);
+  if (!a || !b || isOfficialHost(a, b) || registrableDomain(a) === registrableDomain(b)) return null;
+  const A = splitHost(a);
+  const B = splitHost(b);
+  const brand = B.registrable;
+  if (!brand) return null;
+
+  if (/[^\x00-\x7f]/.test(a)) {
+    const unicodeLabel = A.registrable.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+    if (splitHost(skeleton(a)).registrable === brand || visualFold(unicodeLabel) === visualFold(brand)) return "homoglyph";
+  }
+  const beforeSuffix = A.labels.slice(0, A.labels.length - suffixLabelCount(A));
+  if (beforeSuffix.length >= 2 && beforeSuffix.join("") === brand) return "label_split";
+  if (A.registrable !== brand && A.registrable.replace(/-/g, "") === brand.replace(/-/g, "")) return "label_split";
+  if (A.subdomains.includes(brand)) return "subdomain_abuse";
+  if (A.registrable === brand) return "tld_swap";
+  if (visualFold(A.registrable) === visualFold(brand)) return "confusable";
+  if (brand.length >= 5 && levenshtein(A.registrable, brand) <= maxEditDistance(brand.length)) return "typo";
+  if (brand.length >= 5 && (A.registrable.split("-").includes(brand) || A.registrable.includes(brand))) return "brand_embedded";
+  return null;
 }
 
 /** URL-04: hosts written with non-ASCII look-alike letters, or punycode. */

@@ -22,3 +22,9 @@ test("matching names do not fire PAY-05", () => {
   assert.equal(namesMatch("Mauritius Commercial Bank", "MCB"), true);
   assert.deepEqual(evaluatePaymentContext({ recipient: "ABC Trading Ltd", claimedOrganisation: "ABC Ltd", method: "bank_transfer", onCallNow: false }), []);
 });
+
+test("accountNumber is reduced to its last 4 digits; too short is rejected", () => {
+  assert.deepEqual(validatePaymentContext({ accountNumber: "0045 1123 6789" }).value, { accountLast4: "6789" });
+  assert.match(validatePaymentContext({ accountNumber: "12" }).error, /accountNumber/);
+  assert.match(validatePaymentContext({ accountNumber: 12345678 }).error, /accountNumber/);
+});

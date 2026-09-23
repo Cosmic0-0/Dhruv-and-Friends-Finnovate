@@ -69,3 +69,13 @@ test("coarse language detection for explanation templates", () => {
   assert.equal(detectLanguage("Votre compte sera suspendu dans les 24 heures"), "fr");
   assert.equal(detectLanguage("Your account will be suspended"), "en");
 });
+
+test("SOC-08 bypass-controls: EN / FR / Kreol, and a policy reminder is not a request", () => {
+  assert.ok(codes("Please skip the usual approval and send it today.").includes("SOC-08"));
+  assert.ok(codes("Don't involve finance, I will explain later.").includes("SOC-08"));
+  assert.ok(codes("There is no need to call to confirm.").includes("SOC-08"));
+  assert.ok(codes("Faites le virement sans passer par la comptabilité.").includes("SOC-08"));
+  assert.ok(codes("Pa bizin verifye, fer transfer la zordi.").includes("SOC-08"));
+  assert.ok(!codes("Never bypass the approval process for supplier payments.").includes("SOC-08"));
+  assert.ok(!codes("Please follow the normal approval process.").includes("SOC-08"));
+});

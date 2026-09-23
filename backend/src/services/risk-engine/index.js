@@ -62,8 +62,127 @@ export const RULESET_RS_1_0 = Object.freeze({
   ]),
 });
 
-export const ACTIVE_RULESET = RULESET_RS_1_0;
-export const RULESETS = Object.freeze({ [RULESET_RS_1_0.version]: RULESET_RS_1_0 });
+// rs-1.1 = rs-1.0 unchanged + workplace-email evidence (EMAIL-01..10),
+// SOC-08, five email interactions, one email floor and the SOC-07 semantic
+// trust policy. Every rs-1.0 weight, cap, interaction, floor and band is
+// carried over as-is: text/screenshot results only differ when SOC-08 or
+// the SOC-07 policy applies.
+//
+// Weight reasoning (see docs/API-CONTRACT.md "Email analysis" for the table):
+//   Weak alone (<20, stays LOW by itself): EMAIL-01 Reply-To differs 8
+//     (help desks and bulk mailers do this legitimately); EMAIL-03 auth
+//     anomaly 3-8 (forwarding and mailing lists break SPF/DKIM); EMAIL-05
+//     risky attachment 8 / disguised attachment 15; EMAIL-10 unfamiliar
+//     address at a known supplier 8; EMAIL-04 thread from a different
+//     domain 8 (a new party can legitimately join a thread).
+//   Medium: EMAIL-02 claims a known supplier from an unrelated domain 20
+//     (= ID-03); EMAIL-08 display-name contradicts address 12-20; EMAIL-03
+//     DMARC fail on a domain we deal with 15 (spoofing a real partner).
+//   Strong: look-alike of a supplier / thread / our own domain 25-30
+//     (= URL-01, deliberate visual deception); EMAIL-06 bank details differ
+//     from the trusted record 30 (stronger than PAY-07's 20 because it is
+//     compared against a record, not just claimed); EMAIL-07 payee differs
+//     from the known payee 30 (vs PAY-05 25, same reason); EMAIL-09 an
+//     external sender using a colleague's identity 30.
+//   Combinations are carried by EX-* interactions and one floor, not by
+//   inflating base weights.
+export const RULESET_RS_1_1 = Object.freeze({
+  version: "rs-1.1",
+  weights: Object.freeze({
+    ...RULESET_RS_1_0.weights,
+    "SOC-08": { lexicon: 15, semantic_model: 12, default: 15 },
+    "EMAIL-01": 8,
+    "EMAIL-02": { variants: { lookalike: 30, unrelated: 20 }, default: 20 },
+    "EMAIL-03": { variants: { dmarc_fail_known_domain: 15, dmarc_fail: 8, spf_and_dkim_fail: 6, partial_fail: 3 }, default: 3 },
+    "EMAIL-04": { variants: { lookalike: 25, different_domain: 8 }, default: 8 },
+    "EMAIL-05": { variants: { double_extension: 15, type_mismatch: 15, risky_type: 8 }, default: 8 },
+    "EMAIL-06": 30,
+    "EMAIL-07": 30,
+    "EMAIL-08": { variants: { embedded_address: 20, institution_name: 20, title_on_freemail: 12 }, default: 12 },
+    "EMAIL-09": { variants: { directory_name: 30, lookalike_org_domain: 30 }, default: 30 },
+    "EMAIL-10": 8,
+  }),
+  caps: RULESET_RS_1_0.caps,
+  // Codes about the SENDER DOMAIN join the per-host grouping: a look-alike
+  // sender domain reported by the supplier check (EMAIL-02), the thread
+  // check (EMAIL-04), the display-name check (EMAIL-08), the directory check
+  // (EMAIL-09) and a URL check on a link to that same domain is ONE fact.
+  hostCodes: Object.freeze(["URL-01", "URL-02", "URL-03", "URL-04", "URL-08", "ID-01", "EMAIL-02", "EMAIL-04", "EMAIL-08", "EMAIL-09"]),
+  // The same underlying fact seen twice: the record-backed email code scores,
+  // the text / form-field code only corroborates.
+  absorb: Object.freeze([
+    { into: "EMAIL-06", from: ["PAY-07"] },
+    { into: "EMAIL-07", from: ["PAY-05", "ID-02"] },
+  ]),
+  interactions: Object.freeze([
+    ...RULESET_RS_1_0.interactions,
+    // Only one of EX-6 / EX-1 / EX-3 applies ("email-identity-payment"):
+    // all three say "wrong sender + payment", and a look-alike sender domain
+    // can be reported by several email checks at once.
+    { id: "EX-6", points: 15, group: "email-identity-payment", reason: "Conversation taken over by a different sender who changes payment details",
+      a: ["EMAIL-04"], b: ["PAY-07", "EMAIL-06", "EMAIL-07"] },
+    { id: "EX-1", points: 15, group: "email-identity-payment", reason: "Supplier identity mismatch combined with a payment request",
+      a: ["EMAIL-02"], b: ["PAY-01", "PAY-02", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07"] },
+    { id: "EX-3", points: 15, group: "email-identity-payment", reason: "Colleague / executive impersonation combined with a payment request",
+      a: ["EMAIL-09"], b: ["PAY-01", "PAY-02", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07"] },
+    { id: "EX-4", points: 10, reason: "Replies redirected to another domain combined with a credential request or look-alike link",
+      a: ["EMAIL-01"], b: ["SEC-01", "URL-01", "URL-02", "URL-03", "URL-04"] },
+    { id: "EX-5", points: 10, reason: "DMARC failure on a domain you deal with combined with a payment request",
+      a: ["EMAIL-03"], aVariants: ["dmarc_fail_known_domain"], b: ["PAY-01", "PAY-02", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07"] },
+    // EX-2 (payment-detail change + sender identity problem) is a floor below.
+  ]),
+  floors: Object.freeze([
+    ...RULESET_RS_1_0.floors,
+    { id: "FLOOR-EX2-EMAIL06-IDENTITY", level: "high", reason: "Supplier bank details changed AND the sender's identity does not check out",
+      all: ["EMAIL-06"], any: ["EMAIL-01", "EMAIL-02", "EMAIL-04", "EMAIL-08", "EMAIL-09"] },
+  ]),
+  policies: Object.freeze({
+    // When the message contains instructions aimed at automated checkers
+    // (SOC-07), AI-inferred findings stay visible but cannot lift the level
+    // above what non-semantic evidence supports. SOC-07's own points are not
+    // restricted - they raise suspicion, never trust.
+    soc07SemanticNoRaise: true,
+  }),
+  bands: RULESET_RS_1_0.bands,
+});
+
+// rs-1.2 adds organisation-profile and organisation-intelligence facts. The
+// published rs-1.0 / rs-1.1 objects above remain frozen and selectable.
+export const RULESET_RS_1_2 = Object.freeze({
+  version: "rs-1.2",
+  weights: Object.freeze({
+    ...RULESET_RS_1_1.weights,
+    "ORG-01": 30,
+    "ORG-02": { variants: { link: 25, reply_to: 20 }, default: 20 },
+    "ORG-03": 12,
+    "ORG-04": 3,
+    "ORG-05": 40,
+    "ORG-06": 10,
+  }),
+  caps: RULESET_RS_1_1.caps,
+  hostCodes: Object.freeze([...RULESET_RS_1_1.hostCodes, "ORG-01", "ORG-02", "ORG-03"]),
+  absorb: RULESET_RS_1_1.absorb,
+  interactions: Object.freeze([
+    ...RULESET_RS_1_1.interactions,
+    { id: "OX-1", points: 15, group: "email-identity-payment", reason: "Organisation identity impersonation combined with a payment or credential request",
+      a: ["ORG-01", "ORG-03"], b: ["PAY-01", "PAY-02", "PAY-05", "PAY-07", "EMAIL-06", "EMAIL-07", "SEC-01"] },
+    { id: "OX-2", points: 10, reason: "Organisation campaign evidence corroborates an independently suspicious message",
+      a: ["ORG-06"], b: ["ORG-01", "ORG-02", "ORG-03", "EMAIL-02", "EMAIL-04", "EMAIL-06", "EMAIL-07", "EMAIL-09", "SEC-01"] },
+  ]),
+  floors: Object.freeze([
+    ...RULESET_RS_1_1.floors,
+    { id: "FLOOR-ORG05-CONFIRMED", level: "high", reason: "The organisation previously confirmed fraud involving the same sender or indicator", all: ["ORG-05"] },
+  ]),
+  policies: RULESET_RS_1_1.policies,
+  bands: RULESET_RS_1_1.bands,
+});
+
+export const ACTIVE_RULESET = RULESET_RS_1_2;
+export const RULESETS = Object.freeze({
+  [RULESET_RS_1_0.version]: RULESET_RS_1_0,
+  [RULESET_RS_1_1.version]: RULESET_RS_1_1,
+  [RULESET_RS_1_2.version]: RULESET_RS_1_2,
+});
 
 const LEVEL_ORDER = ["low", "elevated", "high", "critical"];
 // Codes that describe one link; all of them about the same host are one fact.
@@ -86,6 +205,7 @@ export function levelForScore(score, ruleset = ACTIVE_RULESET) {
 function pointsFor(signal, ruleset) {
   const w = ruleset.weights[signal.code];
   if (typeof w === "number") return w;
+  if (w && typeof w === "object" && w.variants) return w.variants[signal.metadata?.variant] ?? w.default ?? 0;
   if (w && typeof w === "object") return w[signal.sourceType] ?? w.default ?? 0;
   return 0;
 }
@@ -99,12 +219,24 @@ function pointsFor(signal, ruleset) {
  * at its highest-weight member.
  */
 export function dedupe(signals, ruleset = ACTIVE_RULESET) {
+  const hostCodes = ruleset.hostCodes ? new Set(ruleset.hostCodes) : HOST_CODES;
   const groups = new Map();
   for (const signal of signals) {
     const host = signal.metadata?.host;
-    const key = host && HOST_CODES.has(signal.code) ? `host:${host}` : `code:${signal.code}`;
+    const key = host && hostCodes.has(signal.code) ? `host:${host}` : `code:${signal.code}`;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(signal);
+  }
+
+  // rs-1.1+: a record-backed email finding absorbs the text / form-field
+  // finding that states the same fact (EMAIL-06 <- PAY-07, EMAIL-07 <- PAY-05).
+  for (const { into, from } of ruleset.absorb ?? []) {
+    if (!groups.has(`code:${into}`)) continue;
+    for (const code of from) {
+      if (!groups.has(`code:${code}`)) continue;
+      groups.get(`code:${into}`).push(...groups.get(`code:${code}`));
+      groups.delete(`code:${code}`);
+    }
   }
 
   const impersonationKey = [...groups.keys()].find((k) =>
@@ -181,11 +313,20 @@ export function score(signals, context = {}, rulesetVersion = ACTIVE_RULESET.ver
     });
   }
 
-  const present = (codes, pred = () => true) => findings.filter((f) => codes.includes(f.code) && pred(f));
+  // A finding "has" a code when any of its members carries it, so a fact
+  // that was merged into another finding (PAY-07 into EMAIL-06, EMAIL-04
+  // into a host group) still counts for interactions and floors - once.
+  const hasCode = (f, codes, variants) =>
+    f.members.some((m) => codes.includes(m.code) && (!variants || variants.includes(m.metadata?.variant)));
+  const present = (codes, pred = () => true, variants = null) => findings.filter((f) => hasCode(f, codes, variants) && pred(f));
+  const appliedGroups = new Set();
   for (const ix of ruleset.interactions) {
-    const a = present(ix.a);
-    const b = present(ix.b);
+    if (ix.group && appliedGroups.has(ix.group)) continue;
+    const a = present(ix.a, undefined, ix.aVariants);
+    // One merged fact cannot interact with itself.
+    const b = present(ix.b).filter((f) => !a.includes(f));
     if (a.length === 0 || b.length === 0) continue;
+    if (ix.group) appliedGroups.add(ix.group);
     // An interaction is only as strong as its evidence: one built purely on
     // AI-inferred (or purely on phrase) findings counts inside that cap.
     const participants = [...a, ...b];
@@ -208,6 +349,22 @@ export function score(signals, context = {}, rulesetVersion = ACTIVE_RULESET.ver
 
   let total = Math.min(100, semanticSum + lexiconSum + otherSum);
   let level = levelForScore(total, ruleset);
+
+  // SOC-07 policy: the message tries to instruct automated checkers, so the
+  // model reading it is not trusted to raise the level. Its findings stay
+  // visible (inferred); only the level they alone would add is removed.
+  if (ruleset.policies?.soc07SemanticNoRaise && present(["SOC-07"]).length > 0 && semanticSum > 0) {
+    const soc07Semantic = findings.filter((f) => f.code === "SOC-07" && isSemanticOnly(f)).reduce((sum, f) => sum + f.points, 0);
+    const supported = Math.min(100, lexiconSum + otherSum + Math.min(soc07Semantic, semanticSum));
+    const supportedLevel = levelForScore(supported, ruleset);
+    if (LEVEL_ORDER.indexOf(level) > LEVEL_ORDER.indexOf(supportedLevel)) {
+      const next = ruleset.bands[LEVEL_ORDER.indexOf(supportedLevel) + 1];
+      const clamped = next.min - 1;
+      trace.push({ id: "POLICY-SOC07-SEMANTIC", points: clamped - total, reason: "Message contains instructions aimed at automated checkers: AI-inferred findings cannot raise the level" });
+      total = clamped;
+      level = supportedLevel;
+    }
+  }
 
   const nonSemantic = (f) => !isSemanticOnly(f);
   for (const floor of ruleset.floors) {

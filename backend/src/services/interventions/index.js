@@ -6,7 +6,7 @@
 // "reduceConcern" lists checks that would LOWER concern. It never says a
 // message is safe: one reassuring fact does not prove legitimacy.
 
-export const POLICY_VERSION = "interventions-1.0";
+export const POLICY_VERSION = "interventions-1.1";
 
 const ACTIONS = Object.freeze({
   dont_open_link: "Do not open the link in this message.",
@@ -24,19 +24,38 @@ const ACTIONS = Object.freeze({
   hostile_instructions: "This message contains hidden instructions aimed at scam checkers - treat it as hostile.",
   block_and_report: "Block the sender and report the message to your bank or the organisation it claims to be from.",
   verify_first: "Verify the request through an official channel before you act on it.",
+  // Workplace email (source "email").
+  supplier_dont_use_details: "Do not use the bank details contained in this email.",
+  supplier_contact_known: "Contact the supplier using contact information already stored by your organisation.",
+  supplier_verify_verbally: "Verify the account change verbally before making payment.",
+  exec_hold_transfer: "Do not make the transfer yet.",
+  exec_normal_approval: "Confirm the request using your organisation's normal approval process.",
+  exec_no_email_contacts: "Do not use contact details contained only in this email.",
+  phish_no_password: "Do not open the link or enter your password.",
+  phish_open_independently: "Open the organisation's service independently.",
+  dont_open_attachment: "Do not open this attachment. Ask your IT or security team to check it first.",
+  dont_reply_to_address: "Do not reply to this email directly - replies would go to a different address than the sender's.",
   no_warning_signs: "No warning signs were found. Only act on requests you were expecting.",
 });
 
 const URL_CODES = ["URL-01", "URL-02", "URL-03", "URL-04", "URL-06", "URL-07", "URL-08", "ID-01", "REP-05"];
-const PAY_CODES = ["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-06", "PAY-07"];
+const PAY_CODES = ["PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-05", "PAY-06", "PAY-07", "EMAIL-06", "EMAIL-07"];
+const SUPPLIER_IDENTITY_CODES = ["EMAIL-02", "EMAIL-04", "EMAIL-10"];
+const SUPPLIER_PAYMENT_ACTIONS = ["supplier_dont_use_details", "supplier_contact_known", "supplier_verify_verbally"];
 
 // Ordered rules: [condition, action ids]. Every matching rule contributes.
 const RULES = [
-  [(c) => c.hasAny(URL_CODES), ["dont_open_link", "open_official_directly"]],
+  // Workplace email first: the most specific instruction leads.
+  [(c) => c.hasAny(["EMAIL-06", "EMAIL-07"]) || (c.hasAny(SUPPLIER_IDENTITY_CODES) && c.hasAny(PAY_CODES)), SUPPLIER_PAYMENT_ACTIONS],
+  [(c) => c.has("EMAIL-09") || (c.has("EMAIL-08") && c.hasAny(PAY_CODES)), ["exec_hold_transfer", "exec_normal_approval", "exec_no_email_contacts"]],
+  [(c) => c.isEmail && c.hasAny([...URL_CODES, "SEC-01"]), ["phish_no_password", "phish_open_independently"]],
+  [(c) => c.has("EMAIL-05"), ["dont_open_attachment"]],
+  [(c) => c.has("EMAIL-01"), ["dont_reply_to_address"]],
+  [(c) => !c.isEmail && c.hasAny(URL_CODES), ["dont_open_link", "open_official_directly"]],
   [(c) => c.has("SEC-01"), ["dont_share_code", "contact_verified_channel"]],
   [(c) => c.has("SEC-02"), ["dont_install", "contact_verified_channel"]],
   [(c) => c.has("PAY-03"), ["dont_move_funds", "contact_verified_channel"]],
-  [(c) => c.has("PAY-07"), ["verify_bank_change"]],
+  [(c) => c.has("PAY-07") && !c.hasAny(["EMAIL-06", "EMAIL-07"]), ["verify_bank_change"]],
   [(c) => c.hasAny(["PAY-05", "PAY-06"]), ["stop_and_verify_recipient"]],
   [(c) => c.has("SOC-03") && c.hasAny(PAY_CODES), ["call_person_known_number", "talk_to_someone"]],
   [(c) => c.has("PAY-04") || (c.has("SOC-05") && c.hasAny(PAY_CODES)), ["dont_pay_fee"]],
@@ -47,7 +66,9 @@ const RULES = [
 
 const REDUCE_CONCERN = [
   [(c) => c.hasAny(URL_CODES), "The same request appears when you open the organisation's official website or app yourself."],
+  [(c) => c.hasAny(["EMAIL-06", "EMAIL-07"]), "The supplier confirms the new account by phone, on a number already held in your supplier records."],
   [(c) => c.hasAny(["PAY-05", "PAY-06", "PAY-07"]), "You confirm the recipient's details through a channel you already trusted before this message arrived."],
+  [(c) => c.has("EMAIL-09"), "The person confirms the request in person or through your organisation's normal approval process."],
   [(c) => c.has("SOC-03") || c.has("SOC-06"), "You reach the person on a number you already had for them, and they confirm the request."],
   [(c) => c.has("SOC-05") || c.has("PAY-04"), "You can confirm the prize, refund or parcel directly with the organisation, without paying anything first."],
 ];
@@ -61,13 +82,14 @@ function legacySuggestedAction(level) {
 }
 
 /**
- * @param {{ level: string, codes: Iterable<string>, scamType?: string|null, stage?: string|null }} input
+ * @param {{ level: string, codes: Iterable<string>, scamType?: string|null, stage?: string|null, source?: string }} input
  * @returns {{ policyVersion: string, actions: {id: string, text: string}[], reduceConcern: string[], suggestedAction: string }}
  */
-export function planInterventions({ level, codes, scamType = null, stage = null }) {
+export function planInterventions({ level, codes, scamType = null, stage = null, source = null }) {
   const codeSet = new Set(codes);
   const ctx = {
     level,
+    isEmail: source === "email",
     scamType,
     stage,
     has: (code) => codeSet.has(code),
