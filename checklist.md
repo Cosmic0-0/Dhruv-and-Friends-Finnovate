@@ -105,13 +105,13 @@ sender data touches the demo, since the app ingests untrusted user input
       (kept as last 4 digits only), 400 with a field-specific message.
 - [x] **Escape user content** before rendering it back in the UI (verdict
       display, flagged-signal view, batch results) to prevent stored/reflected
-      XSS from a malicious pasted message. Verified 2026-09-22: no
-      `dangerouslySetInnerHTML` anywhere in `frontend/` — every place user
+      XSS from a malicious pasted message. Reverified 2026-09-23: every place user
       text (message body, signal evidence, sender) is rendered
       (`components/ResultView.tsx`, `components/result/parts.tsx`,
       `components/result/sections.tsx`) goes through plain JSX text nodes,
-      which React escapes by default. Recheck if `dangerouslySetInnerHTML`
-      or a raw-HTML renderer is ever introduced.
+      which React escapes by default. The two `dangerouslySetInnerHTML` uses
+      contain fixed application-authored theme and JSON-LD strings, never
+      analysis or user content.
 - [x] **Restrict file uploads** (screenshot ingestion) — verified
       2026-09-22: `/api/analyze/screenshot` (`backend/src/routes/index.js`)
       caps decoded image size at 5MB, sniffs PNG/JPEG/WEBP by magic bytes
@@ -122,16 +122,13 @@ sender data touches the demo, since the app ingests untrusted user input
 - [x] **Trim API responses** — don't leak internal fields (raw LLM prompt,
       stack traces, DB row internals) in `/api/analyze`, `/api/batch-scan`,
       or `/api/report` responses. The malformed-JSON HTML-stack-trace leak
-      (`data/test-payloads/FINDINGS.md` #5) was already closed. Fixed
+      found during the first QA pass was already closed. Fixed
       2026-09-22: `/api/analyze` and `/api/analyze/screenshot` no longer
       pass through raw `err.message` — both now return a generic
       `{ "error": "..." }` and log the real error server-side with
       `console.error` (`backend/src/routes/index.js`). `/api/batch-scan`'s
-      **per-message** `explanation` field still includes `err.message` on an
-      individual analysis failure — kept deliberately, it's user-facing "why
-      this one couldn't be analyzed" copy (see FINDINGS.md #6), and the
-      underlying strings are already short/sanitized
-      (`"Ollama request failed: 500"`), never a stack trace or internal path.
+      **per-message** `explanation` field uses a short user-facing failure
+      message rather than a stack trace or internal path.
       Rechecked 2026-09-23 for `emailContext`: `messageId`, Return-Path and
       raw header values are never echoed; the response carries only
       per-signal evidence (the sender/Reply-To address, masked account
@@ -226,8 +223,8 @@ product. Judges and casual visitors notice these fast.
 - [x] **Favicon** set (not the framework default). Verified 2026-09-22:
       `frontend/public/icons/favicon-32.png` + `icon-192.png` referenced in
       `app/layout.tsx:33-36`, custom-branded (not Next.js's default icon).
-- [x] **`sitemap.xml`** present for the deployed app. Implemented
-      2026-09-22: `frontend/app/sitemap.ts` lists `/`, `/learn`, `/trends`
+- [x] **`sitemap.xml`** present for the deployed app. Reverified
+      2026-09-23: `frontend/app/sitemap.ts` lists the public tool and content routes
       (deliberately excludes `/result`, which is `noindex`). Verified via
       `curl http://localhost:3001/sitemap.xml`.
 - [x] **`lang` attribute** set correctly on `<html>` — notable here since
@@ -257,18 +254,13 @@ product. Judges and casual visitors notice these fast.
       → `/result`, through the real fallback LLM path), the Learn quiz
       flow, and `/trends`, all with DevTools console tracking on — zero
       errors on any of them, only harmless Next.js dev Fast Refresh logs.
-      Screenshot upload is now wired up in the UI (`f2b375a`,
-      `frontend/components/ScreenshotUpload.tsx`) but not yet live-verified
-      console-clean end to end. Batch scan → summary is still NOT verified
-      and currently can't be: there is no batch-scan UI page at all
-      (`frontend/app/` has no batch route — only `lib/api.ts` calls the
-      backend route). Batch is backend-complete and unit-tested but has no
-      live UI path to exercise yet.
+      Screenshot upload is wired up but not yet live-verified console-clean end
+      to end. A batch UI now exists at `/batch`; it also still needs a populated
+      real-browser console check.
 - [x] **JS bundle isn't massive** — check bundle size before the demo;
       trim unused dependencies (especially anything pulled in for the LLM
-      or OCR call that isn't needed client-side). Verified 2026-09-22:
-      `frontend/node_modules` now installed; `next build` output shows
-      103 kB shared JS + 0.9–5.5 kB per route (103–126 kB first load JS per
-      route across `/`, `/learn`, `/trends`, `/result`) — no LLM/OCR
+      or OCR call that isn't needed client-side). Reverified 2026-09-23:
+      `next build` shows 103 kB shared JS; most routes load 131–147 kB, while
+      the React Flow campaign page loads 181 kB — no LLM/OCR
       dependency is bundled client-side (`tesseract.js` and the LLM client
       are backend-only, `backend/src/services/`).

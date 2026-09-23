@@ -34,8 +34,8 @@ of truth. Update the relevant durable document when behavior changes.
   times out, or returns invalid JSON.
 - Domain matching, identity checks, payment-context checks, reputation evidence,
   and score arithmetic stay deterministic and unit-testable.
-- Frontend and extension consumers must follow `docs/API-CONTRACT.md`. Detection
-  logic belongs in the backend and must not be copied into clients.
+- Frontend, extension, and Outlook consumers must follow `docs/API-CONTRACT.md`.
+  Detection logic belongs in the backend and must not be copied into clients.
 - Never fabricate live reports, campaigns, trends, review decisions, or model
   availability. Empty data must render as empty data.
 - Treat message content and screenshots as untrusted input. Preserve the current
@@ -58,6 +58,7 @@ backend/src/services/site-security/    passive site checks with SSRF protection
 backend/src/db/                        SQLite schema and queries
 frontend/                              Next.js PWA and all web product flows
 extension/                             Manifest V3 client of the backend API
+outlook-addin/                         Office.js read-mode client of the backend API
 data/                                  registries, reviewed language data, QA data
 ```
 
@@ -87,6 +88,9 @@ cd backend && npm test
 cd frontend && npm test
 cd frontend && npm run typecheck
 cd frontend && npm run build
+cd outlook-addin && npm test
+cd outlook-addin && npm run build
+cd outlook-addin && npm run validate
 ```
 
 Route tests bind temporary localhost servers and may need network-sandbox

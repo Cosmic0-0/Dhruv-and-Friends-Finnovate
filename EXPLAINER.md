@@ -7,7 +7,7 @@ decision rules live in code.
 ## System overview
 
 ```text
-Web PWA / Chrome extension
+Web PWA / Chrome extension / Outlook add-in
           |
           v
       Express API
@@ -48,7 +48,8 @@ All text paths eventually call `backend/src/services/pipeline/runPipeline`:
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
 3. Run deterministic detectors for URLs, identity consistency, lexicon phrases,
-   prompt injection, template artifacts, payment context, and link hygiene.
+   prompt injection, template artifacts, payment context, email context, and link
+   hygiene.
 4. Evaluate matching community events without treating the current analysis as
    evidence for itself.
 5. Ask the semantic model for allowed manipulation codes, exact evidence quotes,
@@ -91,6 +92,9 @@ Run `npm run test:fallback` on the actual demo machine shortly before presenting
   structured payment recipients.
 - Payment context lets the Before You Pay flow add recipient mismatch and active
   coaching signals that cannot be inferred reliably from message text alone.
+- Email context lets the Outlook add-in supply sender, Reply-To, Return-Path,
+  authentication, attachment, and link metadata. These fields are evaluated by
+  deterministic code and are not sent to the LLM.
 - Template-artifact checks catch unrendered mail-merge syntax.
 - Community evidence requires distinct pseudonymous reporters, excludes official
   identities and redaction placeholders, and cannot raise a strong floor without
@@ -151,6 +155,12 @@ explicit user action. The extension is currently configured for
 `http://localhost:4000` and `http://localhost:3000`; deployment requires updating
 `extension/config.js` and the manifest `host_permissions` together.
 
+The Outlook read-mode task pane sends the open message body and bounded metadata
+to the same `/api/analyze` route. It does not scan the mailbox, download attachment
+contents, or add a separate scoring system. Production deployment requires HTTPS,
+an exact `OUTLOOK_ADDIN_ORIGINS` allowlist, and a production-rendered manifest; see
+`outlook-addin/README.md`.
+
 ## Reliability and security boundaries
 
 - API routes enforce message, batch, and image limits and have per-IP rate limits.
@@ -181,6 +191,8 @@ so the setting must match the real topology before production use.
   routing and validation.
 - The extension has extensive automated syntax/logic coverage only through shared
   backend tests and manual steps; it still needs a load-unpacked browser smoke test.
+- Outlook support depends on what each client exposes through Office.js. Missing
+  authentication headers remain unknown rather than being treated as failures.
 - ESLint is not configured. `npm run lint` prompts interactively and is not a CI
   check.
 - The project does not declare/enforce Node 22, although frontend tests require it.
@@ -195,6 +207,8 @@ As of 2026-09-23 in the current worktree:
 - Frontend: all 9 test files pass under Node 22.
 - Frontend: `npm run typecheck` passes.
 - Frontend: `npm run build` passes and generates all 16 app routes.
+- Outlook add-in: run `npm test`, `npm run build`, and `npm run validate` in
+  `outlook-addin/`; the live fixture smoke test additionally requires the backend.
 - Frontend lint: unavailable until ESLint is configured.
 
 These checks validate code paths and contracts. They do not replace a real-model

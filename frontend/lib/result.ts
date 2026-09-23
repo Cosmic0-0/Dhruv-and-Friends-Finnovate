@@ -198,7 +198,7 @@ export function safeChecks(
  * arrives (components/InvestigationReveal.tsx), before the result screen
  * takes over. Every line comes from a field this exact response actually
  * has — nothing here is inferred or fabricated for effect. Order follows the
- * backend's own documented pipeline (EXPLAINER.md §3.1): links, then
+ * backend's documented pipeline (EXPLAINER.md, "Analysis flow"): links, then
  * identity, then community reports, then journey/ScamDNA (both additive,
  * P1-only fields).
  */
