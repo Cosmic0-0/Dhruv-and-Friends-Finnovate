@@ -1,7 +1,7 @@
 # Browser extension: test checklist
 
 Owner: **Caellum**. Written 2026-09-23 against `main` @ `94781c2` (extension v0.3.0).
-Problems found so far are findings #19–#29 in `FINDINGS.md`.
+Problems found so far are findings #19–#30 in `FINDINGS.md`, all but #27 already confirmed in Chrome.
 
 Tick each box as you go. **Expect** is what should happen. **Known issue**
 means it's already logged, so don't log it again.
@@ -133,8 +133,8 @@ On http://localhost:5500/privacy.html:
 - [ ] It does **not** contain `CANARY-USERNAME`, `CANARY-PASSWORD`,
       `CANARY-HIDDEN` or `CANARY-TEXTAREA`.
 - [ ] `CANARY-TYPED` (the rich text box). Expected: not sent, since the README
-      promises typed text is never read. **Likely issue #28:** it will be
-      sent. Please confirm either way.
+      promises typed text is never read. **Known issue #28:** it is
+      sent.
 
 ## 5. Right-click checks
 

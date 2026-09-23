@@ -448,22 +448,28 @@ Nothing blocking. The VPS model is reachable. Next step is re-running
 Raised against `main` @ `94781c2` (extension v0.3.0), backend on
 `localhost:4000` using the VPS model (`/health/llm` reachable, provider
 `ollama`). Test steps are in `EXTENSION-CHECKLIST.md`; test pages are in
-`extension-pages/`.
+`extension-pages/`. **To check fixes:** `EXTENSION-FIX-CHECKS.md` and
+`verify-extension-fixes.mjs` re-test every finding below and print
+PASS/FAIL per number.
 
-Items marked **confirmed** were reproduced with direct calls to the same
-backend routes the extension uses, with the extension's own decision logic
-copied into the script (e.g. the banner rule from `background.js:108`).
-Items marked **from code** are certain from reading the extension but still
-need one click-through in Chrome to confirm, because the extension hasn't been
-loaded in a browser yet.
+Items marked **confirmed in Chrome** were reproduced with the real, unmodified
+extension loaded into Chrome for Testing 148 and driven by a script (toolbar
+click, real popup, real "Scan This Page"), as well as with direct calls to the
+backend routes it uses. Items marked **from code** are certain from reading
+the extension but couldn't be automated (Chrome's right-click menu can't be
+driven by a script), so they need one manual check.
 
 ## 19. Normal sites get a red "High risk" badge if the bank's name is in the address
 
-**Severity:** high, because a judge browsing Wikipedia or LinkedIn sees our tool call it a scam &nbsp;·&nbsp; confirmed
+**Severity:** high, because a judge browsing Wikipedia or LinkedIn sees our tool call it a scam &nbsp;·&nbsp; confirmed in Chrome
 
 `/api/check-url` treats a bank name anywhere in the path as a scam (URL-03,
-always `high`). The badge goes red and the popup says "High risk — strong
-scam signals found":
+always `high`). In Chrome, visiting Wikipedia's MCB_Group article gave a red
+**!** badge, and the popup said "High risk — strong scam signals found" with
+the evidence `en.wikipedia.org uses "mcb" in its path but is not MCB's
+domain`. The same happens for these addresses through the API (LinkedIn
+sends logged-out visitors to a login page first, so it only shows up for
+signed-in users):
 
 ```
 https://en.wikipedia.org/wiki/MCB_Group            ! high-risk  URL-03
@@ -480,7 +486,7 @@ path check for `/api/check-url`, or treat it as low severity there.
 
 ## 20. "Scan This Page" calls a real bank's safety advice a scam
 
-**Severity:** high, because the obvious demo is scanning a real bank page &nbsp;·&nbsp; confirmed
+**Severity:** high, because the obvious demo is scanning a real bank page &nbsp;·&nbsp; confirmed in Chrome
 
 Page text in the style of a real bank's security centre
 (`extension-pages/bank-advice.html`: "MCB will never ask you to share your
@@ -506,7 +512,7 @@ demo; scan `extension-pages/scam.html`.
 
 ## 21. The in-page warning banner appears for word-list matches, even on SAFE pages
 
-**Severity:** medium &nbsp;·&nbsp; confirmed
+**Severity:** medium &nbsp;·&nbsp; confirmed in Chrome
 
 The README says the banner shows only for fake-domain / fake-identity
 checks, "never for weak" signals. The extension decides this with
@@ -524,7 +530,7 @@ is `safe`.
 
 ## 22. The popup forgets the result after about 30 seconds
 
-**Severity:** high for the demo, because the planned beat is "open a fake site, then open the popup" &nbsp;·&nbsp; from code
+**Severity:** high for the demo, because the planned beat is "open a fake site, then open the popup" &nbsp;·&nbsp; confirmed in Chrome
 
 Results are kept only in memory in the background script (`tabResults`,
 `background.js:11`). Chrome puts extension background scripts to sleep after
@@ -533,6 +539,11 @@ popup after that, it gets nothing back and says **"Not checked yet — reload
 the page"**, while the badge still shows the red **!**. Talking over a slide
 for 30 seconds before clicking the icon is enough to trigger this.
 
+In Chrome, on Wikipedia's MCB_Group page, the popup said "High risk" straight
+away. The background script went to sleep **30 s** later with no tab
+activity, and the popup then said "Not checked yet — reload the page", badge
+still `!`.
+
 Having the background script's DevTools open keeps it awake, which hides the
 bug during development. **Suggested direction:** store results in
 `chrome.storage.session` instead of a `Map`, or re-check when the popup finds
@@ -540,7 +551,7 @@ nothing.
 
 ## 23. Hitting the link-check limit shows "Backend unreachable" everywhere, including on scam sites
 
-**Severity:** medium &nbsp;·&nbsp; confirmed
+**Severity:** medium &nbsp;·&nbsp; confirmed in Chrome
 
 Every page load **and every tab switch** calls `/api/check-url`
 (`background.js:53`, even if the tab was checked a second ago). The limit is
@@ -548,12 +559,15 @@ Every page load **and every tab switch** calls `/api/check-url`
 (I'd already used some). Once it's hit, every tab shows the grey **×** and
 "Backend unreachable: backend returned 429" for up to 15 minutes, so a real
 fake-bank site gets no warning. A rehearsal plus the demo on one laptop can
-use this up. **Suggested direction:** reuse the cached result on tab switch,
+use this up. In Chrome, 6 open tabs and 60 quick tab switches used about 80
+of the 120. After the limit, `mcb-secure-verify.top` showed **×** and
+"Backend unreachable: backend returned 429. Browsing was not blocked." (The
+switching itself was fine: all 6 tabs kept the right badge.) **Suggested direction:** reuse the cached result on tab switch,
 and show "too many checks, try again shortly" rather than "unreachable".
 
 ## 24. The amber "?" badge can never appear while browsing, and some scam links show as safe
 
-**Severity:** medium &nbsp;·&nbsp; confirmed
+**Severity:** medium &nbsp;·&nbsp; confirmed in Chrome
 
 `/api/check-url` runs only `checkUrls()`, whose four rules (URL-01 to URL-04)
 are all `high`. So while browsing, the badge is only ✓, ! or ×. The README's
@@ -571,22 +585,24 @@ https://track-parcel-mu.top/    ✓   (the EN-08 scam link: no bank name, so no 
 
 ## 25. "Report this site" reports are never shown back
 
-**Severity:** medium, since the crowdsourced feed is a differentiator &nbsp;·&nbsp; from code
+**Severity:** medium, since the crowdsourced feed is a differentiator &nbsp;·&nbsp; confirmed in Chrome
 
 The popup sends the hostname to `/api/report` and shows the new count once.
 Nothing reads it afterwards. `/api/check-url` doesn't look up reports
 (`routes/index.js:221`), so the next visit to a reported site looks exactly
-the same. There's also no "are you sure?" before reporting, and the limit is
+the same. In Chrome: reported `mcb-secure-verify.top` ("reported 1
+time(s)"), reloaded, and the popup had no mention of it. There's also no "are you sure?" before reporting, and the limit is
 5 per hour. **Suggested direction:** have `/api/check-url` return the report
 count for the hostname and show "reported N times" in the popup.
 
 ## 26. On browser pages, "Report this site" reports junk names, and the popup says "reload"
 
-**Severity:** low &nbsp;·&nbsp; from code
+**Severity:** low &nbsp;·&nbsp; confirmed in Chrome
 
 On `chrome://newtab` or `chrome://extensions`, the popup takes the hostname
 as `newtab` / `extensions`, and **Report this site** sends that to
-`/api/report` as a scam site. On a `file://` page the hostname is empty, so
+`/api/report` as a scam site. In Chrome both went through: "Reported. newtab
+has been reported 1 time(s)." and the same for `extensions`. On a `file://` page the hostname is empty, so
 the button silently does nothing. On all of these the popup says "Not checked
 yet — reload the page", which reloading can't fix. **Suggested direction:**
 disable Scan/Report on non-http(s) pages and say "FraudLens only checks
@@ -594,7 +610,7 @@ websites".
 
 ## 27. No sign anything is happening after a right-click check, and every error says "Backend unreachable"
 
-**Severity:** low &nbsp;·&nbsp; from code
+**Severity:** low &nbsp;·&nbsp; from code (the right-click menu can't be automated)
 
 After "Check selected text with FraudLens", nothing appears until the AI
 finishes (1–7 s in my runs, up to 60 s if it's slow), so people click again.
@@ -605,7 +621,7 @@ is lost (only a dot in Recent checks remains).
 
 ## 28. Text typed into rich text boxes is sent when you scan a page
 
-**Severity:** medium (privacy promise) &nbsp;·&nbsp; from code, confirm with `extension-pages/privacy.html`
+**Severity:** medium (privacy promise) &nbsp;·&nbsp; confirmed in Chrome
 
 `content.js` sends `document.body.innerText`. That correctly leaves out
 password boxes, normal input boxes and hidden fields. It **does** include
@@ -615,16 +631,55 @@ README say typed text is never read "by construction", which isn't true
 there. **Suggested direction:** skip `[contenteditable]` elements when
 collecting text, or reword the promise.
 
+In Chrome, on `extension-pages/privacy.html`, I typed into every box and ran
+Scan This Page. What was sent:
+
+```
+CANARY-USERNAME / CANARY-PASSWORD / CANARY-PWTYPED (typed)   not sent
+CANARY-HIDDEN / CANARY-TEXTAREA / CANARY-TATYPED (typed)     not sent
+CANARY-TYPED (typed into the rich text box)                  SENT
+```
+
 ## 29. README is out of date on "Open in FraudLens"
 
-**Severity:** low &nbsp;·&nbsp; confirmed
+**Severity:** low &nbsp;·&nbsp; confirmed in Chrome
 
 README "Known limitations" says the web app ignores `?scan=`. It doesn't
-anymore: `frontend/components/CheckForm.tsx:169` fills the text box from it.
+anymore: `frontend/components/CheckForm.tsx:169` fills the text box from it
+(in Chrome, the web app opened with the scanned text already in the box).
 But after **Scan This Page**, the text passed is the first 400 characters of
 the page, which is usually the menu and header, not the message. The README
 needs updating, and passing only the part that triggered signals would make
 the handoff useful.
+
+## 30. A page scan can show the page's heading as "Claimed identity … (reported 0x)"
+
+**Severity:** low &nbsp;·&nbsp; seen once in Chrome, not repeatable
+
+Scanning `extension-pages/scam.html` once showed "Claimed identity: Messages I
+received (reported 0x)". "Messages I received" is the page's heading. A
+second run of the same text gave `sender: "MCB"`. The value falls back to the
+AI's guess (`semantic.observedSender`, `pipeline/index.js:174`), so it varies
+between runs. On real pages the first line is usually a menu, which makes
+this more likely. "(reported 0x)" also reads oddly; hiding the count when it's
+0 would help.
+
+### Checked in Chrome and working
+
+- Real bank and everyday sites get ✓; fake bank sites get **!**, including
+  ones that don't load (the address alone is checked).
+- Scan This Page on `scam.html`: SCAM 100/100 with a red banner naming
+  `mcb-secure-verify.top`. Scanning twice gives one banner; **Dismiss**
+  removes it.
+- Backend stopped mid-scan: the popup shows "Failed to fetch" after about 2 s,
+  with no endless spinner. Backend down while browsing: grey **×**, "Backend
+  unreachable: Failed to fetch. Browsing was not blocked.", and pages still
+  load.
+- Scan on `chrome://` pages: "Could not read this page: Cannot access a
+  chrome:// URL".
+- Fast tab switching (6 tabs, 60 switches): every tab kept the right badge.
+- A tab loaded in the first moment after the extension is installed isn't
+  checked until it's reloaded. That's minor and expected.
 
 ### Setup notes (not bugs, but they cost time)
 
