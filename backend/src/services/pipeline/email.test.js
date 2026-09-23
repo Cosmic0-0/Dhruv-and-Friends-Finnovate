@@ -35,7 +35,7 @@ for (const f of FIXTURES) {
   test(`fixture ${f.id}: ${f.title}`, async () => {
     const r = await runPipeline(f.request.message, { emailContext: ctx(f.request.emailContext), semantic: OFF });
     assert.equal(r.analysis.source, "email");
-    assert.equal(r.analysis.rulesetVersion, "rs-1.5");
+    assert.equal(r.analysis.rulesetVersion, "rs-1.6");
     assert.ok(f.expect.levels.includes(r.risk.level), `level ${r.risk.level} (${r.risk.score}) not in ${f.expect.levels}`);
     for (const code of f.expect.codes) assert.ok(allCodes(r).includes(code), `missing ${code} in ${allCodes(r)}`);
     for (const code of f.expect.absentCodes ?? []) assert.ok(!allCodes(r).includes(code), `unexpected ${code}`);

@@ -53,7 +53,7 @@ test("forged signature with the LLM down -> 200, deterministic HIGH, document bl
   assert.equal(body.analysis.semantic.status, "unavailable");
   assert.equal(body.analysis.source, "document");
   assert.equal(body.analysis.detectorVersions.document, "document-1.0");
-  assert.equal(body.analysis.rulesetVersion, "rs-1.5");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.6");
   assert.deepEqual(body.risk, { score: 66, level: "high", confidence: "high" });
   assert.equal(body.verdict, "scam");
   assert.equal(body.decision, "do_not_pay");

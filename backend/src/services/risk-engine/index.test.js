@@ -24,7 +24,7 @@ test("no signals -> low, proceed, score 0", () => {
   assert.equal(r.score, 0);
   assert.equal(r.level, "low");
   assert.equal(r.decision, "proceed");
-  assert.equal(r.rulesetVersion, "rs-1.5");
+  assert.equal(r.rulesetVersion, "rs-1.6");
 });
 
 test("one suspicious hostname is ONE scored finding, not three full-weight ones", () => {

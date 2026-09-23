@@ -77,7 +77,7 @@ test("POST /api/analyze returns a complete, valid response even when the domain-
   assert.deepEqual(body.risk, { score: 36, level: "elevated", confidence: "high" });
   assert.equal(body.verdict, "suspicious");
   assert.equal(body.decision, "verify_first");
-  assert.equal(body.analysis.rulesetVersion, "rs-1.5");
+  assert.equal(body.analysis.rulesetVersion, "rs-1.6");
   assert.equal(body.analysis.semantic.status, "ok");
   assert.ok(Array.isArray(body.signals) && body.signals.length > 0);
   assert.equal(typeof body.suggestedAction, "string");

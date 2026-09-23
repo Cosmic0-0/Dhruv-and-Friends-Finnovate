@@ -16,6 +16,15 @@ Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 > field changed type or meaning, and existing clients need no change. Flag it
 > to the frontend, OCR/batch, extension and Outlook owners before merging.
 
+> **ADDITIVE CHANGE (2026-09-24): image forensics for screenshots.**
+> `POST /api/analyze/screenshot` now also runs the uploaded image through the
+> local Python document-forensics service (TruFor/ELA/layout/EXIF/signature)
+> concurrently with OCR, not just OCR alone. New reason codes `DOC-09`..`DOC-13`
+> (`document-forensics-client/toSignals.js`), ruleset `rs-1.6` (rs-1.0..1.5
+> unchanged and selectable), a new `imageForensics` response field (see that
+> route below). `analysis.detectorVersions.imageForensics` is added when any
+> of these signals fired. No existing field changed type or meaning.
+
 ## `POST /api/analyze`
 
 > **DECISION-ARCHITECTURE CHANGE (2026-09-23) — flag to Oleg (frontend),
@@ -437,6 +446,19 @@ ingestion (`backend/src/services/ocr/`, tesseract.js `eng+fra`). Runs OCR,
 redacts the extracted text server-side, then runs it through the same
 `runPipeline()` as `/api/analyze` (with `analysis.source: "screenshot"`).
 
+**Additive (2026-09-24).** The image also goes through the local Python
+document-forensics service (`backend/src/services/document-forensics-client/`
+— TruFor, Error Level Analysis, Donut layout comparison, EXIF/metadata,
+signature consistency) concurrently with OCR. Its findings become ordinary
+`DOC-09`..`DOC-13` entries in `signals[]` (via
+`document-forensics-client/toSignals.js`, `rs-1.6`), the same "extraSignals
+feed runPipeline()" pattern `/api/analyze/document` uses for PDF/DOCX — one
+deterministic verdict covering both the message's language and the image
+itself, not two separate checks. The LLM still only ever sees the redacted
+OCR text, never the image or the forensic facts. A down/slow forensics
+service degrades to no extra signals (never fails the request); see
+`imageForensics.status` in the response.
+
 ### Request
 
 ```json
@@ -456,12 +478,21 @@ WEBP, regardless of anything the client claims.
 The full `/api/analyze` response (see above) plus:
 
 ```json
-{ "extractedText": "string — redacted OCR output that was actually analyzed" }
+{
+  "extractedText": "string — redacted OCR output that was actually analyzed",
+  "imageForensics": {
+    "status": "\"ok\" | \"unavailable\" — whether the forensics service actually ran",
+    "checksRun": "string[] — which of metadata_pdf/error_level_analysis/trufor/layout_comparison actually executed (the service escalates only when cheaper checks are inconclusive)",
+    "checksSkipped": "{ check: string, reason: string }[] — the rest, and why"
+  }
+}
 ```
 
 The UI never shows `extractedText` to the user - the screenshot thumbnail is
 the only visible confirmation of what was scanned. The text is held in
 memory client-side and submitted to `/api/analyze` once "Check" is pressed.
+`imageForensics` is transparency about what ran, not a second verdict — its
+actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
 
 ### Errors
 

@@ -23,8 +23,8 @@ const PUBLISHED = {
   "rs-1.3": [RULESET_RS_1_3, "90219063951955de"],
 };
 
-test("rs-1.5 is active and the published rulesets are unchanged", () => {
-  assert.equal(ACTIVE_RULESET.version, "rs-1.5");
+test("rs-1.6 is active and the published rulesets are unchanged", () => {
+  assert.equal(ACTIVE_RULESET.version, "rs-1.6");
   for (const [version, [rs, expected]] of Object.entries(PUBLISHED)) {
     assert.equal(fingerprint(rs), expected, `${version} was edited in place`);
     assert.ok(!Object.keys(rs.weights).some((c) => c.startsWith("DOC-")), version);
@@ -108,4 +108,46 @@ test("no forced floor: a pasted transparent/upscaled image or typed-on text stay
 test("document findings are deterministic evidence for confidence", () => {
   assert.equal(score([doc("DOC-04", "transparent_overlay")]).confidence, "high");
   assert.equal(score([doc("DOC-01")], { semanticStatus: "unavailable" }).confidence, "moderate");
+});
+
+// rs-1.6: image-forensics evidence (DOC-09..13, the Python document-
+// forensics service's own confidence as `variant`).
+
+test("rs-1.5 never scores image-forensics evidence", () => {
+  const r = score(
+    [doc("DOC-09", "high"), doc("DOC-10", "high"), doc("DOC-11", "high"), doc("DOC-12", "high"), doc("DOC-13", "high")],
+    {},
+    "rs-1.5",
+  );
+  assert.equal(r.score, 0);
+  assert.equal(r.level, "low");
+});
+
+test("low-confidence image findings alone stay LOW", () => {
+  for (const s of [doc("DOC-09", "low"), doc("DOC-10", "low"), doc("DOC-11", "low"), doc("DOC-12", "low"), doc("DOC-13", "low")]) {
+    const r = score([s]);
+    assert.ok(r.score < 20, `${s.code}:${s.metadata.variant} scored ${r.score}`);
+    assert.equal(r.level, "low");
+  }
+});
+
+test("high-confidence TruFor (DOC-09) alone reaches ELEVATED, never HIGH", () => {
+  const r = score([doc("DOC-09", "high")]);
+  assert.equal(r.score, 30);
+  assert.equal(r.level, "elevated");
+});
+
+test("DX-1 fires for a high/medium-confidence TruFor finding plus an impersonation or payment fact, not for low confidence", () => {
+  assert.ok(ids(score([doc("DOC-09", "high"), lex("PAY-01")])).includes("DX-1"));
+  assert.ok(ids(score([doc("DOC-09", "medium"), sem("ID-04")])).includes("DX-1"));
+  assert.ok(!ids(score([doc("DOC-09", "low"), lex("PAY-01")])).includes("DX-1"));
+  // Still applies at most once even with DOC-04 also present.
+  const both = score([doc("DOC-09", "high"), doc("DOC-04", "transparent_overlay"), lex("PAY-01")]);
+  assert.equal(ids(both).filter((id) => id === "DX-1").length, 1);
+});
+
+test("each image-forensics code scores independently (no cross-code dedupe)", () => {
+  const r = score([doc("DOC-09", "high"), doc("DOC-10", "high"), doc("DOC-11", "high"), doc("DOC-12", "high"), doc("DOC-13", "high")]);
+  assert.equal(r.findings.length, 5);
+  assert.equal(r.score, Math.min(100, 30 + 18 + 15 + 8 + 15));
 });

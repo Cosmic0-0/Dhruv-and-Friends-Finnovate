@@ -111,6 +111,20 @@ export const SIGNAL_DEFS = Object.freeze({
   "DOC-06": { category: "document_integrity", severity: "medium", legacyType: "document_hidden_text", label: "Document contains hidden text" },
   "DOC-07": { category: "document_integrity", severity: "high", legacyType: "document_active_content", label: "Document contains active content" },
   "DOC-08": { category: "document_integrity", severity: "medium", legacyType: "document_font_outlier", label: "An amount, account number or date uses a different font from the rest of the page" },
+
+  // Image forensics (services/document-forensics-client -> the local Python
+  // document-forensics/ service: TruFor, Error Level Analysis, Donut layout
+  // comparison, EXIF/metadata, signature consistency). Applies to screenshots
+  // and photographed documents - pixel/metadata facts about the image itself,
+  // never the semantic model, which only ever sees OCR'd text. Severity is
+  // taken from the service's own per-finding confidence (high/medium/low),
+  // not fixed per code, since that confidence is already the most specific
+  // signal the model produces.
+  "DOC-09": { category: "document_integrity", severity: "high", legacyType: "image_forgery_localization", label: "Forgery-localization model found a tampered region" },
+  "DOC-10": { category: "document_integrity", severity: "medium", legacyType: "image_error_level_anomaly", label: "Error Level Analysis found an inconsistent region" },
+  "DOC-11": { category: "document_integrity", severity: "medium", legacyType: "image_template_mismatch", label: "Image doesn't match the expected layout for its claimed document type" },
+  "DOC-12": { category: "document_integrity", severity: "low", legacyType: "image_metadata_anomaly", label: "Image metadata is inconsistent" },
+  "DOC-13": { category: "document_integrity", severity: "medium", legacyType: "image_signature_inconsistency", label: "A signature region shows internal inconsistency" },
 });
 
 export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));

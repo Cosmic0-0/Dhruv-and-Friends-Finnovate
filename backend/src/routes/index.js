@@ -19,6 +19,7 @@ import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { ingestDocument, extractDocumentText } from "../services/document-store/index.js";
 import { analyzeDocumentForensics } from "../services/document-forensics-client/index.js";
+import { forensicsToSignals, IMAGE_FORENSICS_DETECTOR_VERSION } from "../services/document-forensics-client/toSignals.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 import { getRadar, RADAR_RANGES } from "../services/radar/index.js";
@@ -197,15 +198,27 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   if (buffer.length > MAX_IMAGE_BYTES) {
     return res.status(400).json({ error: `image exceeds maximum size of ${MAX_IMAGE_BYTES / (1024 * 1024)}MB` });
   }
-  if (!sniffImageType(buffer)) {
+  const mimeType = sniffImageType(buffer);
+  if (!mimeType) {
     return res
       .status(400)
       .json({ error: "image must be a valid PNG, JPEG, or WEBP file (checked by content, not the declared type)" });
   }
 
+  // OCR (text, for the message-content pipeline) and image forensics (the
+  // local Python document-forensics service - tampering indicators, never a
+  // verdict on its own) are independent enrichments over the same bytes, so
+  // they run concurrently rather than one waiting on the other - same stance
+  // POST /api/documents already takes. analyzeDocumentForensics() never
+  // throws (a down/slow forensics service degrades to no extra signals, not
+  // a failed check); only a genuine OCR failure aborts the request below.
   let extractedText;
+  let forensics;
   try {
-    extractedText = await extractTextFromImage(buffer);
+    [extractedText, forensics] = await Promise.all([
+      extractTextFromImage(buffer),
+      analyzeDocumentForensics({ buffer, mimeType }),
+    ]);
   } catch (err) {
     console.error(err);
     return res.status(502).json({ error: "OCR failed, try again shortly" });
@@ -226,8 +239,23 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   }
 
   try {
-    const result = await runPipeline(redactedText, { source: "screenshot", language, ip: req.ip, record: sharing.record });
-    res.json({ extractedText: redactedText, ...result });
+    const result = await runPipeline(redactedText, {
+      source: "screenshot",
+      language,
+      ip: req.ip,
+      record: sharing.record,
+      extraSignals: forensicsToSignals(forensics),
+      extraDetectorVersions: { imageForensics: IMAGE_FORENSICS_DETECTOR_VERSION },
+    });
+    res.json({
+      extractedText: redactedText,
+      ...result,
+      imageForensics: {
+        status: forensics.status,
+        checksRun: forensics.report?.checksRun ?? [],
+        checksSkipped: forensics.report?.checksSkipped ?? [],
+      },
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "analysis failed, try again shortly" });
