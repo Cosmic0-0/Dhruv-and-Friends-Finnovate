@@ -1,26 +1,31 @@
 # Web app: test checklist
 
-Owner: **Caellum**. Written 2026-09-23 for round 2 against `caellum` @ `878da43`
-(main merged in). The UI owner's newer screens on the `oleg` branch aren't
-covered here.
+Owner: **Caellum**. Updated 2026-09-23 for round 2 against `caellum` @
+`04ae58f` (PR #12 merged: the UI owner's desktop layout with the side menu).
+The two unmerged commits on `oleg` ("Secondary screens", "iPhone pass") are
+not covered.
 
 Tick each box as you go. **Expect** is what should happen. Items marked
-**(auto)** are covered by `results/webapp-ui.mjs` (git-ignored, see the end of
-this file), so you only need to do them by hand if the script can't run.
-Round 2 results: `results/webapp-round2.md`.
+**(auto)** are covered by `webapp-ui.mjs` (see the end of this file), so you
+only need to do them by hand if the script can't run. Round 2 findings:
+[`ROUND2-FINDINGS.md`](./ROUND2-FINDINGS.md).
 
-**Round 2 is only half done.** Not every (auto) item has run yet. Before
-you continue, check the web app UI changes merged since `878da43` against
-this list.
+**Two layouts.** At 1024 px wide and up (a laptop) the app shows a **side
+menu** on the left and no bottom tab bar. Below that (a phone) there is no
+side menu, and the floating **tab bar** at the bottom is the navigation. Test
+both: the script uses 1280 px and 360 px.
 
 ---
 
 ## 0. Setup (about 5 minutes)
 
-1. **Backend.** `backend/.env` points the AI at `localhost`, so override it:
+1. **Backend.** `backend/.env` points the AI at `localhost`, so override it
+   (the AI machine is `kshitij-fedora`; run `tailscale status` first, hosts
+   move). Either run `sh data/test-payloads/restart-backend.sh` in Git Bash,
+   or:
    ```
    cd backend
-   $env:OLLAMA_URL="http://100.115.195.94:11434"; npm start
+   $env:OLLAMA_URL="http://100.91.27.102:11434"; npm start
    ```
    Open http://localhost:4000/health/llm. Expect `"reachable":true`.
 2. **Web app.** `frontend/.env` sends requests to the shared VPS backend.
@@ -29,9 +34,10 @@ this list.
    cd frontend
    $env:BACKEND_URL="http://localhost:4000"; npm run dev
    ```
-   Open http://localhost:3000.
+   Open http://localhost:3000. To be sure it uses your backend, compare
+   http://localhost:3000/api/trends with http://localhost:4000/api/trends.
 3. For the install/offline checks (section 10) you need a production build,
-   because the offline helper only runs there:
+   because the offline helper only runs there. Stop `npm run dev` first:
    ```
    cd frontend
    $env:BACKEND_URL="http://localhost:4000"; npm run build; npx next start -p 3002
@@ -43,64 +49,72 @@ this list.
 - 10 batch scans per 15 minutes.
 - 5 reports per hour.
 
-Restart the backend to reset them.
+Restart the backend to reset them. Known (round 2): everyone using the
+same web app server shares these limits, so testing from a phone and the
+PC at once uses the same 20.
 
 **Test messages.** Use the ones in `en.json`, `fr.json` and `kr.json`
 (each has an `expected.verdict`). Good ones for the demo are listed in
-`results/webapp-round2.md`.
+`ROUND2-FINDINGS.md` ("Before the demo").
 
 ---
 
 ## 1. Check a message (the main flow)
 
-On the home screen (the **Check** tab):
+On the **Check** screen:
 
-- [ ] (auto) The screen shows a greeting, "Is this a scam?", and two buttons:
-      **Paste & check** and **Check a screenshot**.
-- [ ] Copy `EN-01` from `en.json`, click **Paste & check**. Expect: a box opens
-      with the text in it (Chrome may ask to allow the clipboard). It is
-      **not** checked yet.
-- [ ] (auto) If the clipboard is empty or blocked, the box still opens with
-      "Nothing to paste yet. Type the message, or paste it in."
+- [ ] (auto) A greeting, "Is this a scam?", a **Paste & check** button and a
+      small camera button (**Check a screenshot**).
+- [ ] (auto) **Laptop:** the message box is already open under the buttons.
+      **Phone:** the box opens when you tap **Paste & check**.
+- [ ] Copy `EN-01` from `en.json`, click **Paste & check**. Expect: the text
+      goes into the box (Chrome may ask to allow the clipboard). It is **not**
+      checked yet.
+- [ ] (auto) If the clipboard is empty or blocked: "Nothing to paste yet.
+      Type the message, or paste it in."
 - [ ] (auto) Click **Check this message**. Expect: the dark area becomes a
       progress bar with changing text, and a **Cancel** link.
 - [ ] (auto) Within about 30 s you land on the result screen.
-- [ ] Click **Cancel** during a check. Expect: back to the box, text kept.
+- [ ] (auto) Click **Cancel** during a check. Expect: back to the box, text kept.
 
 ## 2. The result screen
 
+On a laptop the verdict runs across the top, the message is on the left and
+the evidence is on the right. On a phone it's one column.
+
 For a **scam** or **suspicious** message:
 
-- [ ] (auto) Big coloured verdict at the top (red Scam / amber Suspicious),
-      with a score out of 100.
-- [ ] (auto) **What's wrong** lists short reasons; **The link** card names the
-      link and the real site it copies (when there's a link).
-- [ ] (auto) The message is shown with the suspicious words highlighted.
-      Clicking a highlight jumps to its reason.
-- [ ] **Why we think so** (collapsed) opens to one card per reason, each
-      with a severity and a quote from the message. Reasons from the AI are
-      labelled as such.
-- [ ] (auto) **What to do** gives concrete steps (e.g. don't open the link,
-      call the bank on its official number).
-- [ ] (auto) **Simple mode** button: switches to a big, plain summary. If your
-      browser supports it, **Read aloud** speaks it. Turning it off brings back
-      the detailed view, and the choice is remembered next time.
-- [ ] (auto) **Safety card**: a short summary with a **Share** or **Copy**
-      button. The copied text has no phone numbers or account numbers.
+- [ ] (auto) Big coloured verdict at the top ("Likely a scam" / "Be
+      careful"), with a score out of 100 and "Warning signs N found".
+- [ ] (auto) **What's wrong** lists short reasons; **The link** names the link
+      and the real site it copies (when there's a link).
+- [ ] (auto) **The message you sent** has the suspicious words underlined.
+      Clicking one jumps to its reason.
+- [ ] (auto) **Why this looks wrong** opens to one card per reason, each with
+      a severity. Reasons from the AI are under "AI analysis".
+- [ ] (auto) **What to do now** gives concrete steps (e.g. don't open the
+      link, call the bank on the number on your card).
+- [ ] (auto) **Simple mode** switches to a big, plain summary. If your
+      browser supports it, **Read aloud** speaks it. **Show full details**
+      brings the detailed view back.
+- [ ] (auto) **Help me explain this** opens a short safety card with a
+      **Share** or **Copy text** button. The copied text has no phone numbers
+      or account numbers.
 - [ ] (auto) **What was sent for analysis** (bottom, collapsed) shows the
       message with phone numbers, emails and account numbers replaced by
       placeholders, and which AI answered (or that none did).
-- [ ] **Check another message** goes back home.
+- [ ] (auto) **Check another message** goes back to Check.
 
 For a **safe** message (e.g. `EN-15`):
 
-- [ ] (auto) Green verdict, a short list of what was checked, no report
-      button, no scary wording.
+- [ ] (auto) Green "Looks genuine", **What we checked**, no report button, no
+      scary wording.
 
 ## 3. Languages
 
 - [ ] (auto) **Settings → Language**: EN, FR, KREOL. Changing it changes every
-      screen straight away and is remembered after a reload.
+      screen (and the side menu) straight away and is remembered after a
+      reload.
 - [ ] (auto) The explanation on the result screen is in the chosen language.
 - [ ] (auto) French and Kreol messages (e.g. `FR-01`, `KR-01`) are checked
       correctly with the UI in any language.
@@ -113,19 +127,21 @@ For a **safe** message (e.g. `EN-15`):
 
 ## 4. Screenshot upload
 
-- [ ] (auto) Click **Check a screenshot**, pick a clear PNG/JPG of a scam SMS.
-      Expect: a thumbnail, "reading" progress, then the text appears in the
-      box for you to fix. It is **not** checked until you click the button.
+- [ ] (auto) Click the camera button, pick a clear PNG of a scam SMS.
+      Expect: a thumbnail, "Reading the screenshot…", then the text appears in
+      the box for you to fix. It is **not** checked until you click the button.
 - [ ] (auto) The privacy note changes to say the image itself is sent.
 - [ ] (auto) A picture with no text: "We couldn't find any readable text".
 - [ ] (auto) A non-image file renamed `.png`: a clear error, no crash.
 - [ ] A photo from a phone camera (large file): still works (it's shrunk in
       the browser first).
-- [ ] **Remove** and **Type instead** clear the screenshot.
+- [ ] (auto) **Remove screenshot** clears it. After a failed read,
+      **Type it instead** clears the screenshot and the error.
 
 ## 5. Batch scan
 
-Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
+Laptop: side menu → **Tools → Batch scan**. Phone: **Radar** tab → **Tools →
+Batch scan**. Or go to `/batch`.
 
 - [ ] (auto) Paste 3–5 messages separated by blank lines. The counter shows
       `n / 50`.
@@ -138,11 +154,11 @@ Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
 
 ## 6. Report the sender
 
-- [ ] (auto) On a scam result with a phone number or sender name, click
-      **Report sender**. Expect: "Reported … N times" (N goes up each time
-      you report the same sender from a new check).
-- [ ] (auto) With no sender, the button opens a small box to type who sent it.
-- [ ] After 5 reports in an hour: a clear "try later" message, no crash.
+- [ ] (auto) On a scam result, **Report this sender** (known sender) or
+      **Report this message** (asks who sent it). Expect: "Reported. …".
+- [ ] (auto) The sender reported is the one who sent the message, never the
+      bank the message pretends to be.
+- [ ] (auto) After 5 reports in an hour: a clear "try later" message, no crash.
 
 ## 7. Opened from the browser extension (`?scan=`)
 
@@ -155,21 +171,28 @@ Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
 
 ## 8. Other screens
 
-- [ ] (auto) **About to pay someone?** (home) → Before You Pay form. Fill who
-      asked, the recipient and the amount, check. Expect a verdict and, if the
-      recipient was reported before, "reported N times".
-- [ ] (auto) **Replay** (from a result's action bar): the same result told as a
-      story. Opening `/replay` with no check first shows a clear empty state.
+Laptop: all of these are in the side menu (Tools). Phone: through the Check
+screen ("About to pay someone?") and the Radar tab's Tools.
+
+- [ ] (auto) **I'm about to pay** (`/safepay`): fill who's asking, how they
+      contacted you, who you're paying and the amount, then **Check before I
+      pay**. Expect a verdict and, if the recipient was reported before,
+      "This recipient has been reported N times".
+- [ ] (auto) **See how this scam works** (Replay, from a scam result): the
+      same result told as a story. `/replay` with no check first shows "No
+      check to show".
 - [ ] (auto) **Conversation** (`/conversation`): add 3 messages one at a time
-      (friendly intro, then urgency, then an OTP request). Each gets a
-      verdict; the side panel shows the furthest scam stage reached.
-- [ ] (auto) **Sandbox** (`/sandbox`): pick a scenario, step through it.
-      Every message is labelled as a simulation. Works even if the AI is off.
+      with **Analyze message** (friendly intro, then urgency, then an OTP
+      request). Each gets a verdict; **Furthest stage detected** moves on.
+- [ ] (auto) **Sandbox** (`/sandbox`): pick a scenario, **Start simulation**,
+      step through it. Every message is labelled as a simulation. Works even
+      if the AI is off.
 - [ ] (auto) **Radar** (`/trends`): the example scam list, then real numbers
       (or an honest "not enough activity yet" when the database is empty).
-- [ ] (auto) **Network** (link from a result or Radar): a graph of senders and
+- [ ] (auto) **View fraud network** (from a result): a graph of senders and
       links for one pattern, plus a text list. An unknown id shows "not found".
-- [ ] (auto) **Learn**: the quiz loads, answers give feedback, the streak counts.
+- [ ] (auto) **Learn**: the quiz loads, **Scam** / **Genuine** give feedback,
+      "Today N of 5" counts up.
 - [ ] (auto) A made-up address like `/nope` shows the FraudLens 404 page.
 
 ## 9. Settings and theme
@@ -187,16 +210,19 @@ Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
       "Can't reach FraudLens", not a blank page.
 - [ ] In Chrome desktop, the address bar shows an install icon; installing
       opens FraudLens in its own window.
-- [ ] On an Android phone (Chrome): the home screen shows **Add to Home
-      Screen**; **Not now** hides it for good.
+- [ ] On an Android phone (Chrome): the Check screen shows an install card;
+      **Not now** hides it for good.
 - [ ] On an iPhone (Safari): the card shows the Share → Add to Home Screen
       steps instead of a button.
 
-## 11. Phone-size screen
+## 11. Screen sizes
 
-- [ ] (auto) At 360 px wide, no page scrolls sideways (home, result, batch,
-      before-you-pay, conversation, sandbox, radar, learn, settings).
-- [ ] (auto) The tab bar stays at the bottom and doesn't cover the last button.
+- [ ] (auto) At 1280 px: side menu on the left, no bottom tab bar, the
+      current screen is highlighted in the menu.
+- [ ] (auto) At 360 px: no side menu, tab bar at the bottom, and no page
+      scrolls sideways (check, result, batch, before-you-pay, conversation,
+      sandbox, radar, learn, settings, replay).
+- [ ] (auto) The tab bar doesn't cover the last button on a page.
 - [ ] On a real phone: the keyboard doesn't hide the **Check** button.
 
 ## 12. When things go wrong
@@ -206,9 +232,11 @@ Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
       turns red, says "Too long to check", and the button is greyed out.
 - [ ] (auto) **Backend down** (stop it, then check): "Can't reach FraudLens",
       your text is kept, **Try again** works once it's back.
-- [ ] (auto) **AI down** (backend started with a dead AI address): the check
-      still gives a verdict from the fixed rules, and "What was sent" says the
-      AI didn't answer. No error screen.
+- [ ] (auto) **AI down** (backend started with a dead AI address, local
+      only): the check still gives a verdict from the fixed rules, and "What
+      was sent" says no AI answered. No error screen.
+- [ ] (auto) **Ollama down, hosted backup allowed**: the check still works and
+      "What was sent" names the backup AI.
 - [ ] (auto) **Limit hit** (21st check in 15 min): a message that says to wait,
       text kept.
 - [ ] (auto) **No console errors** on any screen in the normal flow.
@@ -217,15 +245,21 @@ Open **Radar** (tab bar) → **Tools → Batch scan**, or go to `/batch`.
 
 ## The script
 
-`results/webapp-ui.mjs` (git-ignored, like the extension's
-`explore-round2.mjs`) drives a real Chrome through the items marked (auto).
-It restarts the backend itself to reset limits.
+`webapp-ui.mjs` drives a real Chrome through the items marked (auto). It
+restarts the backend itself to reset limits, with `restart-backend.sh`
+(kills whatever listens on :4000, starts the backend with the AI host, and
+lets `AI_URL` / `AI_MODE` override it for the "AI down" tests; needs Git
+Bash on Windows). One-time setup: `npm install --no-save puppeteer`.
 
 ```
 cd data/test-payloads
-node results/webapp-ui.mjs
+node webapp-ui.mjs                  # dev server on :3000
+node webapp-ui.mjs --only result    # one section (names in ROUND2-FINDINGS.md)
+node webapp-ui.mjs --pwa            # production build on :3002 (section 10)
 ```
 
-`results/webapp-payloads.mjs` runs every `en/fr/kr` message once through
+Output and screenshots go to `results/` (git-ignored).
+
+`webapp-payloads.mjs` runs every `en/fr/kr` message once through
 the web app's route (with the same in-browser redaction) and compares it with
 `expected.verdict` and the round-1 baseline.

@@ -12,6 +12,14 @@ final demo script.
 - `kr.json` — Kreol payloads (2026-09-23 revision, see below).
 - `consistency.mjs` — sends each message to the AI several times and
   reports how often the answer changes (see below).
+- `ROUND2-FINDINGS.md` — **start here:** what QA round 2 found in the web
+  app, backend and extension, with steps and how to check each fix.
+- `WEBAPP-CHECKLIST.md`, `EXTENSION-CHECKLIST.md` — step-by-step test lists.
+- `webapp-payloads.mjs`, `webapp-ui.mjs` — automated web app checks.
+  `verify-extension-fixes.mjs` (see `EXTENSION-FIX-CHECKS.md`) — extension checks.
+- `restart-backend.sh` — restarts the local backend on :4000 (resets its
+  rate limits); the scripts above use it.
+- `results/` — raw output of test runs (git-ignored).
 
 ## Kreol payloads (`kr.json`)
 
@@ -159,7 +167,7 @@ doesn't apply), using backend/.env's model settings. If your `.env` says
 there for the run (PowerShell):
 
 ```
-$env:OLLAMA_URL = "http://100.115.195.94:11434"; node data/test-payloads/consistency.mjs --set seed
+$env:OLLAMA_URL = "http://100.91.27.102:11434"; node data/test-payloads/consistency.mjs --set seed
 ```
 
 A full run is 216 AI calls at about 11s each (roughly 40 minutes); the
