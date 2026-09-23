@@ -31,7 +31,7 @@ export default function TabBar() {
         aria-label={copy.tabs[key]}
         aria-current={active ? "page" : undefined}
         className={`pressable flex size-[50px] items-center justify-center rounded-full ${
-          active ? "text-brand" : "text-icon-idle"
+          active ? "text-ink" : "text-icon-idle"
         }`}
       >
         <Icon className="size-[26px]" strokeWidth={active ? 2.3 : 1.7} />
@@ -52,7 +52,7 @@ export default function TabBar() {
       <Link
         href={NEW_CHECK_HREF}
         aria-label={copy.tabs.newCheck}
-        className="pressable flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_22px_rgb(36_27_122_/_45%)]"
+        className="pressable flex size-14 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary shadow-[0_8px_20px_rgb(0_0_0_/_22%)]"
       >
         <PlusIcon className="size-[26px]" />
       </Link>

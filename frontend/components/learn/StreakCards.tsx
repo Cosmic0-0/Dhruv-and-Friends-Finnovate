@@ -38,7 +38,7 @@ export default function StreakCards({
         <p className="data mt-1 text-[1.75rem] leading-8 font-bold text-ink">{c.todayCount(done, DAILY_GOAL)}</p>
         <div aria-hidden="true" className="mt-2 flex gap-1.5">
           {Array.from({ length: DAILY_GOAL }, (_, i) => (
-            <span key={i} className={`h-1.5 flex-1 rounded-[3px] ${i < done ? "bg-glow" : "bg-track"}`} />
+            <span key={i} className={`h-1.5 flex-1 rounded-[3px] ${i < done ? "bg-ink" : "bg-track"}`} />
           ))}
         </div>
         <p className="mt-2 text-[0.9375rem] leading-5 text-ink-muted">{left > 0 ? c.more(left) : c.doneToday}</p>
@@ -55,7 +55,7 @@ export default function StreakCards({
                 cy="42"
                 r={R}
                 fill="none"
-                stroke="var(--color-glow)"
+                stroke="var(--color-ink)"
                 strokeWidth="7"
                 strokeLinecap="round"
                 strokeDasharray={`${filled} ${circumference}`}

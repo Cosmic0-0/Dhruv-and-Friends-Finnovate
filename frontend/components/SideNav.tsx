@@ -66,7 +66,7 @@ export default function SideNav() {
                 href={href}
                 aria-current={active ? "page" : undefined}
                 className={`pressable flex min-h-11 items-center gap-3 rounded-2xl px-3 text-[1.0625rem] ${
-                  active ? "bg-brand-soft font-semibold text-accent-ink" : "text-ink-muted hover:text-ink"
+                  active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 <Icon className="size-[22px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
@@ -87,7 +87,7 @@ export default function SideNav() {
               href={href}
               aria-current={active ? "page" : undefined}
               className={`pressable flex min-h-11 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
-                active ? "bg-brand-soft font-semibold text-accent-ink" : "text-ink-muted hover:text-ink"
+                active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
               }`}
             >
               <Icon className="size-[18px] shrink-0" strokeWidth={1.8} />

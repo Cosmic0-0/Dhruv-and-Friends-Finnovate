@@ -121,10 +121,10 @@
   --radius-button: 14px;
   --radius-field: 16px;
   --radius-pill: 9999px;
-  --shadow-card: 0 1px 1px rgb(20 20 60 / 3%), 0 12px 28px rgb(20 20 60 / 7%);
-  --shadow-hero: 0 18px 40px rgb(36 27 122 / 30%), 0 2px 6px rgb(36 27 122 / 16%);
-  --shadow-tabbar: 0 12px 34px rgb(20 20 60 / 16%);
-  --shadow-lift: 0 10px 30px rgb(20 20 60 / 10%);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 20px rgb(0 0 0 / 5%);
+  --shadow-hero: 0 10px 28px rgb(0 0 0 / 14%);
+  --shadow-tabbar: 0 10px 30px rgb(0 0 0 / 12%);
+  --shadow-lift: 0 8px 24px rgb(0 0 0 / 8%);
 
   /* ---- Layout ---- */
   --container-app: 430px;
@@ -137,36 +137,40 @@
     color-scheme: light dark;
 
     /* Light (DESIGN.md "Tokens (light)"). */
-    --c-page: #f4f4f7;
+    --c-page: #f2f2f4;
     --c-card: #ffffff;
-    --c-card-gradient: linear-gradient(180deg, #ffffff 0%, #fafafd 100%);
-    --c-card-edge: rgb(255 255 255 / 95%);
-    --c-muted: rgb(20 20 40 / 5%);
-    --c-suggestion: #eceaf7;
+    /* Flat, not a gradient. */
+    --c-card-gradient: #ffffff;
+    --c-card-edge: rgb(0 0 0 / 5%);
+    --c-muted: rgb(0 0 0 / 5%);
+    --c-suggestion: #ebebee;
 
-    --c-brand: #3b2fb5;
-    --c-brand-deep: #241b7a;
-    --c-brand-soft: #eeebff;
-    --c-brand-ink: #3b2fb5;
+    /* No brand hue. "Brand" resolves to the ink tone so the token names still
+       mean something, and nothing on screen is coloured but a verdict. */
+    --c-brand: #1c1c1e;
+    --c-brand-deep: #000000;
+    --c-brand-soft: #ebebee;
+    --c-brand-ink: #1c1c1e;
     --c-on-brand: #ffffff;
+    /* Kept for the streak flame only, which is a fire. */
     --c-glow: #ff8a3d;
-    --c-glow-soft: #ffeede;
+    --c-glow-soft: #fff0e4;
 
-    --c-surface-dark: #1a1630;
-    --c-surface-dark-2: #2a2450;
-    --c-hero: linear-gradient(155deg, #4a3cd0 0%, #3b2fb5 45%, #241b7a 100%);
+    --c-surface-dark: #1c1c1e;
+    --c-surface-dark-2: #2c2c2e;
+    --c-hero: #1c1c1e;
     --c-hero-edge: transparent;
-    --c-skeleton: #e9e9f0;
-    --c-track: #e6e6ee;
+    --c-skeleton: #e8e8ea;
+    --c-track: #e4e4e7;
 
-    --c-ink: #14141b;
-    --c-ink-soft: #3a3a48;
-    --c-ink-muted: #6b6b7b;
+    --c-ink: #1c1c1e;
+    --c-ink-soft: #3c3c3f;
+    --c-ink-muted: #6e6e75;
     --c-on-ink: #ffffff;
     --c-icon-idle: #8e8e93;
 
-    --c-hairline: rgb(20 20 40 / 10%);
-    --c-line-strong: rgb(20 20 40 / 20%);
+    --c-hairline: rgb(0 0 0 / 9%);
+    --c-line-strong: rgb(0 0 0 / 18%);
 
     --c-red: #ff3b30;
     --c-red-ink: #c4221a;
@@ -186,7 +190,7 @@
     --c-tabbar: rgb(255 255 255 / 82%);
     --c-tabbar-edge: rgb(255 255 255 / 95%);
 
-    --c-scrim: rgb(16 12 40 / 55%);
+    --c-scrim: rgb(12 12 14 / 55%);
 
     /* Reserve the floating bar's height (66px) plus its 28px bottom inset. */
     --tabbar-height: 6.125rem;
@@ -203,34 +207,34 @@
    * duplicated — but the colours are not, which is what would otherwise drift.
    */
   :root {
-    --d-page: #0b0b12;
-    --d-card: #171722;
-    --d-card-gradient: linear-gradient(180deg, #1a1a27 0%, #15151f 100%);
+    --d-page: #0c0c0d;
+    --d-card: #1a1a1c;
+    --d-card-gradient: #1a1a1c;
     --d-card-edge: rgb(255 255 255 / 7%);
     --d-muted: rgb(255 255 255 / 8%);
-    --d-suggestion: #1c1b2e;
+    --d-suggestion: #202022;
 
-    --d-brand: #7c6ff5;
-    --d-brand-deep: #5b4fd6;
-    --d-brand-soft: #211d3f;
-    --d-brand-ink: #a79dff;
-    --d-on-brand: #ffffff;
+    --d-brand: #f2f2f4;
+    --d-brand-deep: #ffffff;
+    --d-brand-soft: #232325;
+    --d-brand-ink: #f2f2f4;
+    --d-on-brand: #111113;
     --d-glow: #ff9e5c;
-    --d-glow-soft: #3a2415;
+    --d-glow-soft: #33220f;
 
-    --d-surface-dark: #171722;
-    --d-surface-dark-2: #232334;
-    --d-hero: linear-gradient(155deg, #3f349e 0%, #2e2578 45%, #1d1755 100%);
-    --d-hero-edge: rgb(255 255 255 / 9%);
-    --d-skeleton: #242432;
-    --d-track: #2c2c3d;
-    --d-ink: #f4f4f7;
-    --d-ink-soft: #c5c5d2;
-    --d-ink-muted: #9595a6;
+    --d-surface-dark: #1a1a1c;
+    --d-surface-dark-2: #2a2a2c;
+    --d-hero: #242426;
+    --d-hero-edge: rgb(255 255 255 / 8%);
+    --d-skeleton: #262628;
+    --d-track: #303033;
+    --d-ink: #f2f2f4;
+    --d-ink-soft: #c6c6ca;
+    --d-ink-muted: #94949c;
     --d-on-ink: #ffffff;
     --d-icon-idle: #8e8e93;
-    --d-hairline: rgb(140 140 180 / 22%);
-    --d-line-strong: rgb(140 140 180 / 38%);
+    --d-hairline: rgb(255 255 255 / 12%);
+    --d-line-strong: rgb(255 255 255 / 22%);
     --d-red: #ff6961;
     --d-red-ink: #ff6961;
     --d-red-tint: #3a1512;
@@ -241,9 +245,9 @@
     --d-orange-ink: #ffb340;
     --d-orange-tint: #3a2610;
     --d-mark-ink: #ffb4ae;
-    --d-tabbar: rgb(26 26 40 / 82%);
+    --d-tabbar: rgb(28 28 30 / 82%);
     --d-tabbar-edge: rgb(255 255 255 / 10%);
-    --d-scrim: rgb(5 4 16 / 65%);
+    --d-scrim: rgb(0 0 0 / 62%);
   }
 
   /* System preference, unless Settings has explicitly chosen light. */
@@ -509,6 +513,7 @@
    * The gradient is the base; ::before bleeds a warm glow in from the top
    * right so the surface has a light source instead of being a flat fill.
    */
+  /* The one dark card per screen, carrying its main question. Flat fill. */
   .hero {
     position: relative;
     isolation: isolate;
@@ -518,27 +523,6 @@
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-hero);
     color: #ffffff;
-  }
-
-  .hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-      radial-gradient(120% 90% at 100% 0%, rgb(255 138 61 / 34%), transparent 58%),
-      radial-gradient(90% 70% at 0% 100%, rgb(124 111 245 / 32%), transparent 62%);
-    pointer-events: none;
-  }
-
-  /* A hairline of light along the top edge, the way a lit surface catches it. */
-  .hero::after {
-    content: "";
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 45%), transparent);
-    pointer-events: none;
   }
 
   /*
