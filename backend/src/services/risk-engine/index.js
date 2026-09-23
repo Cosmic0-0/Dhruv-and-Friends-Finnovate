@@ -187,11 +187,41 @@ export const RULESET_RS_1_2 = Object.freeze({
   bands: RULESET_RS_1_1.bands,
 });
 
-export const ACTIVE_RULESET = RULESET_RS_1_2;
+// rs-1.3 adds SOC-09 (free/cracked-download bait, services/lexicon) and its
+// interaction with ID-04 (an implausible official-publisher claim, see
+// services/analysis's broadened ID-04 guidance) - the deterministic half of
+// the fake-download-aggregator fix. Deliberately a modest interaction
+// (matching IX-1/IX-5's scale), not inflated to force any particular
+// fixture into "high" by itself: bait language plus an unverified claim is
+// real but not yet a bank-grade fact. A fake-download page that ALSO gates
+// the "download" behind a payment/credential step reaches "high" through
+// the existing IX-1 interaction (ID-04 is already in its `a` list) without
+// needing anything new here - see risk-engine/index.test.js.
+export const RULESET_RS_1_3 = Object.freeze({
+  version: "rs-1.3",
+  weights: Object.freeze({
+    ...RULESET_RS_1_2.weights,
+    "SOC-09": { lexicon: 8, semantic_model: 8, default: 8 },
+  }),
+  caps: RULESET_RS_1_2.caps,
+  hostCodes: RULESET_RS_1_2.hostCodes,
+  absorb: RULESET_RS_1_2.absorb,
+  interactions: Object.freeze([
+    ...RULESET_RS_1_2.interactions,
+    { id: "IX-6", points: 15, reason: "Implausible official-publisher claim combined with free/cracked-download bait language",
+      a: ["ID-04"], b: ["SOC-09"] },
+  ]),
+  floors: RULESET_RS_1_2.floors,
+  policies: RULESET_RS_1_2.policies,
+  bands: RULESET_RS_1_2.bands,
+});
+
+export const ACTIVE_RULESET = RULESET_RS_1_3;
 export const RULESETS = Object.freeze({
   [RULESET_RS_1_0.version]: RULESET_RS_1_0,
   [RULESET_RS_1_1.version]: RULESET_RS_1_1,
   [RULESET_RS_1_2.version]: RULESET_RS_1_2,
+  [RULESET_RS_1_3.version]: RULESET_RS_1_3,
 });
 
 const LEVEL_ORDER = ["low", "elevated", "high", "critical"];

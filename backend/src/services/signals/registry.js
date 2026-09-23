@@ -36,6 +36,13 @@ export const SIGNAL_DEFS = Object.freeze({
   "SOC-06": { category: "social", severity: "medium", legacyType: "manipulation", label: "Relationship or investment manipulation" },
   "SOC-07": { category: "social", severity: "high", legacyType: "prompt_injection", label: "Contains instructions aimed at automated checkers" },
   "SOC-08": { category: "social", severity: "medium", legacyType: "control_bypass", label: "Asks you to bypass normal approval or verification" },
+  // Deterministic, brand-agnostic: the phrasing pirated-software distribution
+  // bait almost universally uses ("no survey", "direct download link",
+  // "crack"/"keygen"/"serial key"), never which real company is being
+  // impersonated - that judgement stays with the semantic model's ID-04 read
+  // (see services/analysis's broadened ID-04 guidance). Combines with ID-04
+  // via risk-engine's IX-6 interaction.
+  "SOC-09": { category: "social", severity: "low", legacyType: "piracy_bait", label: "Offers a free/cracked copy of normally paid or restricted software" },
 
   "PAY-01": { category: "payment", severity: "low", legacyType: "payment_request", label: "Asks you to send money" },
   "PAY-02": { category: "payment", severity: "high", legacyType: "payment_request", label: "Unusual payment method (gift card, crypto, courier)" },

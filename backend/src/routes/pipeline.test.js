@@ -171,12 +171,17 @@ test("a false official-publisher claim (fake download aggregator) is no longer s
   const { status, body } = await post("/analyze", { message: FAKE_AGGREGATOR_PAGE_TEXT, pageUrl: "https://example-file-aggregator.test/gta-6-download" });
   assert.equal(status, 200);
   assert.ok(body.signals.some((s) => s.code === "ID-04" && s.sourceType === "semantic_model"));
-  assert.notEqual(body.verdict, "safe");
-  assert.notEqual(body.risk.level, "low");
-  // Pure semantic evidence (no deterministic corroboration for THIS
-  // fixture) stays inside the semantic-only cap by design - it can raise
-  // suspicion, never alone reach a bank-grade "do_not_pay" (see
-  // risk-engine's RULESET_RS_1_0.caps.semanticOnly).
+  // SOC-09 (free/cracked-download bait) fires deterministically on "no
+  // survey" / "direct download link" regardless of the LLM - brand-agnostic,
+  // same fixture text would fire it for any company name in the Publisher line.
+  assert.ok(body.signals.some((s) => s.code === "SOC-09" && s.sourceType === "lexicon"));
+  assert.ok(body.trace.some((t) => t.id === "IX-6"));
+  assert.equal(body.verdict, "suspicious");
+  assert.equal(body.risk.level, "elevated");
+  // Bait language + an unverified claim, with no actual payment/credential
+  // ask on this exact fixture, is real but not yet a bank-grade fact - see
+  // risk-engine/index.test.js for the same page WITH a monetization step
+  // (a download-unlock fee) reaching "high" through the existing IX-1.
   assert.notEqual(body.decision, "do_not_pay");
 });
 
