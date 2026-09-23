@@ -55,15 +55,20 @@ backend/src/services/risk-engine/      deterministic score, level, confidence
 backend/src/services/domain-matching/  URL extraction and lookalike checks
 backend/src/services/community-signals privacy-minimised report clustering
 backend/src/services/site-security/    passive site checks with SSRF protection
+backend/src/services/document-forensics/         PDF/DOCX forensics, feeds a verdict
+backend/src/services/document-store/             stores uploaded document bytes
+backend/src/services/document-forensics-client/  HTTP client for document-forensics/
 backend/src/db/                        SQLite schema and queries
 frontend/                              Next.js PWA and all web product flows
 extension/                             Manifest V3 client of the backend API
 outlook-addin/                         Office.js read-mode client of the backend API
+document-forensics/                    optional Python service: image forgery
+                                       indicators for POST /api/documents, never a verdict
 data/                                  registries, reviewed language data, QA data
 ```
 
-The backend and frontend are separate Node projects. There is intentionally no
-root Node package.
+`backend/`, `frontend/`, `outlook-addin/` and `extension/` are separate Node
+projects. There is intentionally no root Node package.
 
 ## API and coding conventions
 
@@ -91,6 +96,8 @@ cd frontend && npm run build
 cd outlook-addin && npm test
 cd outlook-addin && npm run build
 cd outlook-addin && npm run validate
+cd extension && npm test
+cd document-forensics && python -m pytest   # Python 3.12 venv, see its README
 ```
 
 Route tests bind temporary localhost servers and may need network-sandbox

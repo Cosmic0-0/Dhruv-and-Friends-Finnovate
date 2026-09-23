@@ -44,8 +44,10 @@ semantic status as unavailable.
 ## Analysis flow
 
 All text paths eventually call `backend/src/services/pipeline/runPipeline`. A
-document upload also does (see "Document forensics" below): its structural
-findings join the deterministic evidence through `extraSignals`.
+PDF/DOCX upload to `/api/analyze/document` also does (see "Document forensics"
+below): its structural findings join the deterministic evidence through
+`extraSignals`. An image upload to `/api/documents` does not; it returns
+forensic indicators only.
 
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
@@ -66,6 +68,19 @@ The response includes both the compatibility fields (`verdict`, `riskScore`,
 `decision`, `trace`, `actions`, and `analysis`).
 
 ## Document forensics
+
+There are two document routes. They take different file types and make
+different kinds of claim; `docs/DOCUMENT-FORENSICS.md` compares them.
+
+| Route | Files | Where it runs | Output |
+|---|---|---|---|
+| `POST /api/analyze/document` | PDF, DOCX | Node: `backend/src/services/document-forensics/` | `DOC-*` signals and a normal verdict |
+| `POST /api/documents` | PDF, PNG, JPEG, WEBP | Node stores the bytes (`document-store/`) and OCRs images; the optional Python service `document-forensics/` runs the checks, called through `document-forensics-client/` | Indicators with a confidence label, never a verdict |
+
+The web app's `/document` page uses only the first route. The second is
+reachable through the API only.
+
+### PDF/DOCX: `POST /api/analyze/document`
 
 `POST /api/analyze/document` checks a PDF or Word (.docx) file that feels off,
 such as a bank form, statement, invoice or payment confirmation. It looks at
@@ -138,6 +153,38 @@ editing-tool list, and are never returned.
   impersonation or claimed-institution fact.
 
 The fixtures in `data/test-payloads/documents/` demonstrate each case.
+
+### Images: `POST /api/documents`
+
+This route is for a photographed document, such as a phone photo of a bank
+statement, which the PDF/DOCX route does not accept.
+
+```text
+upload (base64 JSON, <=15MB decoded) -> magic-byte type check (PDF/PNG/JPEG/WEBP)
+  -> store the original bytes in SQLite (document-store)
+  -> in parallel:
+       OCR of the stored image (images only) -> redact()
+       POST to the Python service (document-forensics/, default 127.0.0.1:8081)
+  -> 201 { documentId, mimeType, byteLength, receivedAt, extractedText, forensics }
+```
+
+The Python service runs up to four checks, cheapest first, and only moves to
+a more expensive one when the earlier checks were inconclusive: metadata and
+PDF structure, error-level analysis (ELA), TruFor forgery localisation, then
+a Donut layout comparison against known templates. TruFor and Donut are
+local models.
+
+The response never contains a verdict, a risk score or signals, and this
+route does not call `runPipeline()`. The service reports indicators, each
+with a confidence label, and says "no tampering indicators found" when it
+has none, never "authentic" or "verified". A signature check reports only
+the internal consistency of the signature strokes; it never identifies a
+signer. This route stays conservative because the ML checks' false-positive
+behaviour on real documents is not well understood yet.
+
+The Python service is optional. When it is down, slow or failing, the upload
+still succeeds and `forensics.status` is `"unavailable"`.
+`GET /health/document-forensics` reports whether it is reachable.
 
 ## Model transport
 
@@ -282,15 +329,29 @@ so the setting must match the real topology before production use.
 - The project does not declare/enforce Node 22, although frontend tests require it.
 - Accessibility and responsive behavior need a final real-browser pass across the
   result, screenshot, document, batch, conversation, network, and extension flows.
-- Document forensics finds warning signs, not proof:
-  - Metadata can be stripped or forged.
-  - A forgery that was printed and scanned again leaves no structural trace.
-  - There is no pixel-level error-level analysis.
+- Document forensics finds warning signs, not proof. On both paths, metadata
+  can be stripped or forged, and a forgery that was printed and scanned again
+  leaves no structural trace.
+- PDF/DOCX path (`/api/analyze/document`, Node):
+  - It has no error-level analysis and no ML forgery model. Those exist only
+    in the Python service used by `/api/documents`, which this route does
+    not call.
   - PDF annotations and XFA forms are not inspected.
   - Legitimate e-signing tools can also place transparent signature images on a
     scan, which is why that finding alone is ELEVATED ("verify first"), not HIGH.
   - For PDFs with permissions-only encryption, the active-content scan is
     best-effort.
+  - Only the first 10 pages are inspected, and at most 3 scanned pages are OCR'd.
+- Image path (`/api/documents`, Python service):
+  - ELA only applies to images with JPEG compression history; it is skipped
+    for others.
+  - TruFor has produced false positives on synthetic, non-photographic input.
+    Its pretrained weights are licensed for nonprofit use only.
+  - The layout comparison knows only the few templates in
+    `document-forensics/tests/fixtures/templates/`.
+  - The checks are calibrated against a handful of fixtures, not tuned on
+    real-world documents.
+  - There is no web UI for this route yet.
 
 ## Verification baseline
 
