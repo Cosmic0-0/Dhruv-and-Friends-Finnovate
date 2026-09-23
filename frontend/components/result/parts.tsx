@@ -163,11 +163,22 @@ export function MessageCard({
   const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
   const markClasses = `rounded-[3px] px-0.5 underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] text-[var(--c-mark-ink)] ${tone}`;
   const hasHighlights = segments.some((s) => s.severity);
+  // The verdict is carried by the bubble's own edge rather than a badge beside
+  // it, so the thing being judged is the thing that is marked.
+  const edge =
+    verdict === "scam" ? "var(--color-danger)" : verdict === "suspicious" ? "var(--color-caution)" : "var(--color-safe)";
   return (
-    <section className="card flex flex-col gap-2.5" aria-labelledby="message-label">
+    <section className="flex flex-col gap-2" aria-labelledby="message-label">
       <SectionLabel id="message-label">{copy.result.messageYouSent}</SectionLabel>
-      {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
-      <p className="text-[1.0625rem] leading-[1.6875rem] whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+      {/*
+       * The message itself, annotated in place. This is the product: not a
+       * report about the text, but the text with the damning parts marked.
+       * Set in the system font, because that is how it arrived.
+       */}
+      <p
+        className="bubble bubble-verdict"
+        style={{ "--bubble-edge": edge } as React.CSSProperties}
+      >
         {segments.map((s, i) => {
           if (!s.severity) return <Fragment key={i}>{s.text}</Fragment>;
           // 3px is an inline text-highlight radius, not a surface — intentionally
@@ -186,6 +197,7 @@ export function MessageCard({
           );
         })}
       </p>
+      {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
     </section>
   );
 }

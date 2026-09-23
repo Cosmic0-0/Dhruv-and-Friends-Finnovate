@@ -306,8 +306,8 @@ export default function CheckForm({
           void submit();
         }}
       >
-        <div ref={sheetRef} className="sheet scroll-mt-4">
-          <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-1">
+        <div ref={sheetRef} className="scroll-mt-4 flex flex-col gap-2.5">
+          <div className="flex items-center justify-between gap-3 px-1">
             <label htmlFor="message" className="micro text-ink-muted">
               {copy.messageLabel}
             </label>
@@ -333,7 +333,7 @@ export default function CheckForm({
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}
             aria-describedby={overLimit ? "message-too-long" : undefined}
-            className="block w-full resize-none border-0 bg-transparent px-5 py-2.5 text-[1.0625rem] leading-[1.4375rem] text-ink outline-none placeholder:text-ink-muted/60 focus:outline-none focus-visible:outline-none"
+            className="bubble block w-full resize-none border-0 outline-none placeholder:text-ink-muted/55 focus:outline-none focus-visible:outline-none"
           />
           {pasteNote && (
             <p className="px-5 py-2.5 text-[0.9375rem] text-ink-muted" aria-live="polite">
@@ -354,7 +354,7 @@ export default function CheckForm({
             onTypeInstead={typeInstead}
           />
 
-          <div className="flex gap-2.5 px-5 py-4">
+          <div className="flex gap-2.5">
             {/* While waiting this stays the primary btn and shows a compact
                 version of the wait (same stage, same fill), not a separate
                 spinner. The row below carries the live announcements. */}
