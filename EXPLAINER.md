@@ -343,8 +343,10 @@ so the setting must match the real topology before production use.
   the configured demo model rather than assuming unit tests prove model behavior.
 - The hosted fallback must be tested with a real key; mocked tests only prove
   routing and validation.
-- The extension has extensive automated syntax/logic coverage only through shared
-  backend tests and manual steps; it still needs a load-unpacked browser smoke test.
+- The extension has its own `npm test` suite in `extension/` (manifest
+  permissions, content script, popup states, tab state, security report), and
+  its detection logic is covered by the backend tests because it calls the
+  backend. It still needs a load-unpacked browser smoke test.
 - Outlook support depends on what each client exposes through Office.js. Missing
   authentication headers remain unknown rather than being treated as failures.
 - ESLint is not configured. `npm run lint` prompts interactively and is not a CI
@@ -378,18 +380,25 @@ so the setting must match the real topology before production use.
 
 ## Verification baseline
 
-As of 2026-09-23 in the current worktree:
+Run on 2026-09-23. Node 22 was not installed on the machine, so every Node
+check ran on Node 24.18.0.
 
-- Backend: 469 tests pass when localhost binding is allowed (run on Node
-  24.18, the version installed on the build machine; the project targets 22).
-- Backend: the 84-case deterministic eval (`npm run eval`) gives identical
-  results under rs-1.3 and rs-1.4, and `npm run test:fallback` passes.
-- Frontend: all 10 test files (95 tests) pass.
-- Frontend: `npm run typecheck` passes.
-- Frontend: `npm run build` passes and generates all 17 app routes.
-- Outlook add-in: run `npm test`, `npm run build`, and `npm run validate` in
-  `outlook-addin/`; the live fixture smoke test additionally requires the backend.
-- Frontend lint: unavailable until ESLint is configured.
+| Check | Result |
+|---|---|
+| `backend`: `npm test` | 485 tests, 485 pass (localhost binding allowed) |
+| `backend`: `npm run eval` | runs; 84 cases, deterministic mode, ruleset `rs-1.4`: 46 TP, 0 FP, 21 TN, 17 FN (precision 100%, recall 73.0%) |
+| `frontend`: `npm test` | 95 tests in 10 files, all pass |
+| `frontend`: `npm run typecheck` | passes |
+| `frontend`: `npm run build` | passes; 17 static pages generated |
+| `outlook-addin`: `npm test` | 77 tests in 11 files, all pass |
+| `outlook-addin`: `npm run build`, `npm run validate` | both pass; the manifest is valid |
+| `extension`: `npm test` | 40 tests, all pass |
+| `extension`: `npm run check:retire` | passes; vendored Retire.js data fetched 2026-09-23 |
+| `document-forensics`: `python -m pytest` | not run: no Python 3.12 virtualenv on the machine |
+
+Not run on that date: `npm run test:fallback` (it calls the hosted fallback
+provider), the Outlook live fixture smoke test (it needs a running backend),
+and a frontend lint (ESLint is not configured).
 
 These checks validate code paths and contracts. They do not replace a real-model
 run, OCR sample, browser interaction pass, extension smoke test, or fallback test
