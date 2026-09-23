@@ -31,9 +31,9 @@ const here = dirname(fileURLToPath(import.meta.url));
  */
 const ALLOWED = new Set([
   // The product, and the team.
-  "fraudlens", "fraudlensbot", "dhruv", "friends", "logo",
+  "fraudlens", "fraudlensbot", "dhruv", "and", "friends", "logo",
   // Real Mauritian banks, telecoms and services named in the scam examples.
-  "mcb", "sbm", "absa", "bank", "one", "juice", "my", "t", "emtel", "telekom",
+  "mcb", "sbm", "absa", "mauritius", "bank", "one", "juice", "my", "t", "emtel", "telekom",
   // Fictional names from the Kreol owner's scam corpus.
   "oceanbank",
   // Domains invented for the example scam messages.
@@ -84,15 +84,40 @@ for (const literal of literals) {
   }
 }
 
+/**
+ * KreolMorisienMT predates the 2011 standard orthography in places, so it
+ * carries both spellings: pou and pu, nou and nu, dimounn and dimunn. The
+ * lexicon therefore accepts the old ones, which would let "pu" pass as
+ * attested. The app and the translation memory are both consistently modern,
+ * so name the legacy forms and reject them directly.
+ */
+const LEGACY = {
+  pu: "pou", nu: "nou", u: "ou", ubyen: "ouswa", kuma: "kouma", kumadir: "koumadir",
+  dimunn: "dimoun", buku: "boukou", tu: "tou", kiksoz: "kiksoz", zis: "zis",
+};
+const legacyHits = new Map();
+for (const literal of literals) {
+  for (const raw of literal.match(/[A-Za-zÀ-ÿ'’-]+/g) ?? []) {
+    const word = raw.toLowerCase();
+    if (word in LEGACY && LEGACY[word] !== word) legacyHits.set(word, LEGACY[word]);
+  }
+}
+
 // English that arrives by reference rather than inline. TODO_KREOL(X) renders
 // the English X, so a Kreol user sees English — but there is no English string
 // in the kreol block to find, which is how the whole document forensics screen
 // stayed English through an earlier sweep that only grepped for literals.
 const todo = [...kreol.matchAll(/TODO_KREOL\(([^)]*)/g)].map((m) => m[1].trim().slice(0, 48));
 
-if (unknown.size === 0 && todo.length === 0) {
+if (unknown.size === 0 && todo.length === 0 && legacyHits.size === 0) {
   console.log(`kreol:check — ${literals.length} strings, every word attested in a real Kreol source.`);
   process.exit(0);
+}
+
+if (legacyHits.size) {
+  console.error(`kreol:check — ${legacyHits.size} word(s) use the pre-2011 spelling:\n`);
+  for (const [was, now] of legacyHits) console.error(`  ${was.padEnd(12)} -> ${now}`);
+  console.error("");
 }
 
 if (todo.length) {

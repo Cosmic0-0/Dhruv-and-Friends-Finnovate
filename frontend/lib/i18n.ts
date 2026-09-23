@@ -2423,7 +2423,7 @@ export const COPY: Record<UiLanguage, Copy> = {
           "DOC-03:mod_before_create": () => "Dokiman la dir li finn sanze avan ki li finn kree.",
           "DOC-03:future_date": () => "Dokiman la port enn dat dan fitir.",
           "DOC-03:producer_mismatch": () =>
-            "Bann de not dokiman la lor ki program finn fer li pa dakor, seki arive kan enn dokiman " +
+            "Bann de detay dokiman la lor ki program finn fer li pa dakor, seki arive kan enn dokiman " +
             "sove ankor dan enn lot zouti.",
           "DOC-04": (f: DocFinding) => `${onPage(f.page)}Enn lot zimaz finn met lor paz la.`,
           "DOC-04:transparent_overlay": (f: DocFinding) =>
