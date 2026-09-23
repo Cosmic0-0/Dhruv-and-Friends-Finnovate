@@ -440,3 +440,200 @@ times" until #13 is fixed.
 Nothing blocking. The VPS model is reachable. Next step is re-running
 `consistency.mjs` after fixes to #13, #14 and #18 and comparing against the
 2026-09-23 baseline.
+
+---
+
+## Extension test (2026-09-23)
+
+Raised against `main` @ `94781c2` (extension v0.3.0), backend on
+`localhost:4000` using the VPS model (`/health/llm` reachable, provider
+`ollama`). Test steps are in `EXTENSION-CHECKLIST.md`; test pages are in
+`extension-pages/`.
+
+Items marked **confirmed** were reproduced with direct calls to the same
+backend routes the extension uses, with the extension's own decision logic
+copied into the script (e.g. the banner rule from `background.js:108`).
+Items marked **from code** are certain from reading the extension but still
+need one click-through in Chrome to confirm, because the extension hasn't been
+loaded in a browser yet.
+
+## 19. Normal sites get a red "High risk" badge if the bank's name is in the address
+
+**Severity:** high, because a judge browsing Wikipedia or LinkedIn sees our tool call it a scam &nbsp;·&nbsp; confirmed
+
+`/api/check-url` treats a bank name anywhere in the path as a scam (URL-03,
+always `high`). The badge goes red and the popup says "High risk — strong
+scam signals found":
+
+```
+https://en.wikipedia.org/wiki/MCB_Group            ! high-risk  URL-03
+https://www.linkedin.com/company/mcb-group         ! high-risk  URL-03
+https://www.lexpress.mu/article/mcb-annual-results ! high-risk  URL-03
+https://defimedia.info/sbm-bank-new-branch         ! high-risk  URL-03
+https://github.com/absa/some-repo                  ! high-risk  URL-03
+```
+
+Inside a *message*, a bank name in a link's path is a fair warning sign. As
+the address of the page you're already on, it's normal for news sites,
+Wikipedia and social media. **Suggested direction:** don't use URL-03's
+path check for `/api/check-url`, or treat it as low severity there.
+
+## 20. "Scan This Page" calls a real bank's safety advice a scam
+
+**Severity:** high, because the obvious demo is scanning a real bank page &nbsp;·&nbsp; confirmed
+
+Page text in the style of a real bank's security centre
+(`extension-pages/bank-advice.html`: "MCB will never ask you to share your
+OTP, PIN, password…", "Do not click links in unexpected messages") came back
+**SCAM, risk 70, "do not pay"**, and the extension's banner rule fires:
+
+```
+SEC-03 lexicon         "…MCB will never ask you to share your OTP, PIN, password"
+SEC-01 semantic_model  "MCB will never ask you to share your OTP, PIN, password or card CVV…"
+SEC-02 semantic_model  "Do not click links in unexpected messages."   ← labelled "install remote-access software"
+SOC-01 lexicon         "immediately"
+```
+
+A French news article warning about a scam wave (quoting the scam) also came
+back SCAM. "Never ask for your OTP" is read as asking for it, and the AI's
+SEC-02 quote has nothing to do with remote access. The evidence check passes
+because the quote is in the page, even though it doesn't support the claim.
+This is the analysis engine, not extension code, but whole pages reach it
+through the extension, and pages like this are common.
+**Suggested direction:** make the SEC-01/SEC-03 word lists skip "never
+ask/will never" phrasing. Until then, don't scan bank or news pages in the
+demo; scan `extension-pages/scam.html`.
+
+## 21. The in-page warning banner appears for word-list matches, even on SAFE pages
+
+**Severity:** medium &nbsp;·&nbsp; confirmed
+
+The README says the banner shows only for fake-domain / fake-identity
+checks, "never for weak" signals. The extension decides this with
+`signal.source` (`background.js:110`). The backend gives word-list matches
+(`sourceType: "lexicon"`) the same `source: "identity_check"` tag, so they pass:
+
+- `KR-11`: banner "Fee demanded before you can receive something" (PAY-04, word list)
+- A harmless page (`extension-pages/safe.html`: "The library **will be
+  closed** on Friday…"): verdict **SAFE**, score 10, but an amber banner
+  still appears saying "Threat of suspension, penalty or legal action"
+
+**Suggested direction:** use `sourceType === "rule"` (or the `URL-`/`ID-`
+code prefix) instead of `source`, and never show a banner when the verdict
+is `safe`.
+
+## 22. The popup forgets the result after about 30 seconds
+
+**Severity:** high for the demo, because the planned beat is "open a fake site, then open the popup" &nbsp;·&nbsp; from code
+
+Results are kept only in memory in the background script (`tabResults`,
+`background.js:11`). Chrome puts extension background scripts to sleep after
+about 30 seconds of no activity, and that memory is wiped. If you open the
+popup after that, it gets nothing back and says **"Not checked yet — reload
+the page"**, while the badge still shows the red **!**. Talking over a slide
+for 30 seconds before clicking the icon is enough to trigger this.
+
+Having the background script's DevTools open keeps it awake, which hides the
+bug during development. **Suggested direction:** store results in
+`chrome.storage.session` instead of a `Map`, or re-check when the popup finds
+nothing.
+
+## 23. Hitting the link-check limit shows "Backend unreachable" everywhere, including on scam sites
+
+**Severity:** medium &nbsp;·&nbsp; confirmed
+
+Every page load **and every tab switch** calls `/api/check-url`
+(`background.js:53`, even if the tab was checked a second ago). The limit is
+120 per 15 minutes per computer; 125 quick calls gave `74 × 200, 51 × 429`
+(I'd already used some). Once it's hit, every tab shows the grey **×** and
+"Backend unreachable: backend returned 429" for up to 15 minutes, so a real
+fake-bank site gets no warning. A rehearsal plus the demo on one laptop can
+use this up. **Suggested direction:** reuse the cached result on tab switch,
+and show "too many checks, try again shortly" rather than "unreachable".
+
+## 24. The amber "?" badge can never appear while browsing, and some scam links show as safe
+
+**Severity:** medium &nbsp;·&nbsp; confirmed
+
+`/api/check-url` runs only `checkUrls()`, whose four rules (URL-01 to URL-04)
+are all `high`. So while browsing, the badge is only ✓, ! or ×. The README's
+checklist step 2 expects amber for some sites. The weaker link checks that
+exist for messages (`checkLinkHygiene`: shortened links, raw IP addresses)
+aren't used, so these come back ✓ "No known risk signals":
+
+```
+https://bit.ly/mcbhelp          ✓     http://192.168.1.1/login   ✓
+https://track-parcel-mu.top/    ✓   (the EN-08 scam link: no bank name, so no match)
+```
+
+**Suggested direction:** add URL-05/URL-06 to `/api/check-url` at their own
+(low/medium) severities, which would also bring back the amber state.
+
+## 25. "Report this site" reports are never shown back
+
+**Severity:** medium, since the crowdsourced feed is a differentiator &nbsp;·&nbsp; from code
+
+The popup sends the hostname to `/api/report` and shows the new count once.
+Nothing reads it afterwards. `/api/check-url` doesn't look up reports
+(`routes/index.js:221`), so the next visit to a reported site looks exactly
+the same. There's also no "are you sure?" before reporting, and the limit is
+5 per hour. **Suggested direction:** have `/api/check-url` return the report
+count for the hostname and show "reported N times" in the popup.
+
+## 26. On browser pages, "Report this site" reports junk names, and the popup says "reload"
+
+**Severity:** low &nbsp;·&nbsp; from code
+
+On `chrome://newtab` or `chrome://extensions`, the popup takes the hostname
+as `newtab` / `extensions`, and **Report this site** sends that to
+`/api/report` as a scam site. On a `file://` page the hostname is empty, so
+the button silently does nothing. On all of these the popup says "Not checked
+yet — reload the page", which reloading can't fix. **Suggested direction:**
+disable Scan/Report on non-http(s) pages and say "FraudLens only checks
+websites".
+
+## 27. No sign anything is happening after a right-click check, and every error says "Backend unreachable"
+
+**Severity:** low &nbsp;·&nbsp; from code
+
+After "Check selected text with FraudLens", nothing appears until the AI
+finishes (1–7 s in my runs, up to 60 s if it's slow), so people click again.
+The result window labels every error "Backend unreachable: …", including
+"too many analyze requests" and "No text was selected". In the popup,
+clicking the page while a scan is running closes the popup and the result
+is lost (only a dot in Recent checks remains).
+
+## 28. Text typed into rich text boxes is sent when you scan a page
+
+**Severity:** medium (privacy promise) &nbsp;·&nbsp; from code, confirm with `extension-pages/privacy.html`
+
+`content.js` sends `document.body.innerText`. That correctly leaves out
+password boxes, normal input boxes and hidden fields. It **does** include
+rich text boxes (`contenteditable`), which is what webmail compose windows,
+chat apps and many comment boxes use. The comment in `content.js` and the
+README say typed text is never read "by construction", which isn't true
+there. **Suggested direction:** skip `[contenteditable]` elements when
+collecting text, or reword the promise.
+
+## 29. README is out of date on "Open in FraudLens"
+
+**Severity:** low &nbsp;·&nbsp; confirmed
+
+README "Known limitations" says the web app ignores `?scan=`. It doesn't
+anymore: `frontend/components/CheckForm.tsx:169` fills the text box from it.
+But after **Scan This Page**, the text passed is the first 400 characters of
+the page, which is usually the menu and header, not the message. The README
+needs updating, and passing only the part that triggered signals would make
+the handoff useful.
+
+### Setup notes (not bugs, but they cost time)
+
+- `backend/.env` still has `OLLAMA_URL=http://localhost:11434`. I overrode it
+  on the command line rather than editing the file.
+- `frontend/.env` points the web app at the shared VPS backend
+  (`100.73.202.25:4000`), so "Open in FraudLens" results and report counts
+  come from a different database than the extension's, unless you start
+  it with `BACKEND_URL=http://localhost:4000`.
+- After pulling `main`, the backend needs `sharp`. `npm ci` fails on Windows
+  while any other backend process is running (it can't delete the locked
+  `better_sqlite3.node`); `npm install` works.
