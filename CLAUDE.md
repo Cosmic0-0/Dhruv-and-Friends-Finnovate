@@ -1,260 +1,109 @@
-# CLAUDE.md
+# Repository guidance
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+FraudLens AI is a hackathon prototype for detecting warning signs in suspicious
+financial messages before a user pays or shares credentials. Reliability during
+the live demo is the highest priority, followed by visible differentiation and a
+clear explanation of the evidence behind each decision.
 
-## Judging Priorities (derived from docs/JURY-EVALUATION.md)
+See [`docs/JURY-EVALUATION.md`](./docs/JURY-EVALUATION.md) for the rubric and
+[`docs/BUILD-CHECKLIST.md`](./docs/BUILD-CHECKLIST.md) for current demo readiness.
 
-- Reliability during the live demo is the single highest-weighted concern (part of
-  the 35-mark Implementation & Functionality criterion, the largest bucket). The
-  local-LLM-over-Tailscale architecture must have a working, tested fallback to a
-  hosted API. The fallback path is NOT optional polish, treat it as a blocking
-  requirement for demo readiness, not a stretch feature.
-- Differentiators (Kreol language support, localized scam dataset, structured
-  signal breakdown, domain/lookalike-URL matching, self-hosted inference) must be
-  visibly demonstrated in the live demo, not just present in code. When implementing
-  any of these features, also note in code comments or a demo-script file how it will
-  be shown/explained live, since Innovation & Technical Excellence (25 marks)
-  explicitly scores differentiation from other teams on the same challenge.
-  scalability and real-world impact explicitly.
-- Presentation coordination (15 marks) depends on a stable, rehearsed demo flow.
-  Flag any feature that introduces live network or hardware dependency (e.g. calling
-  out to a laptop-hosted model) as something that needs a pre-demo reliability test,
-  not just a functionality test.
+## Sources of truth
 
-See `docs/JURY-EVALUATION.md` for the full rubric and `docs/BUILD-CHECKLIST.md` for
-tasks grouped and weighted by these criteria.
+- `docs/API-CONTRACT.md`: implemented HTTP contract.
+- `EXPLAINER.md`: current architecture, data flow, and limitations.
+- `checklist.md`: security and launch-readiness status.
+- `data/institution-registry.json`: institution names, aliases, and official
+  domains used by deterministic checks.
+- `backend/src/services/signals/registry.js`: accepted signal codes and weights.
+- `backend/src/services/risk-engine/index.js`: deterministic score and level rules.
+- `backend/src/services/playbooks/index.js`: finite scam-type and journey-stage
+  taxonomy used by Scam Journey and the sandbox.
 
-## Commit attribution
+Do not maintain historical API sketches or session changelogs as parallel sources
+of truth. Update the relevant durable document when behavior changes.
 
-Commits and PRs from this repo are attributed to the human pushing them only.
-Do not add `Co-Authored-By: Claude` (or any other Claude/Anthropic attribution
-line) to commit messages or PR descriptions for this project.
+## Architecture invariants
 
-## Name policy
+- The LLM interprets language only. It may return enum-coded semantic signals,
+  exact evidence quotes, an observed sender, a scam type, and a journey stage.
+  It never owns the verdict, risk score, decision, or action plan.
+- Every model-produced signal must use an allowed code and quote text present in
+  the normalized message. Reject unknown codes and hallucinated evidence.
+- The deterministic pipeline remains useful when the model is unavailable,
+  times out, or returns invalid JSON.
+- Domain matching, identity checks, payment-context checks, reputation evidence,
+  and score arithmetic stay deterministic and unit-testable.
+- Frontend and extension consumers must follow `docs/API-CONTRACT.md`. Detection
+  logic belongs in the backend and must not be copied into clients.
+- Never fabricate live reports, campaigns, trends, review decisions, or model
+  availability. Empty data must render as empty data.
+- Treat message content and screenshots as untrusted input. Preserve the current
+  redaction, input limits, evidence grounding, SSRF protection, and output
+  validation when extending a flow.
+- Keep simulated scam content bounded by the fixed backend playbooks and clearly
+  label it as fictional. The sandbox must never contact a real person or accept
+  arbitrary contact details or links.
 
-Kshitij's name is not to appear anywhere in this project — code, comments,
-READMEs, commit messages/authorship, or PR descriptions — except in this
-file (`CLAUDE.md`). When referring to that role elsewhere, describe the
-area owned (e.g. "backend owner") instead of naming the person.
+## Project structure
 
-## Project
-
-FraudLens AI — built for Finnovate Hackathon 2026 (Challenge 5, sponsored by Clarity).
-Theme: FinTech & Innovation. 72-hour build.
-
-Challenge question: How can AI help customers identify warning signs in suspicious
-financial messages before they make a payment?
-
-Core loop: a user submits a message (pasted text or screenshot) → the system analyzes
-it for scam signals → returns a verdict with a structured breakdown of flagged signals
-(not just a single score) → suggests a concrete next action (block sender, report to
-bank fraud line, verify via official channel).
-
-See "Role gating" below for the working-directory layout each role builds in.
-
-## Scope boundaries (72-hour build)
-
-**In scope for the hackathon window:**
-1. Message analysis endpoint (paste text → verdict + structured signal breakdown + suggested action).
-2. Localized scam pattern detection — reference dataset of real Mauritius-specific
-   scam formats (bank impersonation SMS for MCB, SBM, Absa Mauritius, Bank One;
-   telecom prize scams; mobile money fraud).
-3. Kreol language support — scam messages and UI must work in Kreol, French, and
-   English, including code-switched messages mixing all three in one text.
-4. Structured signal breakdown as output — specific flags (sender mismatch, urgency
-   language, lookalike URL, spoofed identity) as structured data, never a single
-   opaque percentage.
-5. Domain/lookalike-URL matching — links in messages checked against known
-   legitimate local bank/telecom domains, via non-LLM logic.
-6. Crowdsourced threat feed — users can report scam messages; flagged senders are
-   tracked and surfaced on future matches ("this number reported N times").
-7. Screenshot/OCR ingestion — upload a screenshot instead of pasting text.
-8. Batch scan — submit multiple messages at once, get a scanned summary.
-
-**Stretch (only after the core app is demo-stable):**
-- Browser extension: reads the current tab's URL, checks it against the same
-  backend domain-matching logic used for message links, shows a warning badge.
-  Must reuse the core API — never duplicate detection logic in the extension.
-  Scoped and built **after** the core app works end-to-end, not in parallel from
-  hour zero.
-
-## Tech stack
-
-- **Backend**: Node.js, REST API.
-- **Frontend**: Next.js, shipped as an installable PWA (manifest + service
-  worker) so the same codebase covers both the web app and "mobile app" —
-  no separate native/React Native codebase for the hackathon window.
-- **Detection logic**: LLM-based analysis with structured JSON output (flagged
-  signals, verdict, suggested action) + non-LLM domain-matching logic for URLs.
-  The LLM runs **locally** (self-hosted inference, e.g. Ollama or similar) —
-  model choice is TBD. Don't hardcode a cloud provider SDK/API key assumption
-  in the analysis service; call it through a local inference endpoint
-  (base URL + model name from env) so the model can be swapped later.
-- **OCR**: for screenshot ingestion.
-- **Database**: for crowdsourced sender/message reports and batch scan history.
-
-## Role ownership
-
-Each role owns its area end to end, including its own tests and demo data for that
-area, unless noted otherwise.
-
-| Owner | Area | Responsibilities |
-|---|---|---|
-| Kshitij | Backend + browser extension (stretch, droppable under time pressure) | API design, prompt design and structured output schema, domain/lookalike-URL matching logic, database schema for reports and batch history, browser extension scaffolding (Manifest V3, content script) once the API is stable |
-| Joshua | Kreol language support | Kreol scam dataset, prompt tuning for Kreol/French/English code-switching, validating AI explanations read correctly in Kreol |
-| Oleg | UI | Main app frontend (input, verdict display, flagged-signal view, batch scan results), PWA manifest/service worker so the app installs on mobile, extension badge/warning UI once the backend endpoint is live |
-| Dhruv | OCR ingestion + batch scan | Screenshot upload, OCR extraction pipeline, batch scan feature (multi-message upload and summary view) |
-| Caellum | Test payloads and QA | Scam message test set across English, French, and Kreol (Kreol set coordinated with Joshua), sender-reputation seed data for the crowdsourced feed demo, edge-case testing, demo script for final judging |
-
-## Role gating
-
-Each top-level working directory is gated to one owner. Only touch a
-directory outside your own when you're wiring up an agreed interface (e.g.
-Oleg calling the `POST /api/analyze` contract) — don't edit someone else's
-implementation files directly; flag it to them instead.
-
-```
-backend/
-  src/
-    routes/                    Kshitij  — API route handlers
-    services/analysis/         Kshitij  — LLM prompt + structured output schema
-    services/domain-matching/  Kshitij  — lookalike-URL / domain matching logic
-    services/ocr/              Dhruv    — screenshot upload + OCR extraction
-    services/batch/            Dhruv    — batch scan aggregation/summary
-    db/                        Kshitij  — schema for reports + batch history
-frontend/                      Oleg     — Next.js UI (input, verdict, batch views) + PWA manifest/service worker
-extension/                     Kshitij  — browser extension (stretch, after core app is stable)
-data/kreol-dataset/            Joshua   — Kreol/French/English scam samples
-data/test-payloads/            Caellum  — cross-language scam test set
-data/sender-reputation-seed/   Caellum  — seed data for the crowdsourced feed demo
+```text
+backend/src/routes/                    HTTP validation and response handling
+backend/src/services/pipeline/         shared analysis orchestration
+backend/src/services/analysis/         semantic prompt, validation, LLM transport
+backend/src/services/risk-engine/      deterministic score, level, confidence
+backend/src/services/domain-matching/  URL extraction and lookalike checks
+backend/src/services/community-signals privacy-minimised report clustering
+backend/src/services/site-security/    passive site checks with SSRF protection
+backend/src/db/                        SQLite schema and queries
+frontend/                              Next.js PWA and all web product flows
+extension/                             Manifest V3 client of the backend API
+data/                                  registries, reviewed language data, QA data
 ```
 
-`backend/` and `frontend/` are separate Node projects — each person runs
-`npm install` inside their own directory, not at the repo root. Every gated
-directory that isn't self-explanatory has its own `README.md` restating its
-owner and scope.
+The backend and frontend are separate Node projects. There is intentionally no
+root Node package.
 
-Everyone except the backend owner works on their own branch (`joshua`,
-`oleg`, `dhruv`, `caellum`) and opens a PR into `main`; the backend owner
-merges. This is a convention, not an enforced GitHub rule — no branch
-protection is configured, so it relies on everyone actually using their
-branch instead of pushing straight to `main`.
+## API and coding conventions
 
-## API Contract
+- Keep route handlers thin. Put detection and policy logic in services.
+- Validate request shape and size on the server even when the client validates it.
+- Return generic external errors; log operational details server-side.
+- Preserve additive compatibility for the locked API contract unless every client
+  and the contract are updated together.
+- Render user content through React text nodes. Do not introduce raw HTML renderers
+  for analysis evidence.
+- Prefer real aggregate data and explicit unavailable/empty states over examples
+  that look live.
+- Keep English, French, and Kreol UI copy aligned. Kreol copy that has not been
+  reviewed must not be described as reviewed.
 
-**Status: LOCKED.** The authoritative contract is `docs/API-CONTRACT.md` —
-documented from the actual backend implementation
-(`backend/src/routes/index.js` + services), not the sketch below. Oleg (UI),
-Dhruv (OCR/batch), and the extension owner build against `docs/API-CONTRACT.md`.
-Any change to a route's request/response shape must be flagged to all three
-before merging.
+## Verification
 
-Routes covered there: `POST /api/analyze`, `POST /api/analyze/screenshot`
-(added post-placeholder, for OCR ingestion), `POST /api/batch-scan`,
-`POST /api/report`, and `GET /health/llm` (pre-demo LLM-reachability check,
-not part of the live demo flow). It also lists known gaps/non-guarantees
-(e.g. `suggestedAction` is free-form, not an enforced enum; no rate
-limiting/auth yet) — read those before assuming a shape that isn't actually
-guaranteed.
+Use Node 22. Run checks from each project directory:
 
-The block below is the original pre-implementation sketch, kept only for
-history — it differs from what's actually implemented (no
-`/api/analyze/screenshot` or `/health/llm`, `batch-scan` never returns a
-non-2xx and now includes `analysisFailed`/`unanalyzedCount`, etc.). Do not
-build against it.
-
-<details>
-<summary>Original placeholder (superseded)</summary>
-
-### `POST /api/analyze` — message analysis
-
-```
-Request:
-{
-  "message": string,        // raw pasted text
-  "language"?: string       // optional hint: "en" | "fr" | "kreol" | "mixed"
-}
-
-Response:
-{
-  "verdict": "safe" | "suspicious" | "scam",
-  "signals": [
-    {
-      "type": string,        // e.g. "sender_mismatch" | "urgency_language" | "lookalike_url" | "spoofed_identity"
-      "description": string,
-      "severity": "low" | "medium" | "high"
-    }
-  ],
-  "suggestedAction": string, // e.g. "block_sender" | "report_to_bank" | "verify_official_channel"
-  "explanation": string      // human-readable summary, localized to input language
-}
+```bash
+cd backend && npm test
+cd frontend && npm test
+cd frontend && npm run typecheck
+cd frontend && npm run build
 ```
 
-### `POST /api/batch-scan` — batch scan
+Route tests bind temporary localhost servers and may need network-sandbox
+permission. Frontend tests do not run under Node 20 because they are TypeScript
+files executed directly by Node. ESLint is not configured yet, so `npm run lint`
+is currently interactive and must not be cited as a passing automated check.
 
-```
-Request:
-{
-  "messages": string[]      // multiple raw messages
-}
+Before a demo, also run `npm run test:fallback` in `backend/`, check
+`GET /health/llm`, exercise at least one real English/French/Kreol message, and
+complete the extension checklist in `extension/README.md`.
 
-Response:
-{
-  "results": [
-    { "message": string, "verdict": ..., "signals": [...], "suggestedAction": ... }
-  ],
-  "summary": {
-    "total": number,
-    "scamCount": number,
-    "suspiciousCount": number,
-    "safeCount": number
-  }
-}
-```
+## Repository hygiene
 
-### `POST /api/report` — sender/message report
-
-```
-Request:
-{
-  "sender": string,          // phone number, short code, or identifier
-  "message"?: string,
-  "reportedBy"?: string
-}
-
-Response:
-{
-  "sender": string,
-  "reportCount": number,     // total times this sender has been reported
-  "recorded": boolean
-}
-```
-
-</details>
-
-## Compliance checklist
-
-`checklist.md` at the repo root tracks security hardening and
-production-credibility items (SEO/meta tags, no exposed source maps, no
-console errors, etc.). Claude Code should periodically re-check the current
-state of the codebase against `checklist.md` — at minimum before any commit
-that touches an API endpoint, auth, file uploads, or deployment config, and
-whenever asked to review or ship the app — and report which items are now
-satisfied, which regressed, and which are still open. Update the checkboxes
-in `checklist.md` to reflect reality rather than letting it drift out of sync
-with the code.
-
-## Coding conventions
-
-- Backend: standard Node.js REST conventions (Express or equivalent) — route
-  handlers thin, detection/matching logic in separate modules, structured JSON
-  responses matching `docs/API-CONTRACT.md` exactly.
-- Frontend: Next.js App Router idioms — server components for data fetching where
-  possible, client components only where interactivity is required (input forms,
-  verdict display).
-- LLM output must always be validated/parsed against the structured schema before
-  being returned to the frontend — never pass raw LLM text through as the verdict.
-- Domain-matching logic (lookalike URLs) is non-LLM and must be deterministic and
-  unit-testable independent of the LLM call path.
-- Extension code (when started) imports/calls the core API — it must not
-  reimplement domain-matching or scam-detection logic locally.
+- Preserve unrelated work in a dirty worktree.
+- Do not commit `.env`, database files, trained OCR data, generated build output,
+  or secrets.
+- Commits and pull requests are attributed to the human pushing them. Do not add
+  AI co-author trailers.
+- The backend owner is referred to by role in project documentation. The personal
+  name previously used for that role should not be added elsewhere.
