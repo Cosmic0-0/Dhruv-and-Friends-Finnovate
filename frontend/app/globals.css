@@ -362,10 +362,14 @@
 
 @layer components {
   /*
-   * The phone column, at every width. There is no desktop layout: the design
-   * is an iPhone app, and a 430px column centred in a browser window is the
-   * intended desktop presentation. Padding-bottom clears the floating tab bar
-   * and the home indicator.
+   * The phone column. Below md this is the whole layout, exactly as designed:
+   * a 430px column with the floating tab bar clearing the home indicator.
+   *
+   * At md and up the same column keeps its width and its cards, but it is no
+   * longer alone — .app-frame puts a navigation rail beside it (SideNav.tsx),
+   * so a browser window shows what the app contains instead of one narrow
+   * strip stranded in empty space. Every phone pixel is unchanged: everything
+   * desktop is behind the media query below.
    */
   .app-shell {
     position: relative;
@@ -375,6 +379,46 @@
     max-width: var(--container-app);
     min-height: 100dvh;
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
+  }
+
+  .app-frame {
+    display: block;
+  }
+
+  /* 64rem, not 48rem: the rail plus a 600px column needs about 1000px before
+     it stops being cramped. Below that a tablet keeps the phone layout, which
+     is the design, rather than a squeezed desktop one. */
+  @media (min-width: 64rem) {
+    :root {
+      /* No floating bar at this width: the rail is the navigation. */
+      --tabbar-height: 0rem;
+      /* The content column grows a little, but stays near the phone
+         proportions the cards were designed against. */
+      --container-app: 600px;
+    }
+
+    .app-frame {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 2.5rem;
+      margin-inline: auto;
+      /* Capped so the pair sits together on a wide monitor rather than
+         drifting to opposite edges. */
+      max-width: 1060px;
+      padding-inline: 2rem;
+    }
+
+    .app-shell {
+      margin-inline: 0;
+      /* Shrinkable, so the pair never overflows its frame at the narrow end
+         of this range; min-width:0 is what lets a flex item go below its
+         content width. */
+      flex: 1 1 auto;
+      min-width: 0;
+      /* The rail carries the safe-area inset itself. */
+      padding-bottom: 4rem;
+    }
   }
 
   .gutter {

@@ -1,0 +1,98 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { NAV_TABS, NEW_CHECK_HREF } from "@/lib/navTabs";
+import { BookIcon, LayersIcon, PlusIcon, SearchIcon, ShieldIcon } from "./icons";
+import { useLanguage } from "./LanguageProvider";
+
+/**
+ * Desktop navigation rail. Hidden below md, where the floating tab bar is the
+ * navigation (and the design is a phone app).
+ *
+ * It exists because the phone layout, centred in a browser window, gives a
+ * visitor no idea the app has more than one screen: the tab bar is a 326px
+ * pill at the bottom of a 1440px window, and everything it leads to is a tap
+ * away rather than in view. This rail says what is in the app without changing
+ * a single phone pixel.
+ *
+ * Same NAV_TABS and same active-route logic as the tab bar, so the two can't
+ * disagree about where you are. The tools underneath are the routes that have
+ * no tab of their own.
+ */
+export default function SideNav() {
+  const pathname = usePathname() ?? "/";
+  const { copy } = useLanguage();
+
+  const tools = [
+    { href: "/safepay", Icon: ShieldIcon, label: copy.home.payCta },
+    { href: "/batch", Icon: LayersIcon, label: copy.tools.batch },
+    { href: "/conversation", Icon: SearchIcon, label: copy.tools.conversation },
+    { href: "/sandbox", Icon: BookIcon, label: copy.tools.sandbox },
+  ];
+
+  return (
+    <nav
+      aria-label="Sections"
+      className="sticky top-0 hidden h-dvh shrink-0 flex-col gap-6 py-8 pr-6 lg:flex"
+      style={{ paddingTop: "calc(2rem + env(safe-area-inset-top))" }}
+    >
+      <div className="flex items-center gap-2.5 px-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/brand/dhruv-and-friends.png"
+          alt={copy.settings.teamLogoAlt}
+          width={32}
+          height={32}
+          className="size-8 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
+        />
+        <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
+      </div>
+
+      <Link href={NEW_CHECK_HREF} className="pill pressable mx-1 bg-primary text-on-primary">
+        <PlusIcon className="size-[19px]" />
+        {copy.tabs.newCheck}
+      </Link>
+
+      <ul className="flex flex-col gap-0.5">
+        {NAV_TABS.map(({ href, key, Icon, match }) => {
+          const active = match(pathname);
+          return (
+            <li key={href}>
+              <Link
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`pressable flex min-h-11 items-center gap-3 rounded-2xl px-3 text-[1.0625rem] ${
+                  active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <Icon className="size-[22px] shrink-0" strokeWidth={active ? 2.2 : 1.8} />
+                {copy.tabs[key]}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-col gap-0.5 border-t border-card-border pt-4">
+        <p className="micro-sm px-3 pb-1 text-ink-muted">{copy.tools.title}</p>
+        {tools.map(({ href, Icon, label }) => {
+          const active = pathname.startsWith(href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={`pressable flex min-h-10 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
+                active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              <Icon className="size-[18px] shrink-0" strokeWidth={1.8} />
+              {label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
+  );
+}

@@ -42,7 +42,8 @@ export default function TabBar() {
   return (
     <nav
       aria-label="Main"
-      className="tabbar fixed left-1/2 z-30 flex h-[66px] w-[326px] max-w-[calc(100%-2rem)] -translate-x-1/2 items-center justify-between px-3"
+      // lg:hidden — the SideNav rail is the navigation at desktop widths.
+      className="tabbar fixed left-1/2 z-30 flex h-[66px] w-[326px] max-w-[calc(100%-2rem)] -translate-x-1/2 items-center justify-between px-3 lg:hidden"
       style={{ bottom: "calc(28px + env(safe-area-inset-bottom))" }}
     >
       {NAV_TABS.slice(0, 2).map(slot)}

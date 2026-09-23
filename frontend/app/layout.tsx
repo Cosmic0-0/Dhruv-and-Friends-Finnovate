@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import SideNav from "@/components/SideNav";
 import TabBar from "@/components/TabBar";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme";
 import "./globals.css";
@@ -72,7 +73,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <LanguageProvider>
-          <div className="app-shell">{children}</div>
+          {/* One row at md+: navigation rail beside the app column. Below md
+              the frame is a plain block and the column is the whole layout. */}
+          <div className="app-frame">
+            <SideNav />
+            <div className="app-shell">{children}</div>
+          </div>
           <TabBar />
         </LanguageProvider>
         <ServiceWorkerRegister />
