@@ -17,11 +17,16 @@ import {
   normalizeHost,
 } from "../institutions/index.js";
 import { domainToUnicode } from "node:url";
+import { isTrustedDomain, TRUSTED_DOMAINS_VERSION } from "./trustedDomains.js";
 import { makeSignal } from "../signals/registry.js";
 
-export { BRAND_DOMAIN_MAP, BRAND_TOKENS, isOfficialHost };
+export { BRAND_DOMAIN_MAP, BRAND_TOKENS, isOfficialHost, isTrustedDomain };
 export const LEGIT_DOMAINS = OFFICIAL_DOMAINS;
-export const DETECTOR_VERSION = "url-2.0";
+// url-2.1: URL-08 (unofficial-link CTA) no longer fires for a host on the
+// trusted-domains allowlist (data/trusted-domains.json) - see
+// trustedDomains.js. URL-01..04 are unchanged: a trusted domain still gets
+// zero impersonation/lookalike protection.
+export const DETECTOR_VERSION = "url-2.1";
 
 // Explicit-scheme URLs are parsed with URL() so the real host is used
 // (https://mcb.mu@evil.top has host evil.top, not mcb.mu).
@@ -346,7 +351,11 @@ const LINK_CTA_RE =
 /** Weak/structural link signals: URL-05 shortener, URL-06 raw IP, URL-07 userinfo trick, URL-08 action via unofficial link. */
 export function checkLinkHygiene(message) {
   const out = [];
-  const unofficial = extractLinks(message).filter((l) => !institutionForHost(l.host));
+  // "Unofficial" for URL-08 purposes only: not a recognized Mauritius
+  // institution AND not on the trusted-domains allowlist (see
+  // trustedDomains.js's doc comment - this is the ONLY signal that list
+  // affects; a trusted domain still gets zero lookalike protection).
+  const unofficial = extractLinks(message).filter((l) => !institutionForHost(l.host) && !isTrustedDomain(l.host));
   const cta = unofficial.length > 0 ? LINK_CTA_RE.exec(message) : null;
   if (cta) {
     out.push(

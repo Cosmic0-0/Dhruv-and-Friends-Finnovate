@@ -133,3 +133,13 @@ test("URL-08: a verify/log-in call to action through an unofficial link, never t
   assert.equal(s.metadata.host, "oceanbank-verify-secure.test");
   assert.deepEqual(checkLinkHygiene("Log in at https://internet.mcb.mu to verify your statement"), []);
 });
+
+test("URL-08: also never fires for a trusted-domains allowlist entry, or a subdomain of one", () => {
+  assert.deepEqual(checkLinkHygiene("Please verify your account at https://paypal.com/verify now"), []);
+  assert.deepEqual(checkLinkHygiene("Confirm at https://pay.google.com/confirm today"), []);
+});
+
+test("URL-08 still fires for a lookalike of a trusted domain - the allowlist grants no lookalike protection", () => {
+  const s = checkLinkHygiene("Verify now at https://paypal-secure-login.test/verify").find((x) => x.code === "URL-08");
+  assert.ok(s, "expected URL-08 for a domain merely resembling a trusted one");
+});
