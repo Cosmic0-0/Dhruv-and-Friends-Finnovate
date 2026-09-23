@@ -19,7 +19,7 @@ const SEVERITY_RANK = { low: 1, medium: 2, high: 3 };
 // "lookalike_url"/"IDENTITY_MISMATCH"), so this matches on substrings rather
 // than an exact enum.
 const CATEGORY_RULES = [
-  { category: "identity_risk", pattern: /identity|spoof|impersonat|sender.?mismatch|fake.?(identity|sender)/i },
+  { category: "identity_risk", pattern: /identity|spoof|impersonat|sender.?mismatch|fake.?(identity|sender)|template.?artifact/i },
   { category: "technical_risk", pattern: /url|domain|link|lookalike|phishing.?(site|page)|website/i },
   { category: "payment_risk", pattern: /payment|money|transfer|beneficiary|account.?(number|detail)|bank.?detail|mobile.?money|otp|credential|\bpin\b|password/i },
   { category: "verification_risk", pattern: /verif|unofficial|official.?channel|unconfirmed|cannot.?confirm/i },

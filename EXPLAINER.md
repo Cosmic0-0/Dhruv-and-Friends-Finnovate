@@ -18,7 +18,7 @@ priorities; this file explains the *system*, not the rules for changing it.
    - 3.1 [Request flow through `POST /api/analyze`](#31-request-flow-through-post-apianalyze)
    - 3.2 [The LLM layer and its fallback](#32-the-llm-layer-and-its-fallback)
    - 3.3 [Kreol/French/English grounding](#33-kreolfrenchenglish-grounding)
-   - 3.4 [The three deterministic (non-LLM) checks](#34-the-three-deterministic-non-llm-checks)
+   - 3.4 [The deterministic (non-LLM) checks, and score/verdict reconciliation](#34-the-deterministic-non-llm-checks-and-scoreverdict-reconciliation)
    - 3.5 [Screenshot / OCR ingestion](#35-screenshot--ocr-ingestion)
    - 3.6 [Batch scan](#36-batch-scan)
    - 3.7 [Crowdsourced reporting & the database](#37-crowdsourced-reporting--the-database)
@@ -149,7 +149,7 @@ degrades silently to an ungrounded prompt. It can never become a hard
 dependency for the core analyze path (this is a direct requirement from
 CLAUDE.md's reliability-first judging priority).
 
-### 3.4 The three deterministic (non-LLM) checks
+### 3.4 The deterministic (non-LLM) checks, and score/verdict reconciliation
 
 These exist so the product's core claims — "domain matching is
 deterministic," "not just a single opaque LLM score" — are literally true in
@@ -170,12 +170,31 @@ code, independently testable, and immune to LLM flakiness.
   As of this session, the signal also carries structured
   `claimedIdentity`/`officialDomain`/`actualDomain`/`beneficiary` fields
   (previously only a prose `description`) — see §11.
+- **`services/template-artifacts`** (`checkTemplateArtifacts`, new this
+  session — see §12) — flags unrendered mail-merge/template placeholder
+  syntax (`{{.FirstName}}`, `{% tracker %}`, `%%FIRST_NAME%%`) as a `high`-
+  severity `TEMPLATE_ARTIFACT` signal. Built from a real miss: a phishing
+  simulation screenshot (HR/parking-space pretext) scored `safe` because
+  nothing looked for this — real one-to-one correspondence never contains
+  unrendered template syntax, so its presence is near-conclusive evidence
+  of a mass-produced phishing kit regardless of how calm the rest of the
+  message reads.
 - **`services/risk-categories`** (`computeRiskCategories`) — a pure function
   over the final combined `signals[]` array that buckets them into
   `identity_risk` / `behavioral_risk` / `payment_risk` / `technical_risk` /
   `verification_risk`, each rated `LOW`/`MEDIUM`/`HIGH` by the highest
   severity signal in that bucket. Purely additive alongside the existing
   single `riskScore` — never a replacement.
+- **`services/verdict-escalation`** (`reconcileVerdict`, new this session —
+  see §12) — closes a real gap: the LLM's `verdict`/`riskScore` are decided
+  *before* the deterministic checks above run, so a `high`-severity
+  deterministic finding (an `IDENTITY_MISMATCH`, a `TEMPLATE_ARTIFACT`)
+  could sit under an LLM `verdict: "safe"` with nothing ever reconciling
+  the two. This runs after all signals are merged: if the verdict is
+  `"safe"` but any non-LLM signal is `high` severity, it escalates to
+  `"suspicious"` and floors `riskScore` at 50. One-directional only — never
+  downgrades a verdict the LLM already flagged as risky, and never claims
+  `"scam"` on the LLM's behalf.
 
 ### 3.5 Screenshot / OCR ingestion
 
@@ -187,6 +206,25 @@ server-side (§3.8, this is the *only* place server-side redaction happens —
 typed text is redacted in the browser before it's ever sent), then runs the
 exact same `analyzeMessage()` + deterministic-checks pipeline as
 `/api/analyze`.
+
+**OCR preprocessing, new this session (see §12):** `extractTextFromImage`
+now runs Tesseract twice per image via `sharp` — a normalized-grayscale pass
+for ordinary dark-text-on-light content, and a threshold/invert pass for
+solid-color call-to-action buttons (white text on a brand-colored "Confirm
+Your Information"-style button), then merges what each pass found. A plain
+contrast stretch isn't enough: a brand-blue button fill can land right at
+the same grayscale luminosity as its own white text, so the button and its
+label stay indistinguishable until the pixels are pushed fully black/white
+first. This does *not* solve the separate, unfixable problem of a hyperlink
+whose destination URL isn't rendered as visible text anywhere in the
+screenshot — no OCR or vision system can recover that (verified directly:
+a vision-capable local model just describes an unrelated "grid of cells"
+on real screenshots, even after an Ollama upgrade — see §12). The
+mitigation is `analysis/index.js`'s `SYSTEM_PROMPT` now explicitly
+instructing the LLM to treat "log in via a link with your username/
+password" as a high-severity `CREDENTIAL_REQUEST` regardless of tone, so
+detection doesn't depend on a URL being present in the extracted text at
+all.
 
 The frontend deliberately does **not** show this route's own verdict
 directly: `extractedText` goes into an editable textarea so the user can
@@ -638,3 +676,59 @@ held off on those and worked on visual-only refinement elsewhere
   session — see `changes.md`'s "Final status" section for the complete
   built/judged-satisfied/deliberately-not-built/environment-blocked
   breakdown.
+- **2026-09-23** — Reliability/detection pass, triggered by a real miss: a
+  phishing-simulation screenshot (HR/parking-space pretext, PayPal-style)
+  scored `safe`/riskScore 20 against local Ollama. Root-caused and fixed
+  three separate, compounding gaps rather than one:
+  - **OCR**: added two-pass preprocessing (`services/ocr`, §3.5) so
+    light-text-on-color button/banner content is read as reliably as
+    ordinary text.
+  - **Prompt**: `analysis/index.js`'s `SYSTEM_PROMPT` now explicitly names
+    "log in via a link with your password" as high-severity
+    `CREDENTIAL_REQUEST`, independent of tone (§3.5).
+  - **New deterministic check**: `services/template-artifacts` (§3.4)
+    flags unrendered mail-merge syntax (`{{.FirstName}}`) — a tell no
+    prior check looked for.
+  - **New reconciliation step**: `services/verdict-escalation` (§3.4)
+    closes the gap where a `high`-severity deterministic signal could sit
+    under an LLM `verdict: "safe"` with nothing reconciling the two —
+    already true of the pre-existing `IDENTITY_MISMATCH` check, not just
+    the new one. Escalates `safe`→`suspicious` (never further, never a
+    downgrade) and floors `riskScore` at 50 when triggered.
+  Result on the triggering case: `safe`/20 → `suspicious`/50. Regression-
+  verified against a genuine scam message (unchanged, still flagged) and a
+  genuinely safe message (unchanged, still `safe`/0). Backend: 106→112
+  tests. Also attempted upstream Ollama upgrade (0.30.10→0.34.3) to fix a
+  separate, unrelated vision-model bug (a local multimodal model
+  describing an unrelated "grid of cells" for any image, on both the
+  `/api/chat` and native CLI paths) — the upgrade changed the failure mode
+  but didn't fix it; vision-based screenshot analysis is shelved, not
+  pursued further this session. The local Ollama fallback host (this
+  machine, reached by teammates over Tailscale) briefly restarted during
+  the upgrade; confirmed back up and reachable on both `localhost` and the
+  Tailscale interface afterward, no lasting disruption.
+- **2026-09-23** — Architecture comparison: a parallel branch (`joshua`)
+  landed a full deterministic-risk-engine rewrite (LLM demoted to bounded,
+  optional semantic input; a versioned `risk-engine` scores a closed set of
+  registry-enum signal codes instead of trusting an LLM-set `verdict`/
+  `riskScore` directly) — see that branch's own `docs/ARCHITECTURE-REVIEW.md`
+  for the full self-review (195 tests, found and fixed a real false-positive
+  bug where genuine bank subdomain links were flagged as impersonation
+  twice at `high` severity). Live-compared against this session's fixes on
+  three cases: the architecture is the stronger long-term foundation
+  (survives total LLM failure gracefully, closes the same verdict-
+  reconciliation gap structurally rather than as a bolt-on) but initially
+  under-scored the triggering HR-phishing case (`safe`/8) because it
+  predates this session's template-artifact/credential-login detectors.
+  Ported both into it as new signal codes (`SEC-03`, `ID-05`) plus the OCR
+  fix; found and fixed two bugs doing so — a regex verb-form bug (`log in`
+  → `logging` doesn't match `log` + `ing`) and a real architectural gap
+  (registering a signal in `services/signals/registry.js` isn't enough;
+  scoring silently returns 0 points for any code missing from
+  `risk-engine`'s separate weights table — no error, no warning). After
+  both fixes: the same case now scores `scam`/68 (`do_not_pay`, confidence
+  `high`). Combined result pushed to `joshua` on origin (commit `41e0e45`,
+  206 tests) — **not merged to `main`**; this session's own fixes above
+  remain what's live on `main`/deployed for the team. Whether to adopt
+  Joshua's architecture as the new foundation is an open decision for the
+  team, not made here.

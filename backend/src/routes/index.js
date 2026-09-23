@@ -7,6 +7,8 @@ import { analyzeMessage } from "../services/analysis/index.js";
 import { checkUrls, extractLookalikeHosts } from "../services/domain-matching/index.js";
 import { attachDomainAges } from "../services/domain-age/index.js";
 import { checkIdentityConsistency } from "../services/identity-consistency/index.js";
+import { checkTemplateArtifacts } from "../services/template-artifacts/index.js";
+import { reconcileVerdict } from "../services/verdict-escalation/index.js";
 import { computeRiskCategories } from "../services/risk-categories/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
@@ -106,11 +108,16 @@ router.post("/analyze", analyzeLimiter, json({ limit: "300kb" }), async (req, re
 
     const result = await analyzeMessage(message, language);
     attachAges();
-    // All three non-LLM, deterministic checks are additive on top of the
-    // LLM's own signals, not a replacement (see services/domain-matching,
-    // services/identity-consistency).
+    // All non-LLM, deterministic checks are additive on top of the LLM's
+    // own signals, not a replacement (see services/domain-matching,
+    // services/identity-consistency, services/template-artifacts).
     result.signals.push(...urlSignals);
     result.signals.push(...checkIdentityConsistency(message));
+    result.signals.push(...checkTemplateArtifacts(message));
+    // Revisits `verdict`/`riskScore` against the deterministic signals just
+    // added - see services/verdict-escalation for why this can't happen
+    // inside analyzeMessage() itself (those signals don't exist yet then).
+    Object.assign(result, reconcileVerdict(result));
     // Structured risk-category breakdown, derived from the full signal set
     // above. Additive alongside `riskScore` — see docs/API-CONTRACT.md.
     result.riskCategories = computeRiskCategories(result.signals);
@@ -169,10 +176,12 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
 
     const result = await analyzeMessage(redactedText, language);
     attachAges();
-    // Same three additive, non-LLM checks as /api/analyze and
-    // /api/batch-scan - see the comment on /api/analyze above.
+    // Same additive, non-LLM checks as /api/analyze and /api/batch-scan -
+    // see the comment on /api/analyze above.
     result.signals.push(...urlSignals);
     result.signals.push(...checkIdentityConsistency(redactedText));
+    result.signals.push(...checkTemplateArtifacts(redactedText));
+    Object.assign(result, reconcileVerdict(result));
     result.riskCategories = computeRiskCategories(result.signals);
     res.json({ extractedText: redactedText, ...withSenderReports(result) });
   } catch (err) {
@@ -215,19 +224,22 @@ router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, r
     try {
       const result = await analyzeMessage(message);
       attachAges();
-      // Same three additive, non-LLM checks as /api/analyze - see the
-      // comment there. Previously batch-scan skipped these; now matches.
+      // Same additive, non-LLM checks as /api/analyze - see the comment
+      // there. Previously batch-scan skipped these; now matches.
       result.signals.push(...urlSignals);
       result.signals.push(...checkIdentityConsistency(message));
+      result.signals.push(...checkTemplateArtifacts(message));
+      Object.assign(result, reconcileVerdict(result));
       result.riskCategories = computeRiskCategories(result.signals);
       return withSenderReports(result);
     } catch (err) {
-      // Same rationale as urlSignals above: identity-consistency and the
-      // risk-category rollup are both deterministic and don't depend on
-      // the LLM call that just failed, so they still run on the failure
-      // path rather than being silently dropped.
+      // Same rationale as urlSignals above: identity-consistency,
+      // template-artifact detection, and the risk-category rollup are all
+      // deterministic and don't depend on the LLM call that just failed,
+      // so they still run on the failure path rather than being silently
+      // dropped.
       attachAges();
-      const signals = [...urlSignals, ...checkIdentityConsistency(message)];
+      const signals = [...urlSignals, ...checkIdentityConsistency(message), ...checkTemplateArtifacts(message)];
       return {
         verdict: "unknown",
         signals,

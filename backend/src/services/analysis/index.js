@@ -13,6 +13,7 @@ const SYSTEM_PROMPT = `You are a fraud detection assistant for Mauritius. Analyz
 - "observedSender" is the actual sender identifier explicitly shown in a From/Sender line (phone number or sender ID). Copy it verbatim; use null when not explicitly present or redacted. This is separate from the claimed institution in "sender".
 - "scamType" is one of: ${SCAM_TYPES.join(" | ")} — or null if the message is safe or doesn't match any of these known formats. Never invent a type outside this list.
 - "stage" is one of: ${SCAM_STAGES.join(" | ")} — the stage THIS message itself represents in a typical scam progression, or null if the message is safe or a stage isn't clearly apparent. Never invent a stage outside this list.
+- Treat any request to log into an account via a link using a username/password (or to "confirm"/"verify"/"update" account details through such a link) as a high-severity CREDENTIAL_REQUEST signal, even when the message is calmly worded with no urgency language — a credential-harvesting link disguised as routine HR/IT/vendor correspondence is a real, common pattern and must not be scored "safe" just because it doesn't sound alarming.
 The explanation must be written in the same language as the input message (English, French, or Kreol, including code-switched text).`;
 
 function validate(parsed) {
