@@ -403,8 +403,9 @@ The full `/api/analyze` response (see above) plus:
 { "extractedText": "string — redacted OCR output that was actually analyzed" }
 ```
 
-The UI deliberately uses only `extractedText` (the user reviews/corrects it,
-then submits it to `/api/analyze`).
+The UI never shows `extractedText` to the user - the screenshot thumbnail is
+the only visible confirmation of what was scanned. The text is held in
+memory client-side and submitted to `/api/analyze` once "Check" is pressed.
 
 ### Errors
 
@@ -419,6 +420,68 @@ then submits it to `/api/analyze`).
 | `502` | `{ "error": "OCR failed, try again shortly" }` | the tesseract.js worker itself threw. The real error is logged server-side, never returned to the client. |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error after OCR succeeded. An LLM outage is **not** an error (see `/api/analyze`). |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (shares the 20 req/15min bucket with `/api/analyze`) |
+
+## `POST /api/documents`
+
+Not in the original placeholder contract. A **separate feature from
+`/api/analyze/screenshot`**: that route is for scam *message* text (SMS/
+email/WhatsApp screenshots) and never persists the image. This route is for
+*documents* (bank statements, letterheads, IDs) headed into passive forgery
+forensics (`docs/DOCUMENT-FORENSICS.md`, `backend/src/services/document-
+forensics/`), which needs the exact original bytes, so it stores them
+unmodified (`backend/src/services/document-store/`) rather than discarding
+them the way the screenshot route does. This route only ingests and OCRs a
+document — it never scores one; there is no `verdict`, `riskScore`, or
+`signals` in its response. See `docs/DOCUMENT-FORENSICS.md` for how a stored
+document is actually assessed and what that assessment does and does not
+claim.
+
+### Request
+
+```json
+{
+  "document": "string, required — base64-encoded file bytes, max 15MB decoded. A `data:<mime>;base64,` prefix is accepted and stripped if present.",
+  "filename": "string, optional — original filename as reported by the browser, stored as-is, never trusted for the file's actual type"
+}
+```
+
+The document type is **not** taken from a client-supplied field. The
+decoded bytes are sniffed by magic number and must be PDF, PNG, JPEG, or
+WEBP, regardless of anything the client or `filename` claims.
+
+### Response — `201 Created`
+
+```json
+{
+  "documentId": "string (UUID) — internal id; not itself a public retrieval endpoint (see Security below)",
+  "mimeType": "\"application/pdf\" | \"image/png\" | \"image/jpeg\" | \"image/webp\"",
+  "byteLength": "number",
+  "receivedAt": "string — ISO timestamp",
+  "extractedText": "string | null — redacted OCR text for an image document; always null for a PDF (its text layer, if any, is read by the metadata/PDF forensics check instead)"
+}
+```
+
+### Security
+
+There is no `GET /api/documents/:id` route. A stored document can contain a
+bank statement, an ID, or other sensitive personal data, and this backend
+has no per-user auth layer — a UUID alone is not real access control, so
+byte retrieval is only ever an internal function call
+(`getStoredDocument()`), never a public HTTP path.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "document is required and must be a base64-encoded string" }` | `document` missing, not a string, or empty/whitespace-only |
+| `400` | `{ "error": "document could not be decoded as base64" }` | decoding `document` (after stripping any `data:...;base64,` prefix) produces a zero-length buffer |
+| `400` | `{ "error": "document exceeds maximum size of 15MB" }` | decoded buffer exceeds 15MB |
+| `400` | `{ "error": "document must be a valid PDF, PNG, JPEG, or WEBP file (checked by content, not the declared type)" }` | magic-byte sniff doesn't match any supported type |
+| `429` | `{ "error": "too many document-check requests, try again shortly" }` | per-IP rate limit exceeded (15 req/15min — its own bucket, since Part 2's forensics pipeline adds local model inference on top of OCR) |
+
+A failure of OCR itself is not an error for this route: ingestion has
+already succeeded and the bytes are safely stored by the time OCR runs, so
+`extractedText` is simply `null` if OCR throws.
 
 ## `POST /api/batch-scan`
 

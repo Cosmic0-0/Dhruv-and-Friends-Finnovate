@@ -1,6 +1,9 @@
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
 
 // Isolated in-memory DB, fast RDAP timeout, and a hosted-fallback LLM path
 // (so this test never depends on a real Ollama instance being reachable) -
@@ -332,4 +335,49 @@ test("POST /api/analyze-site validates input, rejects unsafe urls with 400, and 
   assert.equal(typeof body.grade, "string");
   assert.ok(Array.isArray(body.findings));
   assert.ok(body.findings.some((f) => f.title === "Missing Content-Security-Policy"));
+});
+
+test("POST /api/documents stores the exact uploaded bytes and returns redacted OCR text, without running the message pipeline", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+  const base = `http://127.0.0.1:${port}/api`;
+
+  const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../services/document-store/fixtures");
+  const pdf = readFileSync(path.join(fixturesDir, "incremental-update.pdf"));
+
+  const res = await originalFetch(`${base}/documents`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document: `data:application/pdf;base64,${pdf.toString("base64")}`, filename: "statement.pdf" }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(typeof body.documentId, "string");
+  assert.equal(body.mimeType, "application/pdf");
+  assert.equal(body.byteLength, pdf.length);
+  // No verdict/riskScore/signals - this route ingests a document, it never
+  // scores one (see routes/index.js's comment on this route).
+  assert.equal("verdict" in body, false);
+  assert.equal("riskScore" in body, false);
+});
+
+test("POST /api/documents rejects a file that isn't a recognised document type", async (t) => {
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const res = await originalFetch(`http://127.0.0.1:${port}/api/documents`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document: Buffer.from("not a document").toString("base64") }),
+  });
+  assert.equal(res.status, 400);
+  const body = await res.json();
+  assert.match(body.error, /must be a valid PDF, PNG, JPEG, or WEBP/);
 });

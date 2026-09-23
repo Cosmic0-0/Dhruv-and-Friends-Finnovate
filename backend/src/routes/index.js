@@ -12,6 +12,7 @@ import { listCampaigns, OUTCOME_LABELS, recordOutcome } from "../services/org-in
 import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
+import { ingestDocument, extractDocumentText } from "../services/document-store/index.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
@@ -20,6 +21,9 @@ export const router = Router();
 
 const MAX_MESSAGE_LENGTH = 5000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB, before base64 overhead
+// Documents (scanned bank statements, letterheads) run larger than a chat
+// screenshot; 15MB decoded covers a multi-page scanned PDF at reasonable DPI.
+const MAX_DOCUMENT_BYTES = 15 * 1024 * 1024;
 
 function rateLimited(message, options) {
   return rateLimit({
@@ -67,6 +71,13 @@ const reportLimiter = rateLimited("too many report submissions from this address
 // probe) - much heavier than check-url, so this stays well below that
 // route's 120/15min even though it's also non-LLM.
 const siteSecurityLimiter = rateLimited("too many security-report requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+});
+// Document ingestion runs OCR (same cost class as analyzeLimiter) today;
+// Part 2's forensics pipeline adds local model inference on top, so this
+// stays capped independently rather than sharing analyzeLimiter's bucket.
+const documentLimiter = rateLimited("too many document-check requests, try again shortly", {
   windowMs: 15 * 60 * 1000,
   limit: 15,
 });
@@ -192,6 +203,61 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
     console.error(err);
     res.status(500).json({ error: "analysis failed, try again shortly" });
   }
+});
+
+// Document ingestion: stores the uploaded file's exact bytes (services/
+// document-store), unmodified, and separately reads back those same stored
+// bytes for OCR. This is deliberately a different feature from
+// /analyze/screenshot: that route is for scam *message* text (SMS/email/
+// WhatsApp screenshots), never persisted, redacted and scored for a
+// verdict. This route is for *documents* (bank statements, letterheads,
+// IDs) headed into the forensics pipeline (services/document-forensics),
+// which produces indicators with a confidence label, never a verdict - see
+// that service's module comment.
+router.post("/documents", documentLimiter, json({ limit: "20mb" }), async (req, res) => {
+  const { document, filename } = req.body;
+  if (!isNonEmptyString(document)) {
+    return res.status(400).json({ error: "document is required and must be a base64-encoded string" });
+  }
+
+  const base64 = document.replace(/^data:[^;]+;base64,/, "");
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length === 0) {
+    return res.status(400).json({ error: "document could not be decoded as base64" });
+  }
+  if (buffer.length > MAX_DOCUMENT_BYTES) {
+    return res.status(400).json({ error: `document exceeds maximum size of ${MAX_DOCUMENT_BYTES / (1024 * 1024)}MB` });
+  }
+
+  const stored = ingestDocument({
+    buffer,
+    sourceChannel: "web_upload",
+    originalFilename: typeof filename === "string" ? filename.slice(0, 255) : undefined,
+  });
+  if (stored.error === "unsupported_type") {
+    return res
+      .status(400)
+      .json({ error: "document must be a valid PDF, PNG, JPEG, or WEBP file (checked by content, not the declared type)" });
+  }
+
+  let extractedText = null;
+  try {
+    extractedText = await extractDocumentText(stored.id);
+  } catch (err) {
+    console.error(err);
+    // Ingestion already succeeded and the bytes are safely stored; OCR
+    // failing is not a reason to fail the whole upload (same "OCR is
+    // enrichment, not a precondition" stance as /analyze/screenshot's own
+    // pipeline-survives-LLM-outage guarantee).
+  }
+
+  res.status(201).json({
+    documentId: stored.id,
+    mimeType: stored.mimeType,
+    byteLength: stored.byteLength,
+    receivedAt: stored.receivedAt,
+    extractedText: extractedText ? redact(extractedText).redacted : null,
+  });
 });
 
 router.post("/batch-scan", batchLimiter, json({ limit: "300kb" }), async (req, res) => {

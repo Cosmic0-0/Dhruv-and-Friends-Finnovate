@@ -64,6 +64,21 @@ db.exec(`
     metrics TEXT NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_risk_audit_log_created_at ON risk_audit_log (created_at);
+  -- Original bytes of an uploaded document (services/document-store), stored
+  -- exactly as received - never a re-render or re-encode - so downstream
+  -- forensics (EXIF, PDF incremental-save structure, error-level analysis)
+  -- has the real evidence to work from instead of a lossy screenshot copy.
+  CREATE TABLE IF NOT EXISTS documents (
+    id TEXT PRIMARY KEY,
+    received_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    source_channel TEXT NOT NULL,
+    original_filename TEXT,
+    mime_type TEXT NOT NULL,
+    byte_length INTEGER NOT NULL,
+    sha256 TEXT NOT NULL,
+    bytes BLOB NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_documents_received_at ON documents (received_at);
 `);
 
 const DOMAIN_AGE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -193,6 +208,44 @@ export function purgeCommunityData(eventCutoffIso, auditCutoffIso) {
   const events = db.prepare("DELETE FROM report_events WHERE created_at < ?").run(eventCutoffIso).changes;
   const audits = db.prepare("DELETE FROM risk_audit_log WHERE created_at < ?").run(auditCutoffIso).changes;
   return { events, audits };
+}
+
+// bytes is stored and returned as a Node Buffer, untouched - callers must
+// never re-encode it before persisting or after reading it back, or the
+// byte-exact guarantee forensics depends on is broken.
+export function insertDocument(doc) {
+  db.prepare(
+    `INSERT INTO documents (id, received_at, source_channel, original_filename, mime_type, byte_length, sha256, bytes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    doc.id,
+    doc.receivedAt,
+    doc.sourceChannel,
+    doc.originalFilename ?? null,
+    doc.mimeType,
+    doc.byteLength,
+    doc.sha256,
+    doc.bytes
+  );
+}
+
+export function getDocument(id) {
+  const row = db
+    .prepare(
+      "SELECT id, received_at, source_channel, original_filename, mime_type, byte_length, sha256, bytes FROM documents WHERE id = ?"
+    )
+    .get(id);
+  if (!row) return undefined;
+  return {
+    id: row.id,
+    receivedAt: row.received_at,
+    sourceChannel: row.source_channel,
+    originalFilename: row.original_filename,
+    mimeType: row.mime_type,
+    byteLength: row.byte_length,
+    sha256: row.sha256,
+    bytes: row.bytes,
+  };
 }
 
 export function saveBatchHistory(summary) {
