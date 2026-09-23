@@ -7,22 +7,22 @@ final demo script.
 
 ## Files
 
-- `en.json` — English payloads.
-- `fr.json` — French payloads.
-- `kr.json` — Kreol payloads (2026-09-23 revision, see below).
-- `consistency.mjs` — sends each message to the AI several times and
+- `en.json`: English payloads.
+- `fr.json`: French payloads.
+- `kr.json`: Kreol payloads (2026-09-23 revision, see below).
+- `consistency.mjs`: sends each message to the AI several times and
   reports how often the answer changes (see below).
-  `consistency.test.mjs` — its scoring tests (no AI needed).
-- `consistency-results/2026-09-23T08-43-48-781Z.json` — one committed
+  `consistency.test.mjs`: its scoring tests (no AI needed).
+- `consistency-results/2026-09-23T08-43-48-781Z.json`: one committed
   consistency run. It is committed on purpose: `webapp-payloads.mjs` reads
   this exact file as its baseline. New runs also land in
   `consistency-results/`; commit one only if you point a script at it.
-- `results/` — raw output of test runs (git-ignored).
-- `documents/` — generated PDF/DOCX fixtures for `POST /api/analyze/document`
+- `results/`: raw output of test runs (git-ignored).
+- `documents/`: generated PDF/DOCX fixtures for `POST /api/analyze/document`
   (see `documents/README.md`).
-- `extension-pages/` — local test pages for the extension, served by
+- `extension-pages/`: local test pages for the extension, served by
   `extension-pages/serve.mjs`.
-- `restart-backend.sh` — restarts the local backend on :4000 (resets its
+- `restart-backend.sh`: restarts the local backend on :4000 (resets its
   rate limits); the web app scripts below use it. It needs `AI_URL` or an
   exported `OLLAMA_URL` pointing at the team's tailnet Ollama host.
 

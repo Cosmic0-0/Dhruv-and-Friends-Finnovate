@@ -908,7 +908,7 @@ silent no-op.
 
 ```json
 {
-  "url": "string — the request's url after parsing (normalised, e.g. a trailing slash added), not a byte-for-byte echo",
+  "url": "string, the request's url after parsing (normalised, e.g. a trailing slash added), not a byte-for-byte echo",
   "finalUrl": "string | null — the URL actually reached after following redirects, or null if the site could not be reached at all",
   "grade": "\"A\" | \"B\" | \"C\" | \"D\" | \"F\" | \"N/A\" — N/A only when the site could not be reached",
   "score": "number | null — 0-100, null only alongside grade \"N/A\"",
@@ -964,16 +964,16 @@ Organisation-scoped campaign list for the Outlook analyst view. The demo has
 one configured organisation (`services/workplace-registry`); callers cannot
 choose an organisation id. No request body. Read-only, non-LLM.
 
-### Response — `200 OK`
+### Response - `200 OK`
 
 ```jsonc
 {
-  "organisationId": "string — the configured demo organisation",
+  "organisationId": "string, the configured demo organisation",
   "campaigns": [
     {
       "campaignId": "OC-<12 hex>",          // stable per organisation + indicator
-      "indicator": "string — the shared indicator, e.g. \"link:<host>\" (type prefix before the first colon)",
-      "indicatorType": "string — e.g. sender_domain, link, account, payee",
+      "indicator": "string, the shared indicator, e.g. \"link:<host>\" (type prefix before the first colon)",
+      "indicatorType": "string, e.g. sender_domain, link, account, payee",
       "messages": 3,                       // distinct flagged observations
       "senders": 2,                        // distinct pseudonymous senders
       "recipients": 2,                     // distinct pseudonymous recipients
@@ -1009,8 +1009,8 @@ pseudonym of the client IP. There is no authentication.
 
 ```json
 {
-  "observationId": "string, required — 64 lowercase hex characters, the analysis.organisation.observationId of an email result",
-  "label": "string, required — one of the labels below"
+  "observationId": "string, required, 64 lowercase hex characters, the analysis.organisation.observationId of an email result",
+  "label": "string, required, one of the labels below"
 }
 ```
 
@@ -1018,13 +1018,13 @@ Labels: `confirmed_phishing`, `confirmed_bec`, `supplier_impersonation`,
 `false_positive`, `legitimate`, `insufficient_evidence`, and, kept for
 compatibility, `confirmed_fraud` and `suspicious_unconfirmed`.
 
-### Response — `200 OK`
+### Response - `200 OK`
 
 ```jsonc
 {
-  "inputHash": "string — the observationId",
-  "label": "string — the label just recorded",
-  "consensus": "string — the most common label across analysts (latest wins a tie)",
+  "inputHash": "string, the observationId",
+  "label": "string, the label just recorded",
+  "consensus": "string, the most common label across analysts (latest wins a tie)",
   "votes": 1                               // number of analysts who labelled it
 }
 ```
