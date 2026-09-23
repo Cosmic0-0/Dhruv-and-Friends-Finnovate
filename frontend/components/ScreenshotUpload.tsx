@@ -218,7 +218,7 @@ export function ScreenshotRow({
           onClick={onRemove}
           aria-label={copy.shot.remove}
           title={copy.shot.remove}
-          className="pressable grid size-10 shrink-0 place-items-center text-ink-muted hover:bg-muted-surface hover:text-ink"
+          className="pressable grid size-11 shrink-0 place-items-center text-ink-muted hover:bg-muted-surface hover:text-ink"
         >
           <XIcon className="size-5" strokeWidth={2} />
         </button>
@@ -245,7 +245,7 @@ export function ScreenshotRow({
             <button
               type="button"
               onClick={onTypeInstead}
-              className="pressable micro min-h-10 border border-line-strong bg-card px-4 text-ink hover:bg-muted-surface"
+              className="pressable micro min-h-11 border border-line-strong bg-card px-4 text-ink hover:bg-muted-surface"
             >
               {copy.shot.typeInstead}
             </button>

@@ -59,7 +59,7 @@ export default function ConversationFlow() {
     <ScreenTitle title={c.title} back={{ href: "/", label: copy.tabs.check }} />
     <div className="gutter flex flex-col gap-4 pt-4">
     <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{c.intro}</p>
-    <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.65fr)]">
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(240px,0.6fr)]">
       <section aria-label={c.thread} className="min-w-0">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="micro text-ink-soft">{c.thread} <span className="ml-2 data text-ink">{String(entries.length).padStart(2, "0")}</span></h2>
@@ -91,7 +91,7 @@ export default function ConversationFlow() {
           {loading ? <div className="mt-5 flex items-center gap-4"><WaitStatus phase="running" stage={stage} labels={copy.wait.check} progressLabel={copy.wait.progressLabel} /><button type="button" onClick={cancel} className="text-sm underline underline-offset-4">{copy.wait.cancel}</button></div> : <button type="submit" disabled={!message.trim()} className="pressable mt-5 flex min-h-12 w-full items-center justify-between bg-surface-dark px-4 py-3 text-sm font-semibold text-on-ink hover:bg-surface-dark-2 disabled:opacity-40">{error ? copy.retry : c.submit}<span aria-hidden="true">↗</span></button>}
         </form>
       </section>
-      <aside className="sheet md:sticky md:top-6" aria-label={c.progress}>
+      <aside className="sheet xl:sticky xl:top-6" aria-label={c.progress}>
         <details open className="group">
           <summary className="cursor-pointer border-b border-card-border bg-surface-dark px-5 py-4 text-on-ink">
             <span className="micro text-on-ink">{c.progress}</span>

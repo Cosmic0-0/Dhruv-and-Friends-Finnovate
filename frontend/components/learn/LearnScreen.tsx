@@ -183,14 +183,14 @@ function DevTools({ copy, onReset, onSeed }: { copy: Copy; onReset: () => void; 
         <button
           type="button"
           onClick={onReset}
-          className="pressable micro min-h-10 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
+          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
         >
           {copy.learn.dev.reset}
         </button>
         <button
           type="button"
           onClick={onSeed}
-          className="pressable micro min-h-10 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
+          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
         >
           {copy.learn.dev.seed}
         </button>

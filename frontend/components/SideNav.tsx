@@ -45,9 +45,9 @@ export default function SideNav() {
         <img
           src="/brand/dhruv-and-friends.png"
           alt={copy.settings.teamLogoAlt}
-          width={32}
-          height={32}
-          className="size-8 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
+          width={40}
+          height={40}
+          className="size-10 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
         />
         <span className="text-[1.0625rem] font-semibold text-ink">FraudLens</span>
       </div>
@@ -86,7 +86,7 @@ export default function SideNav() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`pressable flex min-h-10 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
+              className={`pressable flex min-h-11 items-center gap-3 rounded-2xl px-3 text-[0.9375rem] ${
                 active ? "bg-muted-surface font-semibold text-ink" : "text-ink-muted hover:text-ink"
               }`}
             >

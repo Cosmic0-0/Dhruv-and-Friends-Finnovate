@@ -122,31 +122,31 @@ export default function BatchScan() {
 
       {summary && (
         <div className="flex flex-col gap-6">
-          <div className="grid grid-cols-2 gap-px sheet-border sm:grid-cols-4">
+          <div className="card grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               [summary.total, t("Messages")],
               [summary.safeCount, t("Safe")],
               [summary.suspiciousCount, t("Suspicious")],
               [summary.scamCount, t("Scam")],
             ].map(([count, label]) => (
-              <div key={label as string} className="bg-card p-5">
-                <p className="font-heading text-3xl">{count}</p>
-                <p className="micro text-ink-muted">{label}</p>
+              <div key={label as string} className="flex flex-col">
+                <p className="data text-[1.75rem] leading-8 font-bold text-ink">{count}</p>
+                <p className="text-[0.9375rem] text-ink-muted">{label}</p>
               </div>
             ))}
           </div>
           {summary.failedCount > 0 && (
-            <p className="text-sm text-ink-muted">
+            <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">
               {t(`${summary.failedCount} ${summary.failedCount === 1 ? "message" : "messages"} could not be analysed and should be treated with caution.`)}
             </p>
           )}
 
           {campaigns.length > 0 && (
             <div>
-              <h2 className="micro mb-3 text-ink-muted">{t("Possible campaigns")}</h2>
-              <ul className="flex flex-col gap-px sheet-border sm:grid sm:grid-cols-2 lg:grid-cols-3">
+              <h2 className="micro mb-2.5 px-1 text-ink-muted">{t("Possible campaigns")}</h2>
+              <ul className="grid gap-3.5 sm:grid-cols-2 xl:grid-cols-3">
                 {campaigns.map((c) => (
-                  <li key={c.fingerprintId} className="bg-card p-5">
+                  <li key={c.fingerprintId} className="card">
                     <button
                       type="button"
                       onClick={() => setFilter(filter === c.fingerprintId ? null : c.fingerprintId)}

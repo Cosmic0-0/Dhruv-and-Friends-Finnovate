@@ -532,7 +532,10 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    min-height: 42px;
+    /* The mockup draws 42px; DESIGN.md also sets a 44px floor for touch
+       targets, and the floor wins. Two pixels is imperceptible; a missed tap
+       is not. */
+    min-height: 44px;
     padding-inline: 20px;
     border: 0;
     border-radius: var(--radius-pill);
