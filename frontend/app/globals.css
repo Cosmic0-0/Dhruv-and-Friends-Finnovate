@@ -1,143 +1,226 @@
 @import "tailwindcss";
 
 /*
- * FraudLens design system.
+ * FraudLens design system — iPhone, black and white.
  *
- * Direction: forensic instrument. This is a tool someone opens while deciding
- * whether to move money, so it reads as a report, not a consumer app — one
- * continuous sheet with hairline rules instead of a stack of floating cards,
- * condensed uppercase micro-labels, monospace for machine data (domains,
- * senders), and a verdict gauge built like a measuring scale.
+ * Reference: frontend/design/DESIGN.md and the approved screens in
+ * frontend/design/mockup/ (*.png rendered, *.html for exact values).
  *
- * Palette keeps the approved mockup's three semantic hues (steel / brass /
- * brick at the same muted chroma, so severity reads through label and position
- * rather than saturation) and adds what the mockup's flat token list lacked:
- * a cool-cast ink ramp, a dark instrument surface for real layering, and
- * accessible *-ink variants for coloured text on light backgrounds.
+ * Direction: a native-feeling iPhone app. Apple system font, large titles,
+ * soft 28px cards on a light grey page, one dark hero card per screen
+ * carrying the main question, and a floating frosted tab bar. Black, white
+ * and greys; colour only ever carries meaning (red = scam, green = genuine,
+ * orange = be careful). No uppercase tracked labels, no serif, no em dashes,
+ * no decorative dots, one radius system.
  *
- * Everything lives in @theme so each token is BOTH a CSS custom property
- * (var(--color-ink)) and a Tailwind utility (bg-ink, text-danger, font-mono).
- * Change a colour here, never inline.
+ * Dark mode works without a single component edit: every @theme token points
+ * at a --c-* custom property, and the prefers-color-scheme block below swaps
+ * those. So bg-card / text-ink / border-card-border are already correct in
+ * both modes wherever they appear.
+ *
+ * Three things that all used to be "ink" are separate tokens here, because
+ * they behave differently once there is a dark mode:
+ *   --color-ink            text. Inverts.
+ *   --color-surface-dark   a dark panel (hero, quiz card). Stays dark, so
+ *                          --color-on-ink (text on it) is white in both modes.
+ *   --color-primary        the primary pill button on the page. Inverts,
+ *                          paired with --color-on-primary.
  */
-@theme {
+@theme inline {
   /* ---- Surfaces ---- */
-  --color-page: #eef0ef; /* paper: off-white with a faint cool cast */
-  --color-card: #ffffff; /* the report sheet */
-  --color-muted-surface: rgb(21 24 28 / 4%); /* inset fills, code blocks */
+  --color-page: var(--c-page);
+  --color-card: var(--c-card);
+  --color-muted-surface: var(--c-muted);
+  /* The #E8E8EA suggestion/action card: install prompt, "what to do" panel. */
+  --color-accent-soft: var(--c-suggestion);
+  --color-safe-soft: var(--c-green-tint);
+  /* Dark panels. These do NOT invert: a hero stays dark in dark mode (the
+     mockup's dark hero is just a lighter dark), so text-on-ink is white in
+     both modes. The primary BUTTON is a separate pair below, because that one
+     really does invert. */
+  --color-surface-dark: var(--c-surface-dark);
+  --color-surface-dark-2: var(--c-surface-dark-2);
+  /* Primary pill button on a light page: ink in light mode, light in dark. */
+  --color-primary: var(--c-primary);
+  --color-on-primary: var(--c-on-primary);
+  --color-skeleton: var(--c-skeleton);
+  --color-track: var(--c-track);
 
-  /* ---- Ink ---- */
-  --color-ink: #15181c; /* near-black, cool — text AND a real surface */
-  --color-ink-2: #262c33; /* elevated dark surface, hover on dark */
-  --color-ink-soft: rgb(21 24 28 / 72%); /* body copy */
-  --color-ink-muted: rgb(21 24 28 / 50%); /* captions, meta */
-  --color-on-ink: #eef0ef; /* text on ink surfaces */
+  /* ---- Ink (text) ---- */
+  --color-ink: var(--c-ink);
+  --color-ink-soft: var(--c-ink-soft);
+  --color-ink-muted: var(--c-ink-muted);
+  /* Text and icons on a dark surface. */
+  --color-on-ink: var(--c-on-ink);
+  /* Inactive tab-bar glyphs: lighter than secondary text on purpose. */
+  --color-icon-idle: var(--c-icon-idle);
 
   /* ---- Lines ---- */
-  /* Two weights: hairline separates rows inside a block, strong separates
-     blocks. One divider weight everywhere is what makes a layout read flat. */
-  --color-card-border: rgb(21 24 28 / 11%);
-  --color-line-strong: rgb(21 24 28 / 20%);
+  --color-card-border: var(--c-hairline);
+  --color-line-strong: var(--c-line-strong);
 
-  /* ---- Accent (navigation, links, "safe") ---- */
-  --color-accent: #5980a6; /* surface fill; white text sits on accent-deep */
-  --color-accent-deep: #416180;
-  --color-accent-ink: #33536f; /* accent as TEXT on light — passes AA */
-  --color-accent-soft: #e8eff6;
+  /* ---- Accent ----
+     The palette has no brand hue: the accent IS the ink. Kept as its own
+     token so "this is interactive" stays separable from "this is text". */
+  --color-accent: var(--c-ink);
+  --color-accent-deep: var(--c-ink);
+  --color-accent-ink: var(--c-ink);
 
-  /* ---- Verdict tones ---- */
-  --color-danger: #a14a3a;
-  --color-danger-deep: #6b2f24;
-  --color-danger-ink: #7c3628; /* danger as small text — passes AA */
-  --color-danger-soft: #f6e8e4;
-  --color-caution: #96772f;
-  --color-caution-deep: #5c4720;
-  --color-caution-ink: #6d5620; /* caution as small text — passes AA */
-  --color-caution-bright: #96772f;
-  --color-caution-soft: #f4eede;
-  --color-safe: var(--color-accent);
-  --color-safe-soft: var(--color-accent-soft);
+  /* ---- Verdict tones ----
+     Each has a full-chroma value (fills, icons, large type) and an -ink
+     variant that passes AA as small text on the light card. */
+  --color-danger: var(--c-red);
+  --color-danger-deep: var(--c-red-ink);
+  --color-danger-ink: var(--c-red-ink);
+  --color-danger-soft: var(--c-red-tint);
+  --color-caution: var(--c-orange);
+  --color-caution-deep: var(--c-orange-ink);
+  --color-caution-ink: var(--c-orange-ink);
+  --color-caution-bright: var(--c-orange);
+  --color-caution-soft: var(--c-orange-tint);
+  --color-safe: var(--c-green);
+  --color-safe-ink: var(--c-green-ink);
 
-  /* ---- Typography ---- */
-  /* One IBM Plex superfamily, three cuts, three jobs: Plex Sans Condensed
-     carries headings, verdicts and numbers; Plex Sans carries body copy and
-     renders French/Kreol diacritics cleanly; Plex Mono carries machine data
-     (domains, sender IDs) so it is visibly not prose. */
-  --font-heading: var(--font-plex-sans-condensed), "Arial Narrow", sans-serif;
-  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  /* ---- Typography ----
+     One family: the Apple system font, with a Segoe fallback so Windows
+     review screenshots stay representative. The three variables are kept
+     (rather than collapsed to one) only so existing font-heading / font-mono
+     call sites keep compiling; all three resolve to the same stack, because
+     the design has no serif and no monospace. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-mono: var(--font-sans);
 
-  /* Scale from the mockup: 44 / 28 / 22 / 16 / 14 / 12px */
-  --text-display: 2.75rem;
-  --text-display--line-height: 1;
-  --text-display--letter-spacing: -0.02em;
-  --text-title: 1.75rem;
-  --text-title--line-height: 1.05;
-  --text-title--letter-spacing: -0.01em;
-  --text-subtitle: 1.375rem;
-  --text-subtitle--line-height: 1.15;
+  /* Scale from DESIGN.md: large title 34/41, hero headline 42/46, body 17/23. */
+  --text-display: 2.125rem;
+  --text-display--line-height: 2.5625rem;
+  --text-display--letter-spacing: 0.01em;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.8125rem;
+  --text-title--letter-spacing: 0em;
+  --text-subtitle: 1.0625rem;
+  --text-subtitle--line-height: 1.4375rem;
 
-  --tracking-micro: 0.18em; /* uppercase micro-labels */
+  /* No tracked labels in this system; the token stays so tracking-micro call
+     sites keep compiling until they are swept. */
+  --tracking-micro: 0em;
 
   /* ---- Shape ---- */
-  /* "Radius: 0 everywhere — no rounded corners" (mockup Developer reference). */
-  --radius-card: 0px;
-  --radius-pill: 0px;
-  --shadow-card: none;
+  --radius-card: 28px;
+  --radius-pill: 9999px;
+  --shadow-card: 0 1px 1px rgb(28 28 40 / 2%), 0 14px 30px rgb(28 28 40 / 7%);
+  --shadow-hero: 0 16px 34px rgb(28 28 40 / 22%);
+  --shadow-tabbar: 0 12px 34px rgb(28 28 40 / 14%);
 
   /* ---- Layout ---- */
-  --container-app: 430px; /* widened at md+ below */
-  --spacing-gutter: 1.25rem;
+  --container-app: 430px;
+  --spacing-gutter: 18px;
   --spacing-section: 2rem;
 }
 
 @layer base {
   :root {
-    --tabbar-height: 4.25rem;
+    color-scheme: light dark;
+
+    /* Light (DESIGN.md "Tokens (light)"). */
+    --c-page: #f2f2f3;
+    --c-card: #fcfcfc;
+    --c-card-gradient: linear-gradient(180deg, #fcfcfc 0%, #f6f6f7 100%);
+    --c-card-edge: rgb(255 255 255 / 95%);
+    --c-muted: rgb(0 0 0 / 6%);
+    --c-suggestion: #e8e8ea;
+    --c-surface-dark: #111113;
+    --c-surface-dark-2: #2a2a2d;
+    --c-primary: #111113;
+    --c-on-primary: #ffffff;
+    --c-hero: linear-gradient(180deg, #2a2a2d 0%, #111113 55%, #0b0b0c 100%);
+    --c-hero-edge: transparent;
+    --c-skeleton: #e7e7ea;
+    --c-track: #e5e5ea;
+
+    --c-ink: #1c1c1e;
+    --c-ink-soft: #3c3c3e;
+    --c-ink-muted: #6e6e73;
+    --c-on-ink: #ffffff;
+    --c-icon-idle: #8e8e93;
+
+    --c-hairline: rgb(60 60 67 / 12%);
+    --c-line-strong: rgb(60 60 67 / 22%);
+
+    --c-red: #ff3b30;
+    --c-red-ink: #c4221a;
+    --c-red-tint: #fdeceb;
+    --c-green: #34c759;
+    --c-green-ink: #1d7a3a;
+    --c-green-tint: #e6f6ea;
+    --c-orange: #ff9f0a;
+    --c-orange-ink: #a65300;
+    --c-orange-tint: #fff1e0;
+
+    /* The evidence highlight in the message body needs a darker text colour
+       than the tint's own -ink to stay AA under the 2px underline. */
+    --c-mark-ink: #8a0f09;
+
+    /* Floating tab bar. */
+    --c-tabbar: rgb(255 255 255 / 82%);
+    --c-tabbar-edge: rgb(255 255 255 / 95%);
+
+    --c-scrim: rgb(12 12 14 / 50%);
+
+    /* Reserve the floating bar's height (66px) plus its 28px bottom inset. */
+    --tabbar-height: 6.125rem;
   }
 
-  /* Phone-width on small screens; widens past tablet so desktop isn't a phone
-     column stranded in empty space. TabBar (the fixed bottom bar) is hidden
-     at this same breakpoint — md:hidden in TabBar.tsx, DesktopNav takes over
-     in AppHeader — so there's no bar height left to reserve either. */
-  @media (min-width: 48rem) {
+  /* Dark (DESIGN.md "Tokens (dark, prefers-color-scheme)"). Only the --c-*
+     values change; every utility above follows automatically. */
+  @media (prefers-color-scheme: dark) {
     :root {
-      --container-app: 660px;
-      --tabbar-height: 0px;
+      --c-page: #0c0c0d;
+      --c-card: #1c1c1e;
+      --c-card-gradient: linear-gradient(180deg, #1f1f21 0%, #1a1a1c 100%);
+      --c-card-edge: rgb(255 255 255 / 6%);
+      --c-muted: rgb(255 255 255 / 8%);
+      --c-suggestion: #1f1f21;
+      --c-surface-dark: #1c1c1e;
+      --c-surface-dark-2: #2c2c2e;
+      --c-primary: #f5f5f7;
+      --c-on-primary: #111113;
+      --c-hero: linear-gradient(180deg, #3a3a3c 0%, #232325 100%);
+      --c-hero-edge: rgb(255 255 255 / 8%);
+      --c-skeleton: #2c2c2e;
+      --c-track: #3a3a3c;
+
+      --c-ink: #f5f5f7;
+      --c-ink-soft: #c7c7cc;
+      --c-ink-muted: #98989f;
+      --c-on-ink: #ffffff;
+      --c-icon-idle: #8e8e93;
+
+      --c-hairline: rgb(84 84 88 / 45%);
+      --c-line-strong: rgb(84 84 88 / 65%);
+
+      --c-red: #ff6961;
+      --c-red-ink: #ff6961;
+      --c-red-tint: #3a1512;
+      --c-green: #4cd964;
+      --c-green-ink: #4cd964;
+      --c-green-tint: #10301a;
+      --c-orange: #ffb340;
+      --c-orange-ink: #ffb340;
+      --c-orange-tint: #3a2610;
+
+      --c-mark-ink: #ffb4ae;
+
+      --c-tabbar: rgb(30 30 32 / 82%);
+      --c-tabbar-edge: rgb(255 255 255 / 10%);
+
+      --c-scrim: rgb(0 0 0 / 60%);
     }
-  }
-
-  /* True desktop: wider still, but capped well short of full-bleed so body
-     copy doesn't run past a comfortable line length. */
-  @media (min-width: 64rem) {
-    :root {
-      --container-app: 840px;
-    }
-  }
-
-  /* True desktop and up: fill the viewport — no fixed max-width at all, so
-     the frame actually reaches the edges of the window on any monitor
-     instead of stopping at some arbitrary px cap with dead margin on either
-     side (confirmed against a live wide browser window: a fixed cap here
-     reads as a form stranded in the middle of the screen). --spacing-gutter
-     is the only inset, and it grows with viewport so large screens still get
-     breathing room without a hard stop. Inner blocks (Hero copy, evidence
-     prose) carry their own ch-based max-widths for line length, so this only
-     controls how much of the frame the instrument itself occupies. */
-  @media (min-width: 80rem) {
-    :root { --container-app: 100%; --spacing-gutter: 2.5rem; }
-  }
-
-  @media (min-width: 120rem) {
-    :root { --spacing-gutter: 4rem; }
-  }
-
-  @media (min-width: 160rem) {
-    :root { --spacing-gutter: 6rem; }
   }
 
   html {
     background-color: var(--color-page);
-    color: var(--color-ink-soft);
+    color: var(--color-ink);
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     scroll-padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
@@ -146,8 +229,8 @@
   body {
     min-height: 100dvh;
     font-family: var(--font-sans);
-    font-size: 1rem;
-    line-height: 1.6;
+    font-size: 1.0625rem;
+    line-height: 1.45;
     background-color: var(--color-page);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -156,9 +239,8 @@
   h1,
   h2,
   h3 {
-    font-family: var(--font-heading);
+    font-family: var(--font-sans);
     color: var(--color-ink);
-    font-weight: 600;
     text-wrap: balance;
   }
 
@@ -166,20 +248,21 @@
     font-size: var(--text-display);
     line-height: var(--text-display--line-height);
     letter-spacing: var(--text-display--letter-spacing);
+    font-weight: 700;
   }
 
   h2 {
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
-    letter-spacing: var(--text-title--letter-spacing);
+    font-weight: 600;
   }
 
   h3 {
     font-size: var(--text-subtitle);
     line-height: var(--text-subtitle--line-height);
+    font-weight: 600;
   }
 
-  /* Short descriptive text avoids orphans; long prose is left alone. */
   p,
   li,
   dd {
@@ -187,17 +270,18 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent-deep);
+    outline: 2px solid var(--color-ink);
     outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Centred column, respecting notches / home indicator (viewport-fit=cover
-     is set in layout.tsx). Positioned + z-index:1 so it (and every opaque
-     surface inside it — header, sheets) paints above the fixed particle
-     canvas (z-index:0, ParticleField.tsx); the canvas only shows through
-     the gutters and gaps between sections, never under text. */
+  /*
+   * The phone column, at every width. There is no desktop layout: the design
+   * is an iPhone app, and a 430px column centred in a browser window is the
+   * intended desktop presentation. Padding-bottom clears the floating tab bar
+   * and the home indicator.
+   */
   .app-shell {
     position: relative;
     z-index: 1;
@@ -205,68 +289,131 @@
     width: 100%;
     max-width: var(--container-app);
     min-height: 100dvh;
-    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + var(--spacing-section));
+    padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
   }
 
-  /* Horizontal rhythm for everything that isn't deliberately full-bleed. */
   .gutter {
     padding-left: max(var(--spacing-gutter), env(safe-area-inset-left));
     padding-right: max(var(--spacing-gutter), env(safe-area-inset-right));
   }
 
   /*
-   * The report sheet. Sections inside it are separated by hairline rules
-   * (`.sheet > * + *`), not by gaps between floating boxes — that stack of
-   * identical cards is what makes a layout read as assembled rather than
-   * designed.
+   * The card. .sheet and .card are the same surface; .card just carries its
+   * own padding. Rows inside a card are still separated by hairlines
+   * (.sheet > * + *) — inside one rounded container that reads as a native
+   * grouped list, which is what the Recent and "what we checked" lists are in
+   * the mockup.
    */
-  .sheet {
-    background-color: var(--color-card);
-    border: 1px solid var(--color-card-border);
+  .sheet,
+  .card {
+    background: var(--c-card-gradient);
+    border: 1px solid var(--c-card-edge);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+  }
+
+  .card {
+    padding: 18px;
   }
 
   .sheet > * + * {
     border-top: 1px solid var(--color-card-border);
   }
 
-  /* Uppercase micro-label used for every section and field name. */
+  /* The one dark card per screen, carrying the screen's main question. */
+  .hero {
+    background: var(--c-hero);
+    border: 1px solid var(--c-hero-edge);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-hero);
+    color: #ffffff;
+  }
+
+  /* The flat #E8E8EA card: suggestions and the "what to do" action panel. */
+  .suggestion {
+    background-color: var(--color-accent-soft);
+    border-radius: var(--radius-card);
+  }
+
+  /* Secondary card title: 15px semibold, sentence case, secondary colour.
+     (Was an uppercase tracked micro-label; redefined here so all ~100 call
+     sites pick up the new system at once rather than being rewritten.) */
   .micro {
-    font-family: var(--font-heading);
-    font-size: 0.6875rem;
+    font-family: var(--font-sans);
+    font-size: 0.9375rem;
     font-weight: 600;
-    letter-spacing: var(--tracking-micro);
-    line-height: 1;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    line-height: 1.25rem;
+    text-transform: none;
   }
 
-  /* Machine data: domains, sender IDs, counts. Visibly not prose. */
-  .data {
-    font-family: var(--font-mono);
-    font-variant-numeric: tabular-nums;
+  /* The smaller caption used for severity chips and stat captions. */
+  .micro-sm {
     font-size: 0.8125rem;
-    letter-spacing: -0.01em;
+    font-weight: 500;
+    line-height: 1.125rem;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
-  /* Kept for compatibility with surfaces that genuinely are standalone. */
-  .card {
-    background-color: var(--color-card);
-    border: 1px solid var(--color-card-border);
-    padding: 1.25rem;
+  /* Numbers and looked-up values. Tabular so counts do not jitter; no longer
+     monospaced, because the design has no machine-data voice. */
+  .data {
+    font-family: var(--font-sans);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9375rem;
+    letter-spacing: 0;
   }
 
-  /*
-   * Interactive surfaces. Explicit transition properties (never `all`) so a
-   * retargeted interaction doesn't animate layout, and a small press scale so
-   * buttons feel tactile without theatrics.
-   */
+  /* Every button is a full pill. .pill is the 50px primary/secondary size,
+     .pill-sm the 42px size used inside cards. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 50px;
+    padding-inline: 22px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .pill-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 42px;
+    padding-inline: 20px;
+    border: 0;
+    border-radius: var(--radius-pill);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Floating frosted tab bar. The -webkit- prefix is required on iOS. */
+  .tabbar {
+    background: var(--c-tabbar);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid var(--c-tabbar-edge);
+    border-radius: 33px;
+    box-shadow: var(--shadow-tabbar);
+  }
+
   .pressable {
-    transition-property: background-color, color, border-color, opacity, transform;
-    transition-duration: 140ms;
+    transition-property: background-color, color, border-color, opacity, transform, box-shadow;
+    transition-duration: 180ms;
     transition-timing-function: ease-out;
   }
 
   .pressable:active:not(:disabled) {
-    transform: scale(0.99);
+    transform: scale(0.98);
   }
 }
 
@@ -281,19 +428,14 @@
   .pressable:active:not(:disabled) {
     transform: none;
   }
-
-  /* Belt-and-suspenders alongside ParticleField.tsx's own matchMedia check
-     (which skips creating the canvas at all): if a canvas element somehow
-     exists anyway, it never paints or costs a frame under reduced motion. */
-  canvas {
-    display: none !important;
-  }
 }
 
 /*
- * Daily-streak celebration (components/learn/Celebration.tsx). Pure CSS so it
- * works offline. Sequence: scrim fades in (200ms), card scales up from 0.92
- * with a slight overshoot, then the flame (streak 2+) or tick (day one) plays.
+ * Daily-streak celebration (components/learn/Celebration.tsx), matching
+ * mockup/Streak.html: scrim fades in (200ms), the card scales 0.92 to 1.02 to
+ * 1 over 420ms, then the flame grows in and flickers. Reduced motion keeps
+ * only the fades — a deliberate difference from the mockup, which drops those
+ * too; a 200ms opacity fade is safe and stops the card appearing from nowhere.
  */
 @keyframes fl-fade-in {
   from { opacity: 0; }
@@ -305,18 +447,22 @@
 }
 @keyframes fl-card-in {
   0% { opacity: 0; transform: scale(0.92); }
-  60% { opacity: 1; transform: scale(1.03); }
+  70% { opacity: 1; transform: scale(1.02); }
   100% { opacity: 1; transform: scale(1); }
 }
 @keyframes fl-flame-grow {
-  from { opacity: 0; transform: scale(0.35); }
+  from { opacity: 0; transform: scale(0.4); }
   to { opacity: 1; transform: scale(1); }
 }
 @keyframes fl-flame-flicker {
-  0%, 100% { transform: scale(1, 1) skewX(0deg); }
-  20% { transform: scale(0.98, 1.06) skewX(-2deg); }
-  45% { transform: scale(1.02, 0.95) skewX(1.5deg); }
-  70% { transform: scale(0.99, 1.04) skewX(-1deg); }
+  0%, 100% { transform: scaleY(1) skewX(0deg); }
+  25% { transform: scaleY(1.05) skewX(-2deg); }
+  50% { transform: scaleY(0.97) skewX(1.5deg); }
+  75% { transform: scaleY(1.03) skewX(-1deg); }
+}
+@keyframes fl-flame-core {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.9, 1.1); }
 }
 @keyframes fl-draw {
   to { stroke-dashoffset: 0; }
@@ -324,19 +470,16 @@
 
 .fl-scrim { animation: fl-fade-in 200ms ease-out both; }
 .fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both; }
-.fl-card { animation: fl-card-in 460ms cubic-bezier(0.2, 0.9, 0.3, 1.15) 120ms both; }
+.fl-card { animation: fl-card-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 80ms both; }
 .fl-card[data-closing] { animation: fl-fade-out 200ms ease-in both; }
 
-.fl-flame { transform-box: fill-box; transform-origin: 50% 100%; }
-.fl-flame-grow { animation: fl-flame-grow 520ms cubic-bezier(0.2, 0.9, 0.3, 1.2) 380ms both; }
-.fl-flame-outer { animation: fl-flame-flicker 1.3s ease-in-out 900ms infinite; }
-.fl-flame-inner { animation: fl-flame-flicker 0.9s ease-in-out 900ms infinite reverse; }
+.fl-flame-grow { animation: fl-flame-grow 500ms cubic-bezier(0.2, 0.8, 0.2, 1) 250ms both; transform-origin: 50% 100%; }
+.fl-flame-outer { animation: fl-flame-flicker 1.6s ease-in-out infinite; transform-origin: 56px 126px; }
+.fl-flame-inner { animation: fl-flame-core 1.1s ease-in-out infinite; transform-origin: 56px 118px; }
 
 .fl-tick-circle { stroke-dasharray: 152; stroke-dashoffset: 152; animation: fl-draw 520ms ease-out 420ms forwards; }
 .fl-tick-check { stroke-dasharray: 36; stroke-dashoffset: 36; animation: fl-draw 320ms ease-out 900ms forwards; }
 
-/* Reduced motion: no scale, no flame or drawing; the fades stay. These beat the
-   global reduce rule above (same !important, higher specificity). */
 @media (prefers-reduced-motion: reduce) {
   .fl-scrim { animation: fl-fade-in 200ms ease-out both !important; }
   .fl-scrim[data-closing] { animation: fl-fade-out 200ms ease-in both !important; }
@@ -352,7 +495,7 @@
 /*
  * Wait progress (components/WaitProgress.tsx). There is no real progress
  * server-side, so the fill never claims a percentage: it follows
- * f(t) = 0.92·(1 − (1 + t/6)^−0.941), about 40% at 5s and 75% at 30s, then a
+ * f(t) = 0.92 * (1 - (1 + t/6)^-0.941), about 40% at 5s and 75% at 30s, then a
  * creep that approaches but never reaches 92% (it holds at ~91% after 15 min).
  * Sampled into linear keyframes, so the speed only ever decreases (no pulse at
  * segment boundaries) and there is no JS re-render loop.
@@ -408,29 +551,3 @@
     transform: scaleX(var(--wait-step, 0.25));
   }
 }
-
-/* Fine instrument grid gives the landing surface depth without obscuring text. */
-.hero-instrument::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: linear-gradient(rgb(238 240 239 / 5%) 1px, transparent 1px), linear-gradient(90deg, rgb(238 240 239 / 5%) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(110deg, transparent 25%, black);
-}
-.hero-instrument::after {
-  content: "";
-  position: absolute;
-  right: -5rem;
-  top: -6rem;
-  width: 23rem;
-  height: 23rem;
-  border: 1px solid rgb(238 240 239 / 9%);
-  border-radius: 50%;
-  box-shadow: 0 0 0 48px rgb(238 240 239 / 3%), 0 0 0 96px rgb(238 240 239 / 2%);
-  z-index: -1;
-  pointer-events: none;
-}
-.tool-link { transition: background-color 160ms ease; }
-.tool-link:hover { background-color: var(--color-accent-soft); }

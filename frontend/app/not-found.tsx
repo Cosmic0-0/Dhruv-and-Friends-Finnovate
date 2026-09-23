@@ -13,7 +13,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/"
-          className="pressable micro mt-1 flex min-h-12 items-center bg-ink px-5 text-on-ink hover:bg-ink-2"
+          className="pressable micro mt-1 flex min-h-12 items-center bg-surface-dark px-5 text-on-ink hover:bg-surface-dark-2"
         >
           Back to FraudLens
         </Link>

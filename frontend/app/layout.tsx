@@ -1,40 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Sans_Condensed, IBM_Plex_Mono } from "next/font/google";
 import { LanguageProvider } from "@/components/LanguageProvider";
-import ParticleField from "@/components/ParticleField";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import TabBar from "@/components/TabBar";
 import "./globals.css";
 
-// One designed superfamily doing three jobs (condensed for headings/verdicts,
-// regular for body, mono for machine data below) reads as a considered
-// document system, not three fonts picked separately off a Google Fonts list.
-const plexSansCondensed = IBM_Plex_Sans_Condensed({
-  subsets: ["latin", "latin-ext"],
-  weight: ["500", "600", "700"],
-  variable: "--font-plex-sans-condensed",
-  display: "swap",
-});
-
-// Plain grotesque body carries French and Kreol diacritics cleanly at any size.
-const plexSans = IBM_Plex_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-plex-sans",
-  display: "swap",
-});
-
-// Machine data only — domains, sender IDs, counts — so a looked-up value is
-// visibly not prose. Two weights only, to keep the font payload small.
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-plex-mono",
-  display: "swap",
-});
+// No webfont. The design is an iPhone app (frontend/design/DESIGN.md), so the
+// type is the Apple system font via the stack in globals.css: it is already on
+// the device, renders French and Kreol diacritics natively, and removes three
+// Google Font downloads from a PWA that has to work offline.
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-const TITLE = "FraudLens AI — check a message before you pay";
+const TITLE = "FraudLens AI: check a message before you pay";
 const DESCRIPTION =
   "Paste a suspicious SMS or message and see the scam warning signs: sender mismatch, urgency, lookalike links. Built for Mauritius, in English, French and Kreol.";
 
@@ -44,6 +20,8 @@ export const metadata: Metadata = {
   description: DESCRIPTION,
   alternates: { canonical: "/" },
   applicationName: "FraudLens AI",
+  // "default" (not black-translucent): the top of every screen is the light
+  // page colour, where translucent would leave the status bar text invisible.
   appleWebApp: { capable: true, title: "FraudLens", statusBarStyle: "default" },
   formatDetection: { telephone: false },
   icons: {
@@ -75,17 +53,19 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  // Matches the dark instrument band at the top of the app, so the mobile
-  // status bar reads as part of the same chrome.
-  themeColor: "#15181C",
-  colorScheme: "light",
+  // One per scheme, matching the page colour behind the status bar in each
+  // (globals.css --c-page), so the bar never reads as a separate strip.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F2F2F3" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0C0D" },
+  ],
+  colorScheme: "light dark",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${plexSansCondensed.variable} ${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="en">
       <body>
-        <ParticleField />
         <LanguageProvider>
           <div className="app-shell">{children}</div>
           <TabBar />

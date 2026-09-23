@@ -114,7 +114,7 @@ export default function SafetyCard({
         <button
           type="button"
           onClick={() => void share()}
-          className="pressable micro flex min-h-11 items-center justify-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
+          className="pressable micro flex min-h-11 items-center justify-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
         >
           {copied ? copy.card.copied : canShare ? copy.card.share : copy.card.copyText}
         </button>

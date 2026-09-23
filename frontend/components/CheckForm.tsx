@@ -235,10 +235,10 @@ export default function CheckForm() {
               type="submit"
               disabled={!canSubmit}
               aria-busy={loading}
-              className={`pressable font-heading relative flex min-h-14 flex-1 items-center justify-center overflow-hidden bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
+              className={`pressable font-heading relative flex min-h-14 flex-1 items-center justify-center overflow-hidden bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase ${
                 loading
                   ? "cursor-progress"
-                  : "hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+                  : "hover:bg-surface-dark-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
               }`}
             >
               <span>{loading ? copy.wait.checkShort[stage] : copy.submit}</span>
@@ -350,7 +350,7 @@ function ErrorCard({ error, copy, onRetry }: { error: ApiError; copy: Copy; onRe
       <button
         type="button"
         onClick={onRetry}
-        className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-ink px-4 text-on-ink hover:bg-ink-2"
+        className="pressable micro flex min-h-10 w-fit items-center gap-2 bg-surface-dark px-4 text-on-ink hover:bg-surface-dark-2"
       >
         <RetryIcon className="size-3.5" strokeWidth={2} />
         {copy.retry}

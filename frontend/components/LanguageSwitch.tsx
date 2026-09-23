@@ -26,7 +26,7 @@ export default function LanguageSwitch() {
             // 40px min hit area: the visible chip is short, so height comes
             // from padding rather than a cramped 24px tap target.
             className={`micro pressable min-h-10 px-3 ${
-              active ? "bg-accent text-white" : "text-on-ink/55 hover:bg-white/10 hover:text-on-ink"
+              active ? "bg-on-ink text-surface-dark" : "text-on-ink/55 hover:bg-white/10 hover:text-on-ink"
             }`}
           >
             {l.label}

@@ -164,7 +164,7 @@ export default function FraudReplay() {
 
         <Link
           href="/result"
-          className="pressable font-heading flex min-h-14 items-center justify-center bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2"
+          className="pressable font-heading flex min-h-14 items-center justify-center bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2"
         >
           {r.back}
         </Link>

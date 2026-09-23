@@ -12,16 +12,16 @@ import { ShieldIcon } from "./icons";
  */
 export default function AppHeader() {
   return (
-    <header className="bg-ink text-on-ink pt-[env(safe-area-inset-top)]">
+    <header className="bg-surface-dark text-on-ink pt-[env(safe-area-inset-top)]">
       <div className="gutter flex items-center justify-between gap-4 py-3.5">
         <Link
           href="/"
           aria-label="FraudLens home"
           className="pressable flex items-center gap-2.5 hover:opacity-80"
         >
-          <ShieldIcon className="size-[19px] shrink-0 text-accent" strokeWidth={2} />
+          <ShieldIcon className="size-[19px] shrink-0 text-on-ink" strokeWidth={2} />
           <span className="font-heading text-[1.3125rem] leading-none font-semibold tracking-[0.01em] uppercase">
-            Fraud<span className="text-accent">Lens</span>
+            FraudLens
           </span>
         </Link>
         <div className="flex items-center gap-6">

@@ -111,7 +111,7 @@ export default function BatchScan() {
           type="button"
           onClick={() => void submit()}
           disabled={!canSubmit}
-          className="pressable font-heading flex min-h-14 items-center justify-center gap-3 bg-ink px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
+          className="pressable font-heading flex min-h-14 items-center justify-center gap-3 bg-surface-dark px-5 text-[1.0625rem] font-semibold tracking-[0.06em] text-on-ink uppercase hover:bg-surface-dark-2 disabled:cursor-not-allowed disabled:bg-muted-surface disabled:text-ink-muted"
         >
           {status === "loading" && <span className="size-4 animate-spin rounded-full border-2 border-on-ink/30 border-t-on-ink" />}
           {status === "loading" ? t("Scanning…") : t("Scan messages")}

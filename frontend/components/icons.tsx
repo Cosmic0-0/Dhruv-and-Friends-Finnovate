@@ -155,3 +155,120 @@ export function Spinner({ className }: { className?: string }) {
     </svg>
   );
 }
+
+/*
+ * Icons introduced by the iPhone redesign. Every path below is copied
+ * verbatim from the approved mockups (frontend/design/mockup/*.html), so the
+ * shipped screens match the rendered PNGs exactly. Deliberately not an icon
+ * library: the mockup already specifies the geometry, and inline paths keep
+ * the offline PWA free of another dependency.
+ */
+
+/** Clipboard, on the hero's "Paste & check" button (Main.html). */
+export function ClipboardIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2} {...p}>
+      <rect x="6" y="4.5" width="12" height="16" rx="2.5" />
+      <path d="M9.5 4.5h5v2.5h-5z" />
+    </Svg>
+  );
+}
+
+/** Tab bar: Check (Main.html). */
+export function HomeIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2.3} {...p}>
+      <path d="M4 11l8-6.5 8 6.5v8.5a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" />
+    </Svg>
+  );
+}
+
+/** Tab bar: Learn (Main.html). */
+export function GridIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1.8" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8" />
+    </Svg>
+  );
+}
+
+/** Tab bar: the centre primary button (Main.html). */
+export function PlusIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2.4} {...p}>
+      <path d="M12 5.5v13M5.5 12h13" />
+    </Svg>
+  );
+}
+
+/** Tab bar: Radar (Main.html). */
+export function ChartIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M4 20V4M4 20h16" />
+      <path d="M7.5 15l4-4.5 3 3L20 7.5" />
+    </Svg>
+  );
+}
+
+/** Tab bar: Settings and language (Main.html). */
+export function PersonIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <circle cx="12" cy="8.5" r="4" />
+      <path d="M4.5 20.5c1.2-3.6 4-5.5 7.5-5.5s6.3 1.9 7.5 5.5" />
+    </Svg>
+  );
+}
+
+/** Scam verdict marker in the Recent list (Main.html). */
+export function ArrowDownLeftIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2} {...p}>
+      <path d="M16.5 7.5l-9 9M7.5 9.5v7h7" />
+    </Svg>
+  );
+}
+
+/** "Be careful" verdict marker, and the hero's warning-signs stat (Main.html). */
+export function WarningIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2} {...p}>
+      <path d="M12 4.5l8.5 15h-17z" />
+      <path d="M12 10v4M12 17v.3" />
+    </Svg>
+  );
+}
+
+/** The hero's "Link made" stat (Result-Scam.html). */
+export function LinkChainIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2} {...p}>
+      <path d="M10 14a4 4 0 0 0 5.6 0l3-3a4 4 0 0 0-5.6-5.6l-1 1" />
+      <path d="M14 10a4 4 0 0 0-5.6 0l-3 3a4 4 0 0 0 5.6 5.6l1-1" />
+    </Svg>
+  );
+}
+
+/** Row chevron, e.g. the "About to pay someone?" row under the hero. */
+export function ChevronRightIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2.2} {...p}>
+      <path d="M9.5 5.5L16 12l-6.5 6.5" />
+    </Svg>
+  );
+}
+
+/** Share sheet glyph, for the iOS "Add to Home Screen" instructions. */
+export function ShareIcon(p: IconProps) {
+  return (
+    <Svg strokeWidth={2} {...p}>
+      <path d="M12 3.5v11" />
+      <path d="M8.5 7L12 3.5 15.5 7" />
+      <path d="M6 12.5v6a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5v-6" />
+    </Svg>
+  );
+}

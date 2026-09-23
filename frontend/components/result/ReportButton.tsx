@@ -88,7 +88,7 @@ export default function ReportButton({
           <button
             type="submit"
             disabled={!value.trim() || sending}
-            className="pressable micro flex min-h-12 items-center justify-center gap-2 bg-ink px-5 text-on-ink hover:bg-ink-2 disabled:bg-ink/25"
+            className="pressable micro flex min-h-12 items-center justify-center gap-2 bg-surface-dark px-5 text-on-ink hover:bg-surface-dark-2 disabled:bg-surface-dark/25"
           >
             {sending && <Spinner className="size-4" />}
             {sending ? r.sending : r.submit}
