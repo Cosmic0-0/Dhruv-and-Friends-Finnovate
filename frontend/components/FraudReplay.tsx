@@ -35,11 +35,12 @@ export default function FraudReplay() {
     return (
       <div>
         <ResultHeader copy={copy} />
-        <div className="gutter pt-6">
-          <div className="sheet flex flex-col gap-3 p-5">
-            <h1 className="text-title">{copy.result.missingTitle}</h1>
-            <p>{copy.result.missingBody}</p>
-            <Link href="/" className="micro mt-1 w-fit text-ink underline decoration-accent/40 underline-offset-4 hover:decoration-accent">
+        <div className="gutter pt-4">
+          {/* Same shape as /result's missing state, so the two read alike. */}
+          <div className="card flex flex-col items-start gap-3">
+            <h2>{copy.result.missingTitle}</h2>
+            <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
+            <Link href="/" className="pill-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
