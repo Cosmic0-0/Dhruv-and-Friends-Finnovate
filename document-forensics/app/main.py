@@ -1,8 +1,8 @@
 """Local-only FastAPI service. Called by the Node backend
-(backend/src/services/document-forensics-client, not yet written) over
-localhost HTTP - never exposed publicly, never called from a browser.
-Mirrors how the Node backend already talks to a local Ollama instance:
-another local process over HTTP, not a third-party API.
+(backend/src/services/document-forensics-client/) over localhost HTTP -
+never exposed publicly, never called from a browser. Mirrors how the Node
+backend already talks to a local Ollama instance: another local process
+over HTTP, not a third-party API.
 """
 
 from __future__ import annotations

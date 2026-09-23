@@ -427,14 +427,16 @@ Not in the original placeholder contract. A **separate feature from
 `/api/analyze/screenshot`**: that route is for scam *message* text (SMS/
 email/WhatsApp screenshots) and never persists the image. This route is for
 *documents* (bank statements, letterheads, IDs) headed into passive forgery
-forensics (`docs/DOCUMENT-FORENSICS.md`, `backend/src/services/document-
-forensics/`), which needs the exact original bytes, so it stores them
-unmodified (`backend/src/services/document-store/`) rather than discarding
-them the way the screenshot route does. This route only ingests and OCRs a
-document — it never scores one; there is no `verdict`, `riskScore`, or
-`signals` in its response. See `docs/DOCUMENT-FORENSICS.md` for how a stored
-document is actually assessed and what that assessment does and does not
-claim.
+forensics (`docs/DOCUMENT-FORENSICS.md`, `document-forensics/` — a separate
+local Python service, called over HTTP by
+`backend/src/services/document-forensics-client/`), which needs the exact
+original bytes, so it stores them unmodified
+(`backend/src/services/document-store/`) rather than discarding them the
+way the screenshot route does. This route only ingests, OCRs, and runs
+forensics on a document — it never scores one; there is no `verdict`,
+`riskScore`, or `signals` in its response. See `docs/DOCUMENT-FORENSICS.md`
+for how a stored document is actually assessed and what that assessment
+does and does not claim.
 
 ### Request
 
@@ -457,9 +459,37 @@ WEBP, regardless of anything the client or `filename` claims.
   "mimeType": "\"application/pdf\" | \"image/png\" | \"image/jpeg\" | \"image/webp\"",
   "byteLength": "number",
   "receivedAt": "string — ISO timestamp",
-  "extractedText": "string | null — redacted OCR text for an image document; always null for a PDF (its text layer, if any, is read by the metadata/PDF forensics check instead)"
+  "extractedText": "string | null — redacted OCR text for an image document; always null for a PDF (its text layer, if any, is read by the metadata/PDF forensics check instead)",
+  "forensics": {
+    "status": "\"ok\" | \"unavailable\"",
+    "reason": "string, only present when status is \"unavailable\" — the forensics service was unreachable, timed out, or errored. Never fails the request (see Reliability below).",
+    "report": {
+      "_": "only present when status is \"ok\" — see document-forensics/app/models.py's ForensicsReport for the source of truth; this is that schema's fields camelCased at the Node boundary (backend/src/services/document-forensics-client/index.js), e.g. checks_run -> checksRun",
+      "documentId": "string | null",
+      "mimeType": "string",
+      "confidence": "\"low\" | \"medium\" | \"high\" | null — confidence IN the indicators found, never a verdict; null means no indicators were found",
+      "summary": "string — \"no tampering indicators found\" when indicators is empty; never \"authentic\" or \"verified\"",
+      "indicators": "[{ check, title, description, confidence, evidence }]",
+      "signature": "{ present, note, indicators } | null — a separate, narrower claim (internal stroke consistency only); never identity verification, see docs/DOCUMENT-FORENSICS.md",
+      "checksRun": "string[]",
+      "checksSkipped": "[{ check, reason }]",
+      "scannedAt": "string — ISO timestamp"
+    }
+  }
 }
 ```
+
+### Reliability
+
+`forensics` never fails this request. The Python service is a separate
+local process (`document-forensics/`); if it isn't running, is unreachable,
+times out, or errors, `forensics.status` is `"unavailable"` and every other
+field in the response is still returned normally — same "enrichment, not a
+precondition" stance `/api/analyze`'s response takes toward an LLM outage
+(`analysis.semantic.status`). A cold forensics process (first call after it
+starts) can take up to `DOCUMENT_FORENSICS_TIMEOUT_MS` (90s by default,
+`backend/.env.example`) before degrading, since PyTorch/transformers model
+load happens on the first request that actually needs it.
 
 ### Security
 

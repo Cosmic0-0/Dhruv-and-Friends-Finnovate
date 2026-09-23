@@ -2,6 +2,7 @@ import express from "express";
 import helmet from "helmet";
 import { router } from "./routes/index.js";
 import { checkOllamaHealth, llmStatus } from "./services/analysis/llmClient.js";
+import { checkDocumentForensicsHealth } from "./services/document-forensics-client/index.js";
 import { createApiCors } from "./services/http-cors/index.js";
 
 const app = express();
@@ -42,6 +43,17 @@ app.get("/health/llm", async (_req, res) => {
   const status = llmStatus();
   const activeProvider = reachable ? "ollama" : status.fallbackConfigured ? status.fallbackProvider : "none";
   res.json({ reachable, activeProvider, ...status });
+});
+
+// document-forensics (see document-forensics/README.md) is a separate
+// local process this backend calls over HTTP, same as Ollama - a down/not-
+// yet-started forensics service never fails POST /api/documents (it just
+// returns forensics.status: "unavailable"), but this endpoint gives a
+// direct yes/no for the pre-demo checklist and local dev, same purpose as
+// /health/llm above.
+app.get("/health/document-forensics", async (_req, res) => {
+  const reachable = await checkDocumentForensicsHealth();
+  res.json({ reachable });
 });
 
 // Final error-handling middleware (must be 4-arg, and registered after every

@@ -337,7 +337,24 @@ test("POST /api/analyze-site validates input, rejects unsafe urls with 400, and 
   assert.ok(body.findings.some((f) => f.title === "Missing Content-Security-Policy"));
 });
 
+// Routes the internal document-forensics call (an unqualified fetch() from
+// inside the route handler, not the test's own request to the local test
+// server, which always goes through originalFetch directly) without
+// depending on whether anything is actually listening on the real
+// DOCUMENT_FORENSICS_URL in this environment.
+function routeDocumentForensics(handler) {
+  return (url, init) => {
+    if (String(url).includes("/analyze") && init?.body instanceof FormData) return handler(init);
+    return originalFetch(url, init);
+  };
+}
+
 test("POST /api/documents stores the exact uploaded bytes and returns redacted OCR text, without running the message pipeline", async (t) => {
+  globalThis.fetch = routeDocumentForensics(() => Promise.reject(new Error("simulated: forensics service not running")));
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
   const app = express();
   app.use("/api", router);
   const server = app.listen(0);
@@ -363,6 +380,60 @@ test("POST /api/documents stores the exact uploaded bytes and returns redacted O
   // scores one (see routes/index.js's comment on this route).
   assert.equal("verdict" in body, false);
   assert.equal("riskScore" in body, false);
+  // A down/unreachable forensics service degrades this field - it must
+  // never fail the upload itself (already asserted by the 201 above).
+  assert.equal(body.forensics.status, "unavailable");
+});
+
+test("POST /api/documents surfaces a real forensics report when the service responds", async (t) => {
+  globalThis.fetch = routeDocumentForensics(() =>
+    Promise.resolve(
+      new Response(
+        JSON.stringify({
+          document_id: "doc-1",
+          mime_type: "image/jpeg",
+          confidence: "medium",
+          summary: "1 tampering indicator(s) found",
+          indicators: [
+            { check: "error_level_analysis", title: "Localized error-level anomaly", description: "d", confidence: "medium", evidence: "e" },
+          ],
+          signature: null,
+          checks_run: ["metadata_pdf", "error_level_analysis"],
+          checks_skipped: [{ check: "trufor", reason: "resolved_by_cheaper_checks" }],
+          scanned_at: "2026-01-01T00:00:00Z",
+        }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      )
+    )
+  );
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  const app = express();
+  app.use("/api", router);
+  const server = app.listen(0);
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const fixturesDir = path.join(path.dirname(fileURLToPath(import.meta.url)), "../services/document-store/fixtures");
+  const jpeg = readFileSync(path.join(fixturesDir, "clean.jpg"));
+
+  const res = await originalFetch(`http://127.0.0.1:${port}/api/documents`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ document: `data:image/jpeg;base64,${jpeg.toString("base64")}` }),
+  });
+
+  assert.equal(res.status, 201);
+  const body = await res.json();
+  assert.equal(body.forensics.status, "ok");
+  assert.equal(body.forensics.report.summary, "1 tampering indicator(s) found");
+  assert.equal(body.forensics.report.indicators[0].check, "error_level_analysis");
+  // camelCase, not the Python service's snake_case - see
+  // services/document-forensics-client/index.js's camelizeReport().
+  assert.equal(body.forensics.report.checksRun.length, 2);
+  assert.equal("checks_run" in body.forensics.report, false);
 });
 
 test("POST /api/documents rejects a file that isn't a recognised document type", async (t) => {

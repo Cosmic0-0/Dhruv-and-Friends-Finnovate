@@ -13,6 +13,7 @@ import { DEMO_ORGANISATION } from "../services/workplace-registry/index.js";
 import { summarizeBatch, MAX_BATCH_SIZE } from "../services/batch/index.js";
 import { extractTextFromImage } from "../services/ocr/index.js";
 import { ingestDocument, extractDocumentText } from "../services/document-store/index.js";
+import { analyzeDocumentForensics } from "../services/document-forensics-client/index.js";
 import { redact } from "../services/redact/index.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
@@ -240,16 +241,21 @@ router.post("/documents", documentLimiter, json({ limit: "20mb" }), async (req, 
       .json({ error: "document must be a valid PDF, PNG, JPEG, or WEBP file (checked by content, not the declared type)" });
   }
 
-  let extractedText = null;
-  try {
-    extractedText = await extractDocumentText(stored.id);
-  } catch (err) {
-    console.error(err);
-    // Ingestion already succeeded and the bytes are safely stored; OCR
-    // failing is not a reason to fail the whole upload (same "OCR is
-    // enrichment, not a precondition" stance as /analyze/screenshot's own
-    // pipeline-survives-LLM-outage guarantee).
-  }
+  // OCR (Node, reads the stored bytes back) and forensics (the Python
+  // service, given the bytes directly - see services/document-forensics-
+  // client) are independent enrichments over the same stored document, so
+  // they run concurrently rather than one waiting on the other. Neither
+  // failing is a reason to fail the upload: ingestion already succeeded
+  // and the bytes are safely stored (same "enrichment, not a precondition"
+  // stance as /analyze/screenshot's own pipeline-survives-LLM-outage
+  // guarantee, extended here to a second, independent enrichment step).
+  const [extractedText, forensics] = await Promise.all([
+    extractDocumentText(stored.id).catch((err) => {
+      console.error(err);
+      return null;
+    }),
+    analyzeDocumentForensics({ buffer, mimeType: stored.mimeType, documentId: stored.id }),
+  ]);
 
   res.status(201).json({
     documentId: stored.id,
@@ -257,6 +263,7 @@ router.post("/documents", documentLimiter, json({ limit: "20mb" }), async (req, 
     byteLength: stored.byteLength,
     receivedAt: stored.receivedAt,
     extractedText: extractedText ? redact(extractedText).redacted : null,
+    forensics,
   });
 });
 
