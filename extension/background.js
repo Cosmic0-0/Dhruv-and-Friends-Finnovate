@@ -1,7 +1,8 @@
 import { MAX_ANALYZE_CHARS } from "./config.js";
-import { checkUrl, analyzeText, reportSender } from "./api.js";
+import { checkUrl, analyzeText, reportSender, analyzeSite } from "./api.js";
 import { addRecentCheck } from "./history.js";
 import { stateFromCheckUrl, stateFromAnalyze, BADGE_STYLE } from "./state.js";
+import { detectVulnerableLibraries } from "./vendor/retire-js-scan.js";
 
 // Per-tab cache of the last check-url result, keyed by tabId. Cleared when
 // the tab navigates again or closes. The popup reads from this instead of
@@ -127,6 +128,128 @@ async function scanActiveTab(tabId) {
   return { ok: true, data: { analysis, extracted, state, hostname } };
 }
 
+// ---------- Security Report (passive site-security scan) ----------
+//
+// Orchestrates two page-context injections plus the backend call, mirroring
+// scanActiveTab()'s shape above:
+//   1. collect-signals.js (isolated world, default) — DOM/text extraction,
+//      same-origin script fetches, all passive (see that file's header).
+//   2. fraudlensObserveApiSurface (MAIN world, func injection) — the one
+//      signal that needs the page's real fetch/XMLHttpRequest, so it can't
+//      run in the isolated world collect-signals.js uses. Self-contained on
+//      purpose: chrome.scripting.executeScript serializes `func` via
+//      toString() and re-evaluates it in the target context, so it cannot
+//      close over anything from this file.
+// Retire.js matching itself happens here, not in either injected script —
+// it's pure computation over already-collected data, no page access
+// needed, so it runs in this file's normal ES-module context instead of
+// being duplicated/inlined into a page-injected script.
+
+const API_SURFACE_WINDOW_MS = 1500;
+
+// MUST be self-contained — see comment above. Records fetch()/XHR calls the
+// page itself makes during the observation window only (calls already made
+// before the scan started, e.g. the page's initial load, are not visible —
+// see extension/README.md's Security Report limitations). Never replays or
+// modifies any call; the original fetch/XHR still runs unchanged.
+function fraudlensObserveApiSurface(windowMs) {
+  return new Promise((resolve) => {
+    const entries = [];
+    const isSameOrigin = (url) => {
+      try {
+        return new URL(url, location.href).origin === location.origin;
+      } catch {
+        return true;
+      }
+    };
+
+    const originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+      try {
+        const url = typeof input === "string" ? input : input?.url;
+        const method = (init?.method || (typeof input === "object" && input?.method) || "GET").toUpperCase();
+        if (url && entries.length < 50) entries.push({ url, method, sameOrigin: isSameOrigin(url) });
+      } catch {
+        /* best-effort observation only, never block the real call */
+      }
+      return originalFetch.apply(this, arguments);
+    };
+
+    const originalOpen = window.XMLHttpRequest.prototype.open;
+    window.XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+      try {
+        if (url && entries.length < 50) entries.push({ url: String(url), method: String(method || "GET").toUpperCase(), sameOrigin: isSameOrigin(url) });
+      } catch {
+        /* best-effort observation only, never block the real call */
+      }
+      return originalOpen.call(this, method, url, ...rest);
+    };
+
+    setTimeout(() => {
+      window.fetch = originalFetch;
+      window.XMLHttpRequest.prototype.open = originalOpen;
+      resolve(entries);
+    }, windowMs);
+  });
+}
+
+async function runSecurityReport(tabId) {
+  const tab = await chrome.tabs.get(tabId).catch(() => null);
+  if (!tab?.url || !/^https?:\/\//i.test(tab.url)) {
+    return { ok: false, error: "This page can't be scanned (not an http(s) page)." };
+  }
+
+  let rawSignals;
+  try {
+    const results = await chrome.scripting.executeScript({ target: { tabId }, files: ["collect-signals.js"] });
+    rawSignals = results?.[0]?.result;
+  } catch (err) {
+    return { ok: false, error: `Could not read this page: ${err.message}` };
+  }
+  if (!rawSignals) return { ok: false, error: "No signals could be collected from this page." };
+
+  let apiSurface = [];
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: fraudlensObserveApiSurface,
+      args: [API_SURFACE_WINDOW_MS],
+    });
+    apiSurface = results?.[0]?.result ?? [];
+  } catch {
+    // MAIN-world injection can fail on a handful of restricted pages (chrome://, the Web Store, etc.) - the rest of the report still stands without it.
+  }
+
+  const vulnerableLibraries = detectVulnerableLibraries(rawSignals.scriptsForRetire ?? []);
+  const clientSignals = {
+    domSinks: rawSignals.domSinks,
+    reflectedParams: rawSignals.reflectedParams,
+    mixedContent: rawSignals.mixedContent,
+    insecureForms: rawSignals.insecureForms,
+    vulnerableLibraries,
+    thirdPartyScripts: rawSignals.thirdPartyScripts,
+    apiSurface,
+  };
+
+  let report;
+  try {
+    report = await analyzeSite(tab.url, clientSignals);
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+
+  addRecentCheck({
+    domain: safeHostname(tab.url) || tab.url,
+    at: Date.now(),
+    state: report.grade === "A" || report.grade === "B" ? "safe" : report.grade === "F" || report.grade === "D" ? "high-risk" : "suspicious",
+    kind: "security-report",
+    summary: `grade ${report.grade}`,
+  });
+
+  return { ok: true, data: { report, hostname: safeHostname(tab.url) || tab.url } };
+}
+
 // ---------- 14E / 14F: context menu items ----------
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -232,6 +355,11 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     reportSender(message.sender)
       .then((data) => sendResponse({ ok: true, data }))
       .catch((err) => sendResponse({ ok: false, error: err.message }));
+    return true; // async response
+  }
+
+  if (message?.type === "RUN_SECURITY_REPORT") {
+    runSecurityReport(message.tabId).then(sendResponse);
     return true; // async response
   }
 

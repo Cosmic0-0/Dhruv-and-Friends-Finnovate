@@ -49,6 +49,33 @@ export async function analyzeText(text, language) {
 }
 
 /**
+ * POST /api/analyze-site — passive Site Security Report (see
+ * backend/src/services/site-security/index.js and extension/README.md's
+ * "Security Report" section). `clientSignals` is the optional bundle
+ * background.js#runSecurityReport assembles from collect-signals.js and
+ * the MAIN-world API-surface observer; the backend does all header/TLS/
+ * cookie/artifact fetching itself, never the extension.
+ * Returns { url, finalUrl, grade, score, scannedAt, findings } or throws.
+ */
+export async function analyzeSite(url, clientSignals) {
+  const res = await fetch(`${API_BASE_URL}/api/analyze-site`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url, clientSignals }),
+  });
+  if (!res.ok) {
+    let detail = "";
+    try {
+      detail = (await res.json())?.error ?? "";
+    } catch {
+      /* body wasn't JSON */
+    }
+    throw new Error(detail || `backend returned ${res.status}`);
+  }
+  return res.json();
+}
+
+/**
  * POST /api/report — crowdsourced sender/domain report.
  * Returns { sender, reportCount, recorded } or throws.
  */
