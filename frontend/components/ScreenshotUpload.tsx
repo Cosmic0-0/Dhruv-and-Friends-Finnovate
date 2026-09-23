@@ -9,15 +9,17 @@ import { CheckIcon, RetryIcon, XIcon } from "./icons";
 import { SUCCESS_DELAY_MS, useWaitStage, WaitStatus } from "./WaitProgress";
 
 /**
- * Screenshot → text, for the user to review. The image is compressed in the
+ * Screenshot → text, kept out of view. The image is compressed in the
  * browser, sent to POST /api/analyze/screenshot (the backend's OCR; nothing
- * is read client-side), and only `extractedText` is used: it goes into the
- * editable textarea, never straight to a verdict. OCR misreads characters,
- * so the user sees and fixes the text, then presses Check, which redacts it
- * like typed text.
+ * is read client-side), and `extractedText` is handed to the caller
+ * (CheckForm) to hold in memory - never rendered - and combined with typed
+ * text only once "Check" is pressed, which redacts it like typed text. The
+ * thumbnail here is what the user sees as confirmation the screenshot was
+ * read; the wait stages (WaitStatus below) are what sell "processing" while
+ * OCR runs.
  *
- * DEMO NOTE: attach an SMS screenshot and let the extracted text appear in
- * the box, fix a character live, then press Check.
+ * DEMO NOTE: attach an SMS screenshot and watch the thumbnail move through
+ * its reading stages to "done", then press Check straight from there.
  */
 
 type ServiceErrorKind = Exclude<ApiErrorKind, "validation" | "aborted">;

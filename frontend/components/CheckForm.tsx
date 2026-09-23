@@ -33,13 +33,13 @@ export interface CheckFormHandle {
 /**
  * The Check form. Two ways in, one way out:
  *  - typed or pasted text, and
- *  - a screenshot, whose text is extracted by the backend OCR and put in the
- *    field for the user to review and correct (ScreenshotUpload.tsx).
+ *  - a screenshot, read by the backend OCR (ScreenshotUpload.tsx).
  *
- * Either way the text is always shown in an editable field before anything is
- * checked, and only "Check this message" sends it. It always redacts in the
- * browser first (lib/redact.ts), so identifiers never leave the device from
- * this form; the backend redacts OCR text server-side as a second layer.
+ * A screenshot's extracted text is never shown: the thumbnail *is* the input
+ * the user sees, and the text stays in memory only, combined with anything
+ * typed in the field once "Check this message" is pressed. It always redacts
+ * in the browser first (lib/redact.ts), so identifiers never leave the device
+ * from this form; the backend redacts OCR text server-side as a second layer.
  *
  * The field starts collapsed: the hero's two buttons are the entry points, so
  * the screen opens on one question rather than on an empty textarea.
@@ -78,9 +78,10 @@ export default function CheckForm({
   // Lines revealed during "finishing", each backed by a field the response
   // actually has (lib/result.ts's revealSteps). Empty while loading.
   const [reveal, setReveal] = useState<string[]>([]);
-  // True while the field holds text that came from a screenshot: the image
-  // itself went to the server, so the typed-text privacy promise doesn't apply.
-  const [textFromImage, setTextFromImage] = useState(false);
+  // Text OCR'd from a screenshot. Kept out of the field entirely - the
+  // thumbnail in ScreenshotRow is what the user sees as "the input" - and
+  // combined with `text` only at submit time.
+  const [screenshotText, setScreenshotText] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,11 +90,9 @@ export default function CheckForm({
   const shot = useScreenshot({
     lang,
     onText: (extracted) => {
-      // Never overwrite what the user already typed: append after it.
-      setText((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${extracted}` : extracted));
-      setTextFromImage(true);
+      setScreenshotText(extracted);
       if (status === "error") setStatus("idle");
-      // Bring the text into view without focusing (a phone keyboard would cover it).
+      // Bring the screenshot row into view without focusing (a phone keyboard would cover it).
       requestAnimationFrame(() => sheetRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }));
     },
   });
@@ -138,11 +137,9 @@ export default function CheckForm({
           focusField();
           return;
         }
-        // Pasted text is shown for review, exactly like OCR text; it is never
-        // checked straight off the clipboard.
+        // Pasted text is shown for review before anything is checked.
         setPasteNote(false);
         setText((prev) => (prev.trim() ? prev : trimmed.slice(0, MAX_MESSAGE_LENGTH)));
-        setTextFromImage(false);
         focusField();
       })
       .catch(() => {
@@ -199,12 +196,16 @@ export default function CheckForm({
     el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
   }, [text, open]);
 
+  // The visible counter tracks only what's typed; the hidden screenshot text
+  // is checked against the limit separately, at submit time.
   const length = text.length;
-  const overLimit = length > MAX_MESSAGE_LENGTH;
-  const canSubmit = text.trim().length > 0 && !overLimit && !loading && !shot.busy;
+  const combinedText = [text.trim(), screenshotText.trim()].filter(Boolean).join("\n\n");
+  const overLimit = length > MAX_MESSAGE_LENGTH || combinedText.length > MAX_MESSAGE_LENGTH;
+  const canSubmit = combinedText.length > 0 && !overLimit && !loading && !shot.busy;
   // The screenshot wording applies once an image is on its way to (or reached) the
   // server. A file rejected in the browser (no preview) never left the device.
   const s = shot.state;
+  const textFromImage = screenshotText.trim().length > 0;
   const imageInvolved =
     textFromImage ||
     s.phase === "preparing" ||
@@ -214,7 +215,7 @@ export default function CheckForm({
 
   function removeScreenshot() {
     shot.remove();
-    if (!text.trim()) setTextFromImage(false);
+    setScreenshotText("");
   }
 
   function typeInstead() {
@@ -226,7 +227,7 @@ export default function CheckForm({
     if (!canSubmit) return;
 
     // Only the redacted text ever leaves the browser; the mapping stays local.
-    const { redacted, redactions } = redact(text);
+    const { redacted, redactions } = redact(combinedText);
     if (redacted.length > MAX_MESSAGE_LENGTH) {
       // Placeholders are longer than some originals, so re-check the limit.
       setError({ kind: "validation", reason: "message_too_long", message: copy.tooLong });
@@ -327,8 +328,6 @@ export default function CheckForm({
               setText(e.target.value);
               setPasteNote(false);
               if (status === "error" && error?.kind === "validation") setStatus("idle");
-              // Cleared and no image attached: whatever is typed next is typed text.
-              if (!e.target.value.trim() && shot.state.phase === "none") setTextFromImage(false);
             }}
             placeholder={copy.placeholder}
             aria-invalid={overLimit || undefined}

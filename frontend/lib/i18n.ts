@@ -733,7 +733,7 @@ const CARD_EN: Copy["card"] = {
 // Matches backend/src/routes/index.js (/analyze/screenshot): the image arrives
 // as-is, and the OCR text is redacted (services/redact) before any analysis.
 const IMAGE_PRIVACY_EN =
-  "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from the redacted text, after you review it and press Check.";
+  "Screenshots are sent to our server as they are, with names and numbers still visible. The server reads the text and removes phone numbers, emails and account numbers before anything is analysed. Your result comes only from that redacted text.";
 
 /** Stage 3 (40s+) is shown once and stays: honest, calm, no repeated apology. */
 const STILL_WORKING_EN = "Still working, this can take a couple of minutes on our current setup.";
@@ -741,7 +741,7 @@ const STILL_WORKING_EN = "Still working, this can take a couple of minutes on ou
 const WAIT_EN: Copy["wait"] = {
   check: ["Checking the message…", "Looking for warning signs…", "The AI is reading closely…", STILL_WORKING_EN],
   checkShort: ["Checking…", "Looking for signs…", "Reading closely…", "Still working…"],
-  screenshot: ["Reading the screenshot…", "Pulling out the text…", "Reading the text carefully…", STILL_WORKING_EN],
+  screenshot: ["Scanning your screenshot…", "Processing the image…", "Almost done…", STILL_WORKING_EN],
   progressLabel: "Progress",
   cancel: "Cancel",
 };
@@ -749,7 +749,7 @@ const WAIT_EN: Copy["wait"] = {
 const SHOT_EN: Copy["shot"] = {
   remove: "Remove screenshot",
   alt: "Your screenshot",
-  extracted: "Text added from your screenshot. Check it and fix anything that's wrong, then press Check.",
+  extracted: "Screenshot read. Press Check when you're ready.",
   typeInstead: "Type it instead",
 };
 
@@ -1000,9 +1000,9 @@ export const COPY: Record<UiLanguage, Copy> = {
       ],
       checkShort: ["Vérification…", "Recherche…", "Lecture attentive…", "Toujours en cours…"],
       screenshot: [
-        "Lecture de la capture…",
-        "Extraction du texte…",
-        "Lecture attentive du texte…",
+        "Analyse de votre capture…",
+        "Traitement de l'image…",
+        "Presque terminé…",
         "Toujours en cours, cela peut prendre quelques minutes avec notre configuration actuelle.",
       ],
       progressLabel: "Progression",
@@ -1011,12 +1011,11 @@ export const COPY: Record<UiLanguage, Copy> = {
     uploadScreenshot: "Importer une capture d'écran",
     screenshotLabel: "Capture d'écran",
     imagePrivacyNote:
-      "Les captures d'écran sont envoyées telles quelles à notre serveur, noms et numéros visibles. Le serveur lit le texte et retire les numéros de téléphone, e-mails et numéros de compte avant toute analyse. Votre résultat repose uniquement sur le texte masqué, après votre relecture et votre appui sur Vérifier.",
+      "Les captures d'écran sont envoyées telles quelles à notre serveur, noms et numéros visibles. Le serveur lit le texte et retire les numéros de téléphone, e-mails et numéros de compte avant toute analyse. Votre résultat repose uniquement sur ce texte masqué.",
     shot: {
       remove: "Retirer la capture",
       alt: "Votre capture d'écran",
-      extracted:
-        "Texte ajouté depuis votre capture. Vérifiez-le et corrigez ce qui est faux, puis appuyez sur Vérifier.",
+      extracted: "Capture lue. Appuyez sur Vérifier quand vous êtes prêt.",
       typeInstead: "Le saisir à la place",
     },
     privacyNote: "Les numéros de téléphone, e-mails et numéros de compte sont retirés avant toute analyse.",
@@ -1475,9 +1474,9 @@ export const COPY: Record<UiLanguage, Copy> = {
         "Pe travay ankor…",
       ],
       screenshot: [
-        "Pe lir text la…",
-        "Pe tir text la…",
-        "Pe lir text la bien…",
+        "Pe eskane ou screenshot…",
+        "Pe traite lim la…",
+        "Prèske fini…",
         "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel.",
       ],
       progressLabel: "Progre",
@@ -1486,12 +1485,12 @@ export const COPY: Record<UiLanguage, Copy> = {
     uploadScreenshot: "Met enn screenshot",
     screenshotLabel: "Screenshot",
     // Screenshot upload: Kreol drafted, pending the frontend owner's read-through.
-    imagePrivacyNote: 
-      "Screenshot la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor text la apre sa bann detay-la finn tire, apre ou finn relir li ek pes Verifie.",
+    imagePrivacyNote:
+      "Screenshot la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor sa text ki finn kasyet la.",
     shot: {
       remove: "Tir screenshot la",
       alt: "Ou screenshot",
-      extracted: "Text depi ou screenshot finn azoute. Relir li ek koriz seki pa bon, apre pes Verifie.",
+      extracted: "Screenshot finn lir. Pes Verifie kan ou pare.",
       typeInstead: "Ekrir li plito",
     },
     privacyNote: "Nimero telefonn, email ek nimero kont tire avan nanye analize.",
@@ -1516,7 +1515,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
         image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
         image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
-        image_text_too_long: 
+        image_text_too_long:
           "Ena tro boukou text dan sa screenshot la pou nou verifie enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
