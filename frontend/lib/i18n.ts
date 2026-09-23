@@ -429,7 +429,8 @@ export interface Copy {
 /**
  * A Kreol string not written yet because we weren't confident in it. It
  * shows the English so the screen stays readable, and marks the spot for
- * the Kreol reviewer: grep TODO_KREOL.
+ * the Kreol reviewer: grep DRAFT_KREOL. Nothing currently falls back to
+ * English; TODO_KREOL is kept for a string added faster than it is translated.
  */
 const TODO_KREOL = <T,>(english: T): T => english;
 
@@ -728,7 +729,7 @@ const CARD_EN: Copy["card"] = {
   copied: "Copied",
 };
 
-// Screenshot upload copy (English), held in constants so Kreol can fall back via TODO_KREOL.
+// Screenshot upload copy, held in constants so each language reuses one source.
 // Matches backend/src/routes/index.js (/analyze/screenshot): the image arrives
 // as-is, and the OCR text is redacted (services/redact) before any analysis.
 const IMAGE_PRIVACY_EN =
@@ -1648,9 +1649,40 @@ export const COPY: Record<UiLanguage, Copy> = {
       }),
     },
     // Result screen: reviewed by the frontend owner.
-    conversation: TODO_KREOL(CONVERSATION_EN),
+    conversation: DRAFT_KREOL({
+      title: "Get konversasion la deroule",
+      intro: "Azout bann mesaz dan lord ki ou finn gagn zot. Swiv bann siny danze pandan ki konversasion la avanse.",
+      thread: "Konversasion",
+      empty: "Koumans ar premie mesaz ki ou finn gagne.",
+      add: "Prosen mesaz",
+      submit: "Analiz mesaz la",
+      reset: "Efas konversasion",
+      progress: "Etap pli lwen detekte",
+      pending:
+        "Azout enn mesaz pou get so etap. Sak mesaz analize separeman; diskision la montre etap pli lwen ki finn detekte.",
+      message: "Mesaz",
+      unknownStage: "Etap pa idantifie",
+      verdicts: { safe: "Pena siny danze", suspicious: "Sispe", scam: "Eskrokri" },
+    }),
     result: {
-      journey: TODO_KREOL(JOURNEY_EN),
+      journey: DRAFT_KREOL({
+        title: "Parkour eskrokri",
+        whatNextTitle: "Seki kapav arive apre",
+        youAreHere: "Ou isi",
+        caveat:
+          "Enn progresion posib, pa enn predision. Sa mesaz la pa konfirm bann etap avan.",
+        labels: {
+          INITIAL_CONTACT: "Premie kontak",
+          TRUST_BUILDING: "Pe gagn ou konfians",
+          AUTHORITY_CLAIM: "Pe fer krwar li ena lotorite",
+          URGENCY: "Pe met presion letan",
+          CREDENTIAL_REQUEST: "Pe dimann ou bann idantifian",
+          OTP_REQUEST: "Pe dimann enn kod OTP",
+          PAYMENT_REQUEST: "Pe dimann enn pelman",
+          PAYMENT_PRESSURE: "Pe fors ou pou pey",
+          ACCOUNT_TAKEOVER: "Pe pran kontrol ou kont",
+        },
+      }),
       investigate: DRAFT_KREOL({
         heading: "FraudLens finn verifie",
         messageRead: "Mesaz la lir",
@@ -1786,7 +1818,33 @@ export const COPY: Record<UiLanguage, Copy> = {
       missingTitle: "Pena rezilta",
       missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
     },
-    replay: TODO_KREOL(REPLAY_EN),
+    replay: DRAFT_KREOL({
+      title: "Rekonstitision eskrokri",
+      subtitle: "Kouma sa mesaz la finn fer pou marse, rakonte kouma enn zistwar olie enn rapor.",
+      openReplay: "Get kouma sa eskrokri la marse",
+      back: "Retourn lor rezilta",
+      stepContact: "Kontak la",
+      stepWanted: "Seki li ti pe rod kot ou",
+      stepJourney: "Kot sa pe ale",
+      experienceSafely: "Viv sa san risk",
+      stepPattern: "Model pli larz",
+      patternMatched: (reports: number, senders: number, domains: number) =>
+        `Li koresponn ar bann rapor avan: ${reports} rapor lor ${senders} nimero ek ${domains} domenn.`,
+      stepStop: "Aret la",
+      belief: {
+        sender_mismatch:
+          "Enn mesaz paret pli fiab kan li sanble sorti kot enn nimero ouswa enn kont ki ou rekonet.",
+        lookalike_url: "Enn lien ki preske bon fasil pou rate kan ou pe prese.",
+        urgency_language: "Presion letan koup tan ki ou ti pou pran pou verifie.",
+        spoofed_identity: "Servi enn nom ki dimounn fer konfians fer demann la paret ofisiel.",
+        credential_request:
+          "Enn kod ouswa enn modpas kapav paret san danze pou partaze kan demann la paret normal.",
+        payment_request:
+          "Prezant li kouma enn fre ouswa enn ranbursman fer pelman la paret kouma prosen etap normal.",
+        prize_offer: "Enn rekonpans inatandi bes ou vizilans avan ou verifie kisannla pe dimande.",
+        secrecy: "Kan dir ou gard sa sekre, personn lot pa kapav dekouver trik la.",
+      },
+    }),
     simple: DRAFT_KREOL({
       turnOn: "Mod senp",
       turnOff: "Montre tou detay",
@@ -1798,9 +1856,15 @@ export const COPY: Record<UiLanguage, Copy> = {
       readAloud: "Lir sa afot",
       stopReading: "Aret lir",
     }),
-    card: TODO_KREOL(CARD_EN),
-    // Learn tab: reviewed by the frontend owner. TODO_KREOL marks strings that
-    // have no Kreol translation yet (they show English until one is written).
+    card: DRAFT_KREOL({
+      cardTitle: "Verifikasion sekirite FraudLens",
+      whyHeading: "Kifer nou inkiet",
+      helpMeExplain: "Ed mwa explik sa",
+      share: "Partaze",
+      copyText: "Kopye text la",
+      copied: "Kopie",
+    }),
+    // Learn tab: reviewed by the frontend owner.
     learn: {
       headline: "Aprann rekonet zot",
       streak: (d) => `${d} zour ki swiv`,
@@ -1870,7 +1934,34 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       dev: { title: "Zouti dev", reset: "Efas serie", seed: "Fer kouma si 2 zour fini" },
     },
-    safepay: TODO_KREOL(SAFEPAY_EN),
+    safepay: DRAFT_KREOL({
+      title: "Avan ou pey",
+      intro:
+        "De-trwa kestion rapid avan ou avoy larzan. Nou pou verifie seki nou kapav ek dir ou ki pou fer apre.",
+      requesterLabel: "Kisannla pe dimann ou pey?",
+      requesterPlaceholder: "par ex. MCB, enn konpagni livrezon, enn dimounn ou konne",
+      channelLabel: "Kouma zot finn kontakte ou?",
+      channelPlaceholder: "par ex. SMS, WhatsApp, enn apel",
+      recipientLabel: "Kisannla ou pe peye?",
+      recipientPlaceholder: "Nimero telefonn, nimero kont ouswa nom",
+      amountLabel: "Montan (opsionel)",
+      amountPlaceholder: "par ex. Rs 12,500",
+      amountHeading: "Montan",
+      messageLabel: "Mesaz ki ou finn gagne (opsionel, me li ed boukou)",
+      messagePlaceholder: "Kol mesaz ki finn dimann ou pey, si ou ena li",
+      submit: "Verifie avan mo pey",
+      missingInput: "Dir nou kisannla pe dimande, ouswa kol mesaz la, pou nou ena kiksoz pou verifie.",
+      pauseTitle: "Aret enn kou avan ou pey",
+      okTitle: "Pena siny danze trouve",
+      okBody:
+        "Nou pa finn trouv enn rezon presi pou inkiet, me nou pa kapav konfirm ki sa demann la vre. Si ou ena dout, verifie direk ar lorganizasion lor enn nimero ouswa enn app ki ou deza fer konfians.",
+      recipientReportedLine: (n: number) =>
+        n === 1 ? "Sa benefisier la finn rapporte 1 fwa" : `Sa benefisier la finn rapporte ${n} fwa`,
+      verifyCta: "Verifie par kanal ofisiel",
+      reportCta: "Rapport sa",
+      checkAnother: "Verifie enn lot pelman",
+      back: "Verifie enn mesaz plito",
+    }),
   },
 };
 
