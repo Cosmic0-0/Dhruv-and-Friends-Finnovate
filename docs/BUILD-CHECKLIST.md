@@ -29,14 +29,16 @@ are weighted against.
       through the local model: a 4-message batch gave the correct verdicts
       and summary counts with 0 unanalysed, in about 30s.
 - [x] OCR ingestion functional (screenshot upload → extracted text →
-      analysis). `frontend/components/ScreenshotUpload.tsx` and
-      `CheckForm.tsx` compress the image client-side and post it to
-      `/api/analyze/screenshot`. The OCR text is kept in memory, not shown;
-      the thumbnail is the visible input, and the text is sent to
-      `/api/analyze` when the user presses Check. The backend path was last
-      verified live on 2026-09-22 with a generated PNG and the local model
-      (about 9s); the hidden-text UI flow has not been re-verified live
-      since it changed.
+      analysis). `frontend/components/ScreenshotUpload.tsx` compresses the
+      image client-side and posts it to `/api/analyze/screenshot`;
+      `frontend/components/check/Workspace.tsx` keeps the OCR text in
+      memory, not shown, and sends it to `/api/analyze` when the user
+      presses Check. That second call means the verdict shown ignores the
+      screenshot's image-forensics signals (DOC-09..13); see
+      `docs/API-CONTRACT.md` Known Gaps. The backend path was last verified
+      live on 2026-09-22 with a generated PNG and the local model (about
+      9s), before image forensics was added; the current UI flow has not
+      been verified live.
 - [x] Document forensics (`POST /api/analyze/document`, `/document` in the
       web app). Last verified 2026-09-23:
       - Backend tests cover every DOC detector, each demo fixture end to end
