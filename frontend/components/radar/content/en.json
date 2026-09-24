@@ -1,5 +1,5 @@
 {
-  "title": "Radar",
+  "title": "Scam trends",
   "lede": "What scammers are sending in Mauritius, from messages checked on FraudLens.",
   "ranges": {
     "7d": "7 days",
@@ -18,7 +18,7 @@
   "noneCopied": "No institution named yet",
   "rising": "Rising fast",
   "risingUp": "{n} checks, up from {prev} in the previous period",
-  "risingNew": "New this period",
+  "risingNew": "{n} checks, none in the previous period",
   "mostlyBy": "mostly by {channel}",
   "noneRising": "Nothing growing faster than before",
   "topTypes": "Top scam types",
@@ -28,9 +28,9 @@
   "times": "{n} times",
   "once": "once",
   "empty": "Not enough checks yet",
-  "emptyBody": "Radar fills in as people check messages. Nothing here is made up.",
+  "emptyBody": "Scam trends fills in as people check messages. Nothing here is made up.",
   "loading": "Loading…",
-  "error": "Couldn't load Radar right now.",
+  "error": "Couldn't load Scam trends right now.",
   "retry": "Try again",
   "coverage": "Counts only messages checked on FraudLens and flagged as a scam or suspicious. It is not a count of every scam in Mauritius.",
   "types": {
@@ -49,5 +49,6 @@
     "email": "email",
     "facebook": "Facebook",
     "call": "phone call"
-  }
+  },
+  "newlySeen": "Newly seen"
 }

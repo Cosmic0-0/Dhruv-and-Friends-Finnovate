@@ -52,7 +52,7 @@ export function applyTheme(choice: ThemeChoice): void {
     meta.setAttribute("data-managed", "");
     document.head.appendChild(meta);
   }
-  meta.content = dark ? "#000000" : "#F4F4F6";
+  meta.content = dark ? "#0D0D0C" : "#F3EEDF";
 }
 
 /**

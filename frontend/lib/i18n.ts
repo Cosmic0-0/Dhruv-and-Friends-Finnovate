@@ -699,7 +699,7 @@ const RESULT_EN: Copy["result"] = {
   evidence: {
     title: "Why FraudLens flagged this",
     aiTitle: "AI analysis",
-    deterministicTitle: "Deterministic checks",
+    deterministicTitle: "Rule-based checks",
     communityTitle: "Community intelligence",
     communityLine: (n) => (n === 1 ? "Reported by others 1 time" : `Reported by others ${n} times`),
     sourcesAgree: (n) => `${n} independent evidence sources agree`,
@@ -764,7 +764,7 @@ const RESULT_EN: Copy["result"] = {
     label: "Analyzed by",
     local: "Local AI model (self-hosted, on-device)",
     fallback: "Cloud fallback AI ({provider})",
-    unavailable: "AI unavailable: deterministic checks only",
+    unavailable: "AI offline: rule-based checks only. The verdict still stands.",
   },
   checkAnother: "Check another message",
   missingTitle: "No check to show",
@@ -1179,7 +1179,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "just now", min: "min", hour: "h", day: "d", ago: (s) => `${s} ago` }),
-    tabs: { check: "Check", learn: "Learn", trends: "Radar", settings: "Settings", newCheck: "Check a new message" },
+    tabs: { check: "Check", learn: "Learn", trends: "Scam trends", settings: "Settings", newCheck: "Check a new message" },
     check: {
       greeting: (h) => (h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"),
       question: "Is this a scam?",
@@ -1387,7 +1387,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     },
     relativeTime: (ms) =>
       relative(ms, { now: "à l'instant", min: "min", hour: "h", day: "j", ago: (s) => `il y a ${s}` }),
-    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Radar", settings: "Réglages", newCheck: "Vérifier un nouveau message" },
+    tabs: { check: "Vérifier", learn: "Apprendre", trends: "Tendances", settings: "Réglages", newCheck: "Vérifier un nouveau message" },
     check: {
       greeting: (h) => (h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir"),
       question: "Est-ce une arnaque ?",
@@ -1565,7 +1565,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       evidence: {
         title: "Pourquoi FraudLens a signalé ceci",
         aiTitle: "Analyse par l'IA",
-        deterministicTitle: "Vérifications déterministes",
+        deterministicTitle: "Vérifications par règles",
         communityTitle: "Intelligence communautaire",
         communityLine: (n) => (n === 1 ? "Signalé par d'autres 1 fois" : `Signalé par d'autres ${n} fois`),
         sourcesAgree: (n) => `${n} sources de preuves indépendantes concordent`,
@@ -1631,7 +1631,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analysé par",
         local: "Modèle IA local (auto-hébergé, sur l'appareil)",
         fallback: "IA de secours dans le cloud ({provider})",
-        unavailable: "IA indisponible, vérifications déterministes uniquement",
+        unavailable: "IA hors ligne : vérifications par règles uniquement. Le verdict reste valable.",
       },
       checkAnother: "Vérifier un autre message",
       missingTitle: "Aucun résultat",
@@ -1875,7 +1875,7 @@ export const COPY: Record<UiLanguage, Copy> = {
     tabs: {
       check: "Verifie",
       learn: "Aprann",
-      trends: "Radar",
+      trends: "Tandans eskrokri",
       settings: DRAFT_KREOL("Paramet"),
       newCheck: DRAFT_KREOL("Verifie enn nouvo mesaz"),
     },
@@ -2157,7 +2157,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         label: "Analize par",
         local: "Model AI lokal (self-hosted, lor aparey)",
         fallback: "AI backup lor cloud ({provider})",
-        unavailable: "AI pa disponib, zis verifikasion deterministik",
+        unavailable: "AI pa disponib: zis verifikasion par reg. Verdik la touzour valab.",
       },
       checkAnother: "Verifie enn lot mesaz",
       missingTitle: "Pena rezilta",

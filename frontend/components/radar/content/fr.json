@@ -1,5 +1,5 @@
 {
-  "title": "Radar",
+  "title": "Tendances des arnaques",
   "lede": "Ce que les escrocs envoient à Maurice, d’après les messages vérifiés sur FraudLens.",
   "ranges": {
     "7d": "7 jours",
@@ -18,7 +18,7 @@
   "noneCopied": "Aucune institution nommée pour l’instant",
   "rising": "En forte hausse",
   "risingUp": "{n} vérifications, contre {prev} sur la période précédente",
-  "risingNew": "Nouveau sur la période",
+  "risingNew": "{n} vérifications, aucune sur la période précédente",
   "mostlyBy": "surtout par {channel}",
   "noneRising": "Rien n’augmente plus qu’avant",
   "topTypes": "Types d’arnaques les plus fréquents",
@@ -28,9 +28,9 @@
   "times": "{n} fois",
   "once": "une fois",
   "empty": "Pas encore assez de vérifications",
-  "emptyBody": "Radar se remplit à mesure que les gens vérifient des messages. Rien n’est inventé.",
+  "emptyBody": "Les Tendances se remplissent à mesure que les gens vérifient des messages. Rien n’est inventé.",
   "loading": "Chargement…",
-  "error": "Impossible de charger Radar pour le moment.",
+  "error": "Impossible de charger les Tendances pour le moment.",
   "retry": "Réessayer",
   "coverage": "Ne compte que les messages vérifiés sur FraudLens et signalés comme arnaque ou suspects. Ce n’est pas le total des arnaques à Maurice.",
   "types": {
@@ -49,5 +49,6 @@
     "email": "e-mail",
     "facebook": "Facebook",
     "call": "appel"
-  }
+  },
+  "newlySeen": "Nouvellement repéré"
 }

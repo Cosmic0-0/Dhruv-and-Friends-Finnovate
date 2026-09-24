@@ -1,72 +1,138 @@
 {
   "header": {
     "home": "Accueil FraudLens",
-    "how": "Comment ça marche",
-    "tools": "Outils",
-    "learn": "Apprendre",
-    "radar": "Radar",
-    "createdBy": "Créé par",
-    "theme": "Basculer entre mode clair et sombre",
-    "getExtension": "Obtenir l'extension",
-    "check": "Vérifier un message",
-    "nav": "Sections"
+    "nav": "Sections",
+    "webapp": "Application",
+    "extension": "Extension",
+    "outlook": "Outlook",
+    "trends": "Tendances",
+    "language": "Langue",
+    "cta": "Ouvrir l’application"
   },
   "hero": {
-    "badge": "Conçu pour Maurice · English, Français, Kreol",
-    "title": "Repérez l'arnaque avant d'agir.",
-    "lede": "Collez un message, un lien ou un document. FraudLens vous dit s'il est authentique ou frauduleux, et vous montre exactement pourquoi.",
-    "primary": "Vérifier un message",
-    "secondary": "Obtenir l'extension navigateur"
+    "kicker": "Détection d’arnaques pour Maurice · EN · FR · Kreol",
+    "titleLines": [
+      "Vérifiez",
+      "avant de payer."
+    ],
+    "lede": "FraudLens lit les messages, liens, e-mails et documents suspects, et montre les preuves derrière chaque verdict.",
+    "placeholder": "Collez un message ou un lien suspect…",
+    "inputLabel": "Message ou lien à vérifier",
+    "check": "Vérifier",
+    "sample": "Essayer une vraie arnaque MCB",
+    "privacy": "Le texte du message n’est jamais conservé.",
+    "scroll": "Défiler",
+    "facts": [
+      "Verdict fondé sur des règles",
+      "Preuves citées du message",
+      "Fonctionne même sans l’IA"
+    ]
   },
-  "demo": {
+  "scan": {
     "label": "Exemple de vérification",
-    "receive": "Vous recevez",
-    "shows": "FraudLens vous montre",
+    "eyebrow": "01 / Exemple de vérification",
+    "title": "Chaque alerte pointe les mots qui l’ont déclenchée.",
+    "sender": "MCB-INFO",
     "channel": "SMS · 08:14",
-    "verdict": "Arnaque",
-    "confidence": "Confiance élevée",
-    "reasons": [
+    "calls": [
+      [
+        "pou bloke zordi",
+        "Urgence",
+        "Menace de bloquer le compte aujourd’hui."
+      ],
+      [
+        "Konfirm ou OTP",
+        "Demande de code",
+        "Demande votre code à usage unique. La MCB ne le fait jamais."
+      ],
       [
         "mcb-secure.top",
-        " n'est pas la MCB, le vrai site est ",
-        "mcb.mu"
-      ],
-      [
-        "Demande votre code à usage unique, la MCB ne le fait jamais"
-      ],
-      [
-        "Menace de bloquer le compte aujourd'hui"
+        "Lien imitation",
+        "Ce n’est pas la MCB. Le vrai site est mcb.mu."
       ]
     ],
-    "action": "Ne répondez pas. Appelez la MCB au numéro inscrit sur votre carte."
+    "verdictLabel": "Verdict",
+    "verdict": "Arnaque",
+    "confidence": "Confiance élevée · 3 signaux",
+    "action": "Ne répondez pas. Appelez la MCB au numéro inscrit sur votre carte.",
+    "example": "Exemple"
   },
-  "how": {
-    "title": "Des preuves visibles, pas seulement une étiquette.",
-    "cards": [
+  "engine": {
+    "eyebrow": "02 / Comment il décide",
+    "title": "L’IA lit la langue. Le moteur de règles décide.",
+    "steps": [
       {
         "n": "01",
-        "title": "Lit comme Maurice écrit",
-        "body": "Anglais, français et kreol morisien, même quand les trois sont dans le même message."
+        "title": "Lire",
+        "body": "Un modèle de langue lit l’anglais, le français et le kreol et repère ce que fait le message : urgence, demande de code, paiement. Chaque constat doit citer le message."
       },
       {
         "n": "02",
-        "title": "Connaît les vrais expéditeurs",
-        "body": "Banques locales, Mauritius Post, MRA et opérateurs mobiles : leurs vraies adresses et ce qu'ils ne demandent jamais."
+        "title": "Vérifier",
+        "body": "Des vérifications déterministes comparent liens, expéditeurs et coordonnées de paiement aux vraies adresses des banques, opérateurs et administrations mauriciens."
       },
       {
         "n": "03",
-        "title": "Vérifie aussi les documents",
-        "body": "Repère les signatures collées et les modifications faites après la signature d'un relevé, d'une lettre ou d'une facture."
+        "title": "Décider",
+        "body": "Un moteur de règles pèse les preuves et fixe le verdict et les conseils. Le modèle ne le fait jamais."
       }
-    ]
+    ],
+    "note": "Si l’IA est hors ligne, les étapes 02 et 03 fonctionnent toujours et vous obtenez quand même un verdict."
   },
-  "extension": {
-    "title": "Vérifiez sans quitter la page.",
-    "body": "L'extension FraudLens vérifie les liens dans Gmail, WhatsApp Web et Facebook avant que vous cliquiez.",
-    "chrome": "Ajouter à Chrome",
-    "other": "Firefox et Edge",
-    "badLink": "Ce lien n'est pas la MCB",
-    "official": "Site officiel"
+  "products": {
+    "eyebrow": "03 / Où l’utiliser",
+    "title": "Un moteur. Trois accès.",
+    "marquee": [
+      "Application web",
+      "Extension de navigateur",
+      "Complément Outlook"
+    ],
+    "webapp": {
+      "tag": "Application web",
+      "title": "Toutes les vérifications au même endroit.",
+      "body": "Messages, liens, captures d’écran, documents, bénéficiaires et conversations entières, en anglais, français et kreol.",
+      "tools": [
+        "Messages",
+        "Liens",
+        "Captures",
+        "Documents",
+        "Bénéficiaires",
+        "Conversations"
+      ],
+      "cta": "Ouvrir l’application"
+    },
+    "extension": {
+      "tag": "Extension de navigateur",
+      "title": "Vous prévient avant le clic.",
+      "body": "Link Guard vérifie les liens dans Gmail, WhatsApp Web et Facebook avant que vous ne cliquiez.",
+      "cta": "Ajouter à Chrome",
+      "cta2": "Firefox et Edge",
+      "badLink": "Ce lien n’est pas la MCB",
+      "official": "Site officiel"
+    },
+    "outlook": {
+      "tag": "Complément Outlook",
+      "title": "Un clic sur l’e-mail ouvert.",
+      "body": "Lit l’e-mail ouvert, ses liens et ses résultats SPF, DKIM et DMARC, puis affiche le même verdict que l’application web. Il n’ouvre jamais les pièces jointes et n’envoie jamais de courrier.",
+      "cta": "L’installer",
+      "mock": {
+        "from": "MCB Sécurité",
+        "subject": "Urgent : vérifiez votre compte",
+        "button": "Analyser l’e-mail",
+        "verdict": "Arnaque",
+        "rows": [
+          "Le Reply-To mène à un autre domaine",
+          "DMARC : échec",
+          "Le lien n’est pas mcb.mu"
+        ]
+      }
+    }
+  },
+  "outro": {
+    "title": "Un message vous semble louche ?",
+    "body": "Vérifiez-le avant de répondre, de cliquer ou de payer.",
+    "cta": "Ouvrir l’application",
+    "cta2": "Signaler une arnaque"
   },
   "footer": {
     "built": "FraudLens · Conçu à Maurice par ",
@@ -118,7 +184,7 @@
       },
       {
         "title": "Ce que le serveur conserve",
-        "body": "Le texte envoyé pour analyse sert à produire votre résultat et n'est pas enregistré dans une base de données. Les signalements communautaires font exception : ils sont conservés sous forme d'empreinte à sens unique du texte masqué, jamais le texte lui-même, et supprimés après 90 jours."
+        "body": "Le texte envoyé pour analyse sert à produire votre résultat et n’est pas écrit dans une base de données. Quand un message est signalé, FraudLens compte son type d’arnaque, l’institution qu’il prétend être, l’expéditeur affiché et les faux liens, pour que les Tendances montrent ce qui circule. Vous pouvez désactiver cela dans les Réglages. Les signalements de la communauté sont conservés sous forme d’empreinte à sens unique du texte masqué, jamais le texte lui-même, et sont supprimés après 90 jours."
       },
       {
         "title": "Ce qui reste sur votre appareil",

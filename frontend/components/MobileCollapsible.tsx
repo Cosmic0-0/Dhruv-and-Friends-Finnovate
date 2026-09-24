@@ -18,7 +18,7 @@ import { useLayoutEffect, useRef } from "react";
 export default function MobileCollapsible({
   summary,
   children,
-  openAt = "(min-width: 64rem)",
+  openAt = "(min-width: 40rem)",
 }: {
   summary: React.ReactNode;
   children: React.ReactNode;

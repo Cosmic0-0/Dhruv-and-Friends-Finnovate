@@ -8,6 +8,7 @@ import {
   normalizeStage,
   getLikelyNextStages,
   getSandboxLines,
+  reconcileScamType,
 } from "./index.js";
 
 test("every SCAM_TYPES entry has a PLAYBOOKS entry", () => {
@@ -70,4 +71,16 @@ test("getSandboxLines returns example lines for a known type/stage, [] otherwise
   assert.ok(lines.length > 0);
   assert.deepEqual(getSandboxLines("FAKE_PARCEL", "ACCOUNT_TAKEOVER"), []);
   assert.deepEqual(getSandboxLines("NOT_A_TYPE", "PAYMENT_REQUEST"), []);
+});
+
+test("reconcileScamType lets the registry pick the bank when the model mislabels it", () => {
+  assert.equal(reconcileScamType("BANK_ONE_IMPERSONATION", { id: "mcb" }), "MCB_IMPERSONATION");
+  assert.equal(reconcileScamType("MCB_IMPERSONATION", { id: "sbm" }), "SBM_IMPERSONATION");
+});
+
+test("reconcileScamType leaves non-bank types and unmatched institutions alone", () => {
+  assert.equal(reconcileScamType("FAKE_PARCEL", { id: "mcb" }), "FAKE_PARCEL");
+  assert.equal(reconcileScamType("MCB_IMPERSONATION", { id: "myt" }), "MCB_IMPERSONATION");
+  assert.equal(reconcileScamType("MCB_IMPERSONATION", null), "MCB_IMPERSONATION");
+  assert.equal(reconcileScamType(null, { id: "mcb" }), null);
 });

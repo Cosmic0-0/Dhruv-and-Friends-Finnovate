@@ -20,7 +20,7 @@ export const TONE: Record<Tone, { hl: string; fg: string; dot: string }> = {
   green: { hl: "var(--dc-green-hl)", fg: "var(--dc-green)", dot: "var(--dc-green-dot)" },
 };
 
-export const MONO = "var(--font-jbmono), ui-monospace, monospace";
+export const MONO = "var(--font-geist-mono), ui-monospace, monospace";
 
 /** A surface card. radius 28 (tiles) or 32 (panels), as in the designs. */
 export function card(radius: 20 | 24 | 28 | 32 | 40 = 32, shadow = false): CSSProperties {

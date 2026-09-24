@@ -11,11 +11,47 @@
     "toolsNote": "Also in the top bar",
     "open": "Open →",
     "tools": [
-      { "n": "02", "href": "/safepay", "title": "Before paying", "body": "About to send money to someone new? Check the payee first.", "looks": "Looks at: account or IBAN, phone number, business name, reported fraud" },
-      { "n": "03", "href": "/document", "title": "Check a document", "body": "Bank statements, letters and invoices as PDF or Word.", "looks": "Looks at: pasted signatures, edits after signing, scam wording" },
-      { "n": "04", "href": "/batch", "title": "Batch scan", "body": "Paste or upload several messages and get a verdict for each.", "looks": "Looks at: every message separately, then patterns across them" },
-      { "n": "05", "href": "/conversation", "title": "Whole conversation", "body": "Export a WhatsApp or Messenger chat and check it start to finish.", "looks": "Looks at: how the story changes, when money or codes come up" }
-    ]
+      {
+        "n": "02",
+        "href": "/safepay",
+        "title": "Before paying",
+        "body": "About to send money to someone new? Check the payee first.",
+        "looks": "Looks at: account or IBAN, phone number, business name, reported fraud"
+      },
+      {
+        "n": "03",
+        "href": "/document",
+        "title": "Check a document",
+        "body": "Bank statements, letters and invoices as PDF or Word.",
+        "looks": "Looks at: pasted signatures, edits after signing, scam wording"
+      },
+      {
+        "n": "04",
+        "href": "/batch",
+        "title": "Batch scan",
+        "body": "Paste or upload several messages and get a verdict for each.",
+        "looks": "Looks at: every message separately, then patterns across them"
+      },
+      {
+        "n": "05",
+        "href": "/conversation",
+        "title": "Whole conversation",
+        "body": "Export a WhatsApp or Messenger chat and check it start to finish.",
+        "looks": "Looks at: how the story changes, when money or codes come up"
+      }
+    ],
+    "moreTitle": "More tools",
+    "extraLinks": [
+      {
+        "href": "/sandbox",
+        "title": "Practise safely"
+      },
+      {
+        "href": "/trends",
+        "title": "Scam trends"
+      }
+    ],
+    "engineNote": "The AI reads the language. A rules engine decides the verdict."
   },
   "example": "Ou kont MCB pou bloke zordi. Konfirm ou OTP lor mcb-secure.top/verify",
   "work": {
@@ -24,7 +60,12 @@
     "titleB": "before",
     "titleC": " you act.",
     "lede": "Paste a message or link exactly as you received it. FraudLens reads English, French and Kreol Morisien, even mixed together.",
-    "modes": { "message": "Message", "link": "Link", "screenshot": "Screenshot", "document": "Document" },
+    "modes": {
+      "message": "Message",
+      "link": "Link",
+      "screenshot": "Screenshot",
+      "document": "Document"
+    },
     "placeholder": "Paste the message here",
     "linkPlaceholder": "Paste the link here",
     "linkHint": "We check the address itself: who it belongs to, how old it is, and whether it has been reported. The page is not opened.",
@@ -33,17 +74,31 @@
     "shotReady": "Text read from the screenshot. Press Check message.",
     "shotRemove": "Remove screenshot",
     "meta": {
-      "lang": { "en": "English detected", "fr": "French detected", "kreol": "Kreol detected", "mixed": "Mixed languages" },
-      "links": { "one": "1 link", "other": "{n} links" },
+      "lang": {
+        "en": "English detected",
+        "fr": "French detected",
+        "kreol": "Kreol detected",
+        "mixed": "Mixed languages"
+      },
+      "links": {
+        "one": "1 link",
+        "other": "{n} links"
+      },
       "chars": "{n} chars"
     },
     "receivedBy": "Received by",
-    "channels": { "sms": "SMS", "whatsapp": "WhatsApp", "email": "Email", "facebook": "Facebook", "call": "Call" },
+    "channels": {
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "facebook": "Facebook",
+      "call": "Call"
+    },
     "check": "Check message",
     "checkLink": "Check link",
     "clear": "Clear",
     "cancel": "Cancel",
-    "privacy": "Checked privately. Your message is never stored on our servers.",
+    "privacy": "Message text is never stored. Flagged scams are counted anonymously for Scam trends, unless you turn that off in Settings.",
     "docInstead": "Check a document instead",
     "idleTitle": "Your verdict will appear here.",
     "idleBody": "You'll see a verdict and the exact words that led to it.",
@@ -53,9 +108,21 @@
   },
   "result": {
     "verdict": "Verdict",
-    "confidence": { "high": "High confidence", "moderate": "Medium confidence", "low": "Low confidence" },
-    "signals": { "zero": "no signals", "one": "1 signal", "other": "{n} signals" },
-    "words": { "scam": "Scam.", "suspicious": "Suspicious.", "safe": "Looks genuine." },
+    "confidence": {
+      "high": "High confidence",
+      "moderate": "Medium confidence",
+      "low": "Low confidence"
+    },
+    "signals": {
+      "zero": "no signals",
+      "one": "1 signal",
+      "other": "{n} signals"
+    },
+    "words": {
+      "scam": "Scam.",
+      "suspicious": "Suspicious.",
+      "safe": "Looks genuine."
+    },
     "summary": {
       "scamWho": "This message pretends to be {who}{goal}.",
       "suspiciousWho": "This message claims to be {who}{goal}.",
@@ -82,7 +149,10 @@
     "actedLink": "What to do if you've acted",
     "fullEvidence": "See full evidence",
     "receivedBy": "Received by {channel}",
-    "ai": { "ok": "Language read by AI", "off": "AI unavailable: rules only" },
+    "ai": {
+      "ok": "Language read by AI",
+      "off": "AI unavailable: rules only"
+    },
     "linkFacts": {
       "official": "Official site of {who}",
       "trusted": "A well-known site",
@@ -113,7 +183,9 @@
       "doc_verify_with_issuer": "Do not rely on this document. Ask the organisation that supposedly issued it to confirm it, using contact details you find yourself.",
       "doc_dont_enable_content": "Do not enable editing, macros or content in this file.",
       "no_warning_signs": "No warning signs were found. Only act on requests you were expecting."
-    }
+    },
+    "campaign": "Part of a campaign seen in {n} earlier checks.",
+    "campaignLink": "See the network"
   },
   "full": {
     "back": "← Back to check",

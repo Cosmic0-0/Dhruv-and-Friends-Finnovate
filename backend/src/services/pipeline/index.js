@@ -29,7 +29,7 @@ import { ACTIVE_RULES as WAVE_RULES } from "../community-signals/wave.js";
 import { score, verdictForLevel } from "../risk-engine/index.js";
 import { planInterventions, buildExplanation, POLICY_VERSION } from "../interventions/index.js";
 import { computeRiskCategories } from "../risk-categories/index.js";
-import { getLikelyNextStages } from "../playbooks/index.js";
+import { getLikelyNextStages, reconcileScamType } from "../playbooks/index.js";
 import { attachScamDna } from "../scam-dna/index.js";
 import { makeSignal, SIGNAL_DEFS } from "../signals/registry.js";
 import { availableEvidence } from "../email-context/index.js";
@@ -245,7 +245,7 @@ export async function runPipeline(rawText, context = {}) {
   // EMAIL-06 still means "payment details changed" to the policies below).
   const codes = new Set(decision.findings.flatMap((f) => f.members.map((m) => m.code)));
   const stage = semantic.stage ?? derivedStage(codes);
-  const scamType = semantic.scamType;
+  const scamType = reconcileScamType(semantic.scamType, claimedInstitution);
   const variants = decision.findings.flatMap((f) => f.members.filter((m) => m.metadata?.variant).map((m) => `${m.code}:${m.metadata.variant}`));
   const interventions = planInterventions({ level: decision.level, codes, variants, scamType, stage, source });
   const verification = planVerification({

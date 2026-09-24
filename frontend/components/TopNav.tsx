@@ -1,43 +1,64 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UI_LANGUAGES } from "@/lib/i18n";
 import { applyTheme, loadTheme, saveTheme } from "@/lib/theme";
+import { BrandMark } from "./landing/Art";
 import { dcCopy } from "./dc/content";
 import { useLanguage } from "./LanguageProvider";
 
-/** Desktop top bar, from Nav.dc.html. Below 64rem the tab bar is the navigation. */
+/**
+ * Desktop top bar: Check, Scam trends and Learn, the rest behind More.
+ * Below 64rem the tab bar is the navigation.
+ */
 const PRIMARY = [
   { id: "check", href: "/app", match: (p: string) => p === "/app" || p.startsWith("/result") || p.startsWith("/replay") || p.startsWith("/network") },
-  { id: "learn", href: "/learn", match: (p: string) => p.startsWith("/learn") },
   { id: "radar", href: "/trends", match: (p: string) => p.startsWith("/trends") },
+  { id: "learn", href: "/learn", match: (p: string) => p.startsWith("/learn") },
 ] as const;
-const TOOLS = [
+// Every other check lives on the Check page too; the menu is the shortcut.
+const MORE = [
   { id: "pay", href: "/safepay" },
   { id: "doc", href: "/document" },
-  { id: "batch", href: "/batch" },
   { id: "convo", href: "/conversation" },
+  { id: "batch", href: "/batch" },
+  { id: "sandbox", href: "/sandbox" },
+  { id: "settings", href: "/settings" },
+  { id: "createdBy", href: "/created-by" },
 ] as const;
-
-const linkStyle = (on: boolean): CSSProperties =>
-  on
-    ? { fontSize: 14, padding: "8px 14px", borderRadius: 999, background: "var(--dc-ink)", color: "var(--dc-surface)", whiteSpace: "nowrap" }
-    : { fontSize: 14, padding: "8px 12px", borderRadius: 999, color: "var(--dc-text2)", whiteSpace: "nowrap" };
+const LANG_LABEL: Record<string, string> = { en: "EN", fr: "FR", kreol: "Kreol" };
 
 export default function TopNav() {
   const pathname = usePathname() ?? "/";
   const { lang, setLang } = useLanguage();
   const t = dcCopy(lang).nav;
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const c = loadTheme();
     setTheme(c === "light" ? "light" : c === "system" && !window.matchMedia("(prefers-color-scheme: dark)").matches ? "light" : "dark");
   }, []);
 
-  // The landing page carries its own header (Landing.dc.html).
+  useEffect(() => setMoreOpen(false), [pathname]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !moreRef.current?.contains(e.target as Node)) setMoreOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [moreOpen]);
+
+  // The landing page carries its own header.
   if (pathname === "/") return null;
 
   const toggleTheme = () => {
@@ -47,68 +68,56 @@ export default function TopNav() {
     applyTheme(next);
   };
   const reportOn = pathname.startsWith("/report");
-  const settingsOn = pathname.startsWith("/settings");
+  const moreOn = MORE.some((m) => pathname.startsWith(m.href));
 
   return (
-    <header className="dc-topnav" data-screen-label="Top bar">
-      <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 48px", height: 68, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 36 }}>
-          <Link href="/" aria-label={t.home} style={{ display: "flex", alignItems: "center", gap: 10, color: "var(--dc-ink)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/icons/icon-192.png" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 8, display: "block" }} />
-            <span style={{ fontSize: 16, fontWeight: 500, letterSpacing: "-0.035em" }}>FraudLens</span>
-          </Link>
-          <nav aria-label="Sections" style={{ display: "flex", alignItems: "center", gap: 2 }}>
-            {PRIMARY.map((l) => {
-              const on = l.match(pathname);
-              return (
-                <Link key={l.id} href={l.href} className={on ? undefined : "dc-navlink"} aria-current={on ? "page" : undefined} style={linkStyle(on)}>
-                  {t[l.id]}
-                </Link>
-              );
-            })}
-            <span className="dc-tools" aria-hidden="true" style={{ width: 1, height: 18, background: "var(--dc-line-strong)", margin: "0 10px" }} />
-            <span className="dc-tools" style={{ display: "flex", alignItems: "center", gap: 2 }}>
-              {TOOLS.map((l) => {
-                const on = pathname.startsWith(l.href);
-                return (
-                  <Link key={l.id} href={l.href} className={on ? undefined : "dc-navlink"} aria-current={on ? "page" : undefined} style={linkStyle(on)}>
-                    {t[l.id]}
+    <header className="bt-topnav" data-screen-label="Top bar">
+      <div className="bt-topnav-inner">
+        <Link href="/" aria-label={t.home} className="bt-brand">
+          <BrandMark className="bt-brand-mark" />
+          <span>FraudLens</span>
+        </Link>
+
+        <nav aria-label="Sections" className="bt-nav">
+          {PRIMARY.map((l) => {
+            const on = l.match(pathname);
+            return (
+              <Link key={l.id} href={l.href} className="bt-navpill" aria-current={on ? "page" : undefined}>
+                {t[l.id]}
+              </Link>
+            );
+          })}
+          <div ref={moreRef} className="bt-more">
+            <button type="button" className="bt-navpill" aria-expanded={moreOpen} aria-haspopup="true" data-on={moreOn || undefined} onClick={() => setMoreOpen((o) => !o)}>
+              {t.more} <span aria-hidden="true">{moreOpen ? "−" : "+"}</span>
+            </button>
+            {moreOpen && (
+              <div className="bt-more-menu" role="menu">
+                {MORE.map((m) => (
+                  <Link key={m.id} href={m.href} role="menuitem" aria-current={pathname.startsWith(m.href) ? "page" : undefined}>
+                    {t[m.id]}
+                    <span aria-hidden="true">→</span>
                   </Link>
-                );
-              })}
-            </span>
-          </nav>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, whiteSpace: "nowrap", flexShrink: 0 }}>
-          <div role="radiogroup" aria-label={t.language} className="dc-mono" style={{ display: "flex", gap: 2, fontSize: 12 }}>
+                ))}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        <div className="bt-actions">
+          <div role="radiogroup" aria-label={t.language} className="bt-langs">
             {UI_LANGUAGES.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                role="radio"
-                aria-checked={lang === l.id}
-                onClick={() => setLang(l.id)}
-                style={{ padding: "4px 8px", border: "none", background: "transparent", cursor: "pointer", fontFamily: "inherit", fontSize: 12, color: lang === l.id ? "var(--dc-ink)" : "var(--dc-text4)" }}
-              >
-                {l.id === "kreol" ? "KR" : l.label}
+              <button key={l.id} type="button" role="radio" aria-checked={lang === l.id} onClick={() => setLang(l.id)}>
+                {LANG_LABEL[l.id] ?? l.label}
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={t.theme}
-            style={{ width: 36, height: 36, borderRadius: 999, border: "1px solid var(--dc-line-strong)", background: "transparent", color: "var(--dc-ink)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}
-          >
+          <button type="button" onClick={toggleTheme} aria-label={t.theme} className="bt-iconbtn">
             {theme === "dark" ? "☀" : "☾"}
           </button>
           <Link href="/report" className="report-pill" aria-current={reportOn ? "page" : undefined}>
             <span className="report-pill-dot" aria-hidden="true" />
             {t.report}
-          </Link>
-          <Link href="/settings" className={settingsOn ? undefined : "dc-navlink"} aria-current={settingsOn ? "page" : undefined} style={linkStyle(settingsOn)}>
-            {t.settings}
           </Link>
         </div>
       </div>

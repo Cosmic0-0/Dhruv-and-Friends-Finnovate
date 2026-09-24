@@ -27,7 +27,7 @@
   },
   "share": {
     "label": "Partaz bann egzanp anonim",
-    "desc": "Ed Radar averti lezot. Nou gard enn lanprint eskrokri la, ki li pretann li ete ek so bann lien, zame mesaz la limem."
+    "desc": "Ed Tandans eskrokri averti lezot. Nou gard enn lanprint eskrokri la, ki li pretann li ete ek so bann lien, zame mesaz la limem."
   },
   "extension": {
     "label": "Extension navigater",
@@ -36,7 +36,7 @@
   },
   "alerts": {
     "label": "Alert eskrokri",
-    "desc": "Enn notifikasion kan enn kanpagn eskrokri koumans rann lor Radar. Verifie kan FraudLens ouver, ek an ariyer-plan kot ou navigater permet li."
+    "desc": "Enn notifikasion kan enn kanpagn eskrokri koumans rann dan Tandans eskrokri. Verifie kan FraudLens ouver, ek an ariyer-plan kot ou navigater permet li."
   },
   "practice": {
     "label": "Rapel antrennman sak zour",
@@ -60,7 +60,7 @@
   },
   "notifications": {
     "alertTitle": "Nouvo eskrokri pe rann: {name}",
-    "alertBody": "Trouve dan {count} verifikasion lor FraudLens. Ouver Radar pou get kouma li ete.",
+    "alertBody": "Trouve dan {count} verifikasion lor FraudLens. Ouver Tandans eskrokri pou get kouma li ete.",
     "practiceTitle": "Sink minit antrennman?",
     "practiceBody": "Bann mesaz Aprann zordi pe atann ou. Kontinie ou seri."
   }

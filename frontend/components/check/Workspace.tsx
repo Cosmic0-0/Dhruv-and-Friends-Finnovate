@@ -52,11 +52,20 @@ export default function Workspace({
   const [screenshotResult, setScreenshotResult] = useState<AnalyzeScreenshotResponse | null>(null);
   const shot = useScreenshot({ lang, onResult: setScreenshotResult });
 
-  useEffect(() => () => abortRef.current?.abort(), []);
-
   // Hub hand-off: "Check message" / "Try it with a real MCB scam" already
   // fired a real check — the workspace opens straight into it, once.
   const autoFired = useRef(false);
+
+  // Unmounting aborts the check in flight, so the hand-off must be allowed to
+  // fire again on a remount (React's dev double-mount did exactly this and
+  // left the workspace stuck on "Reading the message…").
+  useEffect(
+    () => () => {
+      abortRef.current?.abort();
+      autoFired.current = false;
+    },
+    []
+  );
   useEffect(() => {
     if (!autoSubmit || autoFired.current) return;
     autoFired.current = true;
