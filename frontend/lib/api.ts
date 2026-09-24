@@ -114,7 +114,7 @@ export interface RequestOptions {
 }
 
 /**
- * Backend LLM_TIMEOUT_MS (currently 60s) applies PER PROVIDER ATTEMPT: in
+ * Backend LLM_TIMEOUT_MS (currently 20s by default, up to 60s if overridden) applies PER PROVIDER ATTEMPT: in
  * "auto" mode a request can try Ollama, time out, then try the hosted
  * fallback - up to ~2x LLM_TIMEOUT_MS before the backend responds at all
  * (see backend/src/services/analysis/llmClient.js). These must stay

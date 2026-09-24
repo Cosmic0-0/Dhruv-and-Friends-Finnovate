@@ -98,13 +98,13 @@
      call sites keep compiling; all three resolve to the same stack, because
      the design has no serif and no monospace. */
   /* The app's own voice. */
-  --font-sans: var(--font-onest), system-ui, sans-serif;
+  --font-sans: var(--font-geist), system-ui, sans-serif;
   /* A received message, in the face it arrived in on the user's phone. Never
      the app's typeface: the app does not put the scammer's words in its own
      voice. */
   --font-message: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: var(--font-jbmono), ui-monospace, monospace;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Scale from DESIGN.md: large title 34/41, hero headline 42/46, body 17/23. */
   --text-display: 2.375rem;
@@ -922,36 +922,39 @@
  * not rebuilt inline still matches.
  * ===================================================================== */
 :root {
-  --dc-bg: #000000; --dc-bar: rgba(0,0,0,0.72); --dc-ink: #FFFFFF; --dc-surface: #111115;
-  --dc-line: #1F1F25; --dc-line2: #1B1B20; --dc-line3: #17171C;
-  --dc-text2: #B3B4BD; --dc-text3: #8A8B95; --dc-text4: #5E5F68;
-  --dc-line-strong: #2A2A31; --dc-underline: #3A3A42; --dc-hover: #1A1A20; --dc-ink-hover: #E4E4EA;
-  --dc-text-body: #D6D7DE;
-  --dc-red: #FF6B64; --dc-red-dot: #FF453A; --dc-red-hl: rgba(255,69,58,0.18);
-  --dc-amber-hl: rgba(255,176,32,0.18); --dc-amber: #FFB547;
-  --dc-green: #34D399; --dc-green-dot: #12B76A; --dc-green-hl: rgba(52,211,153,0.16);
-  --dc-accent: #8A8CFF; --dc-accent-soft: rgba(124,127,255,0.16);
-  --dc-bubble: #23232A; --dc-mine: #4B4BD8;
+  /* "Butter": warm ink black, cream text, butter yellow as the one brand
+     colour. Red stays reserved for scam verdicts, orange for suspicious. */
+  --dc-butter: #F2D54E; --dc-butter-deep: #E3C22F; --dc-on-butter: #0D0D0C;
+  --dc-bg: #0D0D0C; --dc-bar: rgba(13,13,12,0.78); --dc-ink: #F6F1E4; --dc-surface: #161614;
+  --dc-line: #2A2925; --dc-line2: #22211E; --dc-line3: #1C1B19;
+  --dc-text2: #C2BCAC; --dc-text3: #948E80; --dc-text4: #635F55;
+  --dc-line-strong: #3A3833; --dc-underline: #4E4B43; --dc-hover: #201F1C; --dc-ink-hover: #FFFFFF;
+  --dc-text-body: #DEDACF;
+  --dc-red: #FF6A4D; --dc-red-dot: #FF4A2E; --dc-red-hl: rgba(255,74,46,0.18);
+  --dc-amber-hl: rgba(255,154,31,0.18); --dc-amber: #FFA43A;
+  --dc-green: #5FD98E; --dc-green-dot: #2FBF6A; --dc-green-hl: rgba(95,217,142,0.15);
+  --dc-accent: #F2D54E; --dc-accent-soft: rgba(242,213,78,0.14);
+  --dc-bubble: #24231F; --dc-mine: #3D3B34;
   --dc-shadow: none;
-  --dc-shadow-lg: 0 30px 80px -30px rgba(0,0,0,0.8);
+  --dc-shadow-lg: 0 30px 80px -30px rgba(0,0,0,0.85);
   /* fx.js */
-  --dc-dot: rgba(255,255,255,0.07); --dc-glow: rgba(124,127,255,0.16); --dc-glow2: rgba(52,211,153,0.05); --dc-grain: .07;
+  --dc-dot: rgba(246,241,228,0.06); --dc-glow: rgba(242,213,78,0.10); --dc-glow2: rgba(255,106,77,0.04); --dc-grain: .08;
   color-scheme: dark;
 }
 :root[data-theme="light"] {
-  --dc-bg: #F4F4F6; --dc-bar: rgba(244,244,246,0.8); --dc-ink: #0B0B0F; --dc-surface: #FFFFFF;
-  --dc-line: #E6E6EB; --dc-line2: #EFEFF3; --dc-line3: #F4F4F7;
-  --dc-text2: #55565E; --dc-text3: #80818A; --dc-text4: #A9AAB2;
-  --dc-line-strong: #DCDCE2; --dc-underline: #CFCFD6; --dc-hover: #F0F0F3; --dc-ink-hover: #26262D;
-  --dc-text-body: #33343B;
-  --dc-red: #D92D2A; --dc-red-dot: #F04438; --dc-red-hl: #FFE4E2;
-  --dc-amber-hl: #FFF1D6; --dc-amber: #9A5B00;
-  --dc-green: #0A8A4E; --dc-green-dot: #12B76A; --dc-green-hl: #DDF7E9;
-  --dc-accent: #5B5BF6; --dc-accent-soft: #EDEDFF;
-  --dc-bubble: #E9E9EE; --dc-mine: #5B5BF6;
-  --dc-shadow: 0 1px 2px rgba(11,11,15,0.04), 0 12px 32px -12px rgba(11,11,15,0.08);
-  --dc-shadow-lg: 0 1px 2px rgba(11,11,15,0.04), 0 24px 60px -20px rgba(11,11,15,0.18);
-  --dc-dot: rgba(11,11,15,0.09); --dc-glow: rgba(91,91,246,0.10); --dc-glow2: rgba(18,183,106,0.05); --dc-grain: .05;
+  --dc-bg: #F3EEDF; --dc-bar: rgba(243,238,223,0.82); --dc-ink: #0D0D0C; --dc-surface: #FFFCF3;
+  --dc-line: #E2DBC7; --dc-line2: #EAE4D2; --dc-line3: #F0EBDC;
+  --dc-text2: #504C43; --dc-text3: #7D786B; --dc-text4: #A8A293;
+  --dc-line-strong: #D6CEB7; --dc-underline: #C9C0A7; --dc-hover: #EDE7D6; --dc-ink-hover: #2A2925;
+  --dc-text-body: #2F2C26;
+  --dc-red: #D2361A; --dc-red-dot: #E8421F; --dc-red-hl: #FFE0D6;
+  --dc-amber-hl: #FFEACC; --dc-amber: #A35A00;
+  --dc-green: #127A43; --dc-green-dot: #1FA35A; --dc-green-hl: #D8F3E2;
+  --dc-accent: #8A6D00; --dc-accent-soft: rgba(242,213,78,0.35);
+  --dc-bubble: #E8E1CC; --dc-mine: #0D0D0C;
+  --dc-shadow: 0 1px 2px rgba(13,13,12,0.05), 0 12px 32px -12px rgba(13,13,12,0.10);
+  --dc-shadow-lg: 0 1px 2px rgba(13,13,12,0.05), 0 24px 60px -20px rgba(13,13,12,0.20);
+  --dc-dot: rgba(13,13,12,0.08); --dc-glow: rgba(242,213,78,0.30); --dc-glow2: rgba(210,54,26,0.04); --dc-grain: .06;
   color-scheme: light;
 }
 /* The app's older tokens, pointed at the design palette. */
@@ -978,12 +981,12 @@
 
 html, body { background: var(--dc-bg); }
 body {
-  color: var(--dc-ink); font-family: var(--font-onest), system-ui, sans-serif; line-height: normal;
+  color: var(--dc-ink); font-family: var(--font-geist), system-ui, sans-serif; line-height: normal;
   -webkit-font-smoothing: antialiased; transition: background .25s;
 }
 h1, h2, h3 { font-family: inherit; color: inherit; line-height: normal; }
 :focus-visible { outline: 2px solid var(--dc-accent); outline-offset: 2px; }
-.dc-mono { font-family: var(--font-jbmono), ui-monospace, monospace; }
+.dc-mono { font-family: var(--font-geist-mono), ui-monospace, monospace; }
 .dc-link { color: var(--dc-ink); text-decoration: none; }
 .dc-link:hover { color: var(--dc-text2); }
 textarea:focus, input:focus { outline: none; }
@@ -992,7 +995,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 /* ---- fx.js: dot grid, grain, drifting glow, scroll progress, reveal, hover lift ---- */
 body::before {
   content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background-image: radial-gradient(var(--dc-dot) 1px, transparent 1.2px); background-size: 22px 22px;
+  background-image: linear-gradient(var(--dc-dot) 1px, transparent 1px), linear-gradient(90deg, var(--dc-dot) 1px, transparent 1px);
+  background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
   mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
 }
@@ -1024,7 +1028,8 @@ button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.
    it's unsupported and nothing depends on JavaScript to un-hide it. */
 @keyframes flRise { from { opacity: 0; transform: translateY(22px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 @supports (animation-timeline: view()) {
-  main h1, main h2, main p, main [data-fx], footer {
+  /* The landing page (.fl-landing) runs its own GSAP choreography. */
+  main:not(.fl-landing) :is(h1, h2, p, [data-fx]), footer:not(.fl-landing-footer) {
     animation: flRise linear both;
     animation-timeline: view();
     animation-range: entry 0% entry 35%;
@@ -1036,15 +1041,56 @@ button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.
   button:hover, a:hover, .dc-lift:hover { transform: none !important; }
 }
 
-/* ---- Top bar (Nav.dc.html) ---- */
-.dc-topnav {
+/* ---- Top bar ("Butter") ---- */
+.bt-topnav {
   position: sticky; top: 0; z-index: 30; background: var(--dc-bar);
-  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--dc-line);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid var(--dc-line);
 }
-.dc-topnav a { text-decoration: none; }
-.dc-topnav .dc-navlink:hover { color: var(--dc-ink) !important; }
-@media (max-width: 63.999rem) { .dc-topnav { display: none; } }
-@media (max-width: 79.999rem) { .dc-topnav .dc-tools { display: none !important; } }
+.bt-topnav a { text-decoration: none; }
+.bt-topnav-inner { max-width: 1360px; margin: 0 auto; padding: 0 40px; height: 72px; display: flex; align-items: center; gap: 28px; }
+.bt-brand { display: flex; align-items: center; gap: 10px; color: var(--dc-ink); font-weight: 800; font-size: 18px; letter-spacing: -0.04em; flex-shrink: 0; }
+.bt-brand-mark { width: 30px; height: 30px; color: var(--dc-butter); }
+:root[data-theme="light"] .bt-brand-mark { color: var(--dc-ink); }
+.bt-nav { display: flex; align-items: center; gap: 6px; flex: 1; }
+.bt-navpill {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px;
+  border: 1.5px solid transparent; background: transparent; color: var(--dc-text2); cursor: pointer;
+  font-family: inherit; font-size: 12.5px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; white-space: nowrap;
+  transition: color .2s, border-color .2s, background-color .2s;
+}
+.bt-navpill:hover { color: var(--dc-ink); border-color: var(--dc-line-strong); transform: none !important; }
+.bt-navpill[aria-current="page"], .bt-navpill[data-on] { background: var(--dc-butter); border-color: var(--dc-butter); color: var(--dc-on-butter); }
+.bt-more { position: relative; }
+.bt-more-menu {
+  position: absolute; top: calc(100% + 10px); left: 0; min-width: 240px; padding: 8px;
+  background: var(--dc-surface); border: 1px solid var(--dc-line); border-radius: 22px; box-shadow: var(--dc-shadow-lg);
+  display: flex; flex-direction: column; animation: btMenu .22s cubic-bezier(.2,.8,.2,1);
+}
+.bt-more-menu a {
+  display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border-radius: 14px;
+  color: var(--dc-ink); font-size: 15px; font-weight: 600;
+}
+.bt-more-menu a:hover, .bt-more-menu a[aria-current="page"] { background: var(--dc-butter); color: var(--dc-on-butter); }
+@keyframes btMenu { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.bt-actions { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.bt-langs { display: flex; gap: 2px; font-family: var(--font-geist-mono), ui-monospace, monospace; }
+.bt-langs button {
+  border: 0; background: transparent; cursor: pointer; padding: 6px 7px; font: inherit; font-size: 11px;
+  text-transform: uppercase; color: var(--dc-text4);
+}
+.bt-langs button[aria-checked="true"] { color: var(--dc-ink); text-decoration: underline; text-underline-offset: 4px; }
+.bt-iconbtn {
+  width: 36px; height: 36px; border-radius: 999px; border: 1.5px solid var(--dc-line-strong); background: transparent;
+  color: var(--dc-ink); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 15px;
+}
+@media (max-width: 63.999rem) { .bt-topnav { display: none; } }
+@media (max-width: 79.999rem) { .bt-langs { display: none; } .bt-topnav-inner { padding: 0 24px; gap: 16px; } }
+
+/* ---- "Butter" type and buttons across the app pages ---- */
+.dc-main h1, .dc-h1 { font-weight: 650 !important; letter-spacing: -0.045em !important; }
+.dc-mono { letter-spacing: 0.02em; }
+.dc-pill-ink { background: var(--dc-butter) !important; color: var(--dc-on-butter) !important; font-weight: 700 !important; }
+.dc-pill-ink:hover { background: #FFE46A !important; box-shadow: 0 12px 30px -12px rgba(242,213,78,.55); }
 
 /* ---- Page frame: every design page is a centred 1280px column. Below the
    desktop breakpoint the design's multi-column grids stack. ---- */

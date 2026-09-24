@@ -39,7 +39,19 @@
         "body": "Exportez une discussion WhatsApp ou Messenger et vérifiez-la du début à la fin.",
         "looks": "Examine : comment l'histoire évolue, quand l'argent ou les codes apparaissent"
       }
-    ]
+    ],
+    "moreTitle": "Autres outils",
+    "extraLinks": [
+      {
+        "href": "/sandbox",
+        "title": "S’entraîner sans risque"
+      },
+      {
+        "href": "/trends",
+        "title": "Tendances des arnaques"
+      }
+    ],
+    "engineNote": "L’IA lit la langue. Un moteur de règles décide du verdict."
   },
   "example": "Ou kont MCB pou bloke zordi. Konfirm ou OTP lor mcb-secure.top/verify",
   "work": {
@@ -86,7 +98,7 @@
     "checkLink": "Vérifier le lien",
     "clear": "Effacer",
     "cancel": "Annuler",
-    "privacy": "Vérifié en toute confidentialité. Votre message n'est jamais conservé sur nos serveurs.",
+    "privacy": "Le texte du message n’est jamais conservé. Les arnaques détectées sont comptées anonymement pour les Tendances, sauf si vous le désactivez dans les Réglages.",
     "docInstead": "Vérifier un document à la place",
     "idleTitle": "Votre verdict apparaîtra ici.",
     "idleBody": "Vous verrez un verdict et les mots exacts qui y ont mené.",
@@ -171,7 +183,9 @@
       "doc_verify_with_issuer": "Ne vous fiez pas à ce document. Demandez à l'organisme émetteur de le confirmer, via des coordonnées que vous trouvez vous-même.",
       "doc_dont_enable_content": "N'activez pas la modification, les macros ou le contenu de ce fichier.",
       "no_warning_signs": "Aucun signal d'alerte trouvé. N'agissez que sur des demandes que vous attendiez."
-    }
+    },
+    "campaign": "Fait partie d’une campagne vue dans {n} vérifications précédentes.",
+    "campaignLink": "Voir le réseau"
   },
   "full": {
     "back": "← Retour à la vérification",

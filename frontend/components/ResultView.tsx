@@ -39,10 +39,6 @@ export default function ResultView() {
     const loaded = loadResult();
     setResult(loaded);
     setSimple(loadSimpleMode());
-    // Demo/debug aid: which AI (if any) actually served this analysis —
-    // see docs/API-CONTRACT.md's `analysis.semantic` and the "Analyzed by"
-    // line in the "What was sent" panel below for the in-app equivalent.
-    if (loaded?.response.analysis) console.log("[fraudlens] analyzed by:", loaded.response.analysis.semantic);
   }, []);
 
   function toggleSimple() {

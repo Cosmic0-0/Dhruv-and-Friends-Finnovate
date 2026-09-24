@@ -1,5 +1,5 @@
 {
-  "eyebrow": "ESCALATION MATRIX",
+  "eyebrow": "WHO TO CALL",
   "title": "Report a scam",
   "lede": "Who to contact depends on what has happened. Pick the one that matches, and follow the steps in order.",
   "danger": "In danger right now? Call 999",
@@ -99,7 +99,7 @@
       ]
     }
   },
-  "matrixTitle": "The full matrix",
+  "matrixTitle": "Everyone you can call",
   "matrixSub": "Who handles what, by situation.",
   "contactFirst": "Contact first",
   "alsoReport": "Also report",

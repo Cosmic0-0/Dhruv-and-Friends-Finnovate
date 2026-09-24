@@ -2,72 +2,138 @@
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
   "header": {
     "home": "Lakaz FraudLens",
-    "how": "Kouma li marse",
-    "tools": "Zouti",
-    "learn": "Aprann",
-    "radar": "Radar",
-    "createdBy": "Kreye par",
-    "theme": "Sanz ant kler ek fonse",
-    "getExtension": "Gagn extension la",
-    "check": "Verifie enn mesaz",
-    "nav": "Seksion"
+    "nav": "Seksion",
+    "webapp": "App web",
+    "extension": "Extension",
+    "outlook": "Outlook",
+    "trends": "Tandans eskrokri",
+    "language": "Lang",
+    "cta": "Ouver app la"
   },
   "hero": {
-    "badge": "Fer pou Moris · English, Français, Kreol",
-    "title": "Trap eskrokri la avan ou azir.",
-    "lede": "Kol enn mesaz, enn lien ouswa enn dokiman. FraudLens dir ou si li vre ouswa enn eskrokri, ek li montre ou exakteman kifer.",
-    "primary": "Verifie enn mesaz",
-    "secondary": "Gagn extension navigater la"
+    "kicker": "Deteksion eskrokri pou Moris · EN · FR · Kreol",
+    "titleLines": [
+      "Verifie li",
+      "avan ou pey."
+    ],
+    "lede": "FraudLens lir bann mesaz, lien, email ek dokiman ki sispe, ek li montre bann prev deryer sak verdik.",
+    "placeholder": "Kol enn mesaz ouswa enn lien ki sispe…",
+    "inputLabel": "Mesaz ouswa lien pou verifie",
+    "check": "Verifie",
+    "sample": "Seye enn vre eskrokri MCB",
+    "privacy": "Nou pa gard tex mesaz la.",
+    "scroll": "Desann",
+    "facts": [
+      "Verdik par reg",
+      "Prev ki sit mesaz la",
+      "Marse mem san AI"
+    ]
   },
-  "demo": {
+  "scan": {
     "label": "Egzanp enn verifikasion",
-    "receive": "Ou resevwar",
-    "shows": "FraudLens montre ou",
+    "eyebrow": "01 / Egzanp verifikasion",
+    "title": "Sak avertisman montre bann mo ki finn koz li.",
+    "sender": "MCB-INFO",
     "channel": "SMS · 08:14",
-    "verdict": "Eskrokri",
-    "confidence": "Konfians for",
-    "reasons": [
+    "calls": [
+      [
+        "pou bloke zordi",
+        "Irzans",
+        "Li menas pou bloke kont la zordi."
+      ],
+      [
+        "Konfirm ou OTP",
+        "Dimann kod",
+        "Li dimann ou kod enn sel fwa. MCB zamen pa fer sa."
+      ],
       [
         "mcb-secure.top",
-        " pa MCB, vre sit la se ",
-        "mcb.mu"
-      ],
-      [
-        "Li dimann ou kod enn sel fwa, MCB zamen pa fer sa"
-      ],
-      [
-        "Li menas pou bloke kont la zordi"
+        "Fos lien",
+        "Sa pa MCB. Vre sit la se mcb.mu."
       ]
     ],
-    "action": "Pa reponn. Apel MCB lor nimero ki lor ou kart."
+    "verdictLabel": "Verdik",
+    "verdict": "Eskrokri",
+    "confidence": "Konfians for · 3 sinyal",
+    "action": "Pa reponn. Apel MCB lor nimero ki lor ou kart.",
+    "example": "Egzanp"
   },
-  "how": {
-    "title": "Bann prev ou kapav trouve, pa zis enn etiket.",
-    "cards": [
+  "engine": {
+    "eyebrow": "02 / Kouma li deside",
+    "title": "AI la lir langaz la. Moter reg la deside.",
+    "steps": [
       {
         "n": "01",
-        "title": "Li lir kouma Moris ekrir",
-        "body": "Angle, Franse ek Kreol Morisien, mem kan tou le trwa dan mem mesaz."
+        "title": "Lir",
+        "body": "Enn model langaz lir Angle, Franse ek Kreol ek li make seki mesaz la pe fer: irzans, dimann kod, peyman. Sak konstat bizin sit mesaz la."
       },
       {
         "n": "02",
-        "title": "Li konn bann vre lexpediter",
-        "body": "Labank lokal, Mauritius Post, MRA ek operater mobil: zot vre ladres ek seki zot zamen dimande."
+        "title": "Verifie",
+        "body": "Bann verifikasion fix konpar lien, expediter ek detay peyman ar vre ladres bann bank, operater ek ladministrasion Moris."
       },
       {
         "n": "03",
-        "title": "Li verifie dokiman osi",
-        "body": "Li trouv siniatir ki finn kole ek sanzman ki finn fer apre ki enn relve, enn let ouswa enn fakir finn sinie."
+        "title": "Deside",
+        "body": "Enn moter reg pez bann prev ek fix verdik la ek konsey la. Model la zamen pa fer sa."
       }
-    ]
+    ],
+    "note": "Si AI la pa disponib, etap 02 ek 03 kontinie marse ek ou gagn enn verdik kanmem."
   },
-  "extension": {
-    "title": "Verifie san kit paz la.",
-    "body": "Extension FraudLens verifie bann lien dan Gmail, WhatsApp Web ek Facebook avan ou klik lor zot.",
-    "chrome": "Azout dan Chrome",
-    "other": "Firefox ek Edge",
-    "badLink": "Sa lien la pa MCB",
-    "official": "Sit ofisiel"
+  "products": {
+    "eyebrow": "03 / Kot pou servi li",
+    "title": "Enn moter. Trwa fason.",
+    "marquee": [
+      "App web",
+      "Extension navigater",
+      "Add-in Outlook"
+    ],
+    "webapp": {
+      "tag": "App web",
+      "title": "Tou verifikasion dan enn sel plas.",
+      "body": "Mesaz, lien, screenshot, dokiman, benefisier ek konversasion antie, an Angle, Franse ek Kreol.",
+      "tools": [
+        "Mesaz",
+        "Lien",
+        "Screenshot",
+        "Dokiman",
+        "Benefisier",
+        "Konversasion"
+      ],
+      "cta": "Ouver app la"
+    },
+    "extension": {
+      "tag": "Extension navigater",
+      "title": "Averti ou avan ou klik.",
+      "body": "Link Guard verifie lien dan Gmail, WhatsApp Web ek Facebook avan ou klik lor zot.",
+      "cta": "Azout dan Chrome",
+      "cta2": "Firefox ek Edge",
+      "badLink": "Sa lien la pa MCB",
+      "official": "Sit ofisiel"
+    },
+    "outlook": {
+      "tag": "Add-in Outlook",
+      "title": "Enn klik lor email ki ou finn ouver.",
+      "body": "Li lir email ki ouver, so bann lien ek so rezilta SPF, DKIM ek DMARC, apre li montre mem verdik ki app web la. Li zamen ouver atasman ni avoy email.",
+      "cta": "Instal li",
+      "mock": {
+        "from": "MCB Sekirite",
+        "subject": "Irzan: verifie ou kont",
+        "button": "Analiz email",
+        "verdict": "Eskrokri",
+        "rows": [
+          "Reply-To al lor enn lot domenn",
+          "DMARC: pa pase",
+          "Lien la pa mcb.mu"
+        ]
+      }
+    }
+  },
+  "outro": {
+    "title": "Enn mesaz ki pa paret normal?",
+    "body": "Verifie li avan ou reponn, klik ouswa pey.",
+    "cta": "Ouver app la",
+    "cta2": "Rapor enn eskrokri"
   },
   "footer": {
     "built": "FraudLens · Fer dan Moris par ",
@@ -119,7 +185,7 @@
       },
       {
         "title": "Seki server la gard",
-        "body": "Tex ki avoye pou lanaliz servi pou fer ou rezilta ek li pa ekrir dan enn baz done. Rapor kominote se lexsepsion: zot gard kouma enn anprint enn sel sans tex ki finn maske, zamen tex la limem, ek zot efase apre 90 zour."
+        "body": "Tex ki avoye pou analiz servi pou fer ou rezilta ek nou pa ekrir li dan enn baz done. Kan enn mesaz sispe, FraudLens konte so tip eskrokri, linstitision ki li pretann ete, lexpediter ki li montre ek bann fos lien, pou Tandans eskrokri kapav montre seki pe sirkile. Ou kapav tegn sa dan Paramet. Bann rapor kominote gard kouma enn lanprint enn sel direksion tex ki finn kase, zamen tex la limem, ek zot efase apre 90 zour."
       },
       {
         "title": "Seki res lor ou aparey",

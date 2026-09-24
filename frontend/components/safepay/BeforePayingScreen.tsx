@@ -46,7 +46,7 @@ function Field({
   ...props
 }: { label: string; mono?: boolean; prefix?: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   const style: CSSProperties = mono
-    ? { ...inputBase, fontFamily: "var(--font-jbmono), ui-monospace, monospace" }
+    ? { ...inputBase, fontFamily: "var(--font-geist-mono), ui-monospace, monospace" }
     : inputBase;
   return (
     <label style={{ display: "flex", flexDirection: "column", gap: 8 }}>

@@ -26,7 +26,7 @@
   },
   "share": {
     "label": "Partager des exemples anonymes",
-    "desc": "Aide le Radar à prévenir les autres. Nous gardons l'empreinte d'une arnaque, l'expéditeur qu'elle prétend être et ses liens, jamais le message lui-même."
+    "desc": "Aide les Tendances à prévenir les autres. Nous gardons l'empreinte d'une arnaque, l'expéditeur qu'elle prétend être et ses liens, jamais le message lui-même."
   },
   "extension": {
     "label": "Extension de navigateur",
@@ -35,7 +35,7 @@
   },
   "alerts": {
     "label": "Alertes arnaques",
-    "desc": "Une notification quand une campagne d'arnaque commence à circuler sur le Radar. Vérifié quand FraudLens est ouvert, et en arrière-plan si votre navigateur le permet."
+    "desc": "Une notification quand une campagne d'arnaque commence à circuler dans les Tendances. Vérifié quand FraudLens est ouvert, et en arrière-plan si votre navigateur le permet."
   },
   "practice": {
     "label": "Rappel d'entraînement quotidien",
@@ -59,7 +59,7 @@
   },
   "notifications": {
     "alertTitle": "Nouvelle arnaque en circulation : {name}",
-    "alertBody": "Vue dans {count} vérifications sur FraudLens. Ouvrez le Radar pour voir à quoi elle ressemble.",
+    "alertBody": "Vue dans {count} vérifications sur FraudLens. Ouvrez les Tendances pour voir à quoi elle ressemble.",
     "practiceTitle": "Cinq minutes d'entraînement ?",
     "practiceBody": "Les messages du jour vous attendent. Gardez votre série."
   }

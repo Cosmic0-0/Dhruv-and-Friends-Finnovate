@@ -103,12 +103,12 @@ export default function RadarScreen() {
             </div>
 
             <div style={{ borderRadius: 28, background: "var(--dc-red-hl)", padding: 24, display: "flex", flexDirection: "column", gap: 8 }} data-fx>
-              <span style={{ fontSize: 14, color: "var(--dc-red)" }}>{t.rising}</span>
+              <span style={{ fontSize: 14, color: "var(--dc-red)" }}>{data.rising && data.rising.previous === 0 ? t.newlySeen : t.rising}</span>
               {data.rising ? (
                 <>
                   <span style={{ fontSize: 32, fontWeight: 600, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{label(t.types, data.rising.scamType)}</span>
                   <span style={{ fontSize: 15, color: "var(--dc-text2)" }}>
-                    {data.rising.previous > 0 ? fill(t.risingUp, { n: data.rising.current, prev: data.rising.previous }) : t.risingNew}
+                    {data.rising.previous > 0 ? fill(t.risingUp, { n: data.rising.current, prev: data.rising.previous }) : fill(t.risingNew, { n: data.rising.current })}
                     {data.rising.mainChannel && ` · ${fill(t.mostlyBy, { channel: label(t.channels, data.rising.mainChannel) })}`}
                   </span>
                 </>

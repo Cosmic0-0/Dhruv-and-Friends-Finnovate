@@ -7,6 +7,7 @@ import { useLanguage } from "../LanguageProvider";
 import { checkCopy } from "./content";
 import Hub from "./Hub";
 import Workspace from "./Workspace";
+import { takePendingCheck } from "@/lib/handoff";
 import { MAX_MESSAGE_LENGTH } from "@/lib/types";
 
 type View = "hub" | "workspace";
@@ -34,7 +35,13 @@ export default function CheckScreen() {
   const [autoSubmit, setAutoSubmit] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    if (searchParams.get("scan") || searchParams.get("new")) window.history.replaceState(null, "", "/app");
+    if (searchParams.get("scan") || searchParams.get("new")) {
+      window.history.replaceState(null, "", "/app");
+      return;
+    }
+    // A message typed on the landing hero (lib/handoff.ts): check it straight away.
+    const pending = takePendingCheck();
+    if (pending) start(pending.slice(0, MAX_MESSAGE_LENGTH), true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

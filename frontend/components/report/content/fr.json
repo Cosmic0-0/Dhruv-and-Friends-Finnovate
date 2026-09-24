@@ -1,5 +1,5 @@
 {
-  "eyebrow": "MATRICE D’ESCALADE",
+  "eyebrow": "QUI APPELER",
   "title": "Signaler une arnaque",
   "lede": "Qui contacter dépend de ce qui s’est passé. Choisissez la situation qui correspond et suivez les étapes dans l’ordre.",
   "danger": "En danger immédiat ? Appelez le 999",
@@ -99,7 +99,7 @@
       ]
     }
   },
-  "matrixTitle": "La matrice complète",
+  "matrixTitle": "Tous les contacts",
   "matrixSub": "Qui s’occupe de quoi, selon la situation.",
   "contactFirst": "Contacter d’abord",
   "alsoReport": "Signaler aussi",

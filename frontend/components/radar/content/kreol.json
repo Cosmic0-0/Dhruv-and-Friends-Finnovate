@@ -1,6 +1,6 @@
 {
   "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
-  "title": "Radar",
+  "title": "Tandans eskrokri",
   "lede": "Seki bann eskro pe avoye dan Moris, dapre bann mesaz ki dimoun finn verifie lor FraudLens.",
   "ranges": {
     "7d": "7 zour",
@@ -19,7 +19,7 @@
   "noneCopied": "Pena okenn linstitision ankor",
   "rising": "Pe monte vit",
   "risingUp": "{n} verifikasion, kont {prev} dan peryod avan",
-  "risingNew": "Nouvo dan sa peryod la",
+  "risingNew": "{n} verifikasion, okenn dan period avan",
   "mostlyBy": "sirtou par {channel}",
   "noneRising": "Nanye pa pe monte plis ki avan",
   "topTypes": "Bann eskrokri ki plis trouve",
@@ -29,9 +29,9 @@
   "times": "{n} fwa",
   "once": "enn fwa",
   "empty": "Pa ase verifikasion ankor",
-  "emptyBody": "Radar ranpli kan dimoun verifie mesaz. Nanye pa inventer.",
+  "emptyBody": "Tandans eskrokri ranpli kan dimoun verifie mesaz. Nanye pa inventer.",
   "loading": "Pe sarze…",
-  "error": "Pa finn kapav sarz Radar aster la.",
+  "error": "Pa finn kapav sarz Tandans eskrokri aster la.",
   "retry": "Esey ankor",
   "coverage": "Konte zis bann mesaz ki finn verifie lor FraudLens ek ki finn sinyale kouma eskrokri ouswa sispe. Se pa tou eskrokri dan Moris.",
   "types": {
@@ -50,5 +50,6 @@
     "email": "email",
     "facebook": "Facebook",
     "call": "apel"
-  }
+  },
+  "newlySeen": "Nouvo"
 }

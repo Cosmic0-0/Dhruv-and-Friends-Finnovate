@@ -403,7 +403,7 @@ function Quiz({
           <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
             <span style={{ fontSize: 15, fontWeight: 500 }}>{senderLabel(item, t.senderGenuine)}</span>
             {item.languageMix !== lang && item.languageMix !== "en" && (
-              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{item.languageMix}</span>
+              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{languageLabel(item.languageMix)}</span>
             )}
           </div>
         </div>
@@ -546,7 +546,7 @@ function PatternsSection({ trends, items, copy, t }: { trends: TrendCard[]; item
                     className="dc-mono"
                     style={{ fontFamily: MONO, fontSize: 11, color: "var(--dc-text3)", background: "var(--dc-hover)", padding: "4px 8px", borderRadius: 999, flexShrink: 0 }}
                   >
-                    {sourceItem.languageMix.toUpperCase()}
+                    {languageLabel(sourceItem.languageMix)}
                   </span>
                 )}
               </div>
@@ -569,4 +569,15 @@ function PatternsSection({ trends, items, copy, t }: { trends: TrendCard[]; item
       </div>
     </section>
   );
+}
+
+const LANGUAGE_NAMES: Record<string, string> = { en: "English", fr: "Français", mfe: "Kreol" };
+
+/** "mfe+en" -> "Kreol + English": the data's language codes, in words a reader knows. */
+function languageLabel(mix: string): string {
+  return mix
+    .split(/[+_,\s]+/)
+    .filter(Boolean)
+    .map((code) => LANGUAGE_NAMES[code.toLowerCase()] ?? code)
+    .join(" + ");
 }

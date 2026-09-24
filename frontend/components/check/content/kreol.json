@@ -40,7 +40,19 @@
         "body": "Export enn diskision WhatsApp ouswa Messenger ek verifie li depi koumansman ziska lafin.",
         "looks": "Get: kouma zistwar la sanze, kan kas ouswa kod paret"
       }
-    ]
+    ],
+    "moreTitle": "Lezot zouti",
+    "extraLinks": [
+      {
+        "href": "/sandbox",
+        "title": "Pratik san risk"
+      },
+      {
+        "href": "/trends",
+        "title": "Tandans eskrokri"
+      }
+    ],
+    "engineNote": "AI la lir langaz la. Enn moter reg deside verdik la."
   },
   "example": "Ou kont MCB pou bloke zordi. Konfirm ou OTP lor mcb-secure.top/verify",
   "work": {
@@ -87,7 +99,7 @@
     "checkLink": "Verifie lien",
     "clear": "Efase",
     "cancel": "Anile",
-    "privacy": "Verifie an prive. Nou pa zame gard ou mesaz lor nou bann server.",
+    "privacy": "Nou pa gard tex mesaz la. Bann eskrokri ki detekte konte san non pou Tandans eskrokri, sof si ou tegn sa dan Paramet.",
     "docInstead": "Verifie enn dokiman plito",
     "idleTitle": "Ou verdik pou paret isi.",
     "idleBody": "Ou pou trouv enn verdik ek bann mo exak ki finn amenn li.",
@@ -172,7 +184,9 @@
       "doc_verify_with_issuer": "Pa fer konfians sa dokiman la. Dimann organizasion ki swadizan finn emet li pou konfirm li, avek kontak ki ou trouv ou mem.",
       "doc_dont_enable_content": "Pa aktiv modifikasion, makro ouswa kontni dan sa fisie la.",
       "no_warning_signs": "Pa finn trouv okenn siny danze. Azir zis lor bann demann ki ou ti pe atann."
-    }
+    },
+    "campaign": "Fer parti enn kanpagn ki finn trouve dan {n} verifikasion avan.",
+    "campaignLink": "Get rezo la"
   },
   "full": {
     "back": "← Retourn lor verifikasion",

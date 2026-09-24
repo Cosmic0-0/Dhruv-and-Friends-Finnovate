@@ -49,6 +49,8 @@ export default function ResultArticle({
   const { prose, steps } = whatToDoSteps(response, oldCopy);
   const channel = response.analysis?.channel;
   const aiOk = response.analysis?.semantic.status === "ok";
+  // Only a campaign seen before this check; a brand-new fingerprint is not news.
+  const campaign = response.scamDna?.matchStrength === "matched" && response.scamDna.relatedReports > 0 ? response.scamDna : null;
 
   return (
     <article data-nofx style={{ background: "var(--dc-surface)", border: "1px solid var(--dc-line)", borderRadius: 28, boxShadow: "var(--dc-shadow)", overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -61,11 +63,24 @@ export default function ResultArticle({
           <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{metaLine}</span>
         </div>
 
-        <h2 style={{ margin: 0, fontSize: 96, lineHeight: 0.9, fontWeight: 600, letterSpacing: "-0.045em", color: TONE[tone].fg }}>
+        <h2 style={{ margin: 0, fontSize: 84, lineHeight: 0.9, fontWeight: 700, letterSpacing: "-0.05em", color: TONE[tone].fg }}>
           {t.result.words[response.verdict]}
         </h2>
         <p style={{ margin: 0, fontSize: 20, lineHeight: 1.5, color: "var(--dc-text2)" }}>{explanation}</p>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--dc-text2)" }}>
+          <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: "var(--dc-butter)", flexShrink: 0 }} />
+          {t.hub.engineNote}
+        </span>
         {channel && <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{fill(t.result.receivedBy, { channel: t.work.channels[channel] })}</span>}
+        {campaign && (
+          <Link
+            href={`/network/${encodeURIComponent(campaign.fingerprintId)}`}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", padding: "16px 20px", borderRadius: 20, background: "var(--dc-butter)", color: "var(--dc-on-butter)", textDecoration: "none" }}
+          >
+            <span style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.35 }}>{fill(t.result.campaign, { n: campaign.relatedReports })}</span>
+            <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap" }}>{t.result.campaignLink} →</span>
+          </Link>
+        )}
       </div>
 
       <section style={{ margin: "0 40px", borderTop: "1px solid var(--dc-line2)", padding: "28px 0", display: "flex", flexDirection: "column", gap: 10 }}>

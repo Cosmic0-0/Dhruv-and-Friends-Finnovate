@@ -3,7 +3,7 @@
   "nav": {
     "check": "Verifie",
     "learn": "Aprann",
-    "radar": "Radar",
+    "radar": "Tandans eskrokri",
     "pay": "Avan pey",
     "doc": "Dokiman",
     "batch": "Verifie an gro",
@@ -16,7 +16,7 @@
     "more": "Plis",
     "about": "Lor FraudLens",
     "createdBy": "Kreye par",
-    "sandbox": "Similasion"
+    "sandbox": "Pratik san risk"
   },
   "common": {
     "whatToDo": "Ki pou fer aster la",

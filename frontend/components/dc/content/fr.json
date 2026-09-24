@@ -2,7 +2,7 @@
   "nav": {
     "check": "Vérifier",
     "learn": "Apprendre",
-    "radar": "Radar",
+    "radar": "Tendances",
     "pay": "Avant de payer",
     "doc": "Document",
     "batch": "Analyse groupée",
@@ -15,7 +15,7 @@
     "more": "Plus",
     "about": "À propos de FraudLens",
     "createdBy": "Créé par",
-    "sandbox": "Simulation"
+    "sandbox": "S’entraîner"
   },
   "common": {
     "whatToDo": "Que faire maintenant",

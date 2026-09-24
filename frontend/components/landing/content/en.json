@@ -1,72 +1,138 @@
 {
   "header": {
     "home": "FraudLens home",
-    "how": "How it works",
-    "tools": "Tools",
-    "learn": "Learn",
-    "radar": "Radar",
-    "createdBy": "Created by",
-    "theme": "Toggle light and dark mode",
-    "getExtension": "Get the extension",
-    "check": "Check a message",
-    "nav": "Sections"
+    "nav": "Sections",
+    "webapp": "Web app",
+    "extension": "Extension",
+    "outlook": "Outlook",
+    "trends": "Scam trends",
+    "language": "Language",
+    "cta": "Open web app"
   },
   "hero": {
-    "badge": "Made for Mauritius · English, Français, Kreol",
-    "title": "Catch the scam before you act on it.",
-    "lede": "Paste a message, link or document. FraudLens tells you if it's genuine or a scam, and shows you exactly why.",
-    "primary": "Check a message",
-    "secondary": "Get the browser extension"
+    "kicker": "Scam detection for Mauritius · EN · FR · Kreol",
+    "titleLines": [
+      "Check it",
+      "before you pay."
+    ],
+    "lede": "FraudLens reads suspicious messages, links, emails and documents, and shows the evidence behind every verdict.",
+    "placeholder": "Paste a suspicious message or link…",
+    "inputLabel": "Message or link to check",
+    "check": "Check",
+    "sample": "Try a real MCB scam",
+    "privacy": "Message text is never stored.",
+    "scroll": "Scroll",
+    "facts": [
+      "Rules-based verdict",
+      "Evidence quoted from the message",
+      "Works when the AI is offline"
+    ]
   },
-  "demo": {
+  "scan": {
     "label": "Example of a check",
-    "receive": "You receive",
-    "shows": "FraudLens shows you",
+    "eyebrow": "01 / Example check",
+    "title": "Every warning points at the words that caused it.",
+    "sender": "MCB-INFO",
     "channel": "SMS · 08:14",
-    "verdict": "Scam",
-    "confidence": "High confidence",
-    "reasons": [
+    "calls": [
+      [
+        "pou bloke zordi",
+        "Urgency",
+        "Threatens to block the account today."
+      ],
+      [
+        "Konfirm ou OTP",
+        "Code request",
+        "Asks for your one-time code. MCB never does."
+      ],
       [
         "mcb-secure.top",
-        " is not MCB, the real site is ",
-        "mcb.mu"
-      ],
-      [
-        "Asks for your one-time code, MCB never does"
-      ],
-      [
-        "Threatens to block the account today"
+        "Lookalike link",
+        "Not MCB. The real site is mcb.mu."
       ]
     ],
-    "action": "Don't reply. Call MCB on the number on your card."
+    "verdictLabel": "Verdict",
+    "verdict": "Scam",
+    "confidence": "High confidence · 3 signals",
+    "action": "Don't reply. Call MCB on the number on your card.",
+    "example": "Example"
   },
-  "how": {
-    "title": "Evidence you can see, not just a label.",
-    "cards": [
+  "engine": {
+    "eyebrow": "02 / How it decides",
+    "title": "The AI reads the language. The rules engine decides.",
+    "steps": [
       {
         "n": "01",
-        "title": "Reads the way Mauritius writes",
-        "body": "English, French and Kreol Morisien, even when all three are in the same message."
+        "title": "Read",
+        "body": "A language model reads English, French and Kreol and marks what the message is doing: urgency, a code request, a payment. Every claim must quote the message."
       },
       {
         "n": "02",
-        "title": "Knows the real senders",
-        "body": "Local banks, Mauritius Post, MRA and mobile operators, their real addresses and what they never ask for."
+        "title": "Verify",
+        "body": "Deterministic checks compare links, senders and payment details with the real addresses of Mauritian banks, telecoms and agencies."
       },
       {
         "n": "03",
-        "title": "Checks documents too",
-        "body": "Finds pasted-on signatures and edits made after a statement, letter or invoice was signed."
+        "title": "Decide",
+        "body": "A rules engine weighs the evidence and sets the verdict and the advice. The model never does."
       }
-    ]
+    ],
+    "note": "If the AI is offline, steps 02 and 03 still run and you still get a verdict."
   },
-  "extension": {
-    "title": "Check without leaving the page.",
-    "body": "The FraudLens extension checks links in Gmail, WhatsApp Web and Facebook before you click them.",
-    "chrome": "Add to Chrome",
-    "other": "Firefox & Edge",
-    "badLink": "This link is not MCB",
-    "official": "Official site"
+  "products": {
+    "eyebrow": "03 / Where to use it",
+    "title": "One engine. Three ways in.",
+    "marquee": [
+      "Web app",
+      "Browser extension",
+      "Outlook add-in"
+    ],
+    "webapp": {
+      "tag": "Web app",
+      "title": "Every check in one place.",
+      "body": "Messages, links, screenshots, documents, payees and whole conversations, in English, French and Kreol.",
+      "tools": [
+        "Messages",
+        "Links",
+        "Screenshots",
+        "Documents",
+        "Payees",
+        "Conversations"
+      ],
+      "cta": "Open the web app"
+    },
+    "extension": {
+      "tag": "Browser extension",
+      "title": "Warns you before you click.",
+      "body": "Link Guard checks links in Gmail, WhatsApp Web and Facebook before you click them.",
+      "cta": "Add to Chrome",
+      "cta2": "Firefox & Edge",
+      "badLink": "This link is not MCB",
+      "official": "Official site"
+    },
+    "outlook": {
+      "tag": "Outlook add-in",
+      "title": "One click on the email you have open.",
+      "body": "Reads the open email, its links and its SPF, DKIM and DMARC results, then shows the same verdict as the web app. It never opens attachments or sends mail.",
+      "cta": "Set it up",
+      "mock": {
+        "from": "MCB Security",
+        "subject": "Urgent: verify your account",
+        "button": "Analyse email",
+        "verdict": "Scam",
+        "rows": [
+          "Reply-To goes to a different domain",
+          "DMARC: fail",
+          "Link is not mcb.mu"
+        ]
+      }
+    }
+  },
+  "outro": {
+    "title": "Got a message that feels off?",
+    "body": "Check it before you reply, click or pay.",
+    "cta": "Open the web app",
+    "cta2": "Report a scam"
   },
   "footer": {
     "built": "FraudLens · Built in Mauritius by ",
@@ -118,7 +184,7 @@
       },
       {
         "title": "What the server keeps",
-        "body": "Text sent for analysis is used to produce your result and is not written to a database. Community reports are the exception: they are stored as a one-way fingerprint of the redacted text, never the text itself, and are deleted after 90 days."
+        "body": "Text sent for analysis is used to produce your result and is not written to a database. When a message is flagged, FraudLens counts its scam type, the institution it claims to be, the sender it shows and any fake links, so Scam trends can show what is circulating. You can turn this off in Settings. Community reports are stored as a one-way fingerprint of the redacted text, never the text itself, and are deleted after 90 days."
       },
       {
         "title": "What stays on your device",

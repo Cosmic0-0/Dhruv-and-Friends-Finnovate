@@ -2,7 +2,7 @@
   "nav": {
     "check": "Check",
     "learn": "Learn",
-    "radar": "Radar",
+    "radar": "Scam trends",
     "pay": "Before paying",
     "doc": "Document",
     "batch": "Batch scan",
@@ -15,7 +15,7 @@
     "more": "More",
     "about": "About FraudLens",
     "createdBy": "Created by",
-    "sandbox": "Sandbox"
+    "sandbox": "Practise safely"
   },
   "common": {
     "whatToDo": "What to do now",
