@@ -91,6 +91,11 @@ are weighted against.
       action-first Simple mode, including read-aloud support when available.
 - [x] Crowdsourced threat-feed seed data and loader exist under
       `data/sender-reputation-seed/`; load and verify it on the demo database.
+- [ ] Radar demo counts: `npm run seed:radar` in `backend/` adds synthetic
+      counts (tagged `demo_seed`), which Radar adds to the real ones without
+      marking them. Say so when showing Radar, and run
+      `npm run seed:radar -- --clear` afterwards to remove only the seeded
+      rows.
 - [x] Scalability and privacy trade-offs are documented in `EXPLAINER.md`;
       the presenter still needs to rehearse the short version.
 
