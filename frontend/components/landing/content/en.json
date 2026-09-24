@@ -8,6 +8,7 @@
     "createdBy": "Created by",
     "theme": "Toggle light and dark mode",
     "getExtension": "Get the extension",
+    "getOutlook": "Get the Outlook add-in",
     "check": "Check a message",
     "nav": "Sections"
   },
@@ -101,7 +102,18 @@
     "privacy": "Read the extension's privacy policy",
     "back": "Back to FraudLens",
     "notSupported": "Not supported",
-    "edgeBody": "Same steps as Chrome, on edge://extensions."
+    "edgeBody": "Same steps as Chrome, on edge://extensions.",
+    "outlookTitle": "Outlook add-in",
+    "outlookNote": "Checks the email you have open in Outlook on the web or desktop. Not in the Microsoft store yet, so you add it from a manifest file.",
+    "outlookSteps": [
+      "Download manifest.xml (button below).",
+      "Go to aka.ms/olksideload. This opens Outlook on the web.",
+      "Open My add-ins, then Custom Addins, then Add a custom add-in, then Add from file.",
+      "Pick manifest.xml. FraudLens then appears when you open an email."
+    ],
+    "outlookNoteWork": "School and work Microsoft 365 accounts often block custom add-ins. If Custom Addins is missing, ask your IT admin to allow it.",
+    "outlookGuide": "Open the add-in setup guide",
+    "outlookDownload": "Download the add-in manifest"
   },
   "privacyPage": {
     "eyebrow": "PRIVACY",

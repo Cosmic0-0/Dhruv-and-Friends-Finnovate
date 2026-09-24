@@ -9,6 +9,7 @@
     "createdBy": "Kreye par",
     "theme": "Sanz ant kler ek fonse",
     "getExtension": "Gagn extension la",
+    "getOutlook": "Gagn add-in Outlook la",
     "check": "Verifie enn mesaz",
     "nav": "Seksion"
   },
@@ -102,7 +103,18 @@
     "privacy": "Lir politik konfidansialite extension la",
     "back": "Retourn lor FraudLens",
     "notSupported": "Pa siporte",
-    "edgeBody": "Mem bann etap ki Chrome, lor edge://extensions."
+    "edgeBody": "Mem bann etap ki Chrome, lor edge://extensions.",
+    "outlookTitle": "Add-in Outlook",
+    "outlookNote": "Li verifie imel ki ou finn ouver dan Outlook lor web ouswa lor konpiter. Li pa ankor dan magazin Microsoft, alor ou azout li ar enn fisie manifest.",
+    "outlookSteps": [
+      "Telesarz fisie manifest.xml la (bouton anba).",
+      "Al lor aka.ms/olksideload. Outlook lor web pou ouver.",
+      "Ouver My add-ins, apre Custom Addins, apre Add a custom add-in, apre Add from file.",
+      "Swazir manifest.xml. FraudLens pou apare kan ou ouver enn imel."
+    ],
+    "outlookNoteWork": "Kont Microsoft 365 lekol ouswa travay souvan bloke bann add-in personalize. Si Custom Addins pa la, dimann ou administrater IT pou otorize li.",
+    "outlookGuide": "Ouver gid instalasion add-in la",
+    "outlookDownload": "Telesarz manifest add-in la"
   },
   "privacyPage": {
     "eyebrow": "KONFIDANSIALITE",

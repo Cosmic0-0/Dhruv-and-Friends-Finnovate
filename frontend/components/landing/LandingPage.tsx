@@ -66,6 +66,7 @@ export default function LandingPage() {
             >
               {theme === "dark" ? "☀" : "☾"}
             </button>
+            <Link href="/extension#outlook" className={`dc-pill ${s.hideSm}`} style={pill(42, 18, false, 14)}>{t.header.getOutlook}</Link>
             <a href="#extension" className={`dc-pill ${s.hideSm}`} style={pill(42, 18, false, 14)}>{t.header.getExtension}</a>
             <Link href="/app" className="dc-pill dc-pill-ink" style={pill(42, 20, true, 14)}>{t.header.check}</Link>
           </div>

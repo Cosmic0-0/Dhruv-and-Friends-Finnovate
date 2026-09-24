@@ -120,12 +120,15 @@ export function Pill({
   type = "button",
   style,
   ariaLabel,
+  download,
 }: {
   children: ReactNode;
   variant?: PillVariant;
   height?: number;
   pad?: number;
   href?: string;
+  /** Saves `href` as a file with this name instead of navigating to it. */
+  download?: string;
   onClick?: () => void;
   disabled?: boolean;
   type?: "button" | "submit";
@@ -134,6 +137,13 @@ export function Pill({
 }) {
   const s = { ...pillStyle(variant, height, pad ?? (height >= 56 ? 28 : 22)), ...(disabled ? { opacity: 0.5, cursor: "not-allowed" } : {}), ...style };
   const cls = `dc-pill${variant === "ink" ? " dc-pill-ink" : ""}`;
+  if (href && download) {
+    return (
+      <a href={href} download={download} className={cls} style={s} aria-label={ariaLabel}>
+        {children}
+      </a>
+    );
+  }
   if (href) {
     const external = /^(https?:|tel:|mailto:)/.test(href);
     return external ? (

@@ -12,6 +12,9 @@ import { content } from "./content";
  */
 const ZIP_URL = `${REPO_URL}/archive/refs/heads/main.zip`;
 const SOURCE_URL = `${REPO_URL}/tree/main/extension`;
+/** Copy of outlook-addin/manifest.xml; re-copy it there whenever that file changes. */
+const OUTLOOK_MANIFEST_PATH = "/fraudlens-outlook-manifest.xml";
+const OUTLOOK_GUIDE_URL = `${REPO_URL}/blob/main/outlook-addin/README.md`;
 
 export default function ExtensionScreen() {
   const { lang } = useLanguage();
@@ -70,6 +73,28 @@ export default function ExtensionScreen() {
           </section>
         </div>
       </div>
+
+      <section id="outlook" data-fx className="dc-panel" style={{ ...card(32, true), padding: 36, display: "flex", flexDirection: "column", gap: 28, scrollMarginTop: 92 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <h2 style={{ margin: 0, fontSize: 32, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.1 }}>{t.outlookTitle}</h2>
+          <span style={{ fontSize: 15, color: "var(--dc-text3)" }}>{t.outlookNote}</span>
+        </div>
+        <ol style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column" }}>
+          {t.outlookSteps.map((step, i) => (
+            <li key={i} style={{ display: "grid", gridTemplateColumns: "44px minmax(0,1fr)", gap: 18, alignItems: "center", padding: "18px 0", borderTop: "1px solid var(--dc-line2)" }}>
+              <span className="dc-mono" style={{ width: 44, height: 44, borderRadius: 15, background: "var(--dc-hover)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span style={{ fontSize: 16, lineHeight: 1.5 }}>{step}</span>
+            </li>
+          ))}
+        </ol>
+        <span style={{ fontSize: 15, lineHeight: 1.55, color: "var(--dc-text2)" }}>{t.outlookNoteWork}</span>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Pill href={OUTLOOK_MANIFEST_PATH} download="manifest.xml" height={48}>{t.outlookDownload}</Pill>
+          <Pill href={OUTLOOK_GUIDE_URL} variant="outline" height={48}>{t.outlookGuide}</Pill>
+        </div>
+      </section>
     </DcPage>
   );
 }

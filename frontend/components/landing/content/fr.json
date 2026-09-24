@@ -8,6 +8,7 @@
     "createdBy": "Créé par",
     "theme": "Basculer entre mode clair et sombre",
     "getExtension": "Obtenir l'extension",
+    "getOutlook": "Obtenir le complément Outlook",
     "check": "Vérifier un message",
     "nav": "Sections"
   },
@@ -101,7 +102,18 @@
     "privacy": "Lire la politique de confidentialité de l'extension",
     "back": "Retour à FraudLens",
     "notSupported": "Non pris en charge",
-    "edgeBody": "Mêmes étapes que pour Chrome, sur edge://extensions."
+    "edgeBody": "Mêmes étapes que pour Chrome, sur edge://extensions.",
+    "outlookTitle": "Complément Outlook",
+    "outlookNote": "Analyse l'e-mail ouvert dans Outlook sur le web ou sur ordinateur. Pas encore dans la boutique Microsoft : vous l'ajoutez à partir d'un fichier manifeste.",
+    "outlookSteps": [
+      "Téléchargez le fichier manifest.xml (bouton ci-dessous).",
+      "Allez sur aka.ms/olksideload. Outlook sur le web s'ouvre.",
+      "Ouvrez Mes compléments, puis Compléments personnalisés, puis Ajouter un complément personnalisé, puis Ajouter à partir d'un fichier.",
+      "Choisissez manifest.xml. FraudLens apparaît alors quand vous ouvrez un e-mail."
+    ],
+    "outlookNoteWork": "Les comptes Microsoft 365 scolaires ou professionnels bloquent souvent les compléments personnalisés. Si « Compléments personnalisés » est absent, demandez à votre administrateur informatique de l'autoriser.",
+    "outlookGuide": "Ouvrir le guide d'installation du complément",
+    "outlookDownload": "Télécharger le manifeste du complément"
   },
   "privacyPage": {
     "eyebrow": "CONFIDENTIALITÉ",
