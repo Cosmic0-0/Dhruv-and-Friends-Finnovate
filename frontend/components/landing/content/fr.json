@@ -114,7 +114,7 @@
       "tag": "Complément Outlook",
       "title": "Un clic sur l’e-mail ouvert.",
       "body": "Lit l’e-mail ouvert, ses liens et ses résultats SPF, DKIM et DMARC, puis affiche le même verdict que l’application web. Il n’ouvre jamais les pièces jointes et n’envoie jamais de courrier.",
-      "cta": "L’installer",
+      "cta": "Obtenir le complément Outlook",
       "mock": {
         "from": "MCB Sécurité",
         "subject": "Urgent : vérifiez votre compte",

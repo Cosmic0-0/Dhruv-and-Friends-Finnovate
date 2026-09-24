@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { REPO_URL } from "@/lib/team";
 import { ArrowIcon, Crosshair, Scanner } from "./Art";
 import type { Content } from "./content";
 import s from "./landing.module.css";
@@ -9,8 +8,6 @@ import s from "./landing.module.css";
  * The landing's scroll sections. Server-renderable and animation-free: the
  * motion is layered on by useLandingMotion through the data-* hooks.
  */
-
-const OUTLOOK_SETUP_URL = `${REPO_URL}/tree/main/outlook-addin#readme`;
 
 /** A labelled static example (not a live result): the SMS, its evidence and the verdict. */
 export function ScanScene({ t }: { t: Content["scan"] }) {
@@ -159,9 +156,9 @@ export function Products({ t }: { t: Content["products"] }) {
           <p className={s.extText}>{t.outlook.body}</p>
           <OutlookMock t={t.outlook.mock} />
           <div className={s.extCtas}>
-            <a href={OUTLOOK_SETUP_URL} target="_blank" rel="noopener noreferrer" className={`${s.pill} ${s.pillSolid}`}>
+            <Link href="/extension#outlook" className={`${s.pill} ${s.pillSolid}`}>
               <span>{t.outlook.cta}</span>
-            </a>
+            </Link>
           </div>
         </article>
       </div>

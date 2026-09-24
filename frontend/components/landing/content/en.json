@@ -114,7 +114,7 @@
       "tag": "Outlook add-in",
       "title": "One click on the email you have open.",
       "body": "Reads the open email, its links and its SPF, DKIM and DMARC results, then shows the same verdict as the web app. It never opens attachments or sends mail.",
-      "cta": "Set it up",
+      "cta": "Get the Outlook add-in",
       "mock": {
         "from": "MCB Security",
         "subject": "Urgent: verify your account",

@@ -115,7 +115,7 @@
       "tag": "Add-in Outlook",
       "title": "Enn klik lor email ki ou finn ouver.",
       "body": "Li lir email ki ouver, so bann lien ek so rezilta SPF, DKIM ek DMARC, apre li montre mem verdik ki app web la. Li zamen ouver atasman ni avoy email.",
-      "cta": "Instal li",
+      "cta": "Gagn add-in Outlook la",
       "mock": {
         "from": "MCB Sekirite",
         "subject": "Irzan: verifie ou kont",
