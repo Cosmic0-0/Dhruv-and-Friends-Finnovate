@@ -8,6 +8,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { translateMessage } from "./messageTranslation.js";
+import { buildTranslationPrompt } from "./translation.js";
+import { protectEntities } from "./entities.js";
+import { getKreolGrounding } from "../analysis/kreolGrounding.js";
 
 const EN = "Your account will be blocked today. Do not share your OTP. Visit https://example.test/x or call <PRIV_1> now.";
 const KREOL_OUT = "Ou kont pou bloke zordi. Pa partaz ou OTP. Al lor <URL_1> ouswa apel <PRIV_1> aster.";
@@ -65,6 +68,45 @@ test("a copied template tag like <text> is rejected, and the retry can recover",
   const recovering = await translateMessage(EN, "mfe", { provider: async () => JSON.stringify({ translation: answers.shift() }) });
   assert.equal(recovering.status, "ok");
   assert.doesNotMatch(recovering.text, /<text>/);
+});
+
+// ---------------------------------------------------------------- glossary in the prompt
+function promptFor(text) {
+  const grounding = getKreolGrounding(text, { includeDraft: true, maxTerms: 10 });
+  return buildTranslationPrompt({ direction: "en-mfe", protectedText: protectEntities(text).text, grounding });
+}
+const section = (prompt, heading) => {
+  const start = prompt.indexOf(heading);
+  if (start < 0) return "";
+  const rest = prompt.slice(start + heading.length);
+  return rest.split(/\n(?:Reviewed |Draft glossary|General external|Your previous|<untrusted_message>)/)[0];
+};
+
+test("draft glossary rows reach the translation prompt under an explicit 'not yet reviewed' heading", () => {
+  const prompt = promptFor("Your account will be blocked today. Call the bank now.");
+  const drafts = section(prompt, "Draft glossary, not yet reviewed");
+  assert.match(drafts, /"Ou kont pou bloke zordi\."/);
+  assert.match(drafts, /"Apel labank\."/);
+});
+
+test("a reviewed row is never listed under the draft heading, and a draft never under the reviewed one", () => {
+  const prompt = promptFor("Your account will be blocked today. Do not share your PIN with anyone.");
+  const reviewed = section(prompt, "Reviewed FraudLens terminology");
+  const drafts = section(prompt, "Draft glossary, not yet reviewed");
+  assert.match(reviewed, /Pa partaz ou PIN ar personn/);
+  assert.doesNotMatch(drafts, /Pa partaz ou PIN ar personn/);
+  assert.doesNotMatch(reviewed, /zordi/);
+});
+
+test("default grounding still excludes draft rows: only translation opts in", () => {
+  const rows = getKreolGrounding("Your account will be blocked today. Call the bank.").terms;
+  assert.ok(rows.length > 0);
+  assert.ok(rows.every((r) => r.status === "owner_reviewed" || r.status === "ported_reviewed"));
+});
+
+test("the glossary does not change the prompt for a message it has nothing to say about", () => {
+  const prompt = promptFor("Ok");
+  assert.doesNotMatch(prompt, /Draft glossary/);
 });
 
 test("Kreol message to English uses the mfe-en direction and keeps negation", async () => {

@@ -253,6 +253,8 @@ const MIN_SHARED_TERM = 1;
 // opts.includeDraft: when true, also considers draft_generated rows (never
 // rejected rows, which are excluded unconditionally). Default false -
 // callers must opt in explicitly per data/kreol-dataset/CLAUDE.md section 12.
+// opts.maxTerms: cap on returned terminology rows (default MAX_TERMS); the
+// translation prompt asks for more because a message names many words.
 // opts.includeExternal: when true, adds up to MAX_EXTERNAL general MorisienMT
 // sentence pairs (translation/generation prompts; not the fraud-analysis prompt).
 const MAX_EXTERNAL = 2;
@@ -268,7 +270,8 @@ export function getKreolGrounding(message, opts = {}) {
     const tmIndex = includeDraft ? TM_INDEX.reviewedPlusDraft : TM_INDEX.reviewed;
 
     const examples = rank(query, corpusIndex, MAX_EXAMPLES, MIN_SHARED_EXAMPLE);
-    const terms = rank(query, tmIndex, MAX_TERMS, MIN_SHARED_TERM);
+    const termLimit = Number.isInteger(opts.maxTerms) && opts.maxTerms > 0 ? opts.maxTerms : MAX_TERMS;
+    const terms = rank(query, tmIndex, termLimit, MIN_SHARED_TERM);
     const externalExamples = opts.includeExternal === true ? rank(query, loadExternalIndex(), MAX_EXTERNAL, EXTERNAL_MIN_SHARED) : [];
 
     if (examples.length === 0 && terms.length === 0 && externalExamples.length === 0) return EMPTY_RESULT;

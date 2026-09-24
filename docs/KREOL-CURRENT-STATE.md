@@ -89,6 +89,13 @@ source text -> protect entities -> retrieve reviewed terms/examples
   outage returns `status: "unavailable"` and the result screen is unaffected.
   Messages over 2000 characters are not offered translation (no partial
   translations). The extension and Outlook add-in do not call it.
+- **Draft glossary:** `translation-memory.csv` holds `draft_generated` rows for words
+  the model got wrong in live testing (`today` -> `zordi`, `Call the bank.` ->
+  `Apel labank.`, and similar). The translation prompt is the only place that
+  opts in to draft rows (`includeDraft`), and it lists them under a separate
+  "Draft glossary, not yet reviewed" heading, never under the reviewed terms.
+  Fraud analysis still reads reviewed rows only. The rows carry no reviewer and
+  count as reviewed data only after the owner approves them in the review flow.
 - **Status:** the runtime and its safety envelope are implemented and tested with a
   stub provider. Live quality is not measured: run
   `npm run eval:kreol:translate` (needs a reachable model). Without one it reports
