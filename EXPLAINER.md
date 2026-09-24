@@ -80,7 +80,7 @@ Three routes look at how a file or image was made, not only at what it says.
 | `POST /api/documents` | PDF, PNG, JPEG, WEBP | Node stores the bytes (`document-store/`) and OCRs images; the Python service runs the checks | Indicators with a confidence label, never a verdict |
 
 The web app's `/document` page uses only the first route, and its screenshot
-upload uses the second (see "Known limitations" for how it uses the result).
+upload uses the second.
 `/api/documents` is reachable through the API only.
 
 ### PDF/DOCX: `POST /api/analyze/document`
@@ -273,8 +273,10 @@ analysis pipeline sees it.
 The OCR route accepts PNG, JPEG, and WEBP content up to 5 MB after decoding and
 checks magic bytes. Tesseract runs in memory, and the image is also sent to the
 local Python forensics service; neither stores it. The web app does not show
-the OCR text: the screenshot thumbnail is the visible input, and the text is
-sent to `/api/analyze` when the user presses Check.
+the OCR text: the screenshot thumbnail is the visible input. The Check screen
+sends the image when it is picked and shows that response's verdict when the
+user presses Check. Batch asks for OCR only (`ocrOnly: true`), shows the text
+for review, and analyses it with the rest of the batch.
 
 SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
 
@@ -296,7 +298,8 @@ SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
   observed sender identifiers and lookalike domains.
 - Organisation email observations, indicators and analyst outcome labels
   (`org_*`), keyed on HMAC pseudonyms of addresses and of the analyst's IP.
-  A purge function exists but nothing calls it, so these rows are kept.
+  They are deleted after `ORG_RETENTION_DAYS` (default 180), checked at
+  startup and every 6 hours.
 - Radar's daily counters (`radar_daily`, `radar_domain_daily`): verdict,
   scam type, claimed institution, reported channel and lookalike domain per
   Mauritius calendar day, with no text, sender or IP. Rows are tagged `live`
@@ -305,8 +308,8 @@ SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
 - Batch summary counts and cached domain registration dates.
 
 Raw message text and raw reporter IP addresses are not stored. Apart from the
-community events, audit rows and Radar counters, nothing has a retention
-period.
+community events, audit rows, organisation rows and Radar counters, nothing
+has a retention period.
 
 The web app's Settings has a "Share anonymous scam samples" switch. When it is
 off, requests carry `shareSamples: false` and the backend skips the community
@@ -405,10 +408,10 @@ so the setting must match the real topology before production use.
   warns on a mismatch. The frontend tests run TypeScript files directly, which
   Node supports without a flag only from 22.18.0, so `>=22` also admits
   22.0-22.17, which cannot run them.
-- The web app's screenshot flow discards the image-forensics result. It keeps
-  only the OCR text from `/api/analyze/screenshot` and sends that text to
-  `/api/analyze`, so the verdict shown never includes DOC-09..13, and each
-  screenshot costs two analyze requests and two semantic-model calls.
+- The Check screen analyses a screenshot as soon as it is picked, before the
+  user presses Check, so the analysis and its recording happen even if they
+  never do. Waiting for Check needs new wording on the screen in English,
+  French and Kreol, and the Kreol would need review first.
 - Accessibility and responsive behavior need a final real-browser pass across the
   result, screenshot, document, batch, conversation, network, and extension flows.
 - Document forensics finds warning signs, not proof. On both paths, metadata
@@ -453,11 +456,13 @@ not installed on the machine, so every Node check ran on Node 24.18.0.
 | `outlook-addin`: `npm run build`, `npm run validate` | both pass; the manifest is valid |
 | `extension`: `npm test` | 46 tests, all pass |
 | `extension`: `npm run check:retire` | passes; vendored Retire.js data fetched 2026-09-23 |
-| `document-forensics`: `python -m pytest` | not run: no Python 3.12 on the machine |
+| `document-forensics`: `python -m pytest --ignore=tests/test_layout.py` | Python 3.12.10, base requirements only (no PyTorch): 48 passed, 2 skipped (TruFor weights absent); the 8 layout tests need PyTorch to load |
+| `backend`: `npm run test:fallback` | passes: forced Ollama down, served by OpenRouter `liquid/lfm-2.5-2.6b:free` in 25.2s (60s budget), response matched the schema |
 
-Not run on that date: `npm run test:fallback` and `npm run eval:kreol:translate`
-(both need a reachable model), the Outlook live fixture smoke test (it needs a
-running backend), and a frontend lint (ESLint is not configured).
+Not run on that date: `npm run eval:kreol:translate` (it needs the Ollama
+model, and this machine's Tailscale was not connected), the Outlook live
+fixture smoke test (it needs a running backend), and a frontend lint (ESLint
+is not configured).
 
 These checks validate code paths and contracts. They do not replace a real-model
 run, OCR sample, browser interaction pass, extension smoke test, or fallback test

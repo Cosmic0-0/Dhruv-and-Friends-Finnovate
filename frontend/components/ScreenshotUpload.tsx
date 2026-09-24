@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { analyzeScreenshot, type ApiErrorKind, type ValidationReason } from "@/lib/api";
+import type { AnalyzeScreenshotResponse } from "@/lib/types";
 import { compressImage, ImageError, type ImageErrorCode } from "@/lib/image";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { MAX_IMAGE_BYTES } from "@/lib/types";
@@ -9,14 +10,14 @@ import { CheckIcon, RetryIcon, XIcon } from "./icons";
 import { SUCCESS_DELAY_MS, useWaitStage, WaitStatus } from "./WaitProgress";
 
 /**
- * Screenshot → text, kept out of view. The image is compressed in the
- * browser, sent to POST /api/analyze/screenshot (the backend's OCR; nothing
- * is read client-side), and `extractedText` is handed to the caller
- * (CheckForm) to hold in memory - never rendered - and combined with typed
- * text only once "Check" is pressed, which redacts it like typed text. The
- * thumbnail here is what the user sees as confirmation the screenshot was
- * read; the wait stages (WaitStatus below) are what sell "processing" while
- * OCR runs.
+ * Screenshot → verdict, text kept out of view. The image is compressed in the
+ * browser and sent to POST /api/analyze/screenshot, which runs OCR, checks the
+ * image itself for editing (DOC-09..13) and analyses both together. The whole
+ * response is handed to the caller (check/Workspace) and shown as the result
+ * when "Check" is pressed; the text is never rendered or re-analysed, so the
+ * image-forensics signals stay in the verdict. The thumbnail here is what the
+ * user sees as confirmation the screenshot was read; the wait stages
+ * (WaitStatus below) are what sell "processing" while it runs.
  *
  * DEMO NOTE: attach an SMS screenshot and watch the thumbnail move through
  * its reading stages to "done", then press Check straight from there.
@@ -43,14 +44,14 @@ const IMAGE_ERROR_REASON: Record<ImageErrorCode, ValidationReason> = {
   unreadable: "image_unreadable",
 };
 
-export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (text: string) => void }) {
+export function useScreenshot({ lang, onResult }: { lang: UiLanguage; onResult: (result: AnalyzeScreenshotResponse) => void }) {
   const [state, setState] = useState<ShotState>({ phase: "none" });
   const abortRef = useRef<AbortController | null>(null);
   const previewRef = useRef<string | null>(null);
   const dataUrlRef = useRef<string | null>(null);
-  const onTextRef = useRef(onText);
+  const onResultRef = useRef(onResult);
   useEffect(() => {
-    onTextRef.current = onText;
+    onResultRef.current = onResult;
   });
 
   const releasePreview = () => {
@@ -78,17 +79,17 @@ export function useScreenshot({ lang, onText }: { lang: UiLanguage; onText: (tex
       if (controller.signal.aborted) return; // removed or replaced meanwhile
 
       if (res.ok) {
-        const text = res.data.extractedText.trim();
-        if (!text) {
+        const result = res.data;
+        if (!result.extractedText.trim()) {
           setState({ phase: "error", previewUrl, error: { kind: "image", reason: "image_no_text" }, canRetry: false });
           return;
         }
-        // Run the bar to 100% and hold, then hand the text over (unless removed meanwhile).
+        // Run the bar to 100% and hold, then hand the result over (unless removed meanwhile).
         setState({ phase: "finishing", previewUrl });
         setTimeout(() => {
           if (controller.signal.aborted || abortRef.current !== controller) return;
           setState({ phase: "done", previewUrl });
-          onTextRef.current(text);
+          onResultRef.current(result);
         }, SUCCESS_DELAY_MS);
         return;
       }

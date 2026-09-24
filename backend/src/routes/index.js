@@ -2,6 +2,7 @@ import { nextSandboxTurn, MAX_SANDBOX_TURNS } from "../services/sandbox/index.js
 import { PLAYBOOKS, normalizeScamType, normalizeStage } from "../services/playbooks/index.js";
 import { getFingerprintMatches } from "../services/scam-dna/index.js";
 import { recordUserReport } from "../services/community-signals/index.js";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { assessUrl } from "../services/url-reputation/index.js";
@@ -186,6 +187,12 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   const { image, language } = req.body;
   const sharing = parseShareSamples(req.body.shareSamples);
   if (sharing.error) return res.status(400).json({ error: sharing.error });
+  // ocrOnly: true returns just the redacted text - no image forensics, no
+  // analysis, nothing recorded. For callers that let the user edit the text
+  // and analyse it afterwards (the web app's Batch screen), so a screenshot
+  // is not analysed twice.
+  const { ocrOnly = false } = req.body;
+  if (typeof ocrOnly !== "boolean") return res.status(400).json({ error: "ocrOnly must be a boolean" });
   if (!isNonEmptyString(image)) {
     return res.status(400).json({ error: "image is required and must be a base64-encoded string" });
   }
@@ -217,7 +224,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   try {
     [extractedText, forensics] = await Promise.all([
       extractTextFromImage(buffer),
-      analyzeDocumentForensics({ buffer, mimeType }),
+      ocrOnly ? null : analyzeDocumentForensics({ buffer, mimeType }),
     ]);
   } catch (err) {
     console.error(err);
@@ -237,6 +244,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   if (redactedText.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: `extracted text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
+  if (ocrOnly) return res.json({ extractedText: redactedText });
 
   try {
     const result = await runPipeline(redactedText, {
@@ -620,7 +628,25 @@ router.get("/org/campaigns", checkSenderLimiter, (_req, res) => {
   });
 });
 
+// Analyst labels change what GET /api/org/campaigns shows (a "legitimate"
+// or "false_positive" consensus drops an observation), so writing one needs
+// the shared ORG_ANALYST_TOKEN as a bearer token. With no token configured
+// the route is off. Read per request so tests and restarts pick it up.
+function analystTokenStatus(req) {
+  const expected = process.env.ORG_ANALYST_TOKEN;
+  if (!expected) return "disabled";
+  const match = /^Bearer (.+)$/.exec(req.get("authorization") ?? "");
+  if (!match) return "missing";
+  // Compare fixed-length digests so the check takes the same time whatever
+  // the supplied token's length or content.
+  const digest = (v) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(digest(match[1]), digest(expected)) ? "ok" : "missing";
+}
+
 router.post("/org/outcomes", reportLimiter, json({ limit: "10kb" }), (req, res) => {
+  const auth = analystTokenStatus(req);
+  if (auth === "disabled") return res.status(403).json({ error: "analyst outcomes are not enabled on this server" });
+  if (auth !== "ok") return res.status(401).json({ error: "analyst token required" });
   const { observationId, label } = req.body ?? {};
   if (typeof observationId !== "string" || !/^[a-f0-9]{64}$/.test(observationId)) {
     return res.status(400).json({ error: "observationId must be a 64-character hexadecimal identifier" });

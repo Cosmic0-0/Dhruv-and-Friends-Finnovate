@@ -127,8 +127,8 @@ variant, and scored by ruleset `rs-1.6` alongside the OCR text's signals
 (`backend/src/services/document-forensics-client/toSignals.js`). None of them
 reaches `high` alone; DOC-09 at high or medium confidence joins the DX-1
 interaction with an impersonation or payment signal. The image is not
-stored. The web app's Check screen currently discards this result and
-re-analyses only the OCR text (see `docs/API-CONTRACT.md` Known Gaps).
+stored. The web app's Check screen shows this route's verdict directly, so
+the image findings are part of what the user sees.
 
 ## Storage and security
 

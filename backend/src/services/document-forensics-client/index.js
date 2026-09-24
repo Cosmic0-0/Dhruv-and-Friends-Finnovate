@@ -12,14 +12,33 @@ const DOCUMENT_FORENSICS_URL = process.env.DOCUMENT_FORENSICS_URL || "http://127
 // guarantee" stance (see that constant's comment in llmClient.js).
 const DOCUMENT_FORENSICS_TIMEOUT_MS = Number(process.env.DOCUMENT_FORENSICS_TIMEOUT_MS) || 90000;
 
+// Failures are tagged with one of these public reason codes. The response
+// carries only the code; the underlying error (addresses, ports, the
+// service's own error body) is logged server-side.
+class ForensicsError extends Error {
+  constructor(reason, message) {
+    super(message);
+    this.reason = reason;
+  }
+}
+
 async function withTimeout(fn, ms) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
     return await fn(controller.signal);
+  } catch (err) {
+    if (controller.signal.aborted) throw new ForensicsError("timeout", `timed out after ${ms}ms`);
+    throw err;
   } finally {
     clearTimeout(timer);
   }
+}
+
+function publicReason(err) {
+  if (err instanceof ForensicsError) return err.reason;
+  if (err instanceof SyntaxError) return "service_error"; // unparsable JSON body
+  return "unreachable";
 }
 
 function camelizeIndicator(indicator) {
@@ -59,8 +78,9 @@ function camelizeReport(report) {
 /**
  * Calls the local document-forensics service. Never throws for "service
  * unreachable/slow/erroring" - returns { status: "unavailable", reason }
- * instead, the same posture services/analysis/llmClient.js takes toward an
- * Ollama outage: this is enrichment on top of ingestion, not a
+ * instead, where reason is "unreachable" | "timeout" | "service_error".
+ * Same posture services/analysis/llmClient.js takes toward an Ollama
+ * outage: this is enrichment on top of ingestion, not a
  * precondition for it, so a down forensics service must never fail
  * POST /api/documents.
  * @param {{ buffer: Buffer, mimeType: string, documentId?: string, timeoutMs?: number }} input
@@ -76,7 +96,7 @@ export async function analyzeDocumentForensics({ buffer, mimeType, documentId, t
       const res = await fetch(`${DOCUMENT_FORENSICS_URL}/analyze`, { method: "POST", body: form, signal });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        throw new Error(`document-forensics request failed: ${res.status} ${body.slice(0, 200)}`);
+        throw new ForensicsError("service_error", `document-forensics request failed: ${res.status} ${body.slice(0, 200)}`);
       }
       return res.json();
     }, timeoutMs);
@@ -84,7 +104,7 @@ export async function analyzeDocumentForensics({ buffer, mimeType, documentId, t
     return { status: "ok", report: camelizeReport(report) };
   } catch (err) {
     console.error("[document-forensics]", err.message);
-    return { status: "unavailable", reason: err.message };
+    return { status: "unavailable", reason: publicReason(err) };
   }
 }
 

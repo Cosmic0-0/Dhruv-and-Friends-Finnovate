@@ -47,10 +47,11 @@ before any real data touches a demo.
 - [ ] **Enforce server-side auth** on every endpoint that reads or writes
       stored data. Not satisfied: there is no auth middleware in
       `backend/src/index.js` or `backend/src/routes/index.js`, and every
-      route is open. This includes `POST /api/org/outcomes`, where any caller
-      can label an organisation observation as `legitimate` or
-      `false_positive`, which removes it from that organisation's campaign
-      counts. Last verified 2026-09-23.
+      route is open to anyone except `POST /api/org/outcomes`, which needs
+      the shared `ORG_ANALYST_TOKEN` bearer token (and is off when it is not
+      set). A label there can drop an observation from the organisation's
+      campaign counts, which is why it was closed first. Last verified
+      2026-09-24.
 - [ ] **Lock record access**: a user can only fetch their own records, not
       enumerate others' by ID. Not satisfied, but no route reads a user's
       history or a stored document by ID today. Public reads are aggregate or
@@ -140,6 +141,8 @@ before any real data touches a demo.
         playbooks, non-negative integer `turnIndex`.
       - `/api/campaign/:fingerprintId`: IDs over 300 characters get `400`.
       - `/api/trends`: `range`, when present, must be `7d`, `30d` or `12m`.
+      - `/api/analyze/screenshot`: `ocrOnly`, when present, must be a
+        boolean.
 - [x] **Escape user content** before rendering it in the UI. User text
       (message body, signal evidence, sender) is rendered through React
       text nodes. The two `dangerouslySetInnerHTML` uses
@@ -173,19 +176,16 @@ before any real data touches a demo.
         used for the type. The original bytes are always stored, whatever
         `shareSamples` says (see "Encrypt sensitive data at rest"), and are
         never served back.
-- [ ] **Trim API responses**: no raw LLM prompt, stack trace or DB row
+- [x] **Trim API responses**: no raw LLM prompt, stack trace or DB row
       internals in responses. Route failures return a fixed
       `{ "error": "..." }` and log the real error server-side, and the final
       error handler (`backend/src/services/http-errors`) returns generic
       `400`/`413`/`500` bodies. Email metadata (`messageId`, Return-Path, raw
-      headers) is never echoed or sent to the LLM. **One exception:**
-      `POST /api/documents` returns `forensics.reason`, the internal error
-      message from the Python service call, which can include up to 200
-      characters of that service's error body
-      (`backend/src/services/document-forensics-client/index.js`). The
-      screenshot route's `imageForensics` returns only status and check
-      names, not the reason. Last
-      verified 2026-09-23.
+      headers) is never echoed or sent to the LLM. `POST /api/documents`'
+      `forensics.reason` is a fixed code (`unreachable`, `timeout` or
+      `service_error`); the Python service's error text is logged only
+      (`backend/src/services/document-forensics-client/index.js`). Last
+      verified 2026-09-24.
 - [x] **Add security headers**: `helmet()` is mounted in
       `backend/src/index.js` before the API router and sets CSP,
       `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS
@@ -219,12 +219,10 @@ product. Judges and casual visitors notice these fast.
 - [x] **No unstyled Vite+React flash**: N/A. The stack is Next.js App
       Router with fonts from `next/font/google` (Onest, JetBrains Mono),
       self-hosted at build time.
-- [ ] **Unique page titles**: `frontend/app/layout.tsx` sets the template
-      `"%s · FraudLens AI"` and most pages set their own title. Three pages
-      also append the brand themselves (`app/batch/page.tsx`,
-      `app/sandbox/page.tsx`, `app/network/[fingerprintId]/page.tsx`), so
-      their title reads "… · FraudLens · FraudLens AI". Still true on the
-      merged code. Last verified 2026-09-24.
+- [x] **Unique page titles**: `frontend/app/layout.tsx` sets the template
+      `"%s · FraudLens AI"`; pages set only their own name (e.g. "Batch scan"
+      renders as "Batch scan · FraudLens AI"), and the landing page sets an
+      absolute title. Last verified 2026-09-24 in the built HTML.
 - [x] **Meta description**: `frontend/app/layout.tsx` sets a real
       `description`. Last verified 2026-09-24.
 - [x] **`og:image`**: `frontend/app/layout.tsx` sets `openGraph.images` and
@@ -240,8 +238,8 @@ product. Judges and casual visitors notice these fast.
       `frontend/app/layout.tsx` (`/`) and on the public pages, resolved
       against `metadataBase` (`NEXT_PUBLIC_SITE_URL`, default
       `http://localhost:3000`). `/result`, `/replay` and the network page are
-      not indexed and set none. `/app` sets none of its own, so it inherits
-      the layout's `/` canonical. Set
+      not indexed and set none. `/app` sets its own (`/app`); before
+      2026-09-24 it inherited the layout's `/`. Set
       `NEXT_PUBLIC_SITE_URL` to the real domain before sharing a URL. Last
       verified 2026-09-24.
 - [x] **`llms.txt`**: `frontend/public/llms.txt`. Last verified 2026-09-23.

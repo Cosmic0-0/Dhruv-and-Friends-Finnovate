@@ -102,12 +102,13 @@ python3.12 -m venv .venv
 ```
 
 On Windows the virtualenv puts its executables under `.venv\Scripts\`
-instead of `.venv/bin/`. From PowerShell, with Python 3.12 installed through
-the `py` launcher:
+instead of `.venv/bin/`. From PowerShell, create the venv with whichever
+Python 3.12 command you have: `py -3.12` with the python.org installer's
+launcher, or `python3.12` with the Microsoft Store install:
 
 ```powershell
 cd document-forensics
-py -3.12 -m venv .venv
+py -3.12 -m venv .venv      # or: python3.12 -m venv .venv
 .venv\Scripts\python -m pip install -r requirements-base.txt
 
 # Stage 3 (TruFor), optional:
@@ -137,10 +138,15 @@ reports success.
 All four checks are real, local-model implementations, not stubs. Each
 check has its own test module (`tests/test_<check>.py`) plus fixtures under
 `tests/fixtures/`. The suite has 56 test functions; one is parametrised over
-three MIME types, so pytest collects 58 cases. The TruFor and layout tests
-that load a model are skipped, not failed, when the weights are missing. The count was last
-checked on 2026-09-23 by reading the test files; the suite was not run then
-because no Python 3.12 virtualenv was available.
+three MIME types, so pytest collects 58 cases. The TruFor tests that need
+model weights are skipped, not failed, when the weights are missing.
+`tests/test_layout.py` imports `torch` when it loads, so with only
+`requirements-base.txt` installed pytest cannot collect it; run
+`python -m pytest --ignore=tests/test_layout.py` in that setup.
+
+Last run on 2026-09-24 with Python 3.12.10 and the base requirements only:
+48 passed, 2 skipped (TruFor weights not present), `test_layout.py`'s 8
+cases not collected.
 
 | Stage | Module | Status |
 |---|---|---|

@@ -593,17 +593,6 @@
   }
 
   /*
-   * Minimal parallax: the hero drifts a little slower than the page as it
-   * scrolls away. --parallax is written by components/useParallax, and stays 0
-   * under reduced motion and wherever the hook is not used, so this is inert
-   * by default rather than something every hero opts out of.
-   */
-  .parallax {
-    transform: translate3d(0, var(--parallax, 0px), 0);
-    will-change: transform;
-  }
-
-  /*
    * The message bubble. The one object this whole app is about: a text
    * someone received and is not sure of.
    *
@@ -790,11 +779,7 @@
     transform: none;
   }
 
-  /* No drift, and the reveal lands already in place. */
-  .parallax {
-    transform: none !important;
-  }
-
+  /* The reveal lands already in place. */
   .reveal {
     animation: none !important;
     opacity: 1 !important;

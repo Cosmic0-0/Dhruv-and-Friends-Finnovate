@@ -14,7 +14,9 @@ Every route with a body declares its own JSON body limit. A body over it gets
 `413 { "error": "request body is too large" }`, and malformed JSON gets
 `400 { "error": "invalid JSON body" }` (`backend/src/services/http-errors`).
 Rate limits are per client IP and return `429` with a JSON `error` and
-standard `RateLimit-*` headers. There is no authentication on any route.
+standard `RateLimit-*` headers. There is no user authentication. The only
+route that needs a credential is `POST /api/org/outcomes` (a shared analyst
+token, see that route).
 
 | Method and path | Body limit | Rate limit |
 |---|---|---|
@@ -493,7 +495,8 @@ fired.
 {
   "image": "string, required — base64-encoded image bytes, max 5MB decoded. A `data:<mime>;base64,` prefix is accepted and stripped if present.",
   "language": "string, optional — same free-form hint as /api/analyze",
-  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\"",
+  "ocrOnly": "boolean, optional, default false. true: run OCR and redaction only and return { extractedText } (see below)"
 }
 ```
 
@@ -516,11 +519,17 @@ The full `/api/analyze` response (see above) plus:
 }
 ```
 
-The UI never shows `extractedText` to the user - the screenshot thumbnail is
-the only visible confirmation of what was scanned. The text is held in
-memory client-side and submitted to `/api/analyze` once "Check" is pressed.
-`imageForensics` is transparency about what ran, not a second verdict — its
-actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
+The web app's Check screen shows this response as the result. It never shows
+`extractedText`; the screenshot thumbnail is the visible confirmation of what
+was scanned. `imageForensics` is transparency about what ran, not a second
+verdict: its actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
+
+With `ocrOnly: true` the response is only `{ "extractedText": "string" }`: the
+redacted OCR text, with no image forensics, no analysis and nothing recorded,
+so `shareSamples` has no effect. The web app's Batch screen uses it, because
+the user reviews and can edit the text there and the batch is analysed
+afterwards. A non-boolean `ocrOnly` is `400 { "error": "ocrOnly must be a
+boolean" }`.
 
 ### Errors
 
@@ -731,7 +740,7 @@ WEBP, regardless of anything the client or `filename` claims.
   "extractedText": "string | null — redacted OCR text for an image document; always null for a PDF (its text layer, if any, is read by the metadata/PDF forensics check instead)",
   "forensics": {
     "status": "\"ok\" | \"unavailable\"",
-    "reason": "string, only present when status is \"unavailable\" — the forensics service was unreachable, timed out, or errored. Never fails the request (see Reliability below).",
+    "reason": "string, only present when status is \"unavailable\": \"unreachable\" | \"timeout\" | \"service_error\". A fixed code; the underlying error is logged server-side only. Never fails the request (see Reliability below).",
     "report": {
       "_": "only present when status is \"ok\" — see document-forensics/app/models.py's ForensicsReport for the source of truth; this is that schema's fields camelCased at the Node boundary (backend/src/services/document-forensics-client/index.js), e.g. checks_run -> checksRun",
       "documentId": "string | null",
@@ -1239,7 +1248,12 @@ database returns `"campaigns": []`.
 Records an analyst's outcome label for an email the organisation already
 analysed. One label per analyst per observation; a later label from the same
 analyst replaces the earlier one. The analyst is identified by an HMAC
-pseudonym of the client IP. There is no authentication.
+pseudonym of the client IP.
+
+The request must carry `Authorization: Bearer <ORG_ANALYST_TOKEN>`, the
+shared token set in the backend's environment. When `ORG_ANALYST_TOKEN` is
+not set, the route is disabled and always answers `403`. No current client
+calls this route.
 
 ### Request
 
@@ -1271,6 +1285,8 @@ compatibility, `confirmed_fraud` and `suspicious_unconfirmed`.
 |---|---|---|
 | `400` | `{ "error": "observationId must be a 64-character hexadecimal identifier" }` | missing or malformed `observationId` |
 | `400` | `{ "error": "label must be one of: ..." }` | `label` not in the list |
+| `401` | `{ "error": "analyst token required" }` | missing `Authorization` header, or the token does not match |
+| `403` | `{ "error": "analyst outcomes are not enabled on this server" }` | `ORG_ANALYST_TOKEN` is not set on the server |
 | `404` | `{ "error": "organisation observation not found" }` | no stored observation with that id |
 | `429` | `{ "error": "too many report submissions from this address, try again later" }` | shares the 5 req/hour counter with `/api/report` |
 
@@ -1326,25 +1342,20 @@ otherwise.
   `shareSamples: false`) `POST /api/analyze/document` store original file
   bytes in SQLite, unencrypted, with no retention period and no delete route.
   No route returns them.
-- **Organisation outcomes are unauthenticated.** Any caller can post a
-  `legitimate` or `false_positive` label for an observation id, which removes
-  that observation from `GET /api/org/campaigns` counts. The only protection
-  is the shared 5 req/hour report limit.
-- **The web app discards screenshot image forensics.** The Check screen
-  (`frontend/components/ScreenshotUpload.tsx`,
-  `frontend/components/check/Workspace.tsx`) keeps only `extractedText` from
-  `/api/analyze/screenshot` and then sends that text to `/api/analyze`. The
-  verdict it shows therefore never includes DOC-09..13, and each screenshot
-  uses two requests from the analyze rate-limit counter and two semantic-model
-  calls.
+- **Organisation outcomes use one shared token.** `POST /api/org/outcomes`
+  needs `ORG_ANALYST_TOKEN`, but every analyst holds the same token and
+  analysts are told apart only by IP pseudonym. `GET /api/org/campaigns`
+  stays public.
+- **A screenshot is analysed as soon as it is picked.** The web app's Check
+  screen sends it to `/api/analyze/screenshot` when the user chooses the
+  image and shows that result when they press Check, so the analysis (and,
+  unless sharing is off, its recording) happens even if they never press
+  Check.
 - **`POST /api/documents` ignores `shareSamples`.** It always stores the
   upload, unlike `/api/analyze/document`.
 - **Radar mixes seeded demo counts with live ones.** `npm run seed:radar`
   writes rows tagged `demo_seed`; `GET /api/trends?range=` sums both sources
   and the response does not say which part is seeded.
-- **`POST /api/documents` echoes an internal error.** `forensics.reason` is
-  the error message from the call to the Python service, which can include up
-  to 200 characters of that service's error body.
 - **Email analysis is read-mode only (`outlook-addin/`).** It analyses only
   the selected message after the user clicks the task-pane button. There is
   no Microsoft Graph integration or mailbox polling. The supplier registry and

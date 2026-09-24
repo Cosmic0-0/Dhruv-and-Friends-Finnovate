@@ -118,15 +118,24 @@ export interface AnalyzeScreenshotRequest {
 
 /**
  * The server runs OCR, redacts identifiers from the extracted text
- * (backend/src/services/redact), then analyses it. The UI uses only
- * `extractedText`: it goes into the editable textarea for the user to review
- * and correct, then through the browser's own redaction (lib/redact.ts) and
- * /api/analyze like typed text. The server's own verdict in this response is
- * deliberately not shown: it was computed on unreviewed OCR text, which can
- * contain misreads the user hasn't had a chance to fix.
+ * (backend/src/services/redact), checks the image itself for editing (the
+ * DOC-09..13 image-forensics signals), then analyses both together. The Check
+ * screen shows this verdict as the result: the OCR text is never shown or
+ * edited there, so re-analysing it separately would only drop the
+ * image-forensics signals and spend a second analysis.
  */
 export interface AnalyzeScreenshotResponse extends AnalyzeResponse {
   /** OCR output, already redacted server-side: this is what the server analysed. */
+  extractedText: string;
+}
+
+/**
+ * `ocrOnly: true` on the same route: OCR and server-side redaction only, no
+ * analysis and nothing recorded. For screens where the user reviews and can
+ * edit the text before it is analysed (Batch).
+ */
+export interface ScreenshotTextResponse {
+  /** OCR output, already redacted server-side. */
   extractedText: string;
 }
 

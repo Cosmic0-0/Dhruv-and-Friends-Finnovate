@@ -116,13 +116,10 @@ by eye.
 ## Motion
 
 - 150–250ms ease-out on interactive elements; press is `scale(0.98)`.
-- The hero drifts slightly slower than the page on scroll (`lib/useParallax`),
-  one rAF-batched write per frame, capped at 28px.
 - The verdict and its two cards enter in a short stagger (`.reveal`).
 - Streak overlay: scrim fades 200ms, card scales 0.92 → 1.02 → 1 over 420ms,
   flame grows in then flickers.
-- Everything respects `prefers-reduced-motion`; the parallax hook exits early
-  there rather than relying on a CSS override.
+- Everything respects `prefers-reduced-motion`.
 
 ## First run
 

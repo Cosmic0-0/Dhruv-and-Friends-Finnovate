@@ -90,3 +90,10 @@ test("attachScamDna with record:false only reads an existing campaign", () => {
   assert.equal(known.scamDna.relatedReports, 1);
   assert.equal(db.prepare("SELECT message_count AS n FROM scam_dna WHERE claimed_identity = ?").get("Sharing Test Bank").n, 1);
 });
+
+test("ocrOnly on /analyze/screenshot must be a boolean when present, checked before any image work", async (t) => {
+  const post = await serve(t);
+  const res = await post("/analyze/screenshot", { image: "not really an image", ocrOnly: "yes" });
+  assert.equal(res.status, 400);
+  assert.deepEqual(await res.json(), { error: "ocrOnly must be a boolean" });
+});

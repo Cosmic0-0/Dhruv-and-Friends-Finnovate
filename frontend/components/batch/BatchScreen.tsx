@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
 import { signalTitle } from "@/components/result/sections";
 import { card, DcPage, PageHeader, Pill, TONE, type Tone } from "@/components/dc";
-import { batchScan, analyzeScreenshot, type ApiError, type ClientBatchResult } from "@/lib/api";
+import { batchScan, extractScreenshotText, type ApiError, type ClientBatchResult } from "@/lib/api";
 import { compressImage, ImageError } from "@/lib/image";
 import { redact, type Redaction } from "@/lib/redact";
 import { saveResult } from "@/lib/storage";
@@ -85,7 +85,8 @@ export default function BatchScreen() {
       const id = newShots[i].id;
       try {
         const img = await compressImage(file);
-        const res = await analyzeScreenshot({ image: img.dataUrl, language: lang });
+        // OCR only: the text is reviewed here and analysed with the batch.
+        const res = await extractScreenshotText({ image: img.dataUrl, language: lang });
         if (!res.ok) {
           setShots((s) => s.map((x) => (x.id === id ? { ...x, status: "error", error: t.screenshots.failed } : x)));
           continue;
