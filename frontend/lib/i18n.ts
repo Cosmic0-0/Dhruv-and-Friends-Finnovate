@@ -524,6 +524,20 @@ const TODO_KREOL = <T,>(english: T): T => english;
  * Unlike TODO_KREOL, this renders the Kreol: leaving English on screen for a
  * Kreol user is the worse failure. It stays a named wrapper so the strings
  * needing review are still one grep away (grep DRAFT_KREOL).
+ *
+ * The wording is not invented. Every word in the Kreol block is checked
+ * against two sources, in this order of authority:
+ *
+ *   1. `data/kreol-dataset/translation-memory.csv` — reviewed by the Kreol
+ *      owner. Where a term is in there, that spelling wins outright. It is
+ *      why this file says larnak, lyen, verifye, ofisyel and modpas.
+ *   2. KreolMorisienMT (Dabre & Sukhoo, Findings of AACL-IJCNLP 2022):
+ *      38,549 Kreol Morisien sentences. It decides everything the TM does
+ *      not cover — siy, kone, trakase, zimaz, demars, peyman, konpayni.
+ *
+ * `npm run kreol:check` re-runs that check against a lexicon built from
+ * both, and fails on a word neither source has. Run it after editing Kreol
+ * copy: it is what stops French- or English-shaped guesses drifting back in.
  */
 const DRAFT_KREOL = <T,>(kreol: T): T => kreol;
 
@@ -1788,48 +1802,48 @@ export const COPY: Record<UiLanguage, Copy> = {
     subline:
       "Kol li isi avan ou pey, klik ouswa partaz enn kod. Nou pou montre ou seki paret pa bon ek kifer.",
     home: DRAFT_KREOL({
-      tagline: "Trouv eskrokri la avan li arive.",
+      tagline: "Trouv larnak la avan li arive.",
       pitch:
         "FraudLens pa zis dir enn mesaz paret sispe. Li montre ou exakteman kifer, dan enn langaz senp, avan ou pey, klike ouswa partaz enn kod.",
       bullets: [
-        "Get exakteman ki bann mo ek lien finn deklans enn lalert.",
+        "Get exakteman ki bann mo ek lyen finn fer nou mark sa mesaz la.",
         "Li mars an Angle, Franse ek Kreol, mem kan zot melanze.",
-        "Li verifie tou lien kont bann vre domenn labank ek telekom Morisien.",
-        "Verifie enn mesaz, enn kopi lekran, ouswa enn pelman ki ou lor pwen fer.",
+        "Li verifye tou lyen kont bann vre domenn labank ek telekom Morisien.",
+        "Verifye enn mesaz, enn kopi lekran, ouswa enn peyman ki ou lor pwen fer.",
       ],
       payCta: "Mo lor pwen pey",
       payCtaSub: "Fer verifikasion avan ou avoy larzan, pa apre.",
     }),
     messageLabel: "Mesaz la",
     placeholder: "Kol text SMS, WhatsApp ouswa email la isi...",
-    submit: "Verifie sa mesaz la",
-    // Stage 0 reuses the reviewed "Pe verifie…" / "Pe lir text la…"; the rest is new and unreviewed.
+    submit: "Verifye sa mesaz la",
+    // Stage 0 reuses the reviewed "Pe verifye…" / "Pe lir text la…"; the rest is new and unreviewed.
     wait: {
-      check: ["Pe verifie…", "Pe rod bann siny danze…", "AI la pe lir li bien…", "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel."],
+      check: ["Pe verifye…", "Pe rod bann siy danze…", "AI la pe lir li bien…", "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel."],
       checkShort: [
-        "Pe verifie…",
-        "Pe rod siny…",
+        "Pe verifye…",
+        "Pe rod siy…",
         "Pe lir bien…",
         "Pe travay ankor…",
       ],
       screenshot: [
-        "Pe eskane ou screenshot…",
-        "Pe traite lim la…",
-        "Prèske fini…",
+        "Pe lir ou kaptir lekran…",
+        "Pe trete lim la…",
+        "Preske fini…",
         "Pe travay ankor, sa kapav pran de-trwa minit lor nou sistem aktiel.",
       ],
       progressLabel: "Progre",
       cancel: "Anile",
     },
-    uploadScreenshot: "Met enn screenshot",
-    screenshotLabel: "Screenshot",
-    // Screenshot upload: Kreol drafted, pending the frontend owner's read-through.
+    uploadScreenshot: "Met enn kaptir lekran",
+    screenshotLabel: "Kaptir lekran",
+    // Kaptir lekran upload: Kreol drafted, pending the frontend owner's read-through.
     imagePrivacyNote:
-      "Screenshot la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor sa text ki finn kasyet la.",
+      "Kaptir lekran la avoye ar nou server parey kouma li ete, avek nom ek nimero ankor vizib. Server la lir text la ek tir nimero telefonn, email ek nimero kont avan nanye analize. Ou rezilta baze zis lor sa text ki finn kasyet la.",
     shot: {
-      remove: "Tir screenshot la",
-      alt: "Ou screenshot",
-      extracted: "Screenshot finn lir. Pes Verifie kan ou pare.",
+      remove: "Tir kaptir lekran la",
+      alt: "Ou kaptir lekran",
+      extracted: "Kaptir lekran finn lir. Pes Verifye kan ou pare.",
       typeInstead: "Ekrir li plito",
     },
     privacyNote: "Nimero telefonn, email ek nimero kont tire avan nanye analize.",
@@ -1840,23 +1854,30 @@ export const COPY: Record<UiLanguage, Copy> = {
     tooLong: "Tro long. Pa depas 5 000 karakter.",
     retry: "Esey ankor",
     errors: {
-      validationTitle: "Nou pa finn kapav verifie",
+      validationTitle: "Nou pa finn kapav verifye",
       validation: {
-        message_empty: "Kol enn mesaz avan, apre pes verifie.",
+        message_empty: "Kol enn mesaz avan, apre pes verifye.",
         message_too_long: "Mesaz la tro long. Pa depas 5 000 karakter.",
         batch_empty: "Azout omwin enn mesaz.",
-        batch_too_many: "Ou kapav verifie ziska 50 mesaz enn kou.",
+        batch_too_many: "Ou kapav verifye ziska 50 mesaz enn kou.",
         batch_item_empty: "Enn mesaz vid.",
         batch_item_too_long: "Enn mesaz depas 5 000 karakter.",
         sender_empty: "Met nimero ouswa nom sa kinn avoy li.",
-        image_missing: "Swazir enn kaptir ekran pou anvoye.",
-        image_invalid: "Fisie la pa enn imaz PNG, JPEG, ouswa WEBP.",
-        image_too_large: "Imaz la tro gran. Pa depas 5 Mo.",
-        image_unreadable: "Nou pa finn kapav lir sa imaz la. Esey enn lot fisie.",
-        image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir ekran la.",
+        image_missing: "Swazir enn kaptir lekran pou anvoye.",
+        image_invalid: "Dokiman la pa enn zimaz PNG, JPEG, ouswa WEBP.",
+        image_too_large: "Zimaz la tro gran. Pa depas 5 Mo.",
+        image_unreadable: "Nou pa finn kapav lir sa zimaz la. Esey enn lot dokiman.",
+        image_no_text: "Nou pa finn trouv okenn text lizib dan sa kaptir lekran la.",
         image_text_too_long:
-          "Ena tro boukou text dan sa screenshot la pou nou verifie enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
-        ...TODO_KREOL(DOCUMENT_ERRORS_EN),
+          "Ena tro boukou text dan sa kaptir lekran la pou nou verifye enn sel kou. Koup li pou gard zis mesaz la, ouswa kol text la.",
+        ...DRAFT_KREOL({
+          document_too_large: "Sa dokiman la tro gran. Pa depas 10 Mo.",
+          document_unsupported: "Sa dokiman la pa enn PDF ni enn Word (.docx).",
+          document_encrypted:
+            "Sa dokiman la protez ar enn modpas. Ouver li, sov enn kopi san modpas, apre esey ankor.",
+          document_unreadable:
+            "Nou pa finn kapav lir sa dokiman la. Li kapav kase ouswa tro konplex. Esey enn lot kopi.",
+        }),
         invalid: "Ena enn problem ar sa mesaz la. Get li ek esey ankor.",
       },
       llmTitle: "Nou servis okipe",
@@ -1865,7 +1886,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       network: "Pa kapav kontak servis verifikasion la aster. Get ou koneksion ek esey ankor.",
       timeoutTitle: "Sa inn pran tro boukou letan",
       timeout: "Verifikasion la inn pran tro boukou letan, nou finn aret li. Esey ankor, souvan li pli vit dezyem fwa.",
-      ocrTitle: "Nou pa finn kapav lir sa imaz la",
+      ocrTitle: "Nou pa finn kapav lir sa zimaz la",
       ocr: "Enn problem finn arive pandan nou ti pe lir text la. Esey ankor, ouswa ekrir mesaz la plito.",
       unexpectedTitle: "Ena enn problem",
       unexpected: "Nou finn gagn enn repons ki nou pa kapav lir. Esey ankor.",
@@ -1873,35 +1894,35 @@ export const COPY: Record<UiLanguage, Copy> = {
     relativeTime: (ms) =>
       relative(ms, { now: "aster la", min: "min", hour: "er", day: "zour", ago: (s) => `ena ${s}` }),
     tabs: {
-      check: "Verifie",
+      check: "Verifye",
       learn: "Aprann",
-      trends: "Tandans eskrokri",
+      trends: "Tandans larnak",
       settings: DRAFT_KREOL("Paramet"),
-      newCheck: DRAFT_KREOL("Verifie enn nouvo mesaz"),
+      newCheck: DRAFT_KREOL("Verifye enn nouvo mesaz"),
     },
     check: DRAFT_KREOL({
       greeting: (h: number) => (h < 12 ? "Bonzour" : h < 18 ? "Bon apremidi" : "Bonswar"),
-      question: "Eski sa enn eskrokri?",
-      heroLine: "Kol enn mesaz avan ou pey, klik enn lien ouswa partaz enn kod.",
-      paste: "Kol ek verifie",
+      question: "Eski sa enn larnak?",
+      heroLine: "Kol enn mesaz avan ou pey, klik enn lyen ouswa partaz enn kod.",
+      paste: "Kol ek verifye",
       pasteFallback: "Nanye pou kole ankor. Tap mesaz la, ouswa kol li isi.",
-      screenshot: "Verifie enn kopi lekran",
-      document: TODO_KREOL("Check a document"),
-      payRow: "Verifie avan ou pey",
+      screenshot: "Verifye enn kopi lekran",
+      document: DRAFT_KREOL("Verifye enn dokiman"),
+      payRow: "Verifye avan ou pey",
       intro: {
         title: "Ki sa fer",
         points: [
-          "Li trouv bann eskrokri labank, koli ek pri kouma bann ki avoye dan Moris.",
+          "Li trouv bann larnak labank, koli ek pri kouma bann ki avoye dan Moris.",
           "Li lir Kreol, Franse ek Angle, mem kan enn mesaz melanz zot.",
           "Nimero telefonn ek nimero kont tire lor ou telefonn, avan nanye avoye.",
         ],
       },
-      checkingLabel: "Pe verifie mesaz la",
+      checkingLabel: "Pe verifye mesaz la",
       checkingNote: "Sa kapav pran ziska enn minit. Ou kapav les sa lekran la ouver.",
       week: {
         title: "Sa semenn la",
         checks: (n: number) => `${n} verifikasion`,
-        caught: (n: number) => ({ strong: `${n} eskrokri`, rest: "trouve" }),
+        caught: (n: number) => ({ strong: `${n} larnak`, rest: "trouve" }),
         nothing: "nanye pa finn trouve",
       },
       practice: {
@@ -1920,19 +1941,19 @@ export const COPY: Record<UiLanguage, Copy> = {
       recent: {
         title: "Dernie",
         empty: "Ou bann verifikasion pou paret isi.",
-        short: { safe: "Vre", suspicious: "Atansion", scam: "Eskrokri" },
+        short: { safe: "Vre", suspicious: "Atansion", scam: "Larnak" },
       },
     }),
     tools: DRAFT_KREOL({
       title: "Zouti",
-      batch: "Verifie an gro",
+      batch: "Verifye an gro",
       batchHint: "Plizier enn sel kou",
       conversation: "Konversasion",
       conversationHint: "Tou enn diskision",
       sandbox: "Similasion",
       sandboxHint: "Antrenn ou san risk",
-      document: TODO_KREOL("Check a document"),
-      documentHint: TODO_KREOL("PDF or Word"),
+      document: DRAFT_KREOL("Verifye enn dokiman"),
+      documentHint: DRAFT_KREOL("PDF ouswa Word"),
     }),
     settings: DRAFT_KREOL({
       title: "Paramet",
@@ -1944,165 +1965,165 @@ export const COPY: Record<UiLanguage, Copy> = {
         note: "Sistem swiv reglaz kler ouswa fonse ou telefonn limem.",
       },
       languageTitle: "Langaz",
-      languageNote: "Li sanz tou bann lekran, ek li dir lanaliz dan ki langaz pou reponn.",
+      languageNote: "Li sanz tou bann lekran, ek li dir analiz dan ki langaz pou reponn.",
       privacyTitle: "Konfidansialite",
       privacyBody:
-        "Nimero telefonn, email ek nimero kont tire dan ou navigater avan enn mesaz avoye pou lanaliz. Ou bann verifikasion res lor sa aparey la selman.",
+        "Nimero telefonn, email ek nimero kont tire dan ou navigater avan enn mesaz avoye pou analiz. Ou bann verifikasion res lor ou telefonn selman.",
       aboutTitle: "Lor nou",
       aboutBody:
-        "FraudLens ed ou rekonet enn mesaz eskrokri avan ou pey, klik enn lien ouswa partaz enn kod. Fer dan Moris, pou Moris.",
+        "FraudLens ed ou rekonet enn mesaz larnak avan ou pey, klik enn lyen ouswa partaz enn kod. Fer dan Moris, pou Moris.",
       teamLogoAlt: "Logo Dhruv and Friends",
     }),
     trends: {
-      title: "Bann eskrokri konplet dan Moris",
+      title: "Bann larnak konplet dan Moris",
       knownFormats: DRAFT_KREOL("Bann format koni"),
       intro:
-        "FraudLens pankor ena enn fli rapor an direk, alor sa se pa enn klasman an tanrsyel, se bann format eskrokri ki rapote ase souvan dan Moris pou ou rekonet zot dan enn kou lizie.",
+        "FraudLens pankor ena bann rapor an direk, alor sa pa enn klasman an direk. Se bann format larnak ki raporte ase souvan dan Moris, pou ou rekonet zot dan enn kou lizie.",
       categories: [
         {
           title: "SMS ki imit enn labank",
-          body: "Bann mesaz ki fer krwar zot MCB, SBM, Absa Mauritius ouswa Bank One, ki dir ou kont finn sispann ouswa enn transfer bizin konfirme dirzans.",
-          example: "\"Alert MCB: Ou kont finn sispann. Verifie aster lor mcb-secure.top\"",
+          body: "Bann mesaz ki fer krwar zot MCB, SBM, Absa Mauritius ouswa Bank One, ki dir ou kont finn sispann ouswa enn transfer bizin konfirme irzans.",
+          example: "\"Alert MCB: Ou kont finn sispann. Verifye aster lor mcb-secure.top\"",
         },
         {
-          title: "Eskrokri pri telekom",
-          body: "Fos mesaz My.t ouswa Emtel ki dir ou finn gagn data, kredi ouswa larzan, ki pouse ou pou klik enn lien ouswa apel enn nimero pey.",
+          title: "Larnak pri telekom",
+          body: "Fos mesaz My.t ouswa Emtel ki dir ou finn gagn data, kredi ouswa larzan, ki pouse ou pou klik enn lyen ouswa apel enn nimero pey.",
           example: "\"Felisitasion! Ou nimero finn gagn Rs 25 000 kot My.t. Reklam aster: myt-prize.win\"",
         },
         {
           title: "Fraud mobile money",
-          body: 'Enn dimoun ki fer krwar li enn azan mobile money dimann ou PIN ouswa OTP pou "aret" enn move peyman ouswa "amelior" ou kont.',
+          body: 'Enn dimoun ki fer krwar li enn azan mobile money dimann ou PIN ouswa OTP pou "aret" enn move peyman ouswa "ameliore" ou kont.',
           example: "\"Sa se sipor MCB Juice. Partaz kod la pou nou anile move transfer la.\"",
         },
       ],
       footerNote:
-        "Seki pli pros ar enn vre tandans zordi: kan ou verifie enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
+        "Seki pli pros ar enn vre tandans zordi: kan ou verifye enn mesaz, lekran rezilta montre si lezot inn deza rapor sa kinn avoy li la.",
       live: DRAFT_KREOL({
-        heading: "What FraudLens has actually seen",
-        reportedSenders: (n: number) => (n === 1 ? "1 sender reported" : `${n} senders reported`),
-        campaigns: (n: number) => (n === 1 ? "1 pattern tracked" : `${n} patterns tracked`),
-        topSendersTitle: "Most-reported senders",
-        topCampaignsTitle: "Most-observed patterns",
-        reports: (n: number) => (n === 1 ? "1 report" : `${n} reports`),
-        messages: (n: number) => (n === 1 ? "1 check" : `${n} checks`),
-        empty: "Not enough activity yet: check a message to be the first.",
-        loading: "Loading…",
-        error: "Couldn't load this right now.",
+        heading: "Seki FraudLens finn vremem trouve",
+        reportedSenders: (n: number) => (n === 1 ? "1 nimero raporte" : `${n} nimero raporte`),
+        campaigns: (n: number) => (n === 1 ? "1 format swiv" : `${n} format swiv`),
+        topSendersTitle: "Bann nimero pli raporte",
+        topCampaignsTitle: "Bann format pli trouve",
+        reports: (n: number) => (n === 1 ? "1 rapor" : `${n} rapor`),
+        messages: (n: number) => (n === 1 ? "1 verifikasion" : `${n} verifikasion`),
+        empty: "Pankor ase aktivite: verifye enn mesaz pou ou premie.",
+        loading: "Pe rod bann done…",
+        error: "Nou pa finn kapav gagn sa aster la.",
       }),
     },
     // Result screen: reviewed by the frontend owner.
     conversation: DRAFT_KREOL({
       title: "Get konversasion la deroule",
-      intro: "Azout bann mesaz dan lord ki ou finn gagn zot. Swiv bann siny danze pandan ki konversasion la avanse.",
+      intro: "Azout bann mesaz dan lord ki ou finn gagn zot. Swiv bann siy danze pandan ki konversasion la avanse.",
       thread: "Konversasion",
       empty: "Koumans ar premie mesaz ki ou finn gagne.",
       add: "Prosen mesaz",
       submit: "Analiz mesaz la",
       reset: "Efas konversasion",
-      progress: "Etap pli lwen detekte",
+      progress: "Demars pli lwen detekte",
       pending:
-        "Azout enn mesaz pou get so etap. Sak mesaz analize separeman; diskision la montre etap pli lwen ki finn detekte.",
+        "Azout enn mesaz pou get so demars. Sak mesaz analize separeman; diskision la montre demars pli lwen ki finn detekte.",
       message: "Mesaz",
-      unknownStage: "Etap pa idantifie",
-      verdicts: { safe: "Pena siny danze", suspicious: "Sispe", scam: "Eskrokri" },
+      unknownStage: "Demars pa idantifie",
+      verdicts: { safe: "Pena siy danze", suspicious: "Sispe", scam: "Larnak" },
     }),
     result: {
       journey: DRAFT_KREOL({
-        title: "Parkour eskrokri",
+        title: "Parkour larnak",
         whatNextTitle: "Seki kapav arive apre",
         youAreHere: "Ou isi",
         caveat:
-          "Enn progresion posib, pa enn predision. Sa mesaz la pa konfirm bann etap avan.",
+          "Sa montre kot sa kapav ale, li pa enn prediksion. Sa mesaz la pa konfirm bann demars avan.",
         labels: {
           INITIAL_CONTACT: "Premie kontak",
           TRUST_BUILDING: "Pe gagn ou konfians",
           AUTHORITY_CLAIM: "Pe fer krwar li ena lotorite",
           URGENCY: "Pe met presion letan",
-          CREDENTIAL_REQUEST: "Pe dimann ou bann idantifian",
+          CREDENTIAL_REQUEST: "Pe dimann ou kod ek modpas",
           OTP_REQUEST: "Pe dimann enn kod OTP",
-          PAYMENT_REQUEST: "Pe dimann enn pelman",
+          PAYMENT_REQUEST: "Pe dimann enn peyman",
           PAYMENT_PRESSURE: "Pe fors ou pou pey",
           ACCOUNT_TAKEOVER: "Pe pran kontrol ou kont",
         },
       }),
       investigate: DRAFT_KREOL({
-        heading: "FraudLens finn verifie",
+        heading: "FraudLens finn verifye",
         messageRead: "Mesaz la lir",
-        claimedIdentity: (name: string) => `Lenstitision ki li dir: ${name}`,
-        linksChecked: "Bann lien verifie kont domenn labank ek telekom koni",
-        linkFlagged: (host: string) => `Lien sispe trouve: ${host}`,
-        identityChecked: "Idantite sann ki avoye verifie",
+        claimedIdentity: (name: string) => `Institision ki li dir: ${name}`,
+        linksChecked: "Bann lyen verifye kont domenn labank ek telekom koni",
+        linkFlagged: (host: string) => `Lyen sispe trouve: ${host}`,
+        identityChecked: "Idantite sann ki avoye verifye",
         identityMismatch: "Idantite pa koresponn",
-        communityNew: "Pa finn rapporte avan",
+        communityNew: "Pa finn raporte avan",
         communityFlagged: (n: number) =>
-          n === 1 ? "Rapporte par enn lot itilizater avan" : `Rapporte par ${n} lezot itilizater avan`,
-        stageIdentified: (stage: string) => `Etap eskrokri idantifie: ${stage}`,
+          n === 1 ? "Raporte par enn lot itilizater avan" : `Raporte par ${n} lezot itilizater avan`,
+        stageIdentified: (stage: string) => `Demars larnak idantifie: ${stage}`,
         campaignNew: "Nouvo model: pena kanpagn ki koresponn ankor",
-        campaignMatched: "Li koresponn ar enn kanpagn eskrokri koni",
+        campaignMatched: "Li koresponn ar enn kanpagn larnak koni",
       }),
-      networkLink: DRAFT_KREOL("Get rezo eskrokri"),
+      networkLink: DRAFT_KREOL("Get rezo larnak"),
       title: "Rezilta",
       fromSender: (s) => `SMS depi ${s}`,
       back: "Retour",
-      warningSigns: (n) => (n === 0 ? "Pena okenn siny danze" : `${n} siny danze`),
+      warningSigns: (n) => (n === 0 ? "Pena okenn siy danze" : `${n} siy danze`),
       risk: (s) => `Risk ${s} / 100`,
       hero: DRAFT_KREOL({
         riskScore: "Nivo risk",
         outOf: "/ 100",
-        warningSignsLabel: "Siny danze",
+        warningSignsLabel: "Siy danze",
         signsFound: (n: number) => `${n} trouve`,
-        linkMadeLabel: "Lien fer",
+        linkMadeLabel: "Lyen fer",
         daysAgo: (n: number) => (n === 0 ? "zordi" : n === 1 ? "ena 1 zour" : `ena ${n} zour`),
       }),
       whatsWrong: DRAFT_KREOL("Ki pa bon"),
-      signsUnit: (n: number) => (n === 1 ? "siny" : "siny"),
-      theLink: DRAFT_KREOL("Lien la"),
+      signsUnit: (n: number) => (n === 1 ? "siy" : "siy"),
+      theLink: DRAFT_KREOL("Lyen la"),
       daysOld: (n: number) => (n === 1 ? "zour" : "zour"),
       realSite: (d: string) => `Vre sit: ${d}`,
-      linksTitle: DRAFT_KREOL("Bann lien"),
+      linksTitle: DRAFT_KREOL("Bann lyen"),
       linksToTap: DRAFT_KREOL(() => "pou klike"),
       noLinkBody: DRAFT_KREOL("Nanye isi pa kapav ouver enn fos paz."),
-      scamAdvice: "Pa pey, pa ouver lien la, ek zame partaz enn kod ki ou gagn lor ou telefonn.",
+      scamAdvice: "Pa pey, pa ouver lyen la, ek zame partaz enn kod ki ou gagn lor ou telefonn.",
       messageYouSent: "Mesaz ki ou finn avoye",
-      documentText: TODO_KREOL(RESULT_EN.documentText),
+      documentText: DRAFT_KREOL("Text trouve dan dokiman la"),
       whyTitle: "Kifer sa paret pa bon",
       signalTitles: {
         sender_mismatch: "Sa kinn avoy li pa seki li dir li ete",
-        lookalike_url: "Lien la pa pou labank",
+        lookalike_url: "Lyen la pa pou labank",
         urgency_language: "Li pe fors ou pou depese",
         spoofed_identity: "Li pe fer krwar li enn dimoun ou fer konfians",
         credential_request: "Li pe dimann enn kod ouswa ou detay personel",
         payment_request: "Li pe dimann ou pey ouswa avoy larzan",
         prize_offer: "Li pe promet enn zafer ki tro bon pou vre",
         secrecy: "Li pe dir ou gard sa sekre",
-        document_integrity: TODO_KREOL("The file itself shows signs of editing"),
+        document_integrity: DRAFT_KREOL("Dokiman la limem montre ki li finn sanze"),
       },
       genericSignal: "Ena kiksoz ki pa bon",
       severity: { low: "Ba", medium: "Mwayen", high: "O" },
-      xrayHint: DRAFT_KREOL("Tap lor enn fraz sirliyne pou get kifer li finn siyale."),
+      xrayHint: DRAFT_KREOL("Tap lor enn fraz marke pou get kifer li enn problem."),
       identity: DRAFT_KREOL({
         title: "Seki li dir kont seki li ete",
         claimsToBe: "Li dir li",
-        recognized: "Lenstitision rekonet",
-        linksTo: "Me lien la ale lor",
-        paysTo: "Me pelman la ale kot",
-        officialSite: "Sit ofisiel",
-        unverified: "Pa verifie",
-        caveat: "Parski li resanble, sa pa prouve ki enn lien ouswa enn kont vre.",
+        recognized: "Institision rekonet",
+        linksTo: "Me lyen la ale lor",
+        paysTo: "Me peyman la ale kot",
+        officialSite: "Sit ofisyel",
+        unverified: "Pa verifye",
+        caveat: "Parski li resanble, sa pa prouve ki enn lyen ouswa enn kont vre.",
       }),
       evidence: DRAFT_KREOL({
-        title: "Kifer FraudLens finn siyal sa",
-        aiTitle: "Lanaliz AI",
+        title: "Kifer FraudLens finn mark sa",
+        aiTitle: "Analiz AI",
         deterministicTitle: "Verifikasion regleman",
         communityTitle: "Lenformasion kominote",
-        communityLine: (n: number) => (n === 1 ? "Rapporte par lezot 1 fwa" : `Rapporte par lezot ${n} fwa`),
+        communityLine: (n: number) => (n === 1 ? "Raporte par lezot 1 fwa" : `Raporte par lezot ${n} fwa`),
         sourcesAgree: (n: number) => `${n} sours prev endepandan dakor`,
       }),
       lookalikeDomain: (h, d) => `${h} resanble ${d}, me se pa vre sit la.`,
       lookalikeBrand: (h, b) => `${h} servi nom ${b}, me se pa enn vre sit ${b}.`,
       linkCheck: {
-        title: "Verifikasion lien",
-        linkInMessage: "Lien dan mesaz la",
+        title: "Verifikasion lyen",
+        linkInMessage: "Lyen dan mesaz la",
         imitates: "Pe imit",
         domainAge: "Laz domenn",
         domainAgeValue: (d) => (d < 1 ? "Kree zordi" : `${d} zour`),
@@ -2111,29 +2132,29 @@ export const COPY: Record<UiLanguage, Copy> = {
       },
       whatToDoTitle: "Ki pou fer aster",
       steps: {
-        dont_open_or_reply: "Pa ouver lien la ek pa reponn.",
+        dont_open_or_reply: "Pa ouver lyen la ek pa reponn.",
         block_sender: "Blok sa kinn avoy li, pou li pa kapav kontak ou ankor.",
-        report_to_bank: "Averti servis fraud ou labank, lor nimero ki enprime lor ou kart.",
+        report_to_bank: "Averti servis fraud ou labank, lor nimero ki inprime lor ou kart.",
         verify_official:
-          "Verifie direk ar lakonpani, par so app ouswa so sit ofisiel. Pa servi kontak ki dan mesaz la.",
+          "Verifye direk ar konpayni, par so app ouswa so sit ofisyel. Pa servi kontak ki dan mesaz la.",
         dont_share_code: "Zame partaz enn kod ki ou gagn lor ou telefonn, ninport kisannla ki dimande.",
-        call_bank_card: "Si ou pe trakase, apel ou labank lor nimero ki enprime lor ou kart.",
+        call_bank_card: "Si ou pe trakase, apel ou labank lor nimero ki inprime lor ou kart.",
         delete_and_report: "Efas mesaz la ek rapor li.",
       },
-      whatWeCheckedTitle: "Seki nou finn verifie",
+      whatWeCheckedTitle: "Seki nou finn verifye",
       checks: {
-        no_link: "Pena lien, nanye pou klike",
-        no_lookalike: "Okenn lien pa pe imit enn labank ouswa telekom",
+        no_link: "Pena lyen, nanye pou klike",
+        no_lookalike: "Okenn lyen pa pe imit enn labank ouswa telekom",
         informs_not_asks: "Li pe dir ou kiksoz, li pa pe dimann ou fer kiksoz",
         last_four_only: "Li montre zis 4 dernie sif, parey kouma enn vre labank",
-        no_pressure: "Pa presse, pa dimann kod, pa sekre",
+        no_pressure: "Pa prese, pa dimann kod, pa sekre",
       },
       checksShort: {
-        no_link: "Pena lien",
-        no_lookalike: "Pena fo lien",
+        no_link: "Pena lyen",
+        no_lookalike: "Pena fo lyen",
         informs_not_asks: DRAFT_KREOL("Nanye pou fer"),
         last_four_only: DRAFT_KREOL("Zis 4 dernie sif"),
-        no_pressure: DRAFT_KREOL("Pa dimann kod, pa presse"),
+        no_pressure: DRAFT_KREOL("Pa dimann kod, pa prese"),
       },
       safeCaveat:
         "Nou pa kapav garanti ki enn mesaz vre. Si ena larzan ladan ek ou ena enn dout, apel ou labank lor nimero ki lor ou kart.",
@@ -2151,22 +2172,25 @@ export const COPY: Record<UiLanguage, Copy> = {
       sentTitle: "Seki finn avoye pou analiz",
       sentBody: "Zis sa version la ki finn kit ou telefonn. Nimero telefonn, email ek nimero kont finn ranplase avan.",
       sentBodyScreenshot:
-        "Ou screenshot finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text-la kot detay personel finn tire.",
-      sentBodyDocument: TODO_KREOL(RESULT_EN.sentBodyDocument),
+        "Ou kaptir lekran finn avoye ar nou server pou lir text la, avek tou seki ladan vizib. Ou rezilta baze zis lor sa version text la kot detay personel finn tire.",
+      sentBodyDocument: DRAFT_KREOL(
+        "Ou dokiman finn avoye ar nou server, analize dan memwar ek pa garde. Nimero kont, nimero " +
+          "telefonn ek email finn tire dan so text avan sa version la analize.",
+      ),
       aiSource: {
         label: "Analize par",
-        local: "Model AI lokal (self-hosted, lor aparey)",
-        fallback: "AI backup lor cloud ({provider})",
-        unavailable: "AI pa disponib: zis verifikasion par reg. Verdik la touzour valab.",
+        local: "Model AI lokal, lor nou prop server",
+        fallback: "AI lor cloud ({provider})",
+        unavailable: "AI pa disponib, zis bann kontrol san AI",
       },
-      checkAnother: "Verifie enn lot mesaz",
+      checkAnother: "Verifye enn lot mesaz",
       missingTitle: "Pena rezilta",
-      missingBody: "Kol enn mesaz dan Verifie pou trouv enn rezilta isi.",
+      missingBody: "Kol enn mesaz dan Verifye pou trouv enn rezilta isi.",
     },
     replay: DRAFT_KREOL({
-      title: "Rekonstitision eskrokri",
+      title: "Larnak la demars par demars",
       subtitle: "Kouma sa mesaz la finn fer pou marse, rakonte kouma enn zistwar olie enn rapor.",
-      openReplay: "Get kouma sa eskrokri la marse",
+      openReplay: "Get kouma sa larnak la marse",
       back: "Retourn lor rezilta",
       stepContact: "Kontak la",
       stepWanted: "Seki li ti pe rod kot ou",
@@ -2178,17 +2202,19 @@ export const COPY: Record<UiLanguage, Copy> = {
       stepStop: "Aret la",
       belief: {
         sender_mismatch:
-          "Enn mesaz paret pli fiab kan li sanble sorti kot enn nimero ouswa enn kont ki ou rekonet.",
-        lookalike_url: "Enn lien ki preske bon fasil pou rate kan ou pe prese.",
-        urgency_language: "Presion letan koup tan ki ou ti pou pran pou verifie.",
-        spoofed_identity: "Servi enn nom ki dimounn fer konfians fer demann la paret ofisiel.",
+          "Ou fer plis konfians enn mesaz kan li paret sorti kot enn nimero ouswa enn kont ki ou rekonet.",
+        lookalike_url: "Enn lyen ki preske bon fasil pou rate kan ou pe prese.",
+        urgency_language: "Presion letan koup tan ki ou ti pou pran pou verifye.",
+        spoofed_identity: "Servi enn nom ki dimounn fer konfians fer demann la paret ofisyel.",
         credential_request:
           "Enn kod ouswa enn modpas kapav paret san danze pou partaze kan demann la paret normal.",
         payment_request:
-          "Prezant li kouma enn fre ouswa enn ranbursman fer pelman la paret kouma prosen etap normal.",
-        prize_offer: "Enn rekonpans inatandi bes ou vizilans avan ou verifie kisannla pe dimande.",
+          "Prezant li kouma enn fre ouswa enn ranbours fer peyman la paret kouma prosen demars normal.",
+        prize_offer: "Enn rekonpans ki ou pa ti pe atann bes ou atansion avan ou verifye kisannla pe dimande.",
         secrecy: "Kan dir ou gard sa sekre, personn lot pa kapav dekouver trik la.",
-        document_integrity: TODO_KREOL(REPLAY_EN.belief.document_integrity),
+        document_integrity:
+          "Enn dokiman ki paret ofisyel paret kouma enn prev, alor tigit dimoun verifye kouma " +
+          "dokiman la limem finn fer.",
       },
     }),
     simple: DRAFT_KREOL({
@@ -2198,13 +2224,13 @@ export const COPY: Record<UiLanguage, Copy> = {
       stopSuspicious: "Fer atansion",
       claims: (name: string) => `Sa mesaz la dir li sorti kot ${name}.`,
       but: "Me",
-      issueFallback: "FraudLens finn trouv bann siny danze dan sa mesaz la.",
-      readAloud: "Lir sa afot",
+      issueFallback: "FraudLens finn trouv bann siy danze dan sa mesaz la.",
+      readAloud: "Lir sa fot",
       stopReading: "Aret lir",
     }),
     card: DRAFT_KREOL({
       cardTitle: "Verifikasion sekirite FraudLens",
-      whyHeading: "Kifer nou inkiet",
+      whyHeading: "Kifer nou trakase",
       helpMeExplain: "Ed mwa explik sa",
       share: "Partaze",
       copyText: "Kopye text la",
@@ -2223,13 +2249,13 @@ export const COPY: Record<UiLanguage, Copy> = {
         days: (n: number) => (n === 1 ? "zour" : "zour"),
         noStreak: DRAFT_KREOL("Reponn 5 pou koumanse"),
       },
-      quizLabel: "Eskrokri ouswa vre?",
-      scam: "Eskrokri",
+      quizLabel: "Larnak ouswa vre?",
+      scam: "Larnak",
       genuine: "Vre",
       progress: (n, t, k) => `Kestion ${n} lor ${t} · ou finn gagn ${k} bon ziska aster`,
       correct: "Bon repons.",
       incorrect: "Pa bon.",
-      isScam: "Sa enn eskrokri.",
+      isScam: "Sa enn larnak.",
       isGenuine: "Sa enn vre mesaz.",
       whyLabel: "Kifer",
       inEnglish: "An angle",
@@ -2242,16 +2268,16 @@ export const COPY: Record<UiLanguage, Copy> = {
           ? "Parfe. Ou ti pou rekonet zot dan lavi reel osi."
           : k / t >= 0.75
             ? "Bon lizie. Zwe ankor pou gagn enn lot melanz."
-            : "Sa bann-la difisil ekspre. Zwe ankor ek get bien bann siny danze.",
+            : "Sa bann-la fer pou difisil. Zwe ankor ek get bien bann siy danze.",
       best: (b, t) => `Ou pli bon skor: ${b} / ${t}`,
       playAgain: "Zwe ankor",
       syntheticNote: 
-        "Bann mesaz pratik ek egzanp lor sa paz-la inventer, depi nou dataset Kreol. Nom kouma OceanBank pa egziste.",
-      trendsTitle: "Bann kalite arnak kouran",
+        "Bann mesaz pratik ek egzanp lor sa paz-la invante, depi nou bann done Kreol. Nom kouma OceanBank pa existe.",
+      trendsTitle: "Bann kalite larnak kouran",
       trends: {
         parcel_fee: {
           tag: "Fre koli",
-          body: "Enn SMS dir ou koli bloke ladwann ek demann ou pey enn ti fre atraver enn lien. Vre konpani livrezon pa pran fre par lien SMS, al get lor zot prop sit web plito.",
+          body: "Enn SMS dir ou koli bloke ladwann ek demann ou pey enn ti fre atraver enn lyen. Vre konpayni livrezon pa pran fre par lyen SMS, al get lor zot prop sit web plito.",
         },
         fake_relative: {
           tag: "Fos fami",
@@ -2259,7 +2285,7 @@ export const COPY: Record<UiLanguage, Copy> = {
         },
         investment: {
           tag: "Investisman",
-          body: "Enn etranze promet pou double ouswa triple ou larzan dan kek zour, san okenn risk. Profi garanti pa egziste: sa depo-la limem arnak la.",
+          body: "Enn etranze promet pou double ouswa triple ou larzan dan detrwa zour, san okenn risk. Profi garanti pa existe: sa depo-la limem larnak la.",
         },
       },
       languageName: { en: "Angle", fr: "Franse", kreol: "Kreol" },
@@ -2283,32 +2309,186 @@ export const COPY: Record<UiLanguage, Copy> = {
     safepay: DRAFT_KREOL({
       title: "Avan ou pey",
       intro:
-        "De-trwa kestion rapid avan ou avoy larzan. Nou pou verifie seki nou kapav ek dir ou ki pou fer apre.",
+        "De-trwa kestion rapid avan ou avoy larzan. Nou pou verifye seki nou kapav ek dir ou ki pou fer apre.",
       requesterLabel: "Kisannla pe dimann ou pey?",
-      requesterPlaceholder: "par ex. MCB, enn konpagni livrezon, enn dimounn ou konne",
+      requesterPlaceholder: "par ex. MCB, enn konpagni livrezon, enn dimounn ou kone",
       channelLabel: "Kouma zot finn kontakte ou?",
       channelPlaceholder: "par ex. SMS, WhatsApp, enn apel",
       recipientLabel: "Kisannla ou pe peye?",
       recipientPlaceholder: "Nimero telefonn, nimero kont ouswa nom",
-      amountLabel: "Montan (opsionel)",
+      amountLabel: "Montan (pa obligatwar)",
       amountPlaceholder: "par ex. Rs 12,500",
       amountHeading: "Montan",
-      messageLabel: "Mesaz ki ou finn gagne (opsionel, me li ed boukou)",
+      messageLabel: "Mesaz ki ou finn gagne (pa obligatwar, me li ed boukou)",
       messagePlaceholder: "Kol mesaz ki finn dimann ou pey, si ou ena li",
-      submit: "Verifie avan mo pey",
-      missingInput: "Dir nou kisannla pe dimande, ouswa kol mesaz la, pou nou ena kiksoz pou verifie.",
+      submit: "Verifye avan mo pey",
+      missingInput: "Dir nou kisannla pe dimande, ouswa kol mesaz la, pou nou ena kiksoz pou verifye.",
       pauseTitle: "Aret enn kou avan ou pey",
-      okTitle: "Pena siny danze trouve",
+      okTitle: "Pena siy danze trouve",
       okBody:
-        "Nou pa finn trouv enn rezon presi pou inkiet, me nou pa kapav konfirm ki sa demann la vre. Si ou ena dout, verifie direk ar lorganizasion lor enn nimero ouswa enn app ki ou deza fer konfians.",
+        "Nou pa finn trouv enn rezon presi pou trakase, me nou pa kapav konfirm ki sa demann la vre. Si ou ena dout, verifye direk ar organizasion lor enn nimero ouswa enn app ki ou deza fer konfians.",
       recipientReportedLine: (n: number) =>
-        n === 1 ? "Sa benefisier la finn rapporte 1 fwa" : `Sa benefisier la finn rapporte ${n} fwa`,
-      verifyCta: "Verifie par kanal ofisiel",
+        n === 1 ? "Sa benefisier la finn raporte 1 fwa" : `Sa benefisier la finn raporte ${n} fwa`,
+      verifyCta: "Verifye par kanal ofisyel",
       reportCta: "Rapport sa",
-      checkAnother: "Verifie enn lot pelman",
-      back: "Verifie enn mesaz plito",
+      checkAnother: "Verifye enn lot peyman",
+      back: "Verifye enn mesaz plito",
     }),
-    document: TODO_KREOL(DOCUMENT_EN),
+    document: DRAFT_KREOL({
+      title: "Verifye enn dokiman",
+      subtitle: "Enn PDF ouswa enn Word ki paret drol",
+      intro:
+        "Avoy enn formil labank, enn releve, enn demann peyman ouswa enn konfirmasion. FraudLens get " +
+        "kouma dokiman la limem finn fer (siyn kole lor la, text tape lor enn fotokopi, sanzman apre " +
+        "so siyn dizital) ek li lir so text pou rod bann siy danze.",
+      privacy:
+        "Ou dokiman avoye ar server FraudLens, analize dan memwar ek zame garde. Nimero kont, nimero " +
+        "telefonn ek email tire dan so text avan ki text la analize.",
+      drop: "Larg enn PDF ouswa enn Word isi",
+      dropActive: "Larg li pou verifye",
+      choose: "Swazir enn dokiman",
+      types: "PDF ouswa Word (.docx), ziska 10 Mo",
+      remove: "Tire",
+      check: "Verifye sa dokiman la",
+      cancel: "Anile",
+      status: {
+        reading: "Pe lir dokiman la…",
+        uploading: (p: number | null) => (p === null ? "Pe avoy dokiman la…" : `Pe avoy dokiman la… ${p}%`),
+        analysing: "Pe get striktir ek text dokiman la…",
+        analysingNote: "Enn fotokopi kapav pran ziska enn minit.",
+      },
+      storageFailed: "Ou navigater pa finn kapav gard rezilta la. Ferm de-trwa lot tab ek esey ankor.",
+      resultFrom: (name: string) => `Dokiman: ${name}`,
+      whatToDo: {
+        dontAct:
+          "Pa pey, pa siyn, pa avoy nanye akoz sa dokiman la tank li pa konfirme.",
+        doc_verify_with_issuer:
+          "Dimann organizasion ki swadizan finn avoy li pou konfirm li, ar bann kontak ki ou trouve ou " +
+          "mem, pa bann ki dan dokiman la.",
+        doc_dont_enable_content:
+          "Pa aktiv modifikasion ni makro dan sa dokiman la, ek pa ouver bann dokiman ki " +
+          "atase andan.",
+        verify: "Verifye dokiman la ar organizasion kot li sorti avan ou fer nanye.",
+      },
+      panel: {
+        title: "Integrite dokiman",
+        subtitle: "Kouma dokiman la limem finn fer, pa zis seki li dir.",
+        fileFacts: "Dokiman la",
+        fileType: "Kalite",
+        fileTypes: { pdf: "PDF", docx: "Dokiman Word" },
+        pages: "Paz",
+        pagesValue: (analysed: number | null, total: number | null) =>
+          total === null
+            ? analysed === null
+              ? "Pa note"
+              : `${analysed}`
+            : analysed !== null && analysed < total
+              ? `${total} (${analysed} premie verifye)`
+              : `${total}`,
+        producer: "Fer ouswa sove ar",
+        creator: "Kree dan",
+        created: "Kree",
+        modified: "Dernie sanzman",
+        revisions: "Sove ankor",
+        revisionsValue: (n: number) =>
+          n === 0 ? "Non" : n === 1 ? "Enn fwa apre ki li finn kree" : `${n} fwa apre ki li finn kree`,
+        signature: "Siyn dizital",
+        signed: "Ena",
+        notSigned: "Nanye",
+        textSource: "Text lir depi",
+        textSources: {
+          text_layer: "Text dokiman la limem",
+          ocr: "Zimaz la (OCR)",
+          none: "Pena text lizib",
+        },
+        truncated:
+          "Sa dokiman la ena plis text ki enn sel verifikasion kouver, alor zis premie parti so text " +
+          "finn verifye. Bann kontrol lor striktir finn kouver so premie paz.",
+        editedAfterSigning: "Sanze apre so siyn dizital",
+        editedAfterCreation: "Modifye apre ki li finn kree",
+        findingsTitle: "Seki nou finn trouve dan dokiman la",
+        none: "Pena okenn siy danze dan striktir sa dokiman la.",
+        findings: {
+          "DOC-01": (f: DocFinding) =>
+            `Sove ar ${f.tools?.join(", ") || "enn zouti modifikasion ordiner"}. Bann vre dokiman labank ` +
+            `normalman sorti direk dan sistem labank la, pa dan enn editer lor internet.`,
+          "DOC-02": () => "Dokiman la finn sanze apre ki li finn kree.",
+          "DOC-02:incremental_update": () =>
+            "Dokiman la finn modifye ek sove ankor apre ki li ti kree.",
+          "DOC-02:after_signature": () =>
+            "Dokiman la finn sanze apre so siyn dizital, alor seki ou trouve kapav pa seki " +
+            "ti siyn la.",
+          "DOC-03": () =>
+            "Bann detay dokiman la (bann dat ouswa program ki finn fer li) pa dakor ant zot.",
+          "DOC-03:mod_before_create": () => "Dokiman la dir li finn sanze avan ki li finn kree.",
+          "DOC-03:future_date": () => "Dokiman la port enn dat dan fitir.",
+          "DOC-03:producer_mismatch": () =>
+            "Bann de detay dokiman la lor ki program finn fer li pa dakor, seki arive kan enn dokiman " +
+            "sove ankor dan enn lot zouti.",
+          "DOC-04": (f: DocFinding) => `${onPage(f.page)}Enn lot zimaz finn met lor paz la.`,
+          "DOC-04:transparent_overlay": (f: DocFinding) =>
+            `${onPage(f.page)}Enn zimaz ar enn fon transparan finn kole lor fotokopi la${
+              f.ratio && f.ratio >= 2 ? `, ${fmt(f.ratio, "fr")}x mwins bon rezolision ki fotokopi otour` : ""
+            }. Bann siyn ek tanpon kole paret koumsa.`,
+          "DOC-04:resolution_mismatch": (f: DocFinding) =>
+            `${onPage(f.page)}Enn zimaz met lor fotokopi la pli flou ki res paz la${
+              f.ratio ? ` (${fmt(f.ratio, "fr")}x mwins bon rezolision)` : ""
+            }, kouma si li finn agrandi depi enn ti zimaz.`,
+          "DOC-04:overlay": (f: DocFinding) => `${onPage(f.page)}Enn lot zimaz finn met lor paz la.`,
+          "DOC-04:docx_transparent_image": () =>
+            "Enn zimaz ar enn fon transparan poze lor text la, souvan enn siyn ouswa enn tanpon kole. " +
+            "Bann vre siyn dan Word kapav paret koumsa osi.",
+          "DOC-05": (f: DocFinding) =>
+            `${onPage(f.page)}Finn tap text lor fotokopi la:${quoted(f.snippet)}. Enn vre fotokopi ena so text ` +
+            `andan zimaz la.`,
+          "DOC-06": (f: DocFinding) => `${onPage(f.page)}Dokiman la ena text ki ou pa kapav trouve.`,
+          "DOC-06:invisible_render_mode": (f: DocFinding) =>
+            `${onPage(f.page)}Dokiman la ena text invizib. Text kasiet kapav port bann lord pou anbet ` +
+            `bann kontrol otomatik.`,
+          "DOC-06:white_text": (f: DocFinding) =>
+            `${onPage(f.page)}Dokiman la ena text blan lor enn paz blan, invizib pou ou me lizib pou enn ` +
+            `konpiter.`,
+          "DOC-06:tiny_font": (f: DocFinding) => `${onPage(f.page)}Dokiman la ena text tro tipti pou lir.`,
+          "DOC-07": () => "Dokiman la ena bann zafer aktif ladan ki kapav marse kan ou ouver li.",
+          "DOC-07:javascript": () => "Sa PDF la ena kod (JavaScript) ki kapav marse kan ou ouver li.",
+          "DOC-07:launch_action": () => "Sa PDF la esey ouver enn lot dokiman ouswa enn lot program.",
+          "DOC-07:embedded_file": () => "Ena lezot dokiman kasiet andan sa PDF la.",
+          "DOC-07:submit_form": () =>
+            "Sa PDF la ena enn formil ki avoy seki ou tape lor enn sit web.",
+          "DOC-07:macro": () =>
+            "Sa dokiman Word la ena bann makro: kod ki marse si ou klik \u201cEnable content\u201d.",
+          "DOC-07:external_template": (f: DocFinding) =>
+            `Sa dokiman Word la sarz enn model depi internet kan li ouver${f.host ? ` (${f.host})` : ""}. ` +
+            `Sa enn fason koni pou avoy bann program malfezan.`,
+          "DOC-07:ole_object": () =>
+            "Sa dokiman Word la ena enn obze andan ki kapav fer bann zafer marse.",
+          "DOC-08": (f: DocFinding) =>
+            `${onPage(f.page)}${
+              f.snippet ? `"${f.snippet}" servi` : "Enn montan, enn nimero kont ouswa enn dat servi"
+            } enn kalite lekritir${f.font ? ` (${f.font})` : ""} ki pa parey ar res paz la${
+              f.dominantFont ? ` (${f.dominantFont})` : ""
+            }, enn tras kouran ki enn montan ouswa enn dat finn sanze.`,
+          other: () => "Ena kiksoz dan fason sa dokiman la finn fer ki pa normal.",
+        },
+        previewsTitle: "Bann zimaz trouve kole lor dokiman la",
+        previewCaption: (f: PreviewFacts) => {
+          const parts = [
+            f.transparent ? "Zimaz kole ar enn fon transparan" : "Zimaz met lor fotokopi la",
+          ];
+          if (f.lowerRes) parts.push(`${fmt(f.lowerRes, "fr")}x mwins bon rezolision ki fotokopi otour`);
+          if (f.hardEdges) parts.push("bann bor dir ek kare");
+          return `${parts.join(", ")}${f.page !== null ? ` (paz ${f.page})` : ""}.`;
+        },
+        previewAlt: (page: number | null) =>
+          page === null
+            ? "Zimaz trouve kole lor dokiman la"
+            : `Zimaz trouve kole lor paz ${page}`,
+        caveat:
+          "Sa bann siy danze, pa bann prev. Bann vre zouti kapav les serten ladan, ek enn fos dokiman " +
+          "ki finn inprime ek pran an fotokopi ankor pa les okenn tras dan dokiman la. Si ou ena dout, dimann " +
+          "organizasion ki finn avoy li pou konfirm, ar bann kontak ki ou trouve ou mem.",
+      },
+    }),
   },
 };
 
