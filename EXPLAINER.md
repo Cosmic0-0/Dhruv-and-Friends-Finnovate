@@ -424,7 +424,8 @@ so the setting must match the real topology before production use.
   - It has no error-level analysis and no ML forgery model. Those exist only
     in the Python service used by `/api/documents` and
     `/api/analyze/screenshot`, which this route does not call.
-  - PDF annotations and XFA forms are not inspected.
+  - PDF annotations count only as images or text drawn on a scan (a signature
+    stamp, typed-on text); XFA forms are not inspected.
   - Legitimate e-signing tools can also place transparent signature images on a
     scan, which is why that finding alone is ELEVATED ("verify first"), not HIGH.
   - For PDFs with permissions-only encryption, the active-content scan is
