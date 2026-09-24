@@ -10,10 +10,18 @@
 //   node data/test-payloads/consistency.mjs --only EN-01,FR-09,KR-01,SEED-0012
 //   node data/test-payloads/consistency.mjs --set seed      only the sender-reputation seed messages
 //
-// Calls the analysis service in-process, like backend/scripts/check-llm-fallback.js,
-// so the /api/analyze rate limit (20 per 15 min) doesn't apply. Only the AI
-// part is tested: the deterministic lookalike-URL check is added by the
-// route and never varies, so it isn't included here.
+// Calls the full pipeline in-process (services/pipeline/index.js), like
+// backend/scripts/eval.js, so the /api/analyze rate limit (20 per 15 min)
+// doesn't apply. This exercises the deterministic engine too, not just the
+// AI: a case's own signals/verdict can vary run to run only because of the
+// AI's semantic contribution, but the numbers reported are the pipeline's
+// final answer, same as a real request would get.
+//
+// Always an in-memory DB, like eval.js: runPipeline() defaults to
+// record: true, and this script must never write synthetic eval messages
+// into the same fraudlens.db the dev server and demo use (community
+// evidence, ScamDNA fingerprints, Radar counters).
+process.env.DATABASE_URL = ":memory:";
 
 import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
