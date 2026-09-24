@@ -66,7 +66,7 @@ export default function LandingPage() {
             >
               {theme === "dark" ? "☀" : "☾"}
             </button>
-            <Link href="/extension#outlook" className={`dc-pill ${s.hideSm}`} style={pill(42, 18, false, 14)}>{t.header.getOutlook}</Link>
+            <Link href="/extension#outlook" className={`dc-pill ${s.hideMd}`} style={pill(42, 18, false, 14)}>{t.header.getOutlook}</Link>
             <a href="#extension" className={`dc-pill ${s.hideSm}`} style={pill(42, 18, false, 14)}>{t.header.getExtension}</a>
             <Link href="/app" className="dc-pill dc-pill-ink" style={pill(42, 20, true, 14)}>{t.header.check}</Link>
           </div>
@@ -155,6 +155,7 @@ export default function LandingPage() {
               <div className={s.extCtas} style={{ display: "flex", gap: 10, paddingTop: 10 }}>
                 <Link href="/extension#chrome" className="dc-pill" style={{ ...pill(52, 24, false, 15), background: "#FFFFFF", color: "#0B0B0F", fontWeight: 500 }}>{t.extension.chrome}</Link>
                 <Link href="/extension#other-browsers" className="dc-pill" style={{ ...pill(52, 24, false, 15), border: "1px solid rgba(255,255,255,0.5)", color: "#FFFFFF" }}>{t.extension.other}</Link>
+                <Link href="/extension#outlook" className="dc-pill" style={{ ...pill(52, 24, false, 15), border: "1px solid rgba(255,255,255,0.5)", color: "#FFFFFF" }}>{t.header.getOutlook}</Link>
               </div>
             </div>
             <div aria-hidden="true" style={{ background: "rgba(255,255,255,0.12)", borderRadius: 28, padding: 24, display: "flex", flexDirection: "column", gap: 12 }}>

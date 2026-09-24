@@ -2,6 +2,10 @@
    Inline styles carry the design values, so overrides here need !important. */
 .navLink:hover { color: var(--dc-ink) !important; }
 
+/* Nav plus three header pills overflow until roughly 1200px. */
+@media (max-width: 74.999rem) {
+  .hideMd { display: none !important; }
+}
 @media (max-width: 63.999rem) {
   .headerInner { padding: 0 20px !important; gap: 16px !important; }
   .nav { display: none !important; }
