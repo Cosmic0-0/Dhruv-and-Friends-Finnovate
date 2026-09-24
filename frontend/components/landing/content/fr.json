@@ -144,16 +144,16 @@
   "extensionPage": {
     "eyebrow": "EXTENSION NAVIGATEUR",
     "title": "FraudLens Link Guard",
-    "lede": "L'extension compare le site que vous visitez aux vraies adresses des banques et opérateurs mauriciens, et peut analyser une page ou un message sélectionné à la demande. Elle n'est pas encore dans une boutique d'extensions : vous l'installez depuis le code source du projet.",
+    "lede": "L'extension compare le site que vous visitez aux vraies adresses des banques et opérateurs mauriciens, et peut analyser une page ou un message sélectionné à la demande. Elle n'est pas encore dans une boutique d'extensions : vous la téléchargez ici et la chargez vous-même dans votre navigateur.",
     "chromeTitle": "Chrome et Edge",
     "chromeNote": "Fonctionne avec Chrome 102 ou plus récent et avec Microsoft Edge.",
     "steps": [
-      "Téléchargez le code source de FraudLens en zip et décompressez-le.",
+      "Téléchargez le zip de l'extension et décompressez-le.",
       "Ouvrez chrome://extensions (dans Edge : edge://extensions).",
       "Activez le mode développeur.",
-      "Cliquez sur « Charger l'extension non empaquetée » et choisissez le dossier extension du projet décompressé."
+      "Cliquez sur « Charger l'extension non empaquetée » et choisissez le dossier fraudlens-link-guard décompressé (celui qui contient manifest.json)."
     ],
-    "download": "Télécharger le code source (.zip)",
+    "download": "Télécharger l'extension (.zip)",
     "viewSource": "Voir le code de l'extension",
     "firefoxTitle": "Firefox",
     "firefoxBody": "Pas encore pris en charge. L'extension est conçue pour les navigateurs Chromium (service worker Manifest V3) et n'a pas été empaquetée ni testée pour Firefox.",

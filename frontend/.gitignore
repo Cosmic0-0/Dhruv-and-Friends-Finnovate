@@ -5,3 +5,6 @@ out/
 .env*.local
 .env
 npm-debug.log*
+
+# Built from ../extension by scripts/pack-extension.mjs
+public/fraudlens-link-guard.zip
