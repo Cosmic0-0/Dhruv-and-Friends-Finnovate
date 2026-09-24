@@ -1,0 +1,201 @@
+{
+  "zip": "2022.findings-aacl.3.Dataset.zip",
+  "members": [
+    "MorisienMT/Creole MT evaluation Annotations.xlsx",
+    "MorisienMT/README",
+    "MorisienMT/dev.cr",
+    "MorisienMT/dev.en",
+    "MorisienMT/dev.fr",
+    "MorisienMT/test.cr",
+    "MorisienMT/test.en",
+    "MorisienMT/test.fr",
+    "MorisienMT/train.en-cr.cr",
+    "MorisienMT/train.en-cr.en",
+    "MorisienMT/train.fr-cr.cr",
+    "MorisienMT/train.fr-cr.fr"
+  ],
+  "files": {
+    "mfe-en": {
+      "source_file": "train.en-cr.cr",
+      "target_file": "train.en-cr.en",
+      "lines": 21810,
+      "classification": {
+        "dictionary_definition": 2,
+        "duplicate": 4,
+        "natural_sentence": 8428,
+        "short_phrase": 1628,
+        "single_word_gloss": 11542,
+        "suspected_misalignment": 206
+      },
+      "flags": {
+        "exact_duplicate_pair": 4,
+        "length_ratio_gt_3": 198,
+        "source_equals_target": 8
+      },
+      "exact_duplicate_pairs": 4,
+      "duplicate_source_sentences": 23,
+      "duplicate_target_sentences": 2275,
+      "source_word_len": {
+        "min": 1,
+        "max": 126,
+        "mean": 5.79,
+        "median": 1.0,
+        "p95": 24
+      },
+      "target_word_len": {
+        "min": 1,
+        "max": 129,
+        "mean": 6.52,
+        "median": 2.0,
+        "p95": 26
+      },
+      "length_ratio": {
+        "min": 1.0,
+        "max": 29.0,
+        "mean": 1.33,
+        "median": 1.0,
+        "p95": 2.33
+      },
+      "single_word_source_lines": 12467
+    },
+    "mfe-fr": {
+      "source_file": "train.fr-cr.cr",
+      "target_file": "train.fr-cr.fr",
+      "lines": 15239,
+      "classification": {
+        "dictionary_definition": 1,
+        "duplicate": 1,
+        "natural_sentence": 2575,
+        "short_phrase": 1493,
+        "single_word_gloss": 10975,
+        "suspected_misalignment": 194
+      },
+      "flags": {
+        "exact_duplicate_pair": 1,
+        "length_ratio_gt_3": 194
+      },
+      "exact_duplicate_pairs": 1,
+      "duplicate_source_sentences": 10,
+      "duplicate_target_sentences": 2615,
+      "source_word_len": {
+        "min": 1,
+        "max": 39,
+        "mean": 2.02,
+        "median": 1,
+        "p95": 8
+      },
+      "target_word_len": {
+        "min": 1,
+        "max": 49,
+        "mean": 2.58,
+        "median": 1,
+        "p95": 9
+      },
+      "length_ratio": {
+        "min": 1.0,
+        "max": 16.0,
+        "mean": 1.41,
+        "median": 1.0,
+        "p95": 3.0
+      },
+      "single_word_source_lines": 12427
+    }
+  },
+  "splits": {
+    "dev": {
+      "line_counts": {
+        "mfe": 500,
+        "en": 500,
+        "fr": 500
+      },
+      "aligned_3way": true
+    },
+    "test": {
+      "line_counts": {
+        "mfe": 1000,
+        "en": 1000,
+        "fr": 1000
+      },
+      "aligned_3way": true
+    }
+  },
+  "frozen_split_audit": {
+    "dev": {
+      "mfe_en_classification": {
+        "natural_sentence": 498,
+        "suspected_misalignment": 2
+      },
+      "mfe_seen_in_train_mfe-en_source": 0,
+      "mfe_seen_in_train_mfe-fr_source": 0,
+      "en_seen_in_train_mfe-en_target": 1,
+      "fr_seen_in_train_mfe-fr_target": 0,
+      "empty_lines": {
+        "mfe": 0,
+        "en": 0,
+        "fr": 0
+      },
+      "word_len": {
+        "mfe": {
+          "min": 10,
+          "max": 56,
+          "mean": 16.23,
+          "median": 15.0,
+          "p95": 27
+        },
+        "en": {
+          "min": 4,
+          "max": 61,
+          "mean": 16.94,
+          "median": 15.0,
+          "p95": 28
+        },
+        "fr": {
+          "min": 7,
+          "max": 73,
+          "mean": 18.09,
+          "median": 17.0,
+          "p95": 31
+        }
+      }
+    },
+    "test": {
+      "mfe_en_classification": {
+        "natural_sentence": 997,
+        "suspected_misalignment": 3
+      },
+      "mfe_seen_in_train_mfe-en_source": 0,
+      "mfe_seen_in_train_mfe-fr_source": 0,
+      "en_seen_in_train_mfe-en_target": 1,
+      "fr_seen_in_train_mfe-fr_target": 1,
+      "empty_lines": {
+        "mfe": 0,
+        "en": 0,
+        "fr": 0
+      },
+      "word_len": {
+        "mfe": {
+          "min": 9,
+          "max": 47,
+          "mean": 16.04,
+          "median": 15.0,
+          "p95": 27
+        },
+        "en": {
+          "min": 3,
+          "max": 53,
+          "mean": 17.05,
+          "median": 16.0,
+          "p95": 29
+        },
+        "fr": {
+          "min": 6,
+          "max": 58,
+          "mean": 18.05,
+          "median": 16.5,
+          "p95": 31
+        }
+      }
+    }
+  },
+  "annotation_workbook": "Creole MT evaluation Annotations.xlsx: 50 examples x 4 directions, human eval of the paper's NMT system; not used as data"
+}

@@ -1,0 +1,26 @@
+{
+  "capturedFrom": "backend `npm run eval` (deterministic, LLM off), ruleset rs-1.3, node v24.14.1",
+  "backendTests": {
+    "total": 402,
+    "pass": 402,
+    "fail": 0
+  },
+  "frontendTests": {
+    "total": 85,
+    "pass": 85,
+    "fail": 0
+  },
+  "tmRows": 37,
+  "corpusRows": 44,
+  "evalCases": 84,
+  "kreolCases": {
+    "see": "kreol-baseline-eval.txt",
+    "corpusRowsEvaluated": 44,
+    "deterministicRecallAllKreolRows": "28/35 positives (80.0%), FPR 0/9"
+  },
+  "translationMfeEn": "no baseline implementation",
+  "translationEnMfe": "no baseline implementation",
+  "translationFrMfe": "no baseline implementation",
+  "languageDetection": "no labelled baseline yet (detectLanguage is a marker-count vote)",
+  "llmAvailable": false
+}

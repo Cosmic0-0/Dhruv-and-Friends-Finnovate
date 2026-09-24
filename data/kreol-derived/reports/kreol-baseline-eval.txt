@@ -1,0 +1,48 @@
+
+FraudLens evaluation - ruleset rs-1.3 - mode: deterministic (no LLM)
+ALL                        n= 84  TP= 46 FP=  0 TN= 21 FN= 17  P=100.0% R= 73.0% F1= 84.4% FPR=  0.0%
+  lang en                  n= 20  TP= 10 FP=  0 TN=  6 FN=  4  P=100.0% R= 71.4% F1= 83.3% FPR=  0.0%
+  lang fr                  n= 20  TP=  8 FP=  0 TN=  6 FN=  6  P=100.0% R= 57.1% F1= 72.7% FPR=  0.0%
+  lang kreol:mfe           n= 11  TP=  7 FP=  0 TN=  1 FN=  3  P=100.0% R= 70.0% F1= 82.4% FPR=  0.0%
+  lang kreol:mfe+en        n=  7  TP=  5 FP=  0 TN=  0 FN=  2  P=100.0% R= 71.4% F1= 83.3% FPR=  n/a
+  lang kreol:mfe+fr        n=  5  TP=  3 FP=  0 TN=  2 FN=  0  P=100.0% R=100.0% F1=100.0% FPR=  0.0%
+  lang kreol:mfe+en+fr     n=  1  TP=  0 FP=  0 TN=  0 FN=  1  P=  n/a R=  0.0% F1=  n/a FPR=  n/a
+  lang kreol:en            n= 10  TP=  7 FP=  0 TN=  3 FN=  0  P=100.0% R=100.0% F1=100.0% FPR=  0.0%
+  lang kreol:fr            n= 10  TP=  6 FP=  0 TN=  3 FN=  1  P=100.0% R= 85.7% F1= 92.3% FPR=  0.0%
+  kreol owner_reviewed     n= 24  TP= 15 FP=  0 TN=  3 FN=  6  P=100.0% R= 71.4% F1= 83.3% FPR=  0.0%
+
+Per scam type (recall on positives, FP on legitimate):
+  account_verification     n=  1  TP=  1 FP=  0 TN=  0 FN=  0  P=100.0% R=100.0% F1=100.0% FPR=  n/a
+  bank_impersonation       n= 11  TP= 10 FP=  0 TN=  0 FN=  1  P=100.0% R= 90.9% F1= 95.2% FPR=  n/a
+  family_impersonation     n=  7  TP=  5 FP=  0 TN=  0 FN=  2  P=100.0% R= 71.4% F1= 83.3% FPR=  n/a
+  government_impersonation n=  5  TP=  2 FP=  0 TN=  0 FN=  3  P=100.0% R= 40.0% F1= 57.1% FPR=  n/a
+  investment               n=  7  TP=  5 FP=  0 TN=  0 FN=  2  P=100.0% R= 71.4% F1= 83.3% FPR=  n/a
+  job_scam                 n=  7  TP=  4 FP=  0 TN=  0 FN=  3  P=100.0% R= 57.1% F1= 72.7% FPR=  n/a
+  legitimate               n= 21  TP=  0 FP=  0 TN= 21 FN=  0  P=  n/a R=  n/a F1=  n/a FPR=  0.0%
+  merchant_payment_change  n=  4  TP=  3 FP=  0 TN=  0 FN=  1  P=100.0% R= 75.0% F1= 85.7% FPR=  n/a
+  otp_theft                n=  5  TP=  5 FP=  0 TN=  0 FN=  0  P=100.0% R=100.0% F1=100.0% FPR=  n/a
+  parcel_customs           n=  6  TP=  6 FP=  0 TN=  0 FN=  0  P=100.0% R=100.0% F1=100.0% FPR=  n/a
+  payment_request          n=  4  TP=  1 FP=  0 TN=  0 FN=  3  P=100.0% R= 25.0% F1= 40.0% FPR=  n/a
+  prize_lottery            n=  4  TP=  3 FP=  0 TN=  0 FN=  1  P=100.0% R= 75.0% F1= 85.7% FPR=  n/a
+  refund_scam              n=  2  TP=  1 FP=  0 TN=  0 FN=  1  P=100.0% R= 50.0% F1= 66.7% FPR=  n/a
+
+Level distribution: { high: 7, critical: 2, elevated: 37, low: 38 }
+
+Misclassified (17):
+  FN EN-06 [en] low 6 SOC-01 :: Hi, I just sent Rs 3,500 to your mobile money account by mistake. Please send it back urge
+  FN EN-07 [en] low 16 SOC-02,SOC-01 :: MRA NOTICE: You have an unpaid tax balance of Rs 14,200. Failure to settle within 48 hours
+  FN EN-19 [en] low 0 - :: Hi, I'm hiring for a part-time online moderator role - Rs 15,000/month, no experience or i
+  FN EN-20 [en] low 0 - :: Hey, remember me from the community WhatsApp group? I've been doing really well with an FX
+  FN FR-06 [fr] low 8 PAY-01 :: Bonjour, je viens de vous envoyer Rs 4 200 par erreur sur votre compte mobile money. Merci
+  FN FR-07 [fr] low 16 SOC-02,SOC-01 :: AVIS MRA : vous avez un solde d'impôt impayé de Rs 16 800. Le non-paiement sous 48 heures 
+  FN FR-09 [fr] low 0 - :: Maman c'est moi, j'ai perdu mon téléphone donc voici mon nouveau numéro. J'ai un petit sou
+  FN FR-12 [fr] low 0 - :: Veuillez noter que les coordonnées bancaires de notre entreprise ont changé pour tous les 
+  FN FR-19 [fr] low 0 - :: Bonjour, je recrute pour un poste de modérateur en ligne à temps partiel - Rs 15 000/mois,
+  FN FR-20 [fr] low 0 - :: Salut, tu te souviens de moi du groupe WhatsApp du quartier ? Je gagne bien avec un servic
+  FN FL-KM-0003 [kreol:mfe] low 18 SOC-02,SOC-04 :: ALERT SunCoast Bank: To kart inn sispann pou rezon sekirite. Apel sa nimero-la dans 24 er 
+  FN FL-KM-0006 [kreol:mfe] low 14 SOC-01,SOC-05 :: Bonzour, ou'nn gagn enn remboursement MRA Rs 8,400. Klik lien la pou resevwar li avan 24h.
+  FN FL-KM-0007 [kreol:mfe+en] low 16 SOC-02,SOC-01 :: Lannons MRA: Ou ena enn peyman tax outstanding de Rs 12,500. Si ou pa ressi fer li avan 48
+  FN FL-KM-0009 [kreol:mfe] low 14 PAY-01,SOC-01 :: Salut, mo finn avoy larzan par erer lor to kont la banque. Silvouple reavoyy Rs 3,000 lor 
+  FN FL-KM-0013 [kreol:mfe+en] low 14 PAY-01,SOC-01 :: Bonojour mo mem ca, monn perdi mo portab et samem mo nouvo nimero. Pas kav fer bann appel 
+  FN FL-KM-0021 [kreol:mfe+en+fr] low 14 SOC-01,SOC-05 :: Felicitations! Ou'nn gagne enn loterie WhatsApp International, avecv enn prix de Rs 50,000
+  FN FL-KM-0040 [kreol:fr] low 15 PAY-04 :: Offre d'emploi : travail à domicile, Rs 2 500 par jour pour aimer des vidéos. Des frais d'
