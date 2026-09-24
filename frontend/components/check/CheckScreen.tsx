@@ -16,8 +16,10 @@ type View = "hub" | "workspace";
  * The Check hub + workspace (Claude Design Check.dc.html), in one page: the
  * hub is the entry point, "Check message" / "Try it with a real MCB scam"
  * switches to the workspace with a real check already in flight. Handles the
- * extension's `?scan=` hand-off (prefill only, never auto-submit) and the tab
- * bar's `?new=1` (open the workspace ready to type).
+ * extension's `?scan=` hand-off (the user already chose "Open full analysis
+ * in FraudLens", so this fires the real check immediately, same as the Hub's
+ * own auto-submit flows) and the tab bar's `?new=1` (open the workspace ready
+ * to type, no auto-submit — there is no text to check yet).
  */
 export default function CheckScreen() {
   const searchParams = useSearchParams();
@@ -32,7 +34,7 @@ export default function CheckScreen() {
   // Next navigation.
   const [view, setView] = useState<View>(() => (searchParams.get("scan") || searchParams.get("new") ? "workspace" : "hub"));
   const [initialText, setInitialText] = useState(() => searchParams.get("scan")?.slice(0, MAX_MESSAGE_LENGTH) ?? "");
-  const [autoSubmit, setAutoSubmit] = useState<string | undefined>(undefined);
+  const [autoSubmit, setAutoSubmit] = useState<string | undefined>(() => searchParams.get("scan")?.slice(0, MAX_MESSAGE_LENGTH) || undefined);
 
   useEffect(() => {
     if (searchParams.get("scan") || searchParams.get("new")) {

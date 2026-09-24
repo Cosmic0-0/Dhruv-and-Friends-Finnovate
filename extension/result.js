@@ -48,7 +48,7 @@ function renderSignals(signals) {
   }
 }
 
-// The web app pre-fills its check screen from ?scan= (see popup.js).
+// The web app runs a real check on ?scan= immediately (see popup.js).
 function updateOpenLink(scanText) {
   const url = new URL(FRONTEND_ORIGIN + "/app");
   if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));

@@ -87,9 +87,10 @@ function renderSignals(signals) {
   }
 }
 
-// The web app's check screen reads ?scan= and pre-fills the message box
-// with it (frontend/components/CheckForm.tsx), so this opens FraudLens with
-// a short, capped excerpt of the scanned text ready to analyse in full.
+// The web app's check screen reads ?scan= and runs a real check on it
+// immediately (frontend/components/check/CheckScreen.tsx), so this opens
+// FraudLens straight into the full report for a short, capped excerpt of
+// the scanned text.
 function updateOpenLink(scanText) {
   const url = new URL(FRONTEND_ORIGIN + "/app");
   if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));

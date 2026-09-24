@@ -251,7 +251,7 @@ match.
 | 14H financial-form warning | **Deferred, out of scope for this pass** | Too invasive for the time available, per the task brief — no code for this exists |
 | 14I report this site | Done | `POST /api/report` with the current hostname as `sender` — see limitation below |
 | 14J recent checks | Done | `history.js`, `chrome.storage.local`, 15-entry cap, no text ever stored |
-| 14K web app handoff | Done | "Open in FraudLens" opens the web app with `?scan=<capped text>`, which its check screen pre-fills (`frontend/components/check/CheckScreen.tsx`) |
+| 14K web app handoff | Done | "Open in FraudLens" opens the web app with `?scan=<capped text>`, which its check screen runs immediately and shows a full report (`frontend/components/check/CheckScreen.tsx`) |
 | 14L privacy copy | Done | Shown in both `popup.html` and `result.html` |
 | Security Report | Done — orchestration unit-tested; report page visually checked in a browser preview; **re-run the checklist item below in the real extension** | `collect-signals.js` + `security-report.js` + `report.html` + `vendor/retire-js-*` + `POST /api/analyze-site` |
 
@@ -259,8 +259,8 @@ match.
 
 - **Web app handoff (14K) carries only an excerpt.** "Open in FraudLens"
   passes at most `MAX_HANDOFF_CHARS` (400) characters in `?scan=`, because
-  it travels in a URL. The web app pre-fills its check screen with it; for a
-  longer page, paste the rest in by hand.
+  it travels in a URL. The web app runs a full check on that excerpt
+  immediately; for a longer page, paste the rest in by hand and check again.
 - **`/api/report`'s `sender` field.** The contract's `/api/report` only
   ever stores a single free-form `sender` string plus a count
   (`backend/src/db/index.js`); there's no dedicated "domain report" shape.
@@ -349,8 +349,9 @@ plans to show it. Before the demo, a human should walk through:
    the popup's "Recent checks" list shows domain + relative time + a state
    dot for each, oldest entries drop off past 15.
 10. **Open in FraudLens (14K)**: click the link after a page scan or a
-    context-menu check; confirm it opens `FRONTEND_ORIGIN` with the scanned
-    text pre-filled on the check screen (from the `scan=` query param).
+    context-menu check; confirm it opens `FRONTEND_ORIGIN` and runs a real
+    check on the scanned text immediately, landing on a full report (from
+    the `scan=` query param).
 11. **Security Report — the newest feature here, and the one this pass has
     the *least* real-world confidence in (see the callout below).** Click
     "Security Report" in the popup on a real site (try a well-known site
