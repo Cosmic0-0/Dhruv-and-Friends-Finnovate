@@ -1,0 +1,9 @@
+{
+ "latency": {
+  "lexiconOldMsPerMessage": 0.1001,
+  "lexiconNewMsPerMessage": 0.1788,
+  "addedMsPerMessage": 0.0787,
+  "messages": 88,
+  "note": "detectLexicon only, node v24.14.1; /api/analyze latency is dominated by the semantic model (seconds)"
+ }
+}

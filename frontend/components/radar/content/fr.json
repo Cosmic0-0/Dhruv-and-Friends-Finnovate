@@ -1,0 +1,53 @@
+{
+  "title": "Radar",
+  "lede": "Ce que les escrocs envoient à Maurice, d’après les messages vérifiés sur FraudLens.",
+  "ranges": {
+    "7d": "7 jours",
+    "30d": "30 jours",
+    "12m": "12 mois"
+  },
+  "rangeLabel": "Période",
+  "caught": "Arnaques détectées",
+  "vsPrev": "{pct} % par rapport à la période précédente",
+  "noPrev": "Pas de données antérieures à comparer",
+  "chartLabel": "Arnaques détectées par {unit}",
+  "unitDay": "jour",
+  "unitMonth": "mois",
+  "mostCopied": "Expéditeur le plus imité",
+  "shareOf": "{pct} % des vérifications signalées sur la période",
+  "noneCopied": "Aucune institution nommée pour l’instant",
+  "rising": "En forte hausse",
+  "risingUp": "{n} vérifications, contre {prev} sur la période précédente",
+  "risingNew": "Nouveau sur la période",
+  "mostlyBy": "surtout par {channel}",
+  "noneRising": "Rien n’augmente plus qu’avant",
+  "topTypes": "Types d’arnaques les plus fréquents",
+  "fakeLinks": "Faux liens repérés",
+  "pretends": "Se fait passer pour {brand}",
+  "imitatesUnknown": "Imite un site officiel",
+  "times": "{n} fois",
+  "once": "une fois",
+  "empty": "Pas encore assez de vérifications",
+  "emptyBody": "Radar se remplit à mesure que les gens vérifient des messages. Rien n’est inventé.",
+  "loading": "Chargement…",
+  "error": "Impossible de charger Radar pour le moment.",
+  "retry": "Réessayer",
+  "coverage": "Ne compte que les messages vérifiés sur FraudLens et signalés comme arnaque ou suspects. Ce n’est pas le total des arnaques à Maurice.",
+  "types": {
+    "MCB_IMPERSONATION": "Usurpation de la MCB",
+    "SBM_IMPERSONATION": "Usurpation de la SBM",
+    "ABSA_IMPERSONATION": "Usurpation d’Absa",
+    "BANK_ONE_IMPERSONATION": "Usurpation de Bank One",
+    "TELCO_PRIZE_SCAM": "Faux gain télécom",
+    "MOBILE_MONEY_FRAUD": "Fraude au paiement mobile",
+    "FAKE_PARCEL": "Faux frais de colis et de douane",
+    "MARKETPLACE_PAYMENT_FRAUD": "Fraude aux petites annonces"
+  },
+  "channels": {
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "email": "e-mail",
+    "facebook": "Facebook",
+    "call": "appel"
+  }
+}

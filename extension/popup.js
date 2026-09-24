@@ -91,7 +91,7 @@ function renderSignals(signals) {
 // with it (frontend/components/CheckForm.tsx), so this opens FraudLens with
 // a short, capped excerpt of the scanned text ready to analyse in full.
 function updateOpenLink(scanText) {
-  const url = new URL(FRONTEND_ORIGIN + "/");
+  const url = new URL(FRONTEND_ORIGIN + "/app");
   if (scanText) url.searchParams.set("scan", scanText.slice(0, MAX_HANDOFF_CHARS));
   els.openLink.href = url.toString();
 }
@@ -111,8 +111,24 @@ function domainCheckText(result, state) {
   if (result.reportCount > 0) parts.push(`Reported by FraudLens users ${result.reportCount} time${result.reportCount === 1 ? "" : "s"}.`);
   if (typeof result.domainAgeDays === "number" && result.domainAgeDays < 365) {
     parts.push(`Domain registered ${result.domainAgeDays} day${result.domainAgeDays === 1 ? "" : "s"} ago.`);
+  } else if (result.domainAgeDays == null && typeof result.firstCertificateDays === "number" && result.firstCertificateDays < 365) {
+    parts.push(`First seen in public certificate logs ${result.firstCertificateDays} day${result.firstCertificateDays === 1 ? "" : "s"} ago.`);
   }
+  const cert = certificateText(result.certificate);
+  if (cert) parts.push(cert);
   return parts.join(" ");
+}
+
+/**
+ * The certificate in plain words - the old "green bar". EV/OV name a company
+ * the certificate authority checked; DV only proves control of the domain,
+ * which any scam site can get for free. Problems are spelled out by CERT-01.
+ */
+function certificateText(cert) {
+  if (!cert || cert.problem) return "";
+  if (cert.validation === "EV" && cert.organization) return `Certificate verified for ${cert.organization} (Extended Validation, checked by ${cert.issuer ?? "the issuer"}).`;
+  if (cert.validation === "OV" && cert.organization) return `Certificate issued to ${cert.organization} (organisation checked by ${cert.issuer ?? "the issuer"}).`;
+  return "Certificate proves this address only, not who runs the site.";
 }
 
 async function renderTabStatus() {

@@ -1,0 +1,197 @@
+{
+  "hub": {
+    "titleA": "Que voulez-vous ",
+    "titleB": "vérifier ?",
+    "lede": "Commencez par un message, ou choisissez un outil adapté à votre situation. Chaque verdict est accompagné des preuves qui le justifient.",
+    "eyebrow": "01 · Le plus utilisé",
+    "cardTitle": "Vérifier un message ou un lien",
+    "cardBody": "SMS, WhatsApp, e-mail ou capture d'écran. Nous vérifions les liens, l'identité revendiquée et la formulation, en anglais, français et kreol.",
+    "tryExample": "Essayer avec une vraie arnaque MCB",
+    "toolsTitle": "Outils pour des situations précises",
+    "toolsNote": "Aussi dans la barre du haut",
+    "open": "Ouvrir →",
+    "tools": [
+      {
+        "n": "02",
+        "href": "/safepay",
+        "title": "Avant de payer",
+        "body": "Vous allez envoyer de l'argent à quelqu'un de nouveau ? Vérifiez d'abord le bénéficiaire.",
+        "looks": "Examine : compte ou IBAN, numéro de téléphone, nom de l'entreprise, fraudes signalées"
+      },
+      {
+        "n": "03",
+        "href": "/document",
+        "title": "Vérifier un document",
+        "body": "Relevés bancaires, lettres et factures en PDF ou Word.",
+        "looks": "Examine : signatures collées, modifications après signature, formulations d'arnaque"
+      },
+      {
+        "n": "04",
+        "href": "/batch",
+        "title": "Analyse groupée",
+        "body": "Collez ou importez plusieurs messages et obtenez un verdict pour chacun.",
+        "looks": "Examine : chaque message séparément, puis les points communs"
+      },
+      {
+        "n": "05",
+        "href": "/conversation",
+        "title": "Conversation entière",
+        "body": "Exportez une discussion WhatsApp ou Messenger et vérifiez-la du début à la fin.",
+        "looks": "Examine : comment l'histoire évolue, quand l'argent ou les codes apparaissent"
+      }
+    ]
+  },
+  "example": "Ou kont MCB pou bloke zordi. Konfirm ou OTP lor mcb-secure.top/verify",
+  "work": {
+    "back": "← Tous les outils",
+    "titleA": "Vérifiez ",
+    "titleB": "avant",
+    "titleC": " d'agir.",
+    "lede": "Collez un message ou un lien tel que vous l'avez reçu. FraudLens lit l'anglais, le français et le kreol morisien, même mélangés.",
+    "modes": {
+      "message": "Message",
+      "link": "Lien",
+      "screenshot": "Capture",
+      "document": "Document"
+    },
+    "placeholder": "Collez le message ici",
+    "linkPlaceholder": "Collez le lien ici",
+    "linkHint": "Nous vérifions l'adresse elle-même : à qui elle appartient, son âge, et si elle a été signalée. La page n'est pas ouverte.",
+    "shotChoose": "Choisir une capture",
+    "shotHint": "PNG ou JPEG. L'image est lue sur notre serveur et le texte est masqué avant d'être vérifié.",
+    "shotReady": "Texte lu depuis la capture. Appuyez sur Vérifier le message.",
+    "shotRemove": "Retirer la capture",
+    "meta": {
+      "lang": {
+        "en": "Anglais détecté",
+        "fr": "Français détecté",
+        "kreol": "Kreol détecté",
+        "mixed": "Langues mélangées"
+      },
+      "links": {
+        "one": "1 lien",
+        "other": "{n} liens"
+      },
+      "chars": "{n} caractères"
+    },
+    "receivedBy": "Reçu par",
+    "channels": {
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "E-mail",
+      "facebook": "Facebook",
+      "call": "Appel"
+    },
+    "check": "Vérifier le message",
+    "checkLink": "Vérifier le lien",
+    "clear": "Effacer",
+    "cancel": "Annuler",
+    "privacy": "Vérifié en toute confidentialité. Votre message n'est jamais conservé sur nos serveurs.",
+    "docInstead": "Vérifier un document à la place",
+    "idleTitle": "Votre verdict apparaîtra ici.",
+    "idleBody": "Vous verrez un verdict et les mots exacts qui y ont mené.",
+    "loadingTitle": "Lecture du message…",
+    "loadingLink": "Vérification du lien…",
+    "investigated": "Ce que nous avons vérifié"
+  },
+  "result": {
+    "verdict": "Verdict",
+    "confidence": {
+      "high": "Confiance élevée",
+      "moderate": "Confiance moyenne",
+      "low": "Confiance faible"
+    },
+    "signals": {
+      "zero": "aucun signal",
+      "one": "1 signal",
+      "other": "{n} signaux"
+    },
+    "words": {
+      "scam": "Arnaque.",
+      "suspicious": "Suspect.",
+      "safe": "Semble authentique."
+    },
+    "summary": {
+      "scamWho": "Ce message se fait passer pour {who}{goal}.",
+      "suspiciousWho": "Ce message prétend venir de {who}{goal}.",
+      "scam": "Ce message présente les signes d'une arnaque{goal}.",
+      "suspicious": "Certains éléments de ce message ne collent pas{goal}.",
+      "safe": "Nous n'avons trouvé aucun signal d'alerte. N'agissez que sur des demandes que vous attendiez.",
+      "goals": {
+        "OTP_REQUEST": " pour obtenir votre code à usage unique",
+        "CREDENTIAL_REQUEST": " pour obtenir votre mot de passe ou votre carte",
+        "PAYMENT_REQUEST": " pour vous faire envoyer de l'argent",
+        "PAYMENT_PRESSURE": " pour vous faire envoyer de l'argent",
+        "ACCOUNT_TAKEOVER": " pour prendre le contrôle de votre compte"
+      }
+    },
+    "theMessage": "Le message",
+    "theLink": "Le lien",
+    "why": "Pourquoi",
+    "noSignals": "Aucun signal d'alerte trouvé.",
+    "whatToDo": "Que faire maintenant",
+    "report": "Signaler cette arnaque",
+    "share": "Partager ce résultat",
+    "copied": "Copié",
+    "acted": "Vous avez déjà répondu ou donné le code ?",
+    "actedLink": "Que faire si vous avez agi",
+    "fullEvidence": "Voir toutes les preuves",
+    "receivedBy": "Reçu par {channel}",
+    "ai": {
+      "ok": "Langage lu par l'IA",
+      "off": "IA indisponible : règles seules"
+    },
+    "linkFacts": {
+      "official": "Site officiel de {who}",
+      "trusted": "Un site bien connu",
+      "age": "Domaine enregistré il y a {n} jours",
+      "ageYears": "Domaine enregistré il y a plus d'un an",
+      "reports": "Signalé {n} fois par des utilisateurs de FraudLens",
+      "cert": "Certificat délivré à {org}",
+      "shortened": "Lien court qui mène à {url}"
+    },
+    "shareTitle": "Vérification FraudLens",
+    "shareFooter": "Vérifié avec FraudLens",
+    "actions": {
+      "dont_open_link": "N'ouvrez pas le lien de ce message.",
+      "open_official_directly": "Ouvrez vous-même le site de l'organisme, ou son application officielle, jamais via ce lien.",
+      "dont_share_code": "Ne partagez aucun code, PIN, mot de passe ou donnée de carte.",
+      "contact_verified_channel": "Contactez l'organisme via un numéro de confiance, comme celui au dos de votre carte.",
+      "dont_install": "N'installez aucune application et ne donnez à personne l'accès à distance à votre téléphone ou ordinateur.",
+      "dont_move_funds": "Ne déplacez pas d'argent vers un « compte sécurisé ». Les vraies banques ne le demandent jamais.",
+      "verify_bank_change": "N'utilisez pas les coordonnées de ce message. Confirmez tout changement de coordonnées bancaires avec le fournisseur via des coordonnées que vous avez déjà.",
+      "stop_and_verify_recipient": "Mettez la conversation en pause et vérifiez vous-même qui recevra réellement l'argent.",
+      "dont_send_money": "N'envoyez pas d'argent pour l'instant. Vérifiez d'abord la demande de façon indépendante.",
+      "call_person_known_number": "Appelez la personne au numéro que vous aviez déjà, pas celui de ce message.",
+      "talk_to_someone": "Parlez-en à une personne de confiance avant d'agir. Les escrocs demandent le secret pour que personne ne vous prévienne.",
+      "dont_pay_fee": "Ne payez pas de frais pour recevoir un prix, un remboursement, un colis ou un emploi.",
+      "hostile_instructions": "Ce message contient des instructions cachées destinées aux outils de détection. Considérez-le comme hostile.",
+      "block_and_report": "Bloquez l'expéditeur et signalez le message à votre banque ou à l'organisme qu'il prétend représenter.",
+      "verify_first": "Vérifiez la demande par un canal officiel avant d'agir.",
+      "doc_verify_with_issuer": "Ne vous fiez pas à ce document. Demandez à l'organisme émetteur de le confirmer, via des coordonnées que vous trouvez vous-même.",
+      "doc_dont_enable_content": "N'activez pas la modification, les macros ou le contenu de ce fichier.",
+      "no_warning_signs": "Aucun signal d'alerte trouvé. N'agissez que sur des demandes que vous attendiez."
+    }
+  },
+  "full": {
+    "back": "← Retour à la vérification",
+    "eyebrow": "TOUTES LES PREUVES",
+    "title": "La vue complète",
+    "lede": "Tout ce que FraudLens a trouvé lors de cette vérification, et ce que vous pouvez faire ensuite.",
+    "simpleOn": "Vue simple",
+    "simpleOff": "Vue détaillée",
+    "missingTitle": "Aucun résultat à afficher",
+    "missingBody": "Vérifiez d'abord un message. Le dernier résultat est gardé dans cet onglet uniquement.",
+    "checkOne": "Vérifier un message",
+    "identity": "Qui il prétend être",
+    "journey": "Où va cette arnaque",
+    "network": "Voir les signalements liés",
+    "reportTitle": "Prévenir les autres",
+    "reportBody": "Signalez l'expéditeur pour que la prochaine personne qui le vérifie voie l'alerte.",
+    "safetyTitle": "Envoyer une alerte à vos proches",
+    "replay": "Revoir comment FraudLens a décidé",
+    "payCheck": "Vérifier un bénéficiaire avant de payer",
+    "sentTitle": "Ce qui a été envoyé pour analyse",
+    "checkAnother": "Vérifier un autre message"
+  }
+}

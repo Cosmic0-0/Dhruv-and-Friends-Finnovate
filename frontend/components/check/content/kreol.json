@@ -1,0 +1,198 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "hub": {
+    "titleA": "Ki ou le ",
+    "titleB": "verifie?",
+    "lede": "Koumans ar enn mesaz, ouswa swazir enn zouti pou sitiasion ki ou ladan. Sak verdik vinn avek bann prev ki dekrir li.",
+    "eyebrow": "01 · Pli servi",
+    "cardTitle": "Verifie enn mesaz ouswa enn lien",
+    "cardBody": "SMS, WhatsApp, email ouswa enn kopi lekran. Nou verifie bann lien, kisannla li dir li ete ek fason li ekrir, an Angle, Franse ek Kreol.",
+    "tryExample": "Esey li ar enn vre eskrokri MCB",
+    "toolsTitle": "Zouti pou sitiasion spesifik",
+    "toolsNote": "Osi dan bar anler",
+    "open": "Ouver →",
+    "tools": [
+      {
+        "n": "02",
+        "href": "/safepay",
+        "title": "Avan pey",
+        "body": "Ou pe al avoy kas enn nouvo dimoun? Verifie benefisier la avan.",
+        "looks": "Get: kont ouswa IBAN, nimero telefonn, nom biznes, frod ki finn rapor"
+      },
+      {
+        "n": "03",
+        "href": "/document",
+        "title": "Verifie enn dokiman",
+        "body": "Releve labank, let ek fakir an PDF ouswa Word.",
+        "looks": "Get: sinyatir kole, sanzman apre sinyatir, fason ekrir eskrokri"
+      },
+      {
+        "n": "04",
+        "href": "/batch",
+        "title": "Verifie an gro",
+        "body": "Kol ouswa avoy plizier mesaz ek gagn enn verdik pou sakenn.",
+        "looks": "Get: sak mesaz separeman, apre bann rasanblans ant zot"
+      },
+      {
+        "n": "05",
+        "href": "/conversation",
+        "title": "Konversasion antie",
+        "body": "Export enn diskision WhatsApp ouswa Messenger ek verifie li depi koumansman ziska lafin.",
+        "looks": "Get: kouma zistwar la sanze, kan kas ouswa kod paret"
+      }
+    ]
+  },
+  "example": "Ou kont MCB pou bloke zordi. Konfirm ou OTP lor mcb-secure.top/verify",
+  "work": {
+    "back": "← Tou bann zouti",
+    "titleA": "Verifie li ",
+    "titleB": "avan",
+    "titleC": " ou azir.",
+    "lede": "Kol enn mesaz ouswa enn lien exakteman kouma ou finn gagn li. FraudLens lir Angle, Franse ek Kreol Morisien, mem kan zot melanze.",
+    "modes": {
+      "message": "Mesaz",
+      "link": "Lien",
+      "screenshot": "Kopi lekran",
+      "document": "Dokiman"
+    },
+    "placeholder": "Kol mesaz la isi",
+    "linkPlaceholder": "Kol lien la isi",
+    "linkHint": "Nou verifie ladres limem: pou kisannla li ete, ki laz li ena, ek si dimoun finn rapor li. Nou pa ouver paz la.",
+    "shotChoose": "Swazir enn kopi lekran",
+    "shotHint": "PNG ouswa JPEG. Nou lir limaz lor nou server ek nou kasiet bann detay personel avan nou verifie tex la.",
+    "shotReady": "Tex la finn lir depi kopi lekran. Pes Verifie mesaz.",
+    "shotRemove": "Tir kopi lekran",
+    "meta": {
+      "lang": {
+        "en": "Angle detekte",
+        "fr": "Franse detekte",
+        "kreol": "Kreol detekte",
+        "mixed": "Plizier langaz"
+      },
+      "links": {
+        "one": "1 lien",
+        "other": "{n} lien"
+      },
+      "chars": "{n} karakter"
+    },
+    "receivedBy": "Resevwar par",
+    "channels": {
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "facebook": "Facebook",
+      "call": "Apel"
+    },
+    "check": "Verifie mesaz",
+    "checkLink": "Verifie lien",
+    "clear": "Efase",
+    "cancel": "Anile",
+    "privacy": "Verifie an prive. Nou pa zame gard ou mesaz lor nou bann server.",
+    "docInstead": "Verifie enn dokiman plito",
+    "idleTitle": "Ou verdik pou paret isi.",
+    "idleBody": "Ou pou trouv enn verdik ek bann mo exak ki finn amenn li.",
+    "loadingTitle": "Pe lir mesaz la…",
+    "loadingLink": "Pe verifie lien la…",
+    "investigated": "Seki nou finn verifie"
+  },
+  "result": {
+    "verdict": "Verdik",
+    "confidence": {
+      "high": "Konfians for",
+      "moderate": "Konfians mwayenn",
+      "low": "Konfians feb"
+    },
+    "signals": {
+      "zero": "okenn siny",
+      "one": "1 siny",
+      "other": "{n} siny"
+    },
+    "words": {
+      "scam": "Eskrokri.",
+      "suspicious": "Sispe.",
+      "safe": "Paret vre."
+    },
+    "summary": {
+      "scamWho": "Sa mesaz la fer krwar li {who}{goal}.",
+      "suspiciousWho": "Sa mesaz la dir li sorti kot {who}{goal}.",
+      "scam": "Sa mesaz la ena bann siny enn eskrokri{goal}.",
+      "suspicious": "Ena bann zafer dan sa mesaz la ki pa koresponn{goal}.",
+      "safe": "Nou pa finn trouv okenn siny danze. Azir zis lor bann demann ki ou ti pe atann.",
+      "goals": {
+        "OTP_REQUEST": " pou gagn ou kod OTP",
+        "CREDENTIAL_REQUEST": " pou gagn ou password ouswa detay kart",
+        "PAYMENT_REQUEST": " pou fer ou avoy kas",
+        "PAYMENT_PRESSURE": " pou fer ou avoy kas",
+        "ACCOUNT_TAKEOVER": " pou pran ou kont"
+      }
+    },
+    "theMessage": "Mesaz la",
+    "theLink": "Lien la",
+    "why": "Kifer",
+    "noSignals": "Pa finn trouv okenn siny danze.",
+    "whatToDo": "Ki pou fer aster la",
+    "report": "Rapor sa eskrokri la",
+    "share": "Partaz sa rezilta la",
+    "copied": "Kopie",
+    "acted": "Ou finn deza reponn ouswa donn kod la?",
+    "actedLink": "Ki pou fer si ou finn azir",
+    "fullEvidence": "Get tou bann prev",
+    "receivedBy": "Resevwar par {channel}",
+    "ai": {
+      "ok": "IA finn lir langaz la",
+      "off": "IA pa disponib: zis bann reg"
+    },
+    "linkFacts": {
+      "official": "Sit ofisiel {who}",
+      "trusted": "Enn sit bien koni",
+      "age": "Domenn anrezistre ena {n} zour",
+      "ageYears": "Domenn anrezistre ena plis ki enn an",
+      "reports": "Rapor {n} fwa par bann itilizater FraudLens",
+      "cert": "Sertifika done ar {org}",
+      "shortened": "Lien kourt ki amenn lor {url}"
+    },
+    "shareTitle": "Verifikasion FraudLens",
+    "shareFooter": "Verifie avek FraudLens",
+    "actions": {
+      "dont_open_link": "Pa ouver lien ki dan sa mesaz la.",
+      "open_official_directly": "Ouver sit organizasion la ou mem, ouswa so aplikasion ofisiel, zame par sa lien la.",
+      "dont_share_code": "Pa partaz okenn kod, PIN, password ouswa detay kart.",
+      "contact_verified_channel": "Kontakte linstitision avek enn nimero ki ou deza fer konfians, kouma sa kinn ekrir deryer ou kart.",
+      "dont_install": "Pa instal okenn aplikasion ek pa les personn kontrol ou telefonn ouswa ou konpiter a distans.",
+      "dont_move_funds": "Pa transfer kas dan okenn 'kont sekirize'. Enn vre labank zame pa dimann sa.",
+      "verify_bank_change": "Pa servi bann kontak ki dan sa mesaz la. Konfirm tou sanzman detay labank avek fourniser la avek bann kontak ki ou deza ena.",
+      "stop_and_verify_recipient": "Aret konversasion la ek verifie ou mem kisannla pou vremem resevwar kas la.",
+      "dont_send_money": "Pa avoy kas pou aster. Verifie demann la ou mem avan.",
+      "call_person_known_number": "Apel dimoun la lor nimero ki ou ti deza ena, pa nimero ki dan sa mesaz la.",
+      "talk_to_someone": "Koz ar enn dimoun ki ou fer konfians avan ou azir. Bann eskro dimann sekre pou ki personn pa kapav avert ou.",
+      "dont_pay_fee": "Pa pey okenn fre pou gagn enn pri, enn ranbourseman, enn koli ouswa enn travay.",
+      "hostile_instructions": "Sa mesaz la ena bann linstriksion kasiet pou bann zouti verifikasion. Konsider li kouma danzere.",
+      "block_and_report": "Bloke dimoun la ek rapor mesaz la ar ou labank ouswa ar organizasion ki li dir li ete.",
+      "verify_first": "Verifie demann la par enn kanal ofisiel avan ou azir.",
+      "doc_verify_with_issuer": "Pa fer konfians sa dokiman la. Dimann organizasion ki swadizan finn emet li pou konfirm li, avek kontak ki ou trouv ou mem.",
+      "doc_dont_enable_content": "Pa aktiv modifikasion, makro ouswa kontni dan sa fisie la.",
+      "no_warning_signs": "Pa finn trouv okenn siny danze. Azir zis lor bann demann ki ou ti pe atann."
+    }
+  },
+  "full": {
+    "back": "← Retourn lor verifikasion",
+    "eyebrow": "TOU BANN PREV",
+    "title": "Tablo konple",
+    "lede": "Tou seki FraudLens finn trouve dan sa verifikasion la, ek seki ou kapav fer apre.",
+    "simpleOn": "Vizion sinp",
+    "simpleOff": "Vizion detaye",
+    "missingTitle": "Pena rezilta pou montre",
+    "missingBody": "Verifie enn mesaz avan. Dernie rezilta la reste zis dan sa onglet la.",
+    "checkOne": "Verifie enn mesaz",
+    "identity": "Kisannla li dir li ete",
+    "journey": "Kot sa eskrokri la pe ale",
+    "network": "Get bann rapor ki lie",
+    "reportTitle": "Avert lezot",
+    "reportBody": "Rapor dimoun ki finn avoy li pou ki prosenn dimoun ki verifie li trouv lavertisman la.",
+    "safetyTitle": "Avoy enn lavertisman ou fami",
+    "replay": "Revoir kouma FraudLens finn deside",
+    "payCheck": "Verifie enn benefisier avan ou pey",
+    "sentTitle": "Seki finn avoye pou lanaliz",
+    "checkAnother": "Verifie enn lot mesaz"
+  }
+}

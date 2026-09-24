@@ -1,17 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { card } from "./dc";
 import type { Copy } from "@/lib/i18n";
 import { ChevronRightIcon, DocumentIcon, LayersIcon, SearchIcon, BookIcon } from "./icons";
 
 /**
- * Document check, Batch scan, Conversation and Sandbox in the Recent-list row style.
- *
- * The five-slot tab bar has no room for them, and the old tools grid that
- * linked them was removed with the rest of the desktop chrome — this card is
- * now their only entry point, so it is what keeps those three routes
- * reachable. It lives on Radar rather than Check, which the mockup keeps to
- * one task.
+ * Document check, Batch scan, Conversation and Sandbox: a compact row card,
+ * dc-styled to match the rest of the (restyled) page it sits on. Not part of
+ * Radar.dc.html, but kept — the five-slot tab bar has no room for these, and
+ * this card is their only entry point.
  */
 export default function ToolsCard({ copy }: { copy: Copy }) {
   const t = copy.tools;
@@ -23,22 +21,25 @@ export default function ToolsCard({ copy }: { copy: Copy }) {
   ];
 
   return (
-    <section className="sheet" aria-labelledby="tools-title">
-      <div className="px-5 pt-4 pb-1">
-        <h2 id="tools-title" className="micro text-ink-muted">
-          {t.title}
-        </h2>
-      </div>
-      <ul className="flex flex-col px-5 pb-1 [&>li+li]:border-t [&>li+li]:border-card-border">
-        {rows.map(({ href, Icon, label, hint }) => (
-          <li key={href}>
-            <Link href={href} className="pressable flex min-h-[52px] items-center gap-3 py-3">
-              <span className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-muted-surface text-ink">
-                <Icon className="size-[17px]" strokeWidth={2} />
+    <section style={{ ...card(24), padding: "8px 20px" }} aria-labelledby="tools-title" data-fx>
+      <h2 id="tools-title" style={{ margin: 0, padding: "12px 0 4px", fontSize: 12, letterSpacing: "0.04em", color: "var(--dc-text3)" }}>
+        {t.title}
+      </h2>
+      <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+        {rows.map(({ href, Icon, label, hint }, i) => (
+          <li key={href} style={{ borderTop: i === 0 ? "none" : "1px solid var(--dc-line2)" }}>
+            <Link href={href} style={{ display: "flex", alignItems: "center", gap: 12, minHeight: 48, padding: "8px 0", textDecoration: "none", color: "inherit" }}>
+              <span
+                aria-hidden="true"
+                style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--dc-hover)", color: "var(--dc-ink)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              >
+                <Icon className="size-[15px]" strokeWidth={2} />
               </span>
-              <span className="flex-1 text-[1.0625rem] text-ink">{label}</span>
-              <span className="text-[0.9375rem] text-ink-muted">{hint}</span>
-              <ChevronRightIcon className="size-[18px] shrink-0 text-icon-idle" />
+              <span style={{ flex: 1, fontSize: 15, color: "var(--dc-ink)" }}>{label}</span>
+              <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{hint}</span>
+              <span style={{ display: "flex", color: "var(--dc-text3)", flexShrink: 0 }}>
+                <ChevronRightIcon className="size-[16px]" />
+              </span>
             </Link>
           </li>
         ))}

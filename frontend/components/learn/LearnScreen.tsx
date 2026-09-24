@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { DcPage, PageHeader, Pill, card, pillStyle, TONE, MONO } from "@/components/dc";
 import {
   buildRound,
   languagePool,
@@ -12,28 +13,50 @@ import {
 } from "@/lib/learn-content";
 import { redact } from "@/lib/redact";
 import { safeChecks } from "@/lib/result";
-import { DAILY_GOAL, recordAnswer, visibleStreak, type Mistake, type StreakState } from "@/lib/streak";
+import { DAILY_GOAL, recordAnswer, visibleStreak, weekHistory, type Mistake, type StreakState } from "@/lib/streak";
 import { getStreakState, resetStreakState, saveStreakState, seedStreakEndingYesterday } from "@/lib/storage";
 import type { Copy, UiLanguage } from "@/lib/i18n";
 import { useLanguage } from "../LanguageProvider";
-import { ChartIcon, CheckIcon, PersonIcon, WarningIcon } from "../icons";
+import { CheckIcon } from "../icons";
 import Celebration from "./Celebration";
-import ScreenTitle from "../ScreenTitle";
 import StreakCards from "./StreakCards";
+import { learnCopy, fill, type LearnCopy } from "./content";
+import styles from "./AnswerButtons.module.css";
 
 type CelebrationData = { streak: number; right: number; total: number; mistakes: Mistake[] };
 
+const SCAM_TYPE_LABEL: Record<string, string> = {
+  account_verification: "Account verification",
+  bank_impersonation: "Bank impersonation",
+  family_impersonation: "Family impersonation",
+  government_impersonation: "Government impersonation",
+  investment: "Investment offer",
+  job_scam: "Job offer",
+  merchant_payment_change: "Payment details change",
+  otp_theft: "OTP request",
+  parcel_customs: "Parcel & customs fee",
+  payment_request: "Payment request",
+  prize_lottery: "Prize / lottery",
+  refund_scam: "Refund offer",
+};
+
+/** A label derived from the item's own scam_type (or "genuine") — never a fabricated sender name, number or handle. */
+function senderLabel(item: QuizItem, genuineLabel: string): string {
+  if (!item.isScam) return genuineLabel;
+  return SCAM_TYPE_LABEL[item.scamType] ?? item.scamType.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 /**
- * Learn tab. Fully client-side over build-time corpus data: no API call.
- * Explanations reuse the result screen's exact wording (copy.result.*), so
- * a player recognises the same phrases when they check a real message.
- *
- * The quiz only ever shows messages in the selected language. If that
- * language has too few, a note says more are coming and offers another set;
- * it's never swapped in silently.
+ * Learn tab, styled to Learn.dc.html: header with title + 3 stat tiles,
+ * a 1.6fr/1fr split (quiz card | "This week" + "Rule of thumb"), then a
+ * full-width "Common scam patterns" section. Fully client-side over
+ * build-time corpus data: no API call. A round is exactly DAILY_GOAL (5)
+ * questions, so the quiz card's own position counter and the daily-goal
+ * bar always agree.
  */
 export default function LearnScreen({ items, trends }: { items: QuizItem[]; trends: TrendCard[] }) {
   const { lang, copy, ready } = useLanguage();
+  const t = learnCopy(lang);
   // null until mounted: localStorage isn't available during server render.
   const [state, setState] = useState<StreakState | null>(null);
   const [acceptedFallback, setAcceptedFallback] = useState<QuizLanguage | null>(null);
@@ -41,7 +64,6 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
   const today = localDay();
 
   useEffect(() => setState(getStreakState()), []);
-  // A fallback accepted for one language doesn't carry over to another.
   useEffect(() => setAcceptedFallback(null), [lang]);
 
   const save = (next: StreakState) => {
@@ -51,148 +73,188 @@ export default function LearnScreen({ items, trends }: { items: QuizItem[]; tren
 
   const pool = languagePool(items, lang);
   const quizLang: QuizLanguage | null = pool.enough ? lang : acceptedFallback;
+  const done = state ? Math.min(state.today.answered, DAILY_GOAL) : 0;
 
   return (
     <>
-      <ScreenTitle tabKey="learn" />
-      {/*
-        * Phone: one column, in the order drawn. Desktop: the quiz on the left,
-        * today's progress and the reference list on the right, so the width
-        * carries a second column instead of stretching the question.
-        */}
-      <div className="gutter screen-grid flex flex-col gap-4 pt-4 lg:grid">
-        <div className="flex flex-col gap-4">
-
-      {/* Wait for the saved language so a wrong-language question never flashes. */}
-      {!ready ? (
-        <div className="h-72 bg-surface-dark" aria-hidden="true" />
-      ) : !quizLang ? (
-        <LanguageNote pool={pool} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
-      ) : (
-        <div className="flex flex-col gap-3">
-          {quizLang !== lang && (
-            <p className="micro w-fit bg-muted-surface px-2 py-1.5 text-ink-soft">
-              {copy.learn.practisingIn(copy.learn.languageName[quizLang])}
-            </p>
-          )}
-          <Quiz
-            key={quizLang}
-            items={items}
-            quizLang={quizLang}
-            copy={copy}
-            lang={lang}
-            onAnswered={(item, correct) => {
-              const { state: next, completedNow } = recordAnswer(getStreakState(today), { item, correct }, today);
-              const celebrate = completedNow && !next.today.celebrated;
-              if (celebrate) next.today = { ...next.today, celebrated: true }; // once per day, even across reloads
-              save(next);
-              if (celebrate) {
-                setCelebration({
-                  streak: next.streak,
-                  right: next.today.correct,
-                  total: next.today.answered,
-                  mistakes: next.today.mistakes,
-                });
-              }
-            }}
-            onFinished={(score, total) => {
-              const current = getStreakState(today);
-              const prev = current.best;
-              if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
-                save({ ...current, best: { score, total } });
-              }
-            }}
-            best={state?.best ?? null}
-          />
-        </div>
-      )}
-
-          {state && ready && quizLang && (
-            <div aria-live="polite">
-              <StreakCards
-                answered={state.today.answered}
-                streak={visibleStreak(state, today)}
-                copy={copy}
-              />
-            </div>
-          )}
-
-          <p className="px-1 text-[0.9375rem] leading-5 text-ink-muted">{copy.learn.syntheticNote}</p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Trends trends={trends} copy={copy} />
-        </div>
-
-      {process.env.NODE_ENV === "development" && (
-        <DevTools
-          copy={copy}
-          onReset={() => {
-            resetStreakState();
-            setState(getStreakState());
-          }}
-          onSeed={() => {
-            seedStreakEndingYesterday(2);
-            setState(getStreakState());
-          }}
+      <DcPage label="learn" gap={56}>
+        <PageHeader
+          eyebrow={t.eyebrow}
+          title={t.title}
+          lede={t.lede}
+          titleSize={60}
+          aside={ready && state ? <StreakCards state={state} t={t} /> : undefined}
         />
-      )}
+
+        <div className="dc-split" style={{ display: "grid", gridTemplateColumns: "minmax(0,1.6fr) minmax(0,1fr)", gap: 20, alignItems: "start" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {!ready ? (
+              <div style={{ ...card(32), minHeight: 320 }} aria-hidden="true" />
+            ) : !quizLang ? (
+              <LanguageNote pool={pool} t={t} copy={copy} onAccept={() => pool.fallback && setAcceptedFallback(pool.fallback)} />
+            ) : (
+              <>
+                {quizLang !== lang && (
+                  <p style={{ fontSize: 13, color: "var(--dc-text3)", width: "fit-content", background: "var(--dc-hover)", padding: "6px 10px", borderRadius: 8 }}>
+                    {copy.learn.practisingIn(copy.learn.languageName[quizLang])}
+                  </p>
+                )}
+                <Quiz
+                  key={quizLang}
+                  items={items}
+                  quizLang={quizLang}
+                  copy={copy}
+                  t={t}
+                  lang={lang}
+                  onAnswered={(item, correct) => {
+                    const { state: next, completedNow } = recordAnswer(getStreakState(today), { item, correct }, today);
+                    const celebrate = completedNow && !next.today.celebrated;
+                    if (celebrate) next.today = { ...next.today, celebrated: true };
+                    save(next);
+                    if (celebrate) {
+                      setCelebration({ streak: next.streak, right: next.today.correct, total: next.today.answered, mistakes: next.today.mistakes });
+                    }
+                  }}
+                  onFinished={(score, total) => {
+                    const current = getStreakState(today);
+                    const prev = current.best;
+                    if (!prev || score / total > prev.score / prev.total || (score / total === prev.score / prev.total && total > prev.total)) {
+                      save({ ...current, best: { score, total } });
+                    }
+                  }}
+                  best={state?.best ?? null}
+                  goalMet={done >= DAILY_GOAL}
+                />
+              </>
+            )}
+            <p style={{ padding: "0 4px", fontSize: 13, color: "var(--dc-text3)" }}>{copy.learn.syntheticNote}</p>
+          </div>
+
+          <div className="dc-sticky" style={{ display: "flex", flexDirection: "column", gap: 20, position: "sticky", top: 92 }}>
+            {ready && state && <WeekCard state={state} today={today} t={t} />}
+            <RuleCard t={t} />
+          </div>
+        </div>
+
+        <PatternsSection trends={trends} items={items} copy={copy} t={t} />
+
+        {process.env.NODE_ENV === "development" && (
+          <DevTools
+            copy={copy}
+            onReset={() => {
+              resetStreakState();
+              setState(getStreakState());
+            }}
+            onSeed={() => {
+              seedStreakEndingYesterday(2);
+              setState(getStreakState());
+            }}
+          />
+        )}
+      </DcPage>
 
       {celebration && <Celebration {...celebration} copy={copy} onClose={() => setCelebration(null)} />}
-      </div>
     </>
   );
 }
 
+/** "This week" card (Learn.dc.html aside): 7 day squares + the daily-goal bar. */
+function WeekCard({ state, today, t }: { state: StreakState; today: string; t: LearnCopy }) {
+  const WD = ["S", "M", "T", "W", "T", "F", "S"];
+  const week = weekHistory(state, today);
+  const streak = visibleStreak(state, today);
+  const done = Math.min(state.today.answered, DAILY_GOAL);
+  const pct = Math.min(100, Math.round((done / DAILY_GOAL) * 100));
+
+  return (
+    <div style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 22 }} data-fx>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>{t.week.title}</h2>
+        <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{streak > 0 ? fill(t.week.streakLine, { n: streak }) : t.stats.noStreak}</span>
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        {week.map((d) => {
+          const dow = new Date(`${d.day}T00:00:00`).getDay();
+          const isToday = d.day === today;
+          return (
+            <div key={d.day} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flex: 1, minWidth: 0 }}>
+              <div
+                aria-hidden="true"
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 12,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: d.goalMet ? "var(--dc-accent)" : "var(--dc-hover)",
+                  color: "#fff",
+                  outline: isToday ? "1.5px solid var(--dc-accent)" : "none",
+                  outlineOffset: isToday ? 2 : 0,
+                }}
+              >
+                {d.goalMet && <CheckIcon className="size-4" strokeWidth={2.5} />}
+              </div>
+              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{WD[dow]}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ borderTop: "1px solid var(--dc-line2)", paddingTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+          <span style={{ fontSize: 14, color: "var(--dc-text2)" }}>{t.week.dailyGoal}</span>
+          <span style={{ fontSize: 14, fontWeight: 500 }}>{done}/{DAILY_GOAL}</span>
+        </div>
+        <div style={{ height: 8, borderRadius: 4, background: "var(--dc-hover)" }}>
+          <div style={{ height: 8, borderRadius: 4, width: `${pct}%`, background: "var(--dc-accent)" }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RuleCard({ t }: { t: LearnCopy }) {
+  return (
+    <div style={{ background: "var(--dc-accent-soft)", borderRadius: 32, padding: 28, display: "flex", flexDirection: "column", gap: 10 }} data-fx>
+      <span style={{ fontSize: 13, fontWeight: 500, color: "var(--dc-accent)" }}>{t.rule.title}</span>
+      <span style={{ fontSize: 20, fontWeight: 600, lineHeight: 1.3 }}>{t.rule.body}</span>
+    </div>
+  );
+}
+
 /** Too few practice messages in this language: say so, and offer another set (never swap silently). */
-function LanguageNote({ pool, copy, onAccept }: { pool: LanguagePool; copy: Copy; onAccept: () => void }) {
+function LanguageNote({ pool, t, copy, onAccept }: { pool: LanguagePool; t: LearnCopy; copy: Copy; onAccept: () => void }) {
   const L = copy.learn;
   return (
-    <section className="hero flex flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
-      <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
-        {L.quizLabel}
+    <section style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 14 }} aria-labelledby="quiz-label">
+      <p id="quiz-label" style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>
+        {t.eyebrow}
       </p>
-      <p className="text-[1.375rem] leading-[1.8125rem] font-semibold text-white">{L.fewItems(L.languageName[pool.lang])}</p>
+      <p style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em" }}>{L.fewItems(L.languageName[pool.lang])}</p>
       {pool.fallback && (
         <>
-          <button
-            type="button"
-            onClick={onAccept}
-            className="btn pressable w-full bg-white text-[#111113]"
-          >
+          <Pill onClick={onAccept} height={52}>
             {L.offerOther(L.languageName[pool.fallback])}
-          </button>
-          {pool.fallback === "kreol" && <p className="text-[0.9375rem] leading-5 text-white/[0.62]">{L.kreolMixNote}</p>}
+          </Pill>
+          {pool.fallback === "kreol" && <p style={{ margin: 0, fontSize: 14, color: "var(--dc-text3)" }}>{L.kreolMixNote}</p>}
         </>
       )}
     </section>
   );
 }
 
-/**
- * `next dev` only (compiled out of production builds): replay the daily
- * celebration. "Reset streak" forgets everything, so 5 answers show the day-one
- * tick; "Pretend 2 days done" makes today day 3, so 5 answers show the flame.
- */
+/** `next dev` only: replay the daily celebration on demand. */
 function DevTools({ copy, onReset, onSeed }: { copy: Copy; onReset: () => void; onSeed: () => void }) {
   return (
-    <section className="flex flex-col gap-2.5 border border-dashed border-line-strong p-4" aria-label={copy.learn.dev.title}>
-      <p className="micro text-ink-muted">{copy.learn.dev.title}</p>
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={onReset}
-          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
-        >
+    <section style={{ border: "1px dashed var(--dc-line-strong)", borderRadius: 20, padding: 16, display: "flex", flexDirection: "column", gap: 10 }} aria-label={copy.learn.dev.title}>
+      <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text3)" }}>{copy.learn.dev.title}</p>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <Pill variant="outline" height={40} onClick={onReset}>
           {copy.learn.dev.reset}
-        </button>
-        <button
-          type="button"
-          onClick={onSeed}
-          className="pressable micro min-h-11 border border-line-strong bg-card px-3 text-ink hover:bg-muted-surface"
-        >
+        </Pill>
+        <Pill variant="outline" height={40} onClick={onSeed}>
           {copy.learn.dev.seed}
-        </button>
+        </Pill>
       </div>
     </section>
   );
@@ -204,21 +266,24 @@ function Quiz({
   items,
   quizLang,
   copy,
+  t,
   lang,
   onAnswered,
   onFinished,
   best,
+  goalMet,
 }: {
   items: QuizItem[];
-  /** Language of the messages in the round (may differ from the UI language after an accepted fallback). */
   quizLang: QuizLanguage;
   copy: Copy;
+  t: LearnCopy;
   lang: UiLanguage;
   onAnswered: (item: QuizItem, correct: boolean) => void;
   onFinished: (score: number, total: number) => void;
   best: { score: number; total: number } | null;
+  /** Whether today's daily goal was already met before this round started. */
+  goalMet: boolean;
 }) {
-  // First round is deterministic per language (rehearsable); "Play again" reshuffles within it.
   const [round, setRound] = useState<QuizItem[]>(() => buildRound(items, quizLang));
   const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -230,34 +295,33 @@ function Quiz({
   const moved = useRef(false);
   const L = copy.learn;
 
-  // Keep the viewport steady: scroll only as far as needed, so the question
-  // stays on screen next to its explanation. Focus follows without jumping.
   useEffect(() => {
     if (!answer) return;
     nextRef.current?.focus({ preventScroll: true });
-    nextRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    nextRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }, [answer]);
 
   useEffect(() => {
-    if (!moved.current) return; // not on first render
-    cardRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (!moved.current) return;
+    cardRef.current?.scrollIntoView({ block: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     if (finished) playAgainRef.current?.focus({ preventScroll: true });
   }, [index, finished]);
 
   if (round.length === 0) return null;
 
   if (finished) {
+    const doneForToday = !goalMet; // this round is the one that met (or re-confirms) today's goal
     return (
-      <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-live="polite">
-        <p className="text-[0.9375rem] font-semibold text-white/70">{L.scoreLabel}</p>
-        <p className="data text-[3.125rem] leading-none font-bold text-white">
-          {score} <span className="text-[1.25rem] font-medium text-white/50">/ {round.length}</span>
+      <section ref={cardRef} style={{ ...card(32, true), padding: "36px 40px 40px", display: "flex", flexDirection: "column", gap: 14 }} aria-live="polite">
+        <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{doneForToday ? t.doneToday : L.scoreLabel}</p>
+        <p className="dc-mono" style={{ margin: 0, fontFamily: MONO, fontSize: 44, fontWeight: 700, lineHeight: 1, color: "var(--dc-ink)" }}>
+          {score} <span style={{ fontSize: 18, fontWeight: 500, color: "var(--dc-text3)" }}>/ {round.length}</span>
         </p>
-        <div className="flex flex-col gap-1">
-          <p className="text-[1.0625rem] font-medium">{L.scoreLine(score, round.length)}</p>
-          <p className="text-[0.9375rem] leading-relaxed text-white/[0.72]">{L.scoreComment(score, round.length)}</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <p style={{ margin: 0, fontSize: 16, fontWeight: 500 }}>{L.scoreLine(score, round.length)}</p>
+          <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--dc-text2)" }}>{L.scoreComment(score, round.length)}</p>
         </div>
-        {best && <p className="text-sm text-white/[0.62]">{L.best(best.score, best.total)}</p>}
+        {best && <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{L.best(best.score, best.total)}</p>}
         <button
           ref={playAgainRef}
           type="button"
@@ -268,16 +332,15 @@ function Quiz({
             setAnswer(null);
             setFinished(false);
           }}
-          className="btn pressable mt-1 w-full bg-white text-[#111113]"
+          style={{ ...pillStyle("ink", 52), marginTop: 4, width: "100%" }}
         >
-          {L.playAgain}
+          {t.practiceMore}
         </button>
       </section>
     );
   }
 
   const item = round[index];
-  const right = score;
   const choose = (choseScam: boolean) => {
     if (answer) return;
     const correct = choseScam === item.isScam;
@@ -297,59 +360,99 @@ function Quiz({
   };
 
   return (
-    <section ref={cardRef} className="hero flex scroll-mt-4 flex-col gap-3 px-[22px] pt-[22px] pb-5" aria-labelledby="quiz-label">
-      <div className="flex items-center justify-between gap-3">
-        <p id="quiz-label" className="text-[0.9375rem] font-semibold text-white/70">
-          {L.quizLabel}
-        </p>
-        <span className="data text-[0.9375rem] text-white/55">
-          {index + 1} / {round.length}
+    <section ref={cardRef} style={{ ...card(32, true), padding: "36px 40px 40px", display: "flex", flexDirection: "column", gap: 28 }} aria-labelledby="quiz-label">
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <span id="quiz-label" className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-accent)", letterSpacing: "0.04em" }}>
+          {`MESSAGE ${index + 1} OF ${round.length}`.toUpperCase()}
         </span>
+        <div style={{ display: "flex", gap: 6 }} aria-hidden="true">
+          {Array.from({ length: round.length }, (_, i) => (
+            <span
+              key={i}
+              style={{
+                width: 28,
+                height: 6,
+                borderRadius: 999,
+                background: i < index ? "var(--dc-accent)" : i === index ? "var(--dc-ink)" : "var(--dc-line-strong)",
+              }}
+            />
+          ))}
+        </div>
       </div>
-      {/* A verbatim scam-or-genuine sample — same monospaced, rule-marked
-          treatment as a quoted scam sample elsewhere (see TrendsContent),
-          so it reads as quoted evidence rather than the app talking. */}
-      <blockquote
-        key={item.id}
-        lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
-        className="mt-1 text-[1.375rem] leading-[1.8125rem] font-semibold text-white [overflow-wrap:anywhere]"
-      >
-        &ldquo;{item.text}&rdquo;
-      </blockquote>
 
-      <div className="mt-2 grid grid-cols-2 gap-2.5">
+      <div style={{ background: "var(--dc-bg)", borderRadius: 24, padding: 28, display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span
+            aria-hidden="true"
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: "50%",
+              background: "var(--dc-line-strong)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "var(--dc-ink)",
+              flexShrink: 0,
+            }}
+          >
+            {senderLabel(item, t.senderGenuine).charAt(0).toUpperCase()}
+          </span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+            <span style={{ fontSize: 15, fontWeight: 500 }}>{senderLabel(item, t.senderGenuine)}</span>
+            {item.languageMix !== lang && item.languageMix !== "en" && (
+              <span style={{ fontSize: 12, color: "var(--dc-text3)" }}>{item.languageMix}</span>
+            )}
+          </div>
+        </div>
+
+        <blockquote
+          key={item.id}
+          lang={item.languageMix === "en" ? "en" : item.languageMix.startsWith("mfe") ? "mfe" : undefined}
+          style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: "6px 22px 22px 22px", padding: "16px 20px", fontSize: 18, lineHeight: 1.5, fontWeight: 500, maxWidth: 540, overflowWrap: "anywhere" }}
+        >
+          &ldquo;{item.text}&rdquo;
+        </blockquote>
+      </div>
+
+      {!answer && <span style={{ fontSize: 22, fontWeight: 600 }}>{t.question}</span>}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {([true, false] as const).map((isScamButton) => {
           const chosen = answer?.choseScam === isScamButton;
+          const cls = [
+            styles.btn,
+            isScamButton ? styles.scam : styles.genuine,
+            chosen ? (isScamButton ? styles.scamChosen : styles.genuineChosen) : "",
+            answer && !chosen ? styles.dimmed : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
           return (
             <button
               key={String(isScamButton)}
               type="button"
               onClick={() => choose(isScamButton)}
               disabled={!!answer}
-              aria-pressed={chosen}
-              className={`btn pressable transition-opacity ${
-                isScamButton ? "bg-white text-[#111113]" : "bg-white/[0.14] text-white"
-              } ${answer && !chosen ? "opacity-35" : ""} ${chosen ? "ring-2 ring-white/70" : ""}`}
+              className={cls}
+              style={{ width: "100%", boxShadow: chosen ? "0 0 0 2px var(--dc-accent)" : "none" }}
             >
+              <span
+                aria-hidden="true"
+                style={{ width: 8, height: 8, borderRadius: "50%", background: isScamButton ? TONE.red.dot : TONE.green.dot }}
+              />
               {isScamButton ? L.scam : L.genuine}
             </button>
           );
         })}
       </div>
 
-      <p className="text-[0.9375rem] text-white/[0.62]" aria-live="polite">
-        {L.progress(index + 1, round.length, right)}
-      </p>
-
       {answer && <Reveal item={item} answer={answer} copy={copy} lang={lang} />}
 
       {answer && (
-        <button
-          ref={nextRef}
-          type="button"
-          onClick={next}
-          className="btn pressable w-full bg-white text-[#111113]"
-        >
+        <button ref={nextRef} type="button" onClick={next} style={{ ...pillStyle("ink", 52), width: "100%" }}>
           {index + 1 < round.length ? L.next : L.seeScore}
         </button>
       )}
@@ -357,92 +460,113 @@ function Quiz({
   );
 }
 
-/** Why it's a scam (result-screen signal titles) or why it's genuine (result-screen SAFE ticks). */
+/** Why it's a scam (result-screen signal titles) or why it's genuine (result-screen SAFE ticks). Both come from real item data. */
 function Reveal({ item, answer, copy, lang }: { item: QuizItem; answer: Answer; copy: Copy; lang: UiLanguage }) {
   const L = copy.learn;
   const reasons = item.isScam
     ? item.reasons.slice(0, 4).map((k) => copy.result.signalTitles[k])
     : safeChecks([], item.text, redact(item.text).redactions).map((k) => copy.result.checks[k]);
   const showMeaning = lang !== "kreol" && item.languageMix !== "en" && item.englishMeaning;
+  const tone = item.isScam ? TONE.red : TONE.green;
 
   return (
-    <div role="status" className="flex flex-col gap-3 rounded-2xl bg-white/10 p-4">
-      <p className="text-[1.0625rem] font-semibold">
-        {/* Correct/incorrect reuses the same accent/danger tones as the
-            Genuine/Scam choice buttons above, rather than a separate
-            green/pink pair, so the feedback colour ties directly back to
-            the choice the player made. */}
-        <span className={answer.correct ? "text-safe" : "text-danger"}>{answer.correct ? L.correct : L.incorrect}</span>{" "}
-        {item.isScam ? L.isScam : L.isGenuine}
-      </p>
+    <div role="status" style={{ display: "flex", flexDirection: "column", gap: 16, background: tone.hl, borderRadius: 24, padding: 20 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+        <span
+          aria-hidden="true"
+          style={{ width: 48, height: 48, borderRadius: 16, background: "var(--dc-surface)", color: tone.fg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, flexShrink: 0 }}
+        >
+          {item.isScam ? "✕" : "✓"}
+        </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <span style={{ fontSize: 22, fontWeight: 600, color: tone.fg }}>{item.isScam ? L.isScam : L.isGenuine}</span>
+          <span style={{ fontSize: 15, color: "var(--dc-text2)" }}>{answer.correct ? L.correct : L.incorrect}</span>
+        </div>
+      </div>
       {reasons.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <p className="micro text-white/[0.62]">{L.whyLabel}</p>
-          <ul className="flex flex-col gap-1.5">
-            {reasons.map((r) => (
-              <li key={r} className="flex items-start gap-2.5 text-[0.9375rem] leading-snug">
-                {item.isScam ? (
-                  <span aria-hidden="true" className="mt-[0.45em] size-1.5 shrink-0 bg-danger" />
-                ) : (
-                  <CheckIcon className="mt-0.5 size-4 shrink-0 text-safe" strokeWidth={2.5} />
-                )}
-                {r}
+        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <p style={{ margin: "0 0 8px", fontSize: 13, color: "var(--dc-text3)" }}>{L.whyLabel}</p>
+          <ul style={{ display: "flex", flexDirection: "column", margin: 0, padding: 0, listStyle: "none" }}>
+            {reasons.map((r, i) => (
+              <li
+                key={r}
+                style={{ display: "grid", gridTemplateColumns: "28px 1fr", gap: 8, fontSize: 16, lineHeight: 1.4, padding: "10px 0", borderTop: i === 0 ? "none" : "1px solid var(--dc-line2)" }}
+              >
+                <span className="dc-mono" style={{ fontFamily: MONO, fontSize: 12, color: "var(--dc-text3)" }}>{String(i + 1).padStart(2, "0")}</span>
+                <span>{r}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
       {showMeaning && (
-        <p className="text-sm leading-relaxed text-white/70">
-          <span className="font-semibold text-white/85">{L.inEnglish}:</span> {item.englishMeaning}
+        <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5, color: "var(--dc-text2)" }}>
+          <span style={{ fontWeight: 600, color: "var(--dc-ink)" }}>{L.inEnglish}:</span> {item.englishMeaning}
         </p>
       )}
     </div>
   );
 }
 
-/** Tint and glyph per pattern, so the three rows read apart at a glance. */
-const TAG_TONE: Record<TrendCard["category"], { chip: string; Icon: typeof WarningIcon }> = {
-  parcel_fee: { chip: "bg-caution-soft text-caution-ink", Icon: WarningIcon },
-  fake_relative: { chip: "bg-danger-soft text-danger-ink", Icon: PersonIcon },
-  investment: { chip: "bg-safe-soft text-safe-ink", Icon: ChartIcon },
+const TAG_TONE: Record<TrendCard["category"], typeof TONE.red> = {
+  parcel_fee: TONE.amber,
+  fake_relative: TONE.red,
+  investment: TONE.green,
 };
 
 /**
- * No report counts here on purpose: data/sender-reputation-seed/ has no data
- * yet, and a fraud screen must not show numbers we can't source. When seed
- * data mapped to these categories lands, add the count from it.
+ * "Common scam patterns" (Learn.dc.html): a full-width section below the
+ * quiz, 3 real corpus examples (loaded server-side by /learn). Bullet lines
+ * are the real copy sentence-split, never padded with invented facts.
  */
-function Trends({ trends, copy }: { trends: TrendCard[]; copy: Copy }) {
+function PatternsSection({ trends, items, copy, t }: { trends: TrendCard[]; items: QuizItem[]; copy: Copy; t: LearnCopy }) {
   const L = copy.learn;
   return (
-    <section className="sheet" aria-labelledby="trends-label">
-      <div className="px-5 pt-4 pb-1">
-        <h2 id="trends-label" className="micro text-ink-muted">
-          {L.trendsTitle}
-        </h2>
+    <section data-fx>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20, flexWrap: "wrap", marginBottom: 24 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <h2 style={{ margin: 0, fontSize: 36, fontWeight: 600, letterSpacing: "-0.03em" }}>{t.patterns.title}</h2>
+          <p style={{ margin: 0, fontSize: 16, color: "var(--dc-text2)" }}>{t.patterns.sub}</p>
+        </div>
+        <Pill href="/trends" variant="ghost" height={36} pad={0}>
+          {t.patterns.seeAll} →
+        </Pill>
       </div>
-      <ul className="flex flex-col px-5 pb-2 [&>li+li]:border-t [&>li+li]:border-card-border">
-        {trends.map((t) => (
-          <li key={t.category} className="flex flex-col gap-2 py-3.5">
-            <div className="flex items-center gap-3">
-              <span className={`flex size-[34px] shrink-0 items-center justify-center rounded-full ${TAG_TONE[t.category].chip}`}>
-                {(() => {
-                  const Glyph = TAG_TONE[t.category].Icon;
-                  return <Glyph className="size-[17px]" strokeWidth={2} />;
-                })()}
-              </span>
-              <span className="flex-1 text-[1.0625rem] font-medium text-ink">{L.trends[t.category].tag}</span>
+      <div className="dc-cols-1" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0,1fr))", gap: 20 }}>
+        {trends.map((tr) => {
+          const tone = TAG_TONE[tr.category];
+          const sourceItem = tr.example ? items.find((i) => i.id === tr.example!.id) : undefined;
+          const bullets = L.trends[tr.category].body.split(/(?<=[.!?])\s+/).filter(Boolean);
+          return (
+            <div key={tr.category} style={{ ...card(32), padding: 28, display: "flex", flexDirection: "column", gap: 16 }} data-fx>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <span style={{ fontSize: 22, fontWeight: 600 }}>{L.trends[tr.category].tag}</span>
+                {sourceItem && (
+                  <span
+                    className="dc-mono"
+                    style={{ fontFamily: MONO, fontSize: 11, color: "var(--dc-text3)", background: "var(--dc-hover)", padding: "4px 8px", borderRadius: 999, flexShrink: 0 }}
+                  >
+                    {sourceItem.languageMix.toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {tr.example && (
+                <p style={{ margin: 0, background: "var(--dc-bubble)", borderRadius: 14, padding: "12px 16px", fontSize: 15, lineHeight: 1.5, overflowWrap: "anywhere" }}>
+                  &ldquo;{tr.example.text}&rdquo;
+                </p>
+              )}
+              <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
+                {bullets.map((b) => (
+                  <li key={b} style={{ display: "flex", gap: 8, fontSize: 14, lineHeight: 1.5, color: "var(--dc-text2)" }}>
+                    <span aria-hidden="true" style={{ color: tone.fg }}>•</span>
+                    {b}
+                  </li>
+                ))}
+              </ul>
             </div>
-            {t.example && (
-              <p className="rounded-2xl bg-muted-surface px-3.5 py-3 text-[0.9375rem] leading-5 text-ink-soft [overflow-wrap:anywhere]">
-                &ldquo;{t.example.text}&rdquo;
-              </p>
-            )}
-            <p className="text-[0.9375rem] leading-5 text-ink-muted">{L.trends[t.category].body}</p>
-          </li>
-        ))}
-      </ul>
+          );
+        })}
+      </div>
     </section>
   );
 }

@@ -1,21 +1,20 @@
-import SafePayFlow from "@/components/SafePayFlow";
+import BeforePayingScreen from "@/components/safepay/BeforePayingScreen";
+
+export const metadata = {
+  title: "Before paying",
+  description: "Check a phone number, bank account or IBAN's report history and format before you send money.",
+  alternates: { canonical: "/safepay" },
+};
 
 /**
- * "I'm about to pay" — a separate entry point from the Check screen
- * (app/page.tsx), for a payment request the user hasn't sent yet rather
- * than a message they've already received. Reuses the exact same
- * /api/analyze pipeline and result components (components/result/) as the
- * Check flow - see components/SafePayFlow.tsx for how the form maps to one
- * message for that pipeline.
- *
- * The title lives inside SafePayFlow (a client component) rather than here:
- * it needs `copy.safepay.title`, a nested Copy key the server-render-
- * friendly <T> helper can't reach (T only covers top-level string keys).
+ * "Before paying" (Before Paying.dc.html): a deterministic, read-only check
+ * on a payee identifier via POST /api/check-payee - see
+ * components/safepay/BeforePayingScreen.tsx.
  */
 export default function SafePayPage() {
   return (
     <main>
-      <SafePayFlow />
+      <BeforePayingScreen />
     </main>
   );
 }

@@ -10,12 +10,14 @@
  */
 
 // Explicit .ts extension: this is a runtime import, and Node's test runner needs it.
-import { dayGap, nextStreak } from "./learn-content.ts";
+import { dayGap, localDay, nextStreak } from "./learn-content.ts";
 import type { QuizItem } from "./learn-content.ts";
 import type { SignalKind } from "./result";
 
 export const DAILY_GOAL = 5;
 const MAX_MISTAKES = 20;
+/** Past days kept in `history`, well past the 7 the "This week" strip needs. */
+const MAX_HISTORY_DAYS = 35;
 
 export interface Mistake {
   id: string;
@@ -34,14 +36,31 @@ export interface TodayProgress {
   celebrated: boolean;
 }
 
+/** Answered/correct counts for one past calendar day (not today: see StreakState.history). */
+export interface DayStats {
+  answered: number;
+  correct: number;
+}
+
+/** One entry of the Learn tab's "This week" strip. */
+export interface DayStat extends DayStats {
+  day: string;
+  goalMet: boolean;
+}
+
 export interface StreakState {
-  version: 2;
+  version: 3;
   /** Consecutive completed days, ending on lastCompletedDay. */
   streak: number;
   lastCompletedDay: string | null;
   today: TodayProgress;
   /** Best round score (kept from the v1 model). */
   best: { score: number; total: number } | null;
+  /** All-time answered/correct, for the Accuracy stat tile. Grows with every answer, any day. */
+  totalAnswered: number;
+  totalCorrect: number;
+  /** Past days only (today lives in `today`), most recent MAX_HISTORY_DAYS kept. Feeds "This week". */
+  history: Record<string, DayStats>;
 }
 
 export function freshToday(day: string): TodayProgress {
@@ -49,7 +68,31 @@ export function freshToday(day: string): TodayProgress {
 }
 
 export function emptyState(today: string): StreakState {
-  return { version: 2, streak: 0, lastCompletedDay: null, today: freshToday(today), best: null };
+  return { version: 3, streak: 0, lastCompletedDay: null, today: freshToday(today), best: null, totalAnswered: 0, totalCorrect: 0, history: {} };
+}
+
+/** Accuracy across every answer ever recorded, or null before the first one (an honest "no data yet"). */
+export function accuracyPct(state: StreakState): number | null {
+  return state.totalAnswered > 0 ? Math.round((state.totalCorrect / state.totalAnswered) * 100) : null;
+}
+
+function addDaysToDay(day: string, delta: number): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!m) return null;
+  return localDay(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]) + delta));
+}
+
+/** The 7 calendar days ending today (oldest first), for the Learn tab's "This week" strip. */
+export function weekHistory(state: StreakState, today: string): DayStat[] {
+  const out: DayStat[] = [];
+  for (let i = 6; i >= 0; i--) {
+    const day = addDaysToDay(today, -i) ?? today;
+    const src = day === state.today.day ? state.today : state.history[day];
+    const answered = src?.answered ?? 0;
+    const correct = src?.correct ?? 0;
+    out.push({ day, answered, correct, goalMet: answered >= DAILY_GOAL });
+  }
+  return out;
 }
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
@@ -70,30 +113,61 @@ function readMistakes(v: unknown): Mistake[] {
     .slice(-MAX_MISTAKES);
 }
 
+function readDayStats(v: unknown): DayStats | null {
+  if (!isObj(v) || typeof v.answered !== "number") return null;
+  const answered = count(v.answered);
+  return { answered, correct: Math.min(count(v.correct), answered) };
+}
+
+/** Validated history map, capped to the most recent MAX_HISTORY_DAYS entries. */
+function readHistory(v: unknown): Record<string, DayStats> {
+  if (!isObj(v)) return {};
+  const out: Record<string, DayStats> = {};
+  for (const [day, stats] of Object.entries(v)) {
+    if (!isDay(day)) continue;
+    const s = readDayStats(stats);
+    if (s) out[day] = s;
+  }
+  const days = Object.keys(out).sort();
+  for (const day of days.slice(0, Math.max(0, days.length - MAX_HISTORY_DAYS))) delete out[day];
+  return out;
+}
+
 /**
  * Validates whatever is stored and rolls "today" over to a new day. Never
  * throws. The old v1 shape ({ streak, lastDay, best }) counted any answer
  * as a day, so its streak can't be trusted under the new rule: only its best
  * score is carried over.
+ *
+ * v2 → v3 is additive: totals and history didn't exist in v2, so they're
+ * seeded from whatever v2's single "today" snapshot still holds (real data,
+ * just thin until fresh answers build up proper history).
  */
 export function normalizeState(raw: unknown, today: string, legacyV1?: unknown): StreakState {
-  if (isObj(raw) && raw.version === 2) {
+  if (isObj(raw) && (raw.version === 2 || raw.version === 3)) {
     const t = isObj(raw.today) ? raw.today : {};
     const sameDay = isDay(t.day) && t.day === today;
+    const oldToday: TodayProgress = {
+      day: isDay(t.day) ? t.day : today,
+      answered: count(t.answered),
+      correct: Math.min(count(t.correct), count(t.answered)),
+      mistakes: readMistakes(t.mistakes),
+      celebrated: t.celebrated === true,
+    };
+    const isV3 = raw.version === 3;
+    const history = isV3 ? readHistory(raw.history) : {};
+    if (!sameDay && oldToday.day !== today && oldToday.answered > 0) {
+      history[oldToday.day] = { answered: oldToday.answered, correct: oldToday.correct };
+    }
     return {
-      version: 2,
+      version: 3,
       streak: count(raw.streak),
       lastCompletedDay: isDay(raw.lastCompletedDay) ? raw.lastCompletedDay : null,
-      today: sameDay
-        ? {
-            day: today,
-            answered: count(t.answered),
-            correct: Math.min(count(t.correct), count(t.answered)),
-            mistakes: readMistakes(t.mistakes),
-            celebrated: t.celebrated === true,
-          }
-        : freshToday(today),
+      today: sameDay ? oldToday : freshToday(today),
       best: readBest(raw.best),
+      totalAnswered: isV3 ? count(raw.totalAnswered) : oldToday.answered,
+      totalCorrect: isV3 ? Math.min(count(raw.totalCorrect), count(raw.totalAnswered)) : oldToday.correct,
+      history,
     };
   }
   const state = emptyState(today);
@@ -137,6 +211,8 @@ export function recordAnswer(
       streak,
       lastCompletedDay,
       today: { ...t, answered, correct: t.correct + (answer.correct ? 1 : 0), mistakes },
+      totalAnswered: base.totalAnswered + 1,
+      totalCorrect: base.totalCorrect + (answer.correct ? 1 : 0),
     },
   };
 }

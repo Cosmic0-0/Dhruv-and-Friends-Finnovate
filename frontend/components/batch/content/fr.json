@@ -1,0 +1,36 @@
+{
+  "eyebrow": "OUTIL · SCAN GROUPÉ",
+  "title": "Scan groupé",
+  "lede": "Collez plusieurs messages, un par ligne, ou importez des captures d'écran. Chacun reçoit son propre verdict.",
+  "modes": { "paste": "Coller des messages", "screenshots": "Importer des captures" },
+  "paste": {
+    "label": "Messages à scanner",
+    "placeholder": "Message un…\n\nMessage deux…\n\nMessage trois…",
+    "hint": "Séparez chaque message par une ligne vide, jusqu'à {max} à la fois.",
+    "count": "{n} / {max}"
+  },
+  "screenshots": {
+    "add": "Ajouter des captures",
+    "hint": "Importez une ou plusieurs captures d'écran. Le texte est lu automatiquement — vérifiez et corrigez-le ci-dessous avant de scanner.",
+    "reading": "Lecture…",
+    "failed": "Cette capture n'a pas pu être lue.",
+    "remove": "Retirer",
+    "empty": "Aucune capture ajoutée pour l'instant."
+  },
+  "submit": "Scanner les messages",
+  "scanning": "Scan en cours…",
+  "summary": {
+    "scam": "Arnaque",
+    "caution": "Prudence",
+    "genuine": "Authentique",
+    "unanalysed": "{n} d'entre eux n'ont pas pu être analysés et doivent être traités avec prudence."
+  },
+  "results": { "title": "Résultats", "filtered": "filtré", "clear": "Effacer le filtre", "placeholder": "Vos résultats apparaîtront ici, une ligne par message." },
+  "row": { "screenshot": "Capture {n}", "line": "Ligne {n}", "open": "Voir le résultat complet" },
+  "empty": { "title": "Rien de scanné pour l'instant.", "body": "Collez quelques messages ou importez des captures ci-dessus, puis scannez-les ensemble." },
+  "errors": {
+    "tooMany": "Vous pouvez scanner jusqu'à {max} messages à la fois.",
+    "tooLong": "Un des messages dépasse {max} caractères."
+  },
+  "verdictUnknown": "Analyse impossible"
+}

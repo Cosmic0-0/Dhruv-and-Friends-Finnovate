@@ -286,13 +286,79 @@ export const RULESET_RS_1_4 = Object.freeze({
   bands: RULESET_RS_1_3.bands,
 });
 
-export const ACTIVE_RULESET = RULESET_RS_1_4;
+// rs-1.5: URL-10 (Scan This Page: a password/card form on a page claiming a
+// known institution sends to another site). Weighted like a lookalike link
+// and floored to "high": the page is asking for credentials on behalf of a
+// bank and handing them to someone else. Everything else is rs-1.4.
+export const RULESET_RS_1_5 = Object.freeze({
+  ...RULESET_RS_1_4,
+  version: "rs-1.5",
+  weights: Object.freeze({ ...RULESET_RS_1_4.weights, "URL-10": 30 }),
+  floors: Object.freeze([
+    ...RULESET_RS_1_4.floors,
+    { id: "FLOOR-URL10-CREDENTIAL-FORM", level: "high", reason: "A page claiming a known institution sends your password or card details to another site",
+      all: ["URL-10"], requiresClaimedInstitution: true },
+  ]),
+});
+
+// rs-1.6 adds image-forensics evidence (DOC-09..13, services/
+// document-forensics-client/toSignals.js): pixel/metadata facts about a
+// screenshot or photographed document from the local Python
+// document-forensics service (TruFor, ELA, Donut layout, EXIF/metadata,
+// signature consistency). Every signal carries the service's own per-finding
+// confidence as `variant`, so weights key off that directly instead of a
+// flat per-code number - the service already did the calibration.
+//
+// Weight reasoning, high confidence first:
+//   DOC-09 (TruFor) 30/15/8 (high/medium/low) - a trained forgery-
+//     localization model finding a spliced/inpainted region is the most
+//     direct evidence this app has for "this image was edited," closer to
+//     DOC-04's transparent-overlay (25) than a metadata heuristic; still not
+//     an automatic floor - see DX-1 below.
+//   DOC-10 (ELA) 18/10/5 - Error Level Analysis is noisier than TruFor
+//     (recompression and legitimate design elements both perturb it), so
+//     weighted below DOC-09 at every confidence level.
+//   DOC-11 (layout mismatch) 15/8/4 - "doesn't match a known template" is
+//     weak alone (many genuine documents aren't in the template set yet).
+//   DOC-12 (image EXIF/metadata) 8/5/3 - same weak-metadata tier as DOC-01/
+//     DOC-03, just sourced from the Python service's own EXIF read instead
+//     of the Node PDF parser.
+//   DOC-13 (signature inconsistency) 15/8/4 - an internal stroke-consistency
+//     heuristic on a candidate signature region, not a match against a real
+//     reference signature (see document-forensics/app/signature.py's own
+//     scope note) - weighted like DOC-11, not like DOC-09.
+//   DX-1 extended: DOC-09 at high/medium confidence joins the same
+//   "forgery artefact + impersonation/payment fact" group DOC-04/DOC-05/
+//   DOC-08/DOC-02 already use, since a localized splice plus a payment or
+//   identity claim is exactly that pattern.
+const IMAGE_FORENSICS_B = DOC_FORGERY_B;
+export const RULESET_RS_1_6 = Object.freeze({
+  ...RULESET_RS_1_5,
+  version: "rs-1.6",
+  weights: Object.freeze({
+    ...RULESET_RS_1_5.weights,
+    "DOC-09": { variants: { high: 30, medium: 15, low: 8 }, default: 15 },
+    "DOC-10": { variants: { high: 18, medium: 10, low: 5 }, default: 10 },
+    "DOC-11": { variants: { high: 15, medium: 8, low: 4 }, default: 8 },
+    "DOC-12": { variants: { high: 8, medium: 5, low: 3 }, default: 5 },
+    "DOC-13": { variants: { high: 15, medium: 8, low: 4 }, default: 8 },
+  }),
+  interactions: Object.freeze([
+    ...RULESET_RS_1_5.interactions,
+    { id: "DX-1", points: 15, group: "document-forgery", reason: "Document forgery artefact combined with an impersonation or payment request",
+      a: ["DOC-09"], aVariants: ["high", "medium"], b: IMAGE_FORENSICS_B },
+  ]),
+});
+
+export const ACTIVE_RULESET = RULESET_RS_1_6;
 export const RULESETS = Object.freeze({
   [RULESET_RS_1_0.version]: RULESET_RS_1_0,
   [RULESET_RS_1_1.version]: RULESET_RS_1_1,
   [RULESET_RS_1_2.version]: RULESET_RS_1_2,
   [RULESET_RS_1_3.version]: RULESET_RS_1_3,
   [RULESET_RS_1_4.version]: RULESET_RS_1_4,
+  [RULESET_RS_1_5.version]: RULESET_RS_1_5,
+  [RULESET_RS_1_6.version]: RULESET_RS_1_6,
 });
 
 const LEVEL_ORDER = ["low", "elevated", "high", "critical"];

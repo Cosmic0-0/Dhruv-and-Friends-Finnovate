@@ -7,6 +7,8 @@
 //   fail     at least one finding from this check costs points
 //   warn     only informational findings (worth knowing, costs nothing)
 //   pass     the check ran and found nothing
+//   info     an inventory, not a test (e.g. API calls): lists what was seen
+//            and never counts as a pass, even when nothing was seen
 //   not_run  the check couldn't run for this page - `reason` says why.
 //            Never shown as a pass: "we didn't look" is not "it's fine".
 //
@@ -25,6 +27,14 @@ const needs = {
 
 /** [id, label, area, requirement, title pattern] */
 const CHECKS = [
+  ["cloned-metadata", "Metadata doesn't point to another organisation's site", "identity", "client", /^Page metadata points to another organisation's website$/],
+  ["brand-claim", "Page doesn't claim another organisation while asking for credentials", "identity", "client", /^Page claims to be another organisation and asks for credentials$/],
+  ["borrowed-branding", "Branding isn't loaded from another organisation's site", "identity", "client", /^Page loads its branding from another organisation's website$/],
+  ["exfiltration", "No data sent to Telegram bots or Discord webhooks", "identity", "client", /^Page sends data to /],
+  ["privacy-policy", "Links to its own working privacy policy", "identity", "client", /^(?:No privacy policy link|Privacy policy link is broken|Privacy policy link goes to another organisation's website)$/],
+  ["obfuscation", "No deliberately hidden (obfuscated) code", "identity", "client", /^Page runs deliberately hidden \(obfuscated\) code$/],
+  ["context-menu", "Right-click isn't blocked", "identity", "client", /^Right-click is disabled$/],
+
   ["https", "Page is served over HTTPS", "transport", "server", /^Site is not served over HTTPS$/],
   ["http-redirect", "Plain HTTP redirects to HTTPS", "transport", "server", /^(?:HTTP does not redirect to HTTPS|Plain HTTP is also served without a redirect)$/],
   ["tls-handshake", "TLS connection can be established", "transport", "https", /^Could not establish a TLS connection$/],
@@ -78,10 +88,21 @@ const CHECKS = [
   ["api-calls", "API calls made by the page", "third-party", "client", /API call\(s\) observed$/],
 ];
 
+// Inventory checks: they report what the page does without judging it.
+const INFORMATIONAL = {
+  "api-calls": "No API calls were observed while the page loaded. This lists calls; it doesn't test them.",
+};
+
+/** The first few code/response locations behind a check's findings, for the report. */
+function locationsOf(matched) {
+  const locations = matched.flatMap((f) => f.locations ?? []).slice(0, 3);
+  return locations.length ? { locations } : {};
+}
+
 export const CHECK_IDS = Object.freeze(CHECKS.map(([id]) => id));
 
 const SEVERITY_ORDER = ["high", "medium", "low", "info"];
-const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, not_run: 3 };
+const STATUS_ORDER = { fail: 0, warn: 1, pass: 2, info: 3, not_run: 4 };
 
 /** The check a finding belongs to, or null (network/coverage notes aren't checks). */
 export function checkIdForFinding(finding) {
@@ -102,6 +123,11 @@ export function buildChecklist(findings, { reachable, https, clientSignals }) {
     const reason = needs[requirement](ctx);
     const matched = findings.filter((f) => re.test(f.title || ""));
     if (reason && matched.length === 0) return { id, label, area, status: "not_run", reason };
+    if (INFORMATIONAL[id]) {
+      return matched.length
+        ? { id, label, area, status: "info", findings: matched.map((f) => f.title), ...locationsOf(matched) }
+        : { id, label, area, status: "info", reason: INFORMATIONAL[id] };
+    }
     const costly = matched.filter((f) => (SEVERITY_DEDUCTION[f.severity] ?? 0) > 0);
     const worst = SEVERITY_ORDER.find((s) => matched.some((f) => f.severity === s)) ?? null;
     const status = costly.length > 0 ? "fail" : matched.length > 0 ? "warn" : "pass";
@@ -112,6 +138,7 @@ export function buildChecklist(findings, { reachable, https, clientSignals }) {
       status,
       ...(worst ? { severity: worst } : {}),
       ...(matched.length ? { findings: matched.map((f) => f.title) } : {}),
+      ...locationsOf(matched),
     };
   });
 

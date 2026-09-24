@@ -32,6 +32,7 @@ const CATEGORY_LABELS = {
   "third-party": "Third-party scripts",
   "api-surface": "API calls",
   coverage: "Report coverage",
+  identity: "Identity & intent",
 };
 const AREA_STATUS_LABEL = { clean: "Clean", issues: "Issues", not_checked: "Not checked" };
 
@@ -254,6 +255,8 @@ function findingNode(f) {
     ev.append(el("span", "rp-evidence-label", "Evidence"), document.createTextNode(f.evidence));
     body.append(ev);
   }
+  const where = locationsNode(f.locations, f.evidence);
+  if (where) body.append(where);
   if (f.recommendation) {
     const fix = el("p", "rp-fix");
     fix.append(el("span", "rp-fix-label", "How to fix"), document.createTextNode(f.recommendation));
@@ -261,6 +264,117 @@ function findingNode(f) {
   }
   details.append(body);
   return details;
+}
+
+/**
+ * "Where in the code": file (script URL, the page itself, or the part of the
+ * server response), line, and that line of code. Page code is untrusted, so
+ * every value goes in as a text node.
+ */
+function locationsNode(locations, evidence) {
+  if (!Array.isArray(locations) || locations.length === 0) return null;
+  const wrap = el("div", "rp-where");
+  wrap.append(el("span", "rp-evidence-label", locations.length === 1 ? "Where in the code" : `Where in the code (first ${locations.length})`));
+  for (const loc of locations) {
+    const item = el("div", "rp-where-item");
+    const file = typeof loc.file === "string" ? loc.file : "";
+    item.append(el("span", "rp-where-file mono", Number.isInteger(loc.line) ? `${file}:${loc.line}` : file));
+    // Server findings: the "code" is the header already shown as Evidence.
+    if (loc.code && loc.code !== evidence) {
+      const code = el("pre", "rp-where-code");
+      if (Number.isInteger(loc.line)) code.append(el("span", "rp-where-line", String(loc.line)));
+      code.append(document.createTextNode(loc.code));
+      item.append(code);
+    }
+    wrap.append(item);
+  }
+  return wrap;
+}
+
+// ---------------- Icons ----------------
+// One drawn set, 1.5px stroke on a 16px grid, coloured by currentColor.
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+const ICON_PATHS = {
+  pass: ["M3.5 8.5l3 3 6-7"],
+  fail: ["M4.5 4.5l7 7", "M11.5 4.5l-7 7"],
+  warn: ["M8 2.5l6 11H2z", "M8 7v3", "M8 11.8v.2"],
+  neutral: ["M8 4.5v.2", "M8 7v4.5"],
+  unknown: ["M4.5 8h7"],
+  shield: ["M8 1.8l5 2v4c0 3.2-2.2 5.4-5 6.4-2.8-1-5-3.2-5-6.4v-4z"],
+};
+
+function icon(name, className = "rp-icon") {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 16 16");
+  svg.setAttribute("class", className);
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of ICON_PATHS[name] ?? ICON_PATHS.unknown) {
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}
+
+// ---------------- Badly built vs hostile ----------------
+
+const INTENT_ICON = { malicious: "fail", suspicious: "warn", weak_security: "shield", ok: "pass" };
+
+function renderIntent(report) {
+  const intent = report.intent;
+  const box = $("rp-intent");
+  if (!intent?.headline) {
+    box.hidden = true; // report from an older backend
+    return;
+  }
+  box.hidden = false;
+  box.dataset.kind = intent.kind;
+  document.body.dataset.verdict = intent.kind; // tints the backdrop
+  const badge = $("rp-intent-icon");
+  badge.textContent = "";
+  badge.append(icon(INTENT_ICON[intent.kind] ?? "unknown", "rp-intent-svg"));
+  $("rp-intent-headline").textContent = intent.headline;
+  $("rp-intent-explanation").textContent = intent.explanation ?? "";
+  const list = $("rp-intent-reasons");
+  list.textContent = "";
+  const reasons = Array.isArray(intent.reasons) ? intent.reasons : [];
+  const facts = Array.isArray(intent.trustFacts) ? intent.trustFacts : [];
+  for (const r of reasons) {
+    const li = el("li", "rp-intent-item");
+    li.dataset.tone = "bad";
+    li.append(icon("fail"), el("span", "", r));
+    list.append(li);
+  }
+  for (const f of facts) {
+    const li = el("li", "rp-intent-item");
+    li.dataset.tone = "good";
+    li.append(icon("pass"), el("span", "", f));
+    list.append(li);
+  }
+  list.hidden = reasons.length + facts.length === 0;
+}
+
+// ---------------- What gives a scam away ----------------
+
+const KEY_STATUS_LABEL = { pass: "Pass", fail: "Fail", warn: "Caution", neutral: "Note", unknown: "Not checked" };
+
+function renderKeyChecks(report) {
+  const checks = Array.isArray(report.keyChecks) ? report.keyChecks : [];
+  const section = $("rp-key");
+  section.hidden = checks.length === 0;
+  const list = $("rp-key-list");
+  list.textContent = "";
+  for (const check of checks) {
+    const li = el("li", "rp-key-item");
+    li.dataset.status = check.status;
+    const status = el("span", "rp-key-status");
+    status.append(icon(check.status), el("span", "visually-hidden", KEY_STATUS_LABEL[check.status] ?? check.status));
+    const text = el("div", "rp-key-text");
+    text.append(el("span", "rp-key-label", check.label), el("span", "rp-key-value", check.value ?? ""));
+    li.append(status, text, el("p", "rp-key-detail", check.detail ?? ""));
+    list.append(li);
+  }
 }
 
 function renderFindings(report) {
@@ -307,7 +421,7 @@ function wireFilters(report) {
 
 // ---------------- Every check ----------------
 
-const CHECK_STATUS_LABEL = { fail: "Failed", warn: "Warning", pass: "Passed", not_run: "Not checked" };
+const CHECK_STATUS_LABEL = { fail: "Failed", warn: "Warning", pass: "Passed", info: "Info", not_run: "Not checked" };
 
 function renderChecks(report) {
   const checks = Array.isArray(report.checks) ? report.checks : [];
@@ -316,14 +430,14 @@ function renderChecks(report) {
     section.hidden = true; // report from an older backend without a checklist
     return;
   }
-  const areaLabels = new Map((report.summary?.areas ?? []).map((a) => [a.id, a.label]));
-  const tally = { fail: 0, warn: 0, pass: 0, not_run: 0 };
+  const areaLabels = new Map([["identity", "Identity"], ...(report.summary?.areas ?? []).map((a) => [a.id, a.label])]);
+  const tally = { fail: 0, warn: 0, pass: 0, info: 0, not_run: 0 };
   for (const c of checks) tally[c.status] = (tally[c.status] ?? 0) + 1;
 
   $("rp-checks-count").textContent = String(checks.length);
   const tallyEl = $("rp-checks-tally");
   tallyEl.textContent = "";
-  for (const status of ["fail", "warn", "pass", "not_run"]) {
+  for (const status of ["fail", "warn", "pass", "info", "not_run"]) {
     const span = el("span");
     span.append(el("strong", "", String(tally[status])), document.createTextNode(CHECK_STATUS_LABEL[status].toLowerCase()));
     tallyEl.append(span);
@@ -337,8 +451,10 @@ function renderChecks(report) {
     if (check.severity) li.dataset.sev = check.severity;
     const statusText = check.status === "fail" && check.severity ? `${CHECK_STATUS_LABEL.fail} · ${check.severity}` : CHECK_STATUS_LABEL[check.status] ?? check.status;
     li.append(el("span", "rp-check-status", statusText), el("span", "rp-check-label", check.label), el("span", "rp-check-area", areaLabels.get(check.area) ?? check.area));
-    const detail = check.status === "not_run" ? check.reason : check.findings?.join("; ");
+    const detail = check.findings?.join("; ") || check.reason;
     if (detail) li.append(el("p", "rp-check-detail", detail));
+    const where = locationsNode(check.locations);
+    if (where) li.append(where);
     list.append(li);
   }
 }
@@ -399,6 +515,8 @@ async function main() {
   const { report } = entry;
   report.findings = Array.isArray(report.findings) ? report.findings : [];
   renderHeader(entry);
+  renderIntent(report);
+  renderKeyChecks(report);
   renderOverview(report);
   renderCharts(report);
   renderFindings(report);

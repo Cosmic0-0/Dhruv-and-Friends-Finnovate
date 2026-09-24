@@ -1,0 +1,30 @@
+{
+  "eyebrow": "SANDBOX",
+  "title": "Practice spotting a scam",
+  "lede": "Step through a fictional scam conversation, one message at a time. Nothing here is sent to anyone — it's a fixed set of scenarios built from real scam patterns.",
+  "scenario": { "label": "Choose a scenario", "loading": "Loading scenarios…" },
+  "objective": { "title": "Your objective", "body": "Notice the shift from a believable introduction to a request for money, credentials or control." },
+  "progress": "Simulation progress",
+  "reset": "Reset and choose another scenario",
+  "start": "Start simulation",
+  "continueLabel": "Continue simulation",
+  "finish": "Finish simulation",
+  "preparing": "Preparing the next message…",
+  "cancel": "Cancel this step",
+  "scammer": "Scammer",
+  "simulated": "Simulated message",
+  "tactic": "Tactic",
+  "introTitle": "A safe place to spot the pattern.",
+  "introBody": "Advance one message at a time. Each fictional message comes with an explanation of the technique being used.",
+  "ended": {
+    "title": "Simulation ended",
+    "headline": "You've seen the pattern.",
+    "tacticsSeen": "Tactics encountered",
+    "advice": "In a real conversation, stop before sharing a code or sending money. Verify through the institution's official app or a number you already trust.",
+    "another": "Try another scenario",
+    "check": "Check a real message"
+  },
+  "reload": "Reload scenarios",
+  "fictionNote": "Fictional messages. No messages are sent to anyone. No personal details are needed.",
+  "sourceLangNote": "Scenario messages and tactic explanations are shown in the source language."
+}

@@ -1,0 +1,36 @@
+{
+  "eyebrow": "TOOL · BATCH SCAN",
+  "title": "Batch scan",
+  "lede": "Paste several messages, one per line, or upload screenshots. Each gets its own verdict.",
+  "modes": { "paste": "Paste messages", "screenshots": "Upload screenshots" },
+  "paste": {
+    "label": "Messages to scan",
+    "placeholder": "Message one…\n\nMessage two…\n\nMessage three…",
+    "hint": "Separate each message with a blank line, up to {max} at a time.",
+    "count": "{n} / {max}"
+  },
+  "screenshots": {
+    "add": "Add screenshots",
+    "hint": "Upload one or more screenshots. The text is read automatically — review and correct it below before scanning.",
+    "reading": "Reading…",
+    "failed": "Couldn't read this screenshot.",
+    "remove": "Remove",
+    "empty": "No screenshots added yet."
+  },
+  "submit": "Scan messages",
+  "scanning": "Scanning…",
+  "summary": {
+    "scam": "Scam",
+    "caution": "Caution",
+    "genuine": "Genuine",
+    "unanalysed": "{n} of these could not be analysed and should be treated with caution."
+  },
+  "results": { "title": "Results", "filtered": "filtered", "clear": "Clear filter", "placeholder": "Your results will appear here, one row per message." },
+  "row": { "screenshot": "Screenshot {n}", "line": "Line {n}", "open": "Open full result" },
+  "empty": { "title": "Nothing scanned yet.", "body": "Paste a few messages or upload screenshots above, then scan them together." },
+  "errors": {
+    "tooMany": "You can scan up to {max} messages at a time.",
+    "tooLong": "One of the messages is over {max} characters."
+  },
+  "verdictUnknown": "Couldn't analyse"
+}

@@ -73,7 +73,10 @@ Schema: `id,original_message,language_mix,english_meaning,scam_type,risk_signals
 | `provenance` | `synthetic_claude`, `owner_authored`, or `real_report_redacted` — separate from `status`: this says where a row came from, `status` says how trustworthy it currently is. A row can start `draft_generated`/`synthetic_claude` and later become `owner_reviewed`/`synthetic_claude` once reviewed — provenance doesn't change. |
 | `notes` | Brief — what the row tests, not prose. |
 
-Current seed: **24 rows, all `owner_reviewed` / `synthetic_claude`** —
+Current contents: run `python scripts/corpus_tool.py stats` for exact counts (do not
+trust hard-coded numbers in prose). At the time of writing the file holds the 24
+`owner_reviewed` seed rows described below plus further `draft_generated` rows that
+have not been reviewed and are excluded from production grounding. The seed rows are —
 Claude-authored synthetic examples across bank/government/mobile-payment/
 family/parcel/investment/job/prize impersonation plus legitimate controls
 (so the model doesn't learn "financial message = scam"), fictional
@@ -109,8 +112,9 @@ memory.
 ## Collaborative review app
 
 Two datasets need independent human review before anything in them can be
-trusted: the 24-row `scam-corpus.csv` and the 30 `draft_generated` rows in
-`translation-memory.csv`. `review/review_app.py` is a local Streamlit tool
+trusted: the `draft_generated` rows of `scam-corpus.csv` and of
+`translation-memory.csv` (`python scripts/corpus_tool.py stats` and
+`python scripts/tm_tool.py check` print the current counts). `review/review_app.py` is a local Streamlit tool
 that lets Joshua and Caellum review either one, independently, without seeing
 each other's decisions until a separate read-only comparison view.
 
@@ -153,8 +157,8 @@ streamlit run data/kreol-dataset/review/review_app.py
 
 ## Known gaps
 
-- Only 24 seed corpus rows — intentionally small so conventions get fixed
-  before scaling. Do not bulk-generate more until these are reviewed.
+- The reviewed corpus is small on purpose so conventions get fixed before scaling.
+  Do not bulk-generate more until the existing draft rows are reviewed.
 - Reviewed rows are integrated into semantic prompt grounding through
   `backend/src/services/analysis/kreolGrounding.js`. The payload consistency
   runner in `data/test-payloads/consistency.mjs` measures live model variance;

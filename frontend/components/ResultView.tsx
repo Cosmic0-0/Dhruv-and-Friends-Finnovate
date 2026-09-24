@@ -63,7 +63,7 @@ export default function ResultView() {
           <div className="card flex flex-col items-start gap-3">
             <h2>{copy.result.missingTitle}</h2>
             <p className="text-[1.0625rem] leading-[1.4375rem] text-ink-soft">{copy.result.missingBody}</p>
-            <Link href="/" className="btn-sm pressable mt-1 bg-primary text-on-primary">
+            <Link href="/app" className="btn-sm pressable mt-1 bg-primary text-on-primary">
               {copy.result.checkAnother}
             </Link>
           </div>
@@ -171,13 +171,16 @@ export default function ResultView() {
                 </div>
 
                 <div className="flex flex-col gap-4">
+                  {/* The annotated message first: it is the answer. The cards
+                      under it explain the marks, they do not replace them. */}
+                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
+
                   {documentPanel}
+
                   <div className="grid grid-cols-12 items-stretch gap-3.5">
                     <WhatsWrongCard signals={response.signals} copy={copy} lang={lang} />
                     <LinkCard response={response} copy={copy} />
                   </div>
-
-                  <MessageCard text={original} marks={marks} verdict={response.verdict} copy={copy} title={textTitle} />
                 </div>
 
                 <div className="flex flex-col gap-4">
@@ -233,19 +236,23 @@ export default function ResultView() {
 
             {/* Reporting is for message senders: a document's "sender" would be
                 the institution it names, which must never be reported as a scammer. */}
-            <ActionDock response={response} hasReportSection={!fromDocument} copy={copy} />
+            {/* One next-steps panel: where to go, then reporting. Three
+                separate surfaces read as three unrelated offers. */}
+            <div className="panel">
+              <ActionDock response={response} hasReportSection={!fromDocument} copy={copy} />
 
-            {!fromDocument && (
-              <div id="report-section" className="scroll-mt-6">
-                <ReportButton
-                  sender={sender}
-                  redacted={redacted}
-                  reported={result.reported}
-                  onReported={onReported}
-                  copy={copy}
-                />
-              </div>
-            )}
+              {!fromDocument && (
+                <div id="report-section" className="section scroll-mt-6">
+                  <ReportButton
+                    sender={sender}
+                    redacted={redacted}
+                    reported={result.reported}
+                    onReported={onReported}
+                    copy={copy}
+                  />
+                </div>
+              )}
+            </div>
 
             <SafetyCard response={response} claimedIdentity={claimedIdentity} copy={copy} lang={lang} show={show} />
           </>

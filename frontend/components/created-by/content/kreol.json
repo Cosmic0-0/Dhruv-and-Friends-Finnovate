@@ -1,0 +1,22 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "KREYE PAR",
+  "title": "Dhruv & Friends",
+  "lede": "Kat devlopper Morisien. FraudLens finn koumanse dan Finnovate Hackathon 2026.",
+  "badgeAlt": "Badz Dhruv & Friends",
+  "groupAlt": "Lekip la dan Finnovate Hackathon 2026",
+  "caption": "Finnovate Hackathon 2026",
+  "team": "Lekip la",
+  "github": "GitHub",
+  "linkedin": "LinkedIn",
+  "offDuty": "Andeor travay",
+  "pair": "Dhruv ek Oleg",
+  "pairAlt": "Dhruv ek Oleg",
+  "contact": "Kontakte nou",
+  "roles": {
+    "dhruv": "Backend, extension navigater ek forensik",
+    "caellum": "Kalite, test ek verifikasion dokiman",
+    "joshua": "Moter risk, add-in Outlook ek Kreol",
+    "oleg": "Design prodwi ek app web"
+  }
+}

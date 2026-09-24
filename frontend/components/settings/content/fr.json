@@ -1,0 +1,66 @@
+{
+  "title": "Réglages",
+  "groups": {
+    "display": "Langue et affichage",
+    "privacy": "Confidentialité",
+    "alerts": "Alertes et extension",
+    "about": "À propos"
+  },
+  "language": {
+    "label": "Langue de l'app",
+    "desc": "Les vérifications marchent dans les trois langues, quel que soit votre choix"
+  },
+  "appearance": {
+    "label": "Apparence",
+    "desc": "Le mode sombre repose les yeux le soir",
+    "light": "Clair",
+    "dark": "Sombre"
+  },
+  "simple": {
+    "label": "Résultats simplifiés",
+    "desc": "Afficher le verdict et la raison la plus importante, rien de plus"
+  },
+  "history": {
+    "label": "Garder mon historique",
+    "desc": "Activé par défaut. Enregistré sur cet appareil uniquement, jamais sur nos serveurs."
+  },
+  "share": {
+    "label": "Partager des exemples anonymes",
+    "desc": "Aide le Radar à prévenir les autres. Nous gardons l'empreinte d'une arnaque, l'expéditeur qu'elle prétend être et ses liens, jamais le message lui-même."
+  },
+  "extension": {
+    "label": "Extension de navigateur",
+    "desc": "Vous avertit avant d'ouvrir un lien d'arnaque connu. Activez-la ou désactivez-la dans l'extension elle-même.",
+    "cta": "Obtenir l'extension"
+  },
+  "alerts": {
+    "label": "Alertes arnaques",
+    "desc": "Une notification quand une campagne d'arnaque commence à circuler sur le Radar. Vérifié quand FraudLens est ouvert, et en arrière-plan si votre navigateur le permet."
+  },
+  "practice": {
+    "label": "Rappel d'entraînement quotidien",
+    "desc": "Un rappel le soir si l'entraînement du jour n'est pas fait. Envoyé quand FraudLens est ouvert, et en arrière-plan si votre navigateur le permet."
+  },
+  "notif": {
+    "blocked": "Les notifications sont bloquées pour ce site. Autorisez-les dans les réglages du navigateur, puis réessayez.",
+    "unsupported": "Ce navigateur ne peut pas afficher de notifications."
+  },
+  "about": {
+    "privacyLabel": "Ce qui quitte votre appareil",
+    "teamLabel": "Créé par Dhruv & Friends",
+    "teamCta": "Voir l'équipe"
+  },
+  "delete": {
+    "button": "Supprimer mon historique",
+    "confirm": "Supprimer toutes les vérifications enregistrées sur cet appareil ? C'est définitif.",
+    "yes": "Supprimer",
+    "no": "Annuler",
+    "done": "Votre historique a été supprimé."
+  },
+  "notifications": {
+    "alertTitle": "Nouvelle arnaque en circulation : {name}",
+    "alertBody": "Vue dans {count} vérifications sur FraudLens. Ouvrez le Radar pour voir à quoi elle ressemble.",
+    "practiceTitle": "Cinq minutes d'entraînement ?",
+    "practiceBody": "Les messages du jour vous attendent. Gardez votre série."
+  }
+}

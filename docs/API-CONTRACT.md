@@ -42,6 +42,15 @@ Routes marked "(analyze)", "(read)" or "(report)" share one limiter per
 group, and so one counter per IP: for example, five `/api/org/outcomes` calls
 use up the same hourly budget as five `/api/report` calls.
 
+> **ADDITIVE CHANGE (2026-09-24): image forensics for screenshots.**
+> `POST /api/analyze/screenshot` now also runs the uploaded image through the
+> local Python document-forensics service (TruFor/ELA/layout/EXIF/signature)
+> concurrently with OCR, not just OCR alone. New reason codes `DOC-09`..`DOC-13`
+> (`document-forensics-client/toSignals.js`), ruleset `rs-1.6` (rs-1.0..1.5
+> unchanged and selectable), a new `imageForensics` response field (see that
+> route below). `analysis.detectorVersions.imageForensics` is added when any
+> of these signals fired. No existing field changed type or meaning.
+
 ## `POST /api/analyze`
 
 The same response is returned by `/api/analyze/screenshot` (plus
@@ -77,6 +86,9 @@ assessment**; `analysis.semantic.status` says which.
   "message": "string, required, 1-5000 characters",
   "language": "string, optional — hint: \"en\" | \"fr\" | \"kreol\" | \"mixed\" (picks the explanation language; auto-detected otherwise)",
   "pageUrl": "string, optional — the URL of the page `message` was extracted from (e.g. the extension's \"Scan This Page\"). Used ONLY to derive a hostname so links to the scanned page's own site are not flagged as \"not an official domain\" relative to itself (URL-08); never fetched, never treated as a claim about the message, and a malformed value is silently ignored rather than rejected.",
+  "shareSamples": "boolean, optional, default true — false = store nothing derived from this request (see \"Sharing samples\" under /api/analyze)",
+  "pageForms": "array, optional, at most 10 — Scan This Page only, ignored without pageUrl: [{ actionHost: string|null (where a password/card form submits; null = the page itself), hasPassword: boolean, hasCard: boolean }]. Field values are never sent. Feeds URL-10. A malformed value is a 400.",
+  "channel": "string, optional — how the user says the message arrived (the web Check screen's \"Received by\"): \"sms\" | \"whatsapp\" | \"email\" | \"facebook\" | \"call\". Context only: passed to the semantic model as a labelled, may-be-wrong hint (prompt semantic-1.3) and echoed as analysis.channel; it never adds a signal or changes the score. Any other value is a 400 (\"channel must be one of: ...\").",
   "paymentContext": {
     "amount": "number >= 0, optional",
     "currency": "string <= 200, optional",
@@ -95,6 +107,27 @@ prose for the LLM): `method` in {gift_card, voucher, crypto,
 money_transfer_service} → `PAY-02`; `recipient` not matching
 `claimedOrganisation` → `PAY-05`; `onCallNow: true` → `PAY-06`. An invalid
 `paymentContext` returns `400` with a field-specific message.
+
+#### Sharing samples (`shareSamples`)
+
+Accepted by `/api/analyze`, `/api/analyze/screenshot`, `/api/analyze/document`
+and `/api/batch-scan` (`backend/src/services/sharing`). By default an analysis
+may add to FraudLens's shared evidence: a community evidence event (message
+fingerprint hashes, normalised sender, claimed brand, lookalike hosts, a
+hashed reporter IP — never the message text), a ScamDNA observation (claimed
+identity, sender, lookalike domains), a batch's summary counts, and, for
+`/api/analyze/document`, the uploaded file's original bytes. The web app's
+Settings → "Share anonymous scam samples" sends `shareSamples: false` when
+turned off; the backend then skips all of those writes. The analysis itself
+is unchanged: existing community evidence and known ScamDNA campaigns are
+still read (a known campaign still returns `scamDna` with `matchStrength:
+"matched"`; an unknown one returns no `scamDna`, and `/api/analyze/document`
+returns `documentId: null`). The only write that remains is
+`risk_audit_log`, and only when OTHER users' community evidence changed this
+verdict: it records the rule and those evidence rows so the adjusted verdict
+stays explainable, and holds nothing from this request. Explicit reports
+(`POST /api/report`) are a separate user action and are not affected. A
+non-boolean value is a `400 { "error": "shareSamples must be a boolean" }`.
 
 ### Response — `200 OK`
 
@@ -124,11 +157,12 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.4",
+    "rulesetVersion": "rs-1.5",
     "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.1", "lexicon": "lexicon-1.0", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
-    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.2", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "detectorVersions": { "url": "url-2.2", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
+    "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.3", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
+    "channel": "sms | whatsapp | email | facebook | call — optional, only when the request sent `channel`",
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
   }
 }
@@ -172,14 +206,18 @@ and never shown or scored.
 
 | Code | Meaning | Emitted by |
 |---|---|---|
-| URL-01 | Lookalike of an official domain (edit distance scaled by label length) | rule |
-| URL-02 | Brand token as the registrable label of an unofficial domain | rule |
+| URL-01 | Lookalike of an official domain (edit distance scaled by label length), or of a global brand in `data/global-brands.json` (visual fold, or a typo keeping the first letter) | rule |
+| URL-02 | Brand token as the registrable label of an unofficial domain; for global brands, the brand (plain or disguised) as one hyphen part (`micros0ft-login.com`) | rule |
 | URL-03 | Brand in subdomain or path of an unrelated host | rule |
-| URL-04 | Punycode / homoglyph host | rule |
+| URL-04 | Punycode / homoglyph host (NFKC + confusables skeleton; names the institution or global brand imitated when it matches) | rule |
 | URL-05 | URL shortener (weak) | rule |
 | URL-06 | Raw IP link | rule |
 | URL-07 | `user@host` link disguise | rule |
 | URL-08 | Verify/log-in/claim call-to-action through an unofficial link | rule |
+| URL-10 | Scan This Page: the page text claims a known institution, the page is not its official site, and a password/card form submits cross-site to a host that is neither official nor on the trusted-domains list (SSO). High; rs-1.5 weight 30 plus floor FLOOR-URL10-CREDENTIAL-FORM | rule |
+| URL-11 | `/api/check-url` only: the site runs on a tunnel or dynamic-DNS host (ngrok, trycloudflare, duckdns, no-ip …). Medium; no risk-engine weight | rule |
+| CERT-01 | `/api/check-url` only: the site's TLS certificate is expired, not yet valid, self-signed, issued for another host, or not trusted. A missing intermediate alone (browsers fill it in) is not reported. High; no risk-engine weight | rule |
+| CERT-02 | `/api/check-url` only: a lookalike host (URL-01..04) whose certificate was issued in the last 7 days. Medium; never fires without a lookalike | rule |
 | ID-01 | Claimed registry institution, link to a non-official host (subdomains of an official domain are official) | rule |
 | ID-02 | Claimed institution, payment beneficiary is someone else | rule |
 | ID-03 | Suspicious sender identity (reserved) | – |
@@ -197,7 +235,7 @@ and never shown or scored.
 | EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
 | DOC-01..DOC-08 | Structural evidence in an uploaded PDF/DOCX - see `POST /api/analyze/document` | rule (document forensics) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.4`)
+#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.5`)
 
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
@@ -217,6 +255,11 @@ claim combined with free/cracked-download bait language). Deliberately not
 inflated to reach "high" on its own: that still needs an actual technical
 or payment/credential fact (e.g. a download-unlock fee reaching "high"
 through the existing IX-1, since ID-04 is already in its `a` list).
+
+`rs-1.5` (active) is `rs-1.4` plus URL-10 (weight 30) and floor
+FLOOR-URL10-CREDENTIAL-FORM (high, requires a claimed institution). Nothing
+else changes, and only Scan This Page requests with `pageForms` can emit
+URL-10, so every other analysis scores exactly as under rs-1.4.
 
 `rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
 fingerprints) and adds the document-forensics weights and interaction DX-1
@@ -409,6 +452,7 @@ campaign counts only; there is no live retraining.
 | `400` | `{ "error": "message exceeds maximum length of 5000 characters" }` | `message.length > 5000` |
 | `400` | `{ "error": "paymentContext.<field> ..." }` | invalid `paymentContext` |
 | `400` | `{ "error": "emailContext.<field> ..." }` | invalid `emailContext` (wrong type, unparsable address, too many entries) |
+| `400` | `{ "error": "shareSamples must be a boolean" }` | `shareSamples` present but not a boolean (same on screenshot, document and batch-scan) |
 | `500` | `{ "error": "analysis failed, try again shortly" }` | unexpected internal error only. **An LLM outage, timeout, invalid JSON or schema failure is not an error** — it returns `200` with `analysis.semantic.status` = `unavailable`/`invalid`. |
 | `413` | `{ "error": "request body is too large" }` | the body exceeds the route's JSON limit. This applies to every route and is mapped in `backend/src/services/http-errors`. Malformed JSON is `400 { "error": "invalid JSON body" }`. |
 | `429` | `{ "error": "too many analyze requests, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
@@ -420,12 +464,26 @@ Screenshot/OCR ingestion (`backend/src/services/ocr/`, tesseract.js
 through the same `runPipeline()` as `/api/analyze` (with
 `analysis.source: "screenshot"`). The image is not stored.
 
+**Additive (2026-09-24).** The image also goes through the local Python
+document-forensics service (`backend/src/services/document-forensics-client/`
+— TruFor, Error Level Analysis, Donut layout comparison, EXIF/metadata,
+signature consistency) concurrently with OCR. Its findings become ordinary
+`DOC-09`..`DOC-13` entries in `signals[]` (via
+`document-forensics-client/toSignals.js`, `rs-1.6`), the same "extraSignals
+feed runPipeline()" pattern `/api/analyze/document` uses for PDF/DOCX — one
+deterministic verdict covering both the message's language and the image
+itself, not two separate checks. The LLM still only ever sees the redacted
+OCR text, never the image or the forensic facts. A down/slow forensics
+service degrades to no extra signals (never fails the request); see
+`imageForensics.status` in the response.
+
 ### Request
 
 ```json
 {
   "image": "string, required — base64-encoded image bytes, max 5MB decoded. A `data:<mime>;base64,` prefix is accepted and stripped if present.",
-  "language": "string, optional — same free-form hint as /api/analyze"
+  "language": "string, optional — same free-form hint as /api/analyze",
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
 }
 ```
 
@@ -438,12 +496,21 @@ WEBP, regardless of anything the client claims.
 The full `/api/analyze` response (see above) plus:
 
 ```json
-{ "extractedText": "string — redacted OCR output that was actually analyzed" }
+{
+  "extractedText": "string — redacted OCR output that was actually analyzed",
+  "imageForensics": {
+    "status": "\"ok\" | \"unavailable\" — whether the forensics service actually ran",
+    "checksRun": "string[] — which of metadata_pdf/error_level_analysis/trufor/layout_comparison actually executed (the service escalates only when cheaper checks are inconclusive)",
+    "checksSkipped": "{ check: string, reason: string }[] — the rest, and why"
+  }
+}
 ```
 
 The UI never shows `extractedText` to the user - the screenshot thumbnail is
 the only visible confirmation of what was scanned. The text is held in
 memory client-side and submitted to `/api/analyze` once "Check" is pressed.
+`imageForensics` is transparency about what ran, not a second verdict — its
+actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
 
 ### Errors
 
@@ -488,6 +555,7 @@ case too.
 {
   "file": "string, required - the file's bytes as base64, or a data URL (the data:...;base64, prefix is stripped). Max 10MB decoded.",
   "fileName": "string, optional - display only; ignored by the backend and never echoed",
+  "shareSamples": "boolean, optional, default true - false: the file's bytes are NOT stored (documentId is null) and nothing else is recorded; see /api/analyze \"Sharing samples\"",
   "language": "string, optional - same free-form hint as /api/analyze"
 }
 ```
@@ -713,7 +781,8 @@ already succeeded and the bytes are safely stored by the time OCR runs, so
 
 ```json
 {
-  "messages": ["string, required — 1-50 items, each 1-5000 characters"]
+  "messages": ["string, required — 1-50 items, each 1-5000 characters"],
+  "shareSamples": "boolean, optional, default true — false: no batch history row and no per-message evidence is stored; see /api/analyze \"Sharing samples\""
 }
 ```
 
@@ -750,6 +819,81 @@ never returns a top-level 5xx.
 
 There is no top-level 5xx for this route — LLM failures are absorbed
 per-message as described above.
+
+## `POST /api/analyze/conversation`
+
+Analyses a whole chat as ONE message: the other party's messages, in order,
+are joined into a single transcript and run through `runPipeline()` once
+(`backend/src/services/conversation`, `analysis.source: "conversation"`).
+That keeps every guarantee of `/api/analyze` — one deterministic verdict and
+score, grounded semantic evidence, the same intervention policy — instead of
+a separate, inconsistent verdict per bubble. The caller's own ("me") messages
+are accepted and echoed back via indices but are never analysed.
+
+### Request
+
+```json
+{
+  "messages": [
+    { "from": "me" | "them", "text": "string, required, 1-5000 characters" }
+  ],
+  "language": "string, optional — same free-form hint as /api/analyze",
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
+}
+```
+
+`messages`: 1-500 items, at least one `"them"` message. Longer chats keep the
+most recent `"them"` text up to 12,000 characters combined; the response says
+where analysis started (`conversation.firstAnalysedIndex`).
+
+### Response — `200 OK`
+
+The full `/api/analyze` response (see above; `verdict`, `signals`,
+`suggestedAction`, `explanation`, `riskScore`, `actions`, `scamProfile`,
+`journey`, `scamDna`, `analysis`, …) plus:
+
+```jsonc
+{
+  "conversation": {
+    "messageCount": 4,          // messages.length, as sent
+    "theirMessageCount": 3,     // how many were from "them"
+    "analysedMessageCount": 3,  // how many of those fit in the 12,000-char budget
+    "truncated": false,         // true when older "them" messages were dropped
+    "firstAnalysedIndex": 0,    // index (into `messages`) analysis started at, or null
+    "flags": [
+      { "index": 3, "code": "SEC-01", "severity": "high", "label": "Requested a one-time code", "evidence": "the OTP you received" }
+    ],
+    "stages": [
+      { "stage": "TRUST_BUILDING", "index": 2 }
+    ]
+  }
+}
+```
+
+`flags`: one entry per signal whose evidence quote is grounded inside one of
+the `"them"` messages (community-sourced signals, which describe the sender
+rather than quote text, are never attached). `label` is the signal's display
+name (`backend/src/services/signals/registry.js`); `evidence` is the exact
+quoted text, already redacted the same way the request was. `stages`: the
+first message index each fixed playbook stage (`backend/src/services/
+playbooks`) was observed at, via a fixed signal-code → stage table
+(`CODE_STAGE` in `backend/src/services/conversation/index.js`); only signal
+codes whose meaning maps onto one stage unambiguously are included.
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "messages must be a non-empty array" }` | `messages` missing, not an array, or empty |
+| `400` | `{ "error": "messages exceeds the maximum of 500" }` | `messages.length > 500` |
+| `400` | `{ "error": "every message must be an object" }` | an item is not an object |
+| `400` | `{ "error": "every message needs from: \"me\" or \"them\"" }` | an item's `from` is missing or not `"me"`/`"them"` |
+| `400` | `{ "error": "every message needs non-empty text" }` | an item's `text` is missing, not a string, or empty/whitespace-only |
+| `400` | `{ "error": "every message must be 5000 characters or fewer" }` | an item's `text` exceeds 5000 characters |
+| `400` | `{ "error": "the conversation has no messages from the other person" }` | every message has `from: "me"` |
+| `400` | `{ "error": "shareSamples must be a boolean" }` | `shareSamples` present but not a boolean |
+| `429` | `{ "error": "too many conversation checks, try again shortly" }` | per-IP rate limit exceeded (20 req/15min) |
+| `500` | `{ "error": "conversation analysis failed" }` | unexpected internal error only — an LLM outage/timeout/invalid JSON is not an error; it returns `200` with `analysis.semantic.status` not `"ok"`, same as `/api/analyze` |
 
 ## `POST /api/check-sender`
 
@@ -828,6 +972,24 @@ assuming the `230` Mauritius country code for 8-digit local numbers. So
 the same underlying count instead of three independent rows. The `sender`
 field in the response echoes back the raw string exactly as submitted.
 
+## `POST /api/text-profile`
+
+Describes pasted text for the web Check screen's meta row while the user
+types. Descriptive only: no signal, score, verdict, LLM call or storage. It
+reuses the pipeline's language markers (`services/lexicon`) and link
+extraction (`services/domain-matching`).
+
+Request: `{ "text": "string, required, 0-5000 characters" }`
+
+Response `200`:
+
+```json
+{ "language": "en | fr | kreol | mixed | null (null = too few marker words to tell)", "links": 1, "hosts": ["mcb-secure.top"] }
+```
+
+Errors: `400` when `text` is missing, not a string or over 5000 characters;
+`429` over 600 requests / 15 min per IP.
+
 ## `POST /api/check-url`
 
 Used by the browser extension. A bare hostname/URL isn't a scam "message" to
@@ -851,10 +1013,32 @@ the host, and a domain-age lookup.
 ```json
 {
   "url": "string — echoed back from the request",
-  "flagged": "boolean — true if checkUrls() produced any signal",
-  "signals": [ { "type": "lookalike_url", "description": "string", "severity": "low" | "medium" | "high" } ]
+  "host": "string | null — normalized hostname, null when the url can't be parsed",
+  "flagged": "boolean — true if any signal fired",
+  "signals": "[signal] — same shape as /api/analyze signals: lookalike (URL-01..04), shortener / raw IP / @ disguise (URL-05..07), known-phishing list (REP-05), new domain (URL-09), repeated reports (REP-03)",
+  "reportCount": "number — user reports for this host (0 for official/trusted hosts)",
+  "officialInstitution": "string | null — display name when the host is an institution's official domain",
+  "trusted": "boolean — host is on data/trusted-domains.json",
+  "domainAgeDays": "number | null — registration age from RDAP, null when unknown",
+  "resolvedUrl": "string | null — for a known URL shortener only: where it points, read from ONE redirect response of the shortener (the destination is never fetched). Signals for the destination are included in `signals` with metadata.viaShortener set to the shortener host. null when not a shortener or unresolvable",
+  "firstCertificateDays": "number | null — days since the domain's first certificate in Certificate Transparency logs (crt.sh), looked up on every check for non-official, non-trusted hosts; null when unknown",
+  "certificate": "null | { validation: \"EV\" | \"OV\" | \"DV\" | null, organization: string|null, issuer: string|null, validFrom, validTo, issuedDaysAgo, expiresInDays, trusted: boolean, problem: null | \"expired\" | \"not_yet_valid\" | \"self_signed\" | \"wrong_host\" | \"untrusted\" } — read from a bare TLS handshake on EVERY https check, official sites included (the old browser green bar: EV/OV name a verified organisation). SSRF-guarded, 2.5 s timeout, cached per host for 1 h, null when unreachable or plain HTTP",
+  "version": "string"
 }
 ```
+
+Known-malicious lists (REP-05) are the local files in `data/threat-intel/`
+(OpenPhish phishing and URLhaus malware feeds, refreshed by
+`npm run update:threat-feed`, plus the committed local blocklist) and, only
+when `SAFE_BROWSING_API_KEY` is set, Google Safe Browsing (2 s timeout,
+fail-open, cached 30 min). When RDAP returns no registration date (a registry
+without RDAP, or a slow/failed lookup), URL-09 falls back to the domain's first certificate in
+Certificate Transparency logs (crt.sh): worded as "first appeared in public
+certificate logs", capped at medium, and `domainAgeDays` stays null.
+
+Short-link resolution contacts only hosts on the fixed shortener list in
+`services/domain-matching`, over HTTPS, after the SSRF guard, with a 3 s
+timeout (`services/url-reputation/short-links.js`).
 
 ### Errors
 
@@ -928,7 +1112,10 @@ silent no-op.
     "categories": "[{ category, area, count, points }] — points actually lost per category after scoring, sorted by points; points always sum to 100 - score",
     "areas": "[{ id, label, status: \"clean\" | \"issues\" | \"not_checked\", score: number | null, findings, pointsLost }] — eight fixed areas (transport, headers, framing, cookies, exposure, page-code, content, third-party)"
   },
-  "checks": "[{ id, label, area, status: \"fail\" | \"warn\" | \"pass\" | \"not_run\", severity?, findings?: string[], reason? }] — every check the report runs (44), most pressing first: failures (worst severity first), warnings, passes, then checks that couldn't run with the reason. not_run is never a pass",
+  "checks": "[{ id, label, area, status: \"fail\" | \"warn\" | \"pass\" | \"info\" | \"not_run\", severity?, findings?: string[], reason? }] — every check the report runs (44), most pressing first: failures (worst severity first), warnings, passes, informational inventories (info: lists what was seen, e.g. API calls, and is never a pass), then checks that couldn't run with the reason. not_run is never a pass",
+  "intent": "{ kind: \"malicious\" | \"suspicious\" | \"weak_security\" | \"ok\", headline, explanation, reasons: string[], trustFacts: string[], reputationChecked: boolean } — badly built vs hostile. The grade measures engineering hygiene; intent comes from the same reputation assessment as /api/check-url (threat lists, lookalikes, tunnel hosts, certificate, domain age). weak_security = real gaps but no sign of bad intent (common on older and government sites), with the facts that show the site is genuine",
+  "reputation": "null | { signals, officialInstitution, domainAgeDays, firstCertificateDays, certificate } — the /api/check-url assessment used for intent; null when it timed out (5 s cap, fail-open)",
+  "findings[].locations": "optional [{ file, line?, code }] (at most 3) — where the finding is: for page-code findings the script URL or page URL, 1-based line and that line of source as collected by the extension; for server findings the part of the response (e.g. \"HTTP response headers · <url>\") and the header/evidence. Untrusted page text, capped and stripped of control characters; clients must render it as text. checks[].locations carries the first three from the findings a check matched",
   "coverage": {
     "serverChecks": "boolean — false when the site could not be reached",
     "clientSignals": "boolean — false when no page-side signals were collected",
@@ -1214,6 +1401,35 @@ integer, starting at zero. Invalid input returns 400. Body limit 10kb;
 30 requests / 15 minutes / IP, 429 when exceeded.
 
 Response `200 OK`:
+
+**Optional `?range=7d|30d|12m` (additive).** Adds a `radar` object with
+ranged aggregates for the Radar page; any other `range` value is `400`.
+Without `range` the response is unchanged. Source: `backend/src/services/radar`,
+two daily counter tables (`radar_daily`: day, verdict, scam type, claimed
+institution, user-reported channel, count; `radar_domain_daily`: day,
+lookalike domain, institution it imitates, count). Only `scam`/`suspicious`
+checks are counted; no text, sender, IP or pseudonym is stored; requests with
+`shareSamples: false` record nothing; rows are purged after
+`RADAR_RETENTION_DAYS` (default 730). Days are Mauritius calendar days (UTC+4).
+
+```ts
+radar?: {
+  range: "7d" | "30d" | "12m";
+  unit: "day" | "month";          // bucket size of `series`
+  from: string; to: string;        // YYYY-MM-DD, to exclusive
+  scamsCaught: number;             // checks with verdict "scam" in the range
+  flaggedChecks: number;           // scam + suspicious
+  change: { previous: number; pct: number } | null; // vs the previous equal period; null when it had no scams
+  series: { start: string; scams: number }[];       // 7, 30 or 12 buckets, oldest first
+  topImpersonated: { name: string; checks: number; sharePct: number } | null; // share of flaggedChecks
+  rising: { scamType: string; current: number; previous: number; mainChannel: string | null } | null; // largest growth vs previous period; null if nothing grew
+  topScamTypes: { scamType: string; checks: number; pct: number }[]; // top 5, pct of typed checks
+  fakeLinks: { domain: string; imitates: string | null; times: number }[]; // top 5 lookalike domains
+}
+```
+
+Every value is a sum over stored counters; an empty database returns zeros,
+`null`s and `[]`, which the client renders as an empty state.
 
 ```ts
 {

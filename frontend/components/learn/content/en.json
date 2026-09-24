@@ -1,0 +1,38 @@
+{
+  "eyebrow": "LEARN",
+  "title": "Learn to spot them",
+  "lede": "Five real-style messages a day. Decide whether each one is a scam, then see what gave it away.",
+  "question": "Scam or genuine?",
+  "stats": {
+    "today": "Today",
+    "todayCount": "{done} of {goal}",
+    "streak": "Streak",
+    "unit": "days",
+    "days": "{n} day streak",
+    "noStreak": "No streak yet",
+    "accuracy": "Accuracy",
+    "accuracyEmpty": "Not yet"
+  },
+  "week": {
+    "title": "This week",
+    "streakLine": "{n} days in a row",
+    "dailyGoal": "Daily goal"
+  },
+  "goal": {
+    "title": "Today's goal",
+    "more": "{n} more to go",
+    "done": "Goal reached for today"
+  },
+  "rule": {
+    "title": "Rule of thumb",
+    "body": "No bank, courier or government office in Mauritius will ask for your one-time code."
+  },
+  "patterns": {
+    "title": "Common scam patterns",
+    "sub": "What they look like in Mauritius right now.",
+    "seeAll": "See what's trending on Radar"
+  },
+  "senderGenuine": "Genuine message",
+  "doneToday": "Done for today",
+  "practiceMore": "Practice another set"
+}

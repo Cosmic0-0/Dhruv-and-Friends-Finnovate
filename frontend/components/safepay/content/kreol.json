@@ -1,0 +1,81 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "OUTIL · AVAN OU PEY",
+  "title": "Verifie avan ou pey",
+  "lede": "Pe pou avoy kas ar enn dimoun nouvo? Rant kisannla ou pe pey ek nou pou verifie li kont rapport eskrokri ek detay li'nn donn ou.",
+  "formLabel": "Detay peyman",
+  "methodLabel": "Kouma ou pe pey?",
+  "methods": { "phone": "Juice / telefonn", "bank_account": "Kont labank", "iban": "IBAN" },
+  "identifierLabel": { "phone": "Nimero telefonn", "bank_account": "Nimero kont", "iban": "IBAN" },
+  "identifierPlaceholder": {
+    "phone": "ex. 5781 2094",
+    "bank_account": "ex. 000123456789",
+    "iban": "ex. MU17BOMM0101101030300200000MUR"
+  },
+  "nameLabel": "Non ki li'nn done ou",
+  "namePlaceholder": "Fakiltatif",
+  "amountLabel": "Montan",
+  "amountPlaceholder": "0",
+  "amountPrefix": "Rs",
+  "idleCard": {
+    "title": "Kisannla sa verifikasion-la fer",
+    "items": [
+      "Istorik rapport pou sa nimero ouswa kont-la",
+      "Si nimero, kont ouswa IBAN-la byen formate",
+      "Konsey selon rezon ek montan ou'nn rant"
+    ],
+    "note": "Nou pa zamais deplas kas ouswa kontakte dimoun ou pe pey."
+  },
+  "reasonLabel": "Pou ki sa?",
+  "reasons": {
+    "car": "Loto / veikil",
+    "rent_deposit": "Depo loyer",
+    "online_shop": "Aste anlinn",
+    "family": "Fami ouswa kamarad",
+    "invoice": "Fakti"
+  },
+  "submit": "Verifie sannla",
+  "checking": "Pe verifie…",
+  "cancel": "Anile",
+  "idleTitle": "Rezilta pou aparet la.",
+  "idleBody": "Swazir kouma ou pe pey, met nimero, kont ouswa IBAN, apre klik verifie.",
+  "missingIdentifier": "Rant enn nimero telefonn, kont ouswa IBAN dabor.",
+  "invalidAmount": "Montan-la bizin enn nimero.",
+  "verdict": {
+    "stop": "Aret avan ou pey",
+    "caution": "Fer pos ek verifie",
+    "clear": "Pena rapport konet kont sannla"
+  },
+  "verdictBody": {
+    "stop": "Omwin enn verifikasion lor sa nimero-la inn fail net. Pa avoy kas ziska ou'nn konfirm li enn lot fason.",
+    "caution": "Nanye pa exkli net, me ena enn kitsoz ki bizin enn deziem regar avan ou avoy kas.",
+    "clear": "Nanye pa resorti dan nou istorik rapport ouswa dan check format. Sa pa vedir garanti."
+  },
+  "findingsTitle": "Kisannla nou'nn verifie",
+  "findings": {
+    "REPORTED": "Rapporte {count} fwa par lezot itilizater FraudLens.",
+    "NOT_REPORTED": "Personn pa ankor rapport sannla lor FraudLens.",
+    "IBAN_FORMAT_INVALID": "Sa pa resanble enn IBAN valid.",
+    "IBAN_CHECKSUM_FAILED": "Sifer verifikasion sa IBAN-la pa korek — kapav gagn fot dan ki'nn tape li.",
+    "IBAN_LENGTH_WRONG": "Longer pa korek pou enn IBAN {country}.",
+    "IBAN_FOREIGN": "Sa enn IBAN {country}, pa Moris.",
+    "IBAN_VALID": "Format IBAN {country} korek.",
+    "PHONE_VALID": "Resanble enn nimero mobil Moris valid.",
+    "PHONE_NOT_MU_MOBILE": "Sa pa resanble enn nimero mobil Moris.",
+    "ACCOUNT_FORMAT_ODD": "Format sa nimero kont-la drol.",
+    "ORGANISATION_ON_PERSONAL_NUMBER": "Ou'nn mansione {organisation}, me sa enn nimero telefonn personel, pa enn kont biznes.",
+    "LARGE_AMOUNT": "Rs {amount} enn gro montan pou avoy koumsa — sa kalite transfer difisil pou aneile."
+  },
+  "caveat": "FraudLens pa kapav konfirm kisannla proprieter sa nimero, kont ouswa IBAN — li zis gete istorik rapport ek si format korek. Touzour verifie idantite par enn kanal ki ou deza fer konfians.",
+  "whatToDo": {
+    "stop": "Pa avoy sa peyman-la.",
+    "caution": "Verifie avan ou avoy.",
+    "clear": "Verifie dimoun-la endepandaman avan ou avoy."
+  },
+  "whatToDoBody": {
+    "stop": "Kontakte dimoun ouswa lorganizasion lor enn nimero ouswa adres ou'nn deza gagne — pa sa enn li'nn fek donne — avan ou avoy nanye.",
+    "caution": "Konfirm kisannla ou pe pey par enn kanal ou deza fer konfians, apre avoy zis seki ou'nn dakor.",
+    "clear": "Enn check prop pa enn prev idantite. Konfirm kisannla ou pe pey par enn kanal ou deza fer konfians."
+  },
+  "checkAnother": "Verifie enn lot dimoun"
+}

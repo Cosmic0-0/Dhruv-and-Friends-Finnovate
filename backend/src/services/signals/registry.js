@@ -25,6 +25,14 @@ export const SIGNAL_DEFS = Object.freeze({
   // being visited. Deliberately has no risk-engine weight: message analysis
   // never emits it, so no published ruleset changes.
   "URL-09": { category: "technical", severity: "medium", legacyType: "new_domain", label: "Website domain was registered very recently" },
+  // Scan This Page only (services/page-forms): the extension reports each
+  // password/card form's destination host; never emitted for pasted text.
+  "URL-10": { category: "technical", severity: "high", legacyType: "suspicious_link", label: "Login or card form sends your details to another site" },
+  // /api/check-url only (services/url-reputation), like URL-09: no risk-engine
+  // weight, so no published ruleset changes.
+  "URL-11": { category: "technical", severity: "medium", legacyType: "suspicious_link", label: "Site runs on a tunnel or dynamic-DNS host" },
+  "CERT-01": { category: "technical", severity: "high", legacyType: "suspicious_link", label: "Website's security certificate is invalid" },
+  "CERT-02": { category: "technical", severity: "medium", legacyType: "new_domain", label: "Look-alike site with a brand-new certificate" },
 
   "ID-01": { category: "identity", severity: "high", legacyType: "IDENTITY_MISMATCH", label: "Claims to be an institution but links to a different domain" },
   "ID-02": { category: "identity", severity: "high", legacyType: "IDENTITY_MISMATCH", label: "Claims to be an institution but payment goes to someone else" },
@@ -103,6 +111,20 @@ export const SIGNAL_DEFS = Object.freeze({
   "DOC-06": { category: "document_integrity", severity: "medium", legacyType: "document_hidden_text", label: "Document contains hidden text" },
   "DOC-07": { category: "document_integrity", severity: "high", legacyType: "document_active_content", label: "Document contains active content" },
   "DOC-08": { category: "document_integrity", severity: "medium", legacyType: "document_font_outlier", label: "An amount, account number or date uses a different font from the rest of the page" },
+
+  // Image forensics (services/document-forensics-client -> the local Python
+  // document-forensics/ service: TruFor, Error Level Analysis, Donut layout
+  // comparison, EXIF/metadata, signature consistency). Applies to screenshots
+  // and photographed documents - pixel/metadata facts about the image itself,
+  // never the semantic model, which only ever sees OCR'd text. Severity is
+  // taken from the service's own per-finding confidence (high/medium/low),
+  // not fixed per code, since that confidence is already the most specific
+  // signal the model produces.
+  "DOC-09": { category: "document_integrity", severity: "high", legacyType: "image_forgery_localization", label: "Forgery-localization model found a tampered region" },
+  "DOC-10": { category: "document_integrity", severity: "medium", legacyType: "image_error_level_anomaly", label: "Error Level Analysis found an inconsistent region" },
+  "DOC-11": { category: "document_integrity", severity: "medium", legacyType: "image_template_mismatch", label: "Image doesn't match the expected layout for its claimed document type" },
+  "DOC-12": { category: "document_integrity", severity: "low", legacyType: "image_metadata_anomaly", label: "Image metadata is inconsistent" },
+  "DOC-13": { category: "document_integrity", severity: "medium", legacyType: "image_signature_inconsistency", label: "A signature region shows internal inconsistency" },
 });
 
 export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));

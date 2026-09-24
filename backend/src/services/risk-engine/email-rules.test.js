@@ -9,8 +9,8 @@ const sig = (code, sourceType = "rule", metadata = {}) => makeSignal(code, { sou
 const email = (code, variant, host) => sig(code, "rule", { ...(variant ? { variant } : {}), ...(host ? { host } : {}) });
 const ids = (r) => r.trace.map((t) => t.id);
 
-test("rs-1.4 is active; published rs-1.0 and rs-1.1 remain unchanged and selectable", () => {
-  assert.equal(ACTIVE_RULESET.version, "rs-1.4");
+test("rs-1.6 is active; published rs-1.0 and rs-1.1 remain unchanged and selectable", () => {
+  assert.equal(ACTIVE_RULESET.version, "rs-1.6");
   assert.equal(RULESET_RS_1_2.weights["ORG-01"], 30);
   for (const [code, w] of Object.entries(RULESET_RS_1_0.weights)) assert.deepEqual(RULESET_RS_1_1.weights[code], w, code);
   for (const ix of RULESET_RS_1_0.interactions) assert.ok(RULESET_RS_1_1.interactions.includes(ix), ix.id);

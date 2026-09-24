@@ -7,7 +7,24 @@ export interface Campaign {
   senders: string[];
   domains: string[];
 }
+/** GET /api/trends?range= (docs/API-CONTRACT.md): real ranged aggregates for Radar. */
+export type RadarRange = "7d" | "30d" | "12m";
+export interface RadarData {
+  range: RadarRange;
+  unit: "day" | "month";
+  from: string;
+  to: string;
+  scamsCaught: number;
+  flaggedChecks: number;
+  change: { previous: number; pct: number } | null;
+  series: { start: string; scams: number }[];
+  topImpersonated: { name: string; checks: number; sharePct: number } | null;
+  rising: { scamType: string; current: number; previous: number; mainChannel: string | null } | null;
+  topScamTypes: { scamType: string; checks: number; pct: number }[];
+  fakeLinks: { domain: string; imitates: string | null; times: number }[];
+}
 export interface TrendsSummary {
+  radar?: RadarData;
   totals: { reportedSenders: number; totalReports: number; campaigns: number; domains: number };
   topSenders: { sender: string; reportCount: number }[];
   topCampaigns: { fingerprintId: string; scamType: string; claimedIdentity: string | null; messageCount: number }[];
@@ -43,3 +60,16 @@ export const getCampaign = (id: string, signal?: AbortSignal) => request<Campaig
 export const getTrends = (signal?: AbortSignal) => request<TrendsSummary>("/api/trends", (x): x is TrendsSummary => obj(x) && obj(x.totals) && typeof x.totals.reportedSenders === "number" && typeof x.totals.totalReports === "number" && typeof x.totals.campaigns === "number" && typeof x.totals.domains === "number" && Array.isArray(x.topSenders) && x.topSenders.every(s => obj(s) && typeof s.sender === "string" && typeof s.reportCount === "number") && Array.isArray(x.topCampaigns) && x.topCampaigns.every(c => obj(c) && typeof c.fingerprintId === "string" && typeof c.scamType === "string" && (c.claimedIdentity === null || typeof c.claimedIdentity === "string") && typeof c.messageCount === "number") && Array.isArray(x.scamTypeCounts) && x.scamTypeCounts.every(s => obj(s) && typeof s.scamType === "string" && typeof s.campaigns === "number" && typeof s.messages === "number"), signal);
 export const getSandboxCatalog = (signal?: AbortSignal) => request<SandboxCatalog>("/api/sandbox/playbooks", (x): x is SandboxCatalog => obj(x) && typeof x.maxTurns === "number" && Array.isArray(x.playbooks) && x.playbooks.every(p => obj(p) && typeof p.scamType === "string" && typeof p.label === "string" && strings(p.typicalStages)), signal);
 export const nextSandboxTurn = (body: { scamType: string; stage: string; turnIndex: number }, signal?: AbortSignal) => request<SandboxTurn>("/api/sandbox/next", (x): x is SandboxTurn => obj(x) && x.simulated === true && typeof x.ended === "boolean" && typeof x.scamType === "string" && typeof x.stage === "string" && typeof x.turnIndex === "number" && (x.line === null || typeof x.line === "string") && obj(x.tactic) && typeof x.tactic.label === "string" && typeof x.tactic.explanation === "string" && ["llm", "scripted", "ended"].includes(String(x.source)) && (x.nextStage === null || typeof x.nextStage === "string") && strings(x.typicalStages), signal, body);
+
+const num = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
+const isRadar = (r: unknown): r is RadarData =>
+  obj(r) && typeof r.range === "string" && num(r.scamsCaught) && num(r.flaggedChecks) &&
+  (r.change === null || (obj(r.change) && num(r.change.pct))) &&
+  Array.isArray(r.series) && r.series.every(b => obj(b) && typeof b.start === "string" && num(b.scams)) &&
+  (r.topImpersonated === null || (obj(r.topImpersonated) && typeof r.topImpersonated.name === "string" && num(r.topImpersonated.sharePct))) &&
+  (r.rising === null || (obj(r.rising) && typeof r.rising.scamType === "string")) &&
+  Array.isArray(r.topScamTypes) && r.topScamTypes.every(t => obj(t) && typeof t.scamType === "string" && num(t.pct) && num(t.checks)) &&
+  Array.isArray(r.fakeLinks) && r.fakeLinks.every(l => obj(l) && typeof l.domain === "string" && num(l.times));
+/** Radar's ranged aggregates (additive `?range=` on /api/trends). */
+export const getRadar = (range: RadarRange, signal?: AbortSignal) =>
+  request<{ radar: RadarData }>(`/api/trends?range=${range}`, (x): x is { radar: RadarData } => obj(x) && isRadar(x.radar), signal).then(d => d.radar);

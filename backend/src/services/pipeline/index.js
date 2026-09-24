@@ -20,6 +20,7 @@ import { checkUrls, checkLinkHygiene, registrableDomain, DETECTOR_VERSION as URL
 import { attachDomainAges } from "../domain-age/index.js";
 import { checkThreatIntel } from "../threat-intel/index.js";
 import { checkIdentityConsistency } from "../identity-consistency/index.js";
+import { checkPageForms } from "../page-forms/index.js";
 import { detectLexicon, detectInjection, detectTemplateArtifacts, detectLanguage, LEXICON_VERSION } from "../lexicon/index.js";
 import { evaluatePaymentContext } from "../payment-context/index.js";
 import { analyzeSemantics, SEMANTIC_PROMPT_VERSION } from "../analysis/index.js";
@@ -38,8 +39,9 @@ import { extractIndicators, evaluateOrgIntel, observationId, pseudonym, recordOr
 import { planVerification, VERIFICATION_POLICY_VERSION } from "../verification-workflows/index.js";
 import { DEMO_DIRECTORY, DEMO_ORGANISATION, DEMO_SUPPLIERS } from "../workplace-registry/index.js";
 import { getReportCount } from "../../db/index.js";
+import { recordRadarObservation } from "../radar/index.js";
 
-export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch", "document"]);
+export const SOURCES = Object.freeze(["pasted_text", "screenshot", "email", "batch", "document", "conversation"]);
 
 // A sender reported this many times (legacy per-sender counter) becomes a
 // REP-03 signal.
@@ -135,7 +137,7 @@ function senderReputation(sender) {
 
 /**
  * @param {string} rawText the (already redacted) message text
- * @param {{ source?: string, language?: string, paymentContext?: object|null, emailContext?: object|null,
+ * @param {{ source?: string, language?: string, channel?: string|null, paymentContext?: object|null, emailContext?: object|null,
  *   pageHost?: string|null, ip?: string, now?: number, ocrQuality?: "low"|"ok",
  *   extraSignals?: object[], extraDetectorVersions?: Record<string, string>,
  *   semantic?: { enabled?: boolean, timeoutMs?: number, llm?: Function } }} [context]
@@ -145,12 +147,13 @@ function senderReputation(sender) {
  *   trusted as a claim, only used so a page's own domain/subdomains are never flagged as "not an official
  *   domain" relative to themselves (see domain-matching#checkLinkHygiene). extraSignals are pre-computed
  *   deterministic registry signals about evidence other than the text (document forensics) and are scored with
- *   everything else. extraDetectorVersions are merged into analysis.detectorVersions.
+ *   everything else. extraDetectorVersions are merged into analysis.detectorVersions. record: false (the
+ *   request's shareSamples: false, services/sharing) stores nothing derived from this message.
  */
 export async function runPipeline(rawText, context = {}) {
   const {
-    language, paymentContext = null, emailContext = null, pageHost = null, ip, now = Date.now(), ocrQuality,
-    extraSignals, extraDetectorVersions = {}, semantic: semanticOpts = {},
+    language, channel = null, paymentContext = null, emailContext = null, pageHost = null, pageForms = null, ip, now = Date.now(), ocrQuality,
+    extraSignals, extraDetectorVersions = {}, semantic: semanticOpts = {}, record = true,
   } = context;
   const source = emailContext ? "email" : context.source ?? "pasted_text";
   const text = analysisText(rawText, emailContext);
@@ -159,7 +162,7 @@ export async function runPipeline(rawText, context = {}) {
   const semanticPromise =
     semanticOpts.enabled === false
       ? Promise.resolve({ status: "skipped", signals: [], rejected: [], scamType: null, stage: null, observedSender: null })
-      : analyzeSemantics(text, { language, timeoutMs: semanticOpts.timeoutMs ?? SEMANTIC_TIMEOUT_MS, llm: semanticOpts.llm });
+      : analyzeSemantics(text, { language, channel, timeoutMs: semanticOpts.timeoutMs ?? SEMANTIC_TIMEOUT_MS, llm: semanticOpts.llm });
 
   const claim =
     findClaimedInstitution(text) ??
@@ -185,6 +188,7 @@ export async function runPipeline(rawText, context = {}) {
     // by the risk engine; nothing emitted it until now).
     ...checkThreatIntel(text),
     ...checkIdentityConsistency(text),
+    ...checkPageForms(pageForms, { pageHost, claimedInstitution }),
     ...lexicon,
     ...detectInjection(text),
     ...detectTemplateArtifacts(text),
@@ -235,7 +239,7 @@ export async function runPipeline(rawText, context = {}) {
   const engineContext = { semanticStatus: semantic.status, claimedInstitution, ocrQuality };
   const decision = score(signals, engineContext);
   const levelWithoutCommunity = community.signal ? score(withoutCommunity, engineContext).level : decision.level;
-  const { riskAdjustment } = recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now });
+  const { riskAdjustment } = recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now, record });
 
   // Every code in a finding, incl. merged ones (a PAY-07 absorbed into
   // EMAIL-06 still means "payment details changed" to the policies below).
@@ -292,7 +296,7 @@ export async function runPipeline(rawText, context = {}) {
     },
   };
   if (email) {
-    orgRecorded = recordOrgEmail({
+    orgRecorded = record && recordOrgEmail({
       orgId: DEMO_ORGANISATION.organisationId,
       inputHash: orgObservationId,
       senderKey: orgIntel.senderKey,
@@ -316,6 +320,8 @@ export async function runPipeline(rawText, context = {}) {
     };
     result.verification = verification;
   }
+  // User-reported "Received by" (services/channel): echoed, never scored.
+  if (channel) result.analysis.channel = channel;
   if (sender) result.sender = sender;
   if (observedSender) result.observedSender = observedSender;
   if (reputation.reports !== undefined) result.senderReports = reputation.reports;
@@ -326,9 +332,11 @@ export async function runPipeline(rawText, context = {}) {
   }
 
   try {
-    attachScamDna(result);
+    attachScamDna(result, { record });
   } catch (err) {
     console.error(`[scam-dna] skipped: ${err.message}`);
   }
+  // Radar's daily counters (services/radar): taxonomy values only, never text.
+  if (record) recordRadarObservation(result, now);
   return result;
 }

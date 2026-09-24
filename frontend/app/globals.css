@@ -97,14 +97,20 @@
      (rather than collapsed to one) only so existing font-heading / font-mono
      call sites keep compiling; all three resolve to the same stack, because
      the design has no serif and no monospace. */
-  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+  /* The app's own voice. */
+  --font-sans: var(--font-onest), system-ui, sans-serif;
+  /* A received message, in the face it arrived in on the user's phone. Never
+     the app's typeface: the app does not put the scammer's words in its own
+     voice. */
+  --font-message: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
   --font-heading: var(--font-sans);
-  --font-mono: var(--font-sans);
+  --font-mono: var(--font-jbmono), ui-monospace, monospace;
 
   /* Scale from DESIGN.md: large title 34/41, hero headline 42/46, body 17/23. */
-  --text-display: 2.125rem;
-  --text-display--line-height: 2.5625rem;
-  --text-display--letter-spacing: 0.01em;
+  --text-display: 2.375rem;
+  --text-display--line-height: 2.625rem;
+  /* Negative as it grows: letters read too far apart at display size. */
+  --text-display--letter-spacing: -0.025em;
   --text-title: 1.375rem;
   --text-title--line-height: 1.8125rem;
   --text-title--letter-spacing: 0em;
@@ -128,16 +134,24 @@
   /* Buttons and inputs are soft rectangles; full-round is kept for things that
      really are chips or circles (tab bar, icon badges, status dots, verdict
      chips). That split is what stops the UI reading as a field of ovals. */
-  --radius-button: 14px;
+  --radius-button: 999px;
   --radius-field: 16px;
   --radius-pill: 9999px;
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 4%), 0 8px 20px rgb(0 0 0 / 5%);
+  --shadow-card: var(--dc-shadow);
   --shadow-hero: 0 10px 28px rgb(0 0 0 / 14%);
   --shadow-tabbar: 0 10px 30px rgb(0 0 0 / 12%);
   --shadow-lift: 0 8px 24px rgb(0 0 0 / 8%);
 
+  /* ---- Space ----
+     Four steps. Eight different gap values across the app is what made it
+     read as assembled rather than designed. */
+  --space-1: 0.5rem;   /* inside a row */
+  --space-2: 0.875rem; /* between rows in a group */
+  --space-3: 1.25rem;  /* between groups */
+  --space-4: 2rem;     /* between regions */
+
   /* ---- Layout ---- */
-  --container-app: 430px;
+  --container-app: none;
   --spacing-gutter: 18px;
   --spacing-section: 2rem;
 }
@@ -154,6 +168,7 @@
     --c-card-edge: rgb(0 0 0 / 5%);
     --c-muted: rgb(0 0 0 / 5%);
     --c-suggestion: #ebebee;
+    --c-bubble: #ffffff;
 
     /* No brand hue. "Brand" resolves to the ink tone so the token names still
        mean something, and nothing on screen is coloured but a verdict. */
@@ -228,6 +243,7 @@
     --d-card-edge: rgb(255 255 255 / 7%);
     --d-muted: rgb(255 255 255 / 8%);
     --d-suggestion: #202022;
+    --d-bubble: #1f1f22;
 
     --d-brand: #f2f2f4;
     --d-brand-deep: #ffffff;
@@ -279,6 +295,7 @@
       --c-card-edge: var(--d-card-edge);
       --c-muted: var(--d-muted);
       --c-suggestion: var(--d-suggestion);
+      --c-bubble: var(--d-bubble);
       --c-brand: var(--d-brand);
       --c-brand-deep: var(--d-brand-deep);
       --c-brand-soft: var(--d-brand-soft);
@@ -335,6 +352,7 @@
     --c-card-edge: var(--d-card-edge);
     --c-muted: var(--d-muted);
     --c-suggestion: var(--d-suggestion);
+    --c-bubble: var(--d-bubble);
     --c-brand: var(--d-brand);
     --c-brand-deep: var(--d-brand-deep);
     --c-brand-soft: var(--d-brand-soft);
@@ -443,12 +461,17 @@
    * strip stranded in empty space. Every phone pixel is unchanged: everything
    * desktop is behind the media query below.
    */
+  /*
+   * Page frame for the Claude Design pages (frontend design project,
+   * *.dc.html). The top bar (components/TopNav.tsx) sits above a full-width
+   * shell; each page centres its own 1280px column (components/dc). Below the
+   * desktop breakpoint the floating tab bar is the navigation.
+   */
   .app-shell {
     position: relative;
     z-index: 1;
-    margin-inline: auto;
     width: 100%;
-    max-width: var(--container-app);
+    min-width: 0;
     min-height: 100dvh;
     padding-bottom: calc(var(--tabbar-height) + env(safe-area-inset-bottom) + 1rem);
   }
@@ -457,51 +480,17 @@
     display: block;
   }
 
-  /*
-   * Desktop, from 64rem. The phone column stops being a column: the rail is
-   * pinned to the left edge on its own surface and the content region takes
-   * the rest of the window, the way a desktop app is laid out rather than a
-   * phone page centred in a browser.
-   *
-   * 64rem, not 48rem: a rail plus a usable content region needs about 1000px.
-   * Below that a tablet keeps the phone layout, which is the design rather
-   * than a squeezed desktop one.
-   */
   @media (min-width: 64rem) {
     :root {
-      /* No floating bar at this width: the rail is the navigation. */
       --tabbar-height: 0rem;
-      /* The content region is the frame's second column, so the column cap
-         that constrained the phone layout no longer applies. */
       --container-app: none;
       --spacing-gutter: 2.5rem;
     }
 
-    .app-frame {
-      display: grid;
-      grid-template-columns: 264px minmax(0, 1fr);
-      align-items: start;
-      min-height: 100dvh;
-    }
-
     .app-shell {
-      max-width: none;
-      margin-inline: 0;
-      min-width: 0;
-      padding-bottom: 4rem;
+      padding-bottom: 0;
     }
 
-    /*
-     * Screens whose blocks are independent enough to sit side by side. One
-     * column of phone-width cards stretched across a monitor is the thing
-     * that reads as a phone page; two columns is what makes the width useful.
-     * Capped so the content does not sprawl on an ultra-wide display.
-     */
-    /*
-     * Equal columns and a shared row baseline. Unequal fractions plus
-     * align-items:start meant no two cards ever lined up, which is what made
-     * the page read as scattered boxes rather than a grid.
-     */
     .screen-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: stretch;
@@ -555,6 +544,42 @@
    * The gradient is the base; ::before bleeds a warm glow in from the top
    * right so the surface has a light source instead of being a flat fill.
    */
+  /*
+   * The panel. ONE surface holding several related sections, divided by
+   * hairlines, instead of each section floating as its own card.
+   *
+   * This is the difference between a designed screen and a stack of boxes:
+   * grouping is carried by the container, and the divisions inside it show
+   * what belongs together. Most things that used .card should be a section
+   * inside a .panel.
+   */
+  .panel {
+    background: var(--c-card);
+    border: 1px solid var(--c-card-edge);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    overflow: clip;
+  }
+
+  .panel > * + * {
+    border-top: 1px solid var(--color-card-border);
+  }
+
+  /* A section inside a panel: its own padding, no surface of its own. */
+  .section {
+    padding: var(--space-3) var(--space-3) var(--space-3);
+  }
+
+  /* Section heading. Sized as a heading, not as another grey micro-label on
+     top of every block. */
+  .section-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.375rem;
+    letter-spacing: -0.006em;
+    color: var(--color-ink);
+  }
+
   /* The one dark card per screen, carrying its main question. Flat fill. */
   .hero {
     position: relative;
@@ -576,6 +601,36 @@
   .parallax {
     transform: translate3d(0, var(--parallax, 0px), 0);
     will-change: transform;
+  }
+
+  /*
+   * The message bubble. The one object this whole app is about: a text
+   * someone received and is not sure of.
+   *
+   * Shaped like a received message, not like a card — asymmetric corner on the
+   * lower left, where an incoming bubble is tucked. Set in the system font
+   * (--font-message), because that is the face it arrived in.
+   */
+  .bubble {
+    position: relative;
+    font-family: var(--font-message);
+    font-size: 1.0625rem;
+    line-height: 1.5rem;
+    letter-spacing: 0;
+    background: var(--c-bubble);
+    color: var(--color-ink);
+    padding: 16px 18px;
+    border-radius: 22px 22px 22px 6px;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  /* Once a verdict is in, the bubble carries it: a weighted edge on the side
+     it is tucked to. The verdict is the only colour on the screen, so it goes
+     on the thing being judged rather than on a badge beside it. */
+  .bubble-verdict {
+    border-left: 3px solid var(--bubble-edge, transparent);
+    border-radius: 22px 22px 22px 6px;
   }
 
   /* The flat #E8E8EA card: suggestions and the "what to do" action panel. */
@@ -869,3 +924,206 @@
     transform: scaleX(var(--wait-step, 0.25));
   }
 }
+
+
+/* =====================================================================
+ * Claude Design system (design project "FraudLens", *.dc.html).
+ *
+ * Every page is implemented from its .dc.html file with the design's own
+ * values. The palette below is copied verbatim from those files as --dc-*
+ * tokens. Dark is the design's default; Settings' "Light" stamps
+ * data-theme="light". The older --c-* tokens that Tailwind utilities read
+ * (bg-card, text-ink, ...) are mapped onto the same palette, so anything
+ * not rebuilt inline still matches.
+ * ===================================================================== */
+:root {
+  --dc-bg: #000000; --dc-bar: rgba(0,0,0,0.72); --dc-ink: #FFFFFF; --dc-surface: #111115;
+  --dc-line: #1F1F25; --dc-line2: #1B1B20; --dc-line3: #17171C;
+  --dc-text2: #B3B4BD; --dc-text3: #8A8B95; --dc-text4: #5E5F68;
+  --dc-line-strong: #2A2A31; --dc-underline: #3A3A42; --dc-hover: #1A1A20; --dc-ink-hover: #E4E4EA;
+  --dc-text-body: #D6D7DE;
+  --dc-red: #FF6B64; --dc-red-dot: #FF453A; --dc-red-hl: rgba(255,69,58,0.18);
+  --dc-amber-hl: rgba(255,176,32,0.18); --dc-amber: #FFB547;
+  --dc-green: #34D399; --dc-green-dot: #12B76A; --dc-green-hl: rgba(52,211,153,0.16);
+  --dc-accent: #8A8CFF; --dc-accent-soft: rgba(124,127,255,0.16);
+  --dc-bubble: #23232A; --dc-mine: #4B4BD8;
+  --dc-shadow: none;
+  --dc-shadow-lg: 0 30px 80px -30px rgba(0,0,0,0.8);
+  /* fx.js */
+  --dc-dot: rgba(255,255,255,0.07); --dc-glow: rgba(124,127,255,0.16); --dc-glow2: rgba(52,211,153,0.05); --dc-grain: .07;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --dc-bg: #F4F4F6; --dc-bar: rgba(244,244,246,0.8); --dc-ink: #0B0B0F; --dc-surface: #FFFFFF;
+  --dc-line: #E6E6EB; --dc-line2: #EFEFF3; --dc-line3: #F4F4F7;
+  --dc-text2: #55565E; --dc-text3: #80818A; --dc-text4: #A9AAB2;
+  --dc-line-strong: #DCDCE2; --dc-underline: #CFCFD6; --dc-hover: #F0F0F3; --dc-ink-hover: #26262D;
+  --dc-text-body: #33343B;
+  --dc-red: #D92D2A; --dc-red-dot: #F04438; --dc-red-hl: #FFE4E2;
+  --dc-amber-hl: #FFF1D6; --dc-amber: #9A5B00;
+  --dc-green: #0A8A4E; --dc-green-dot: #12B76A; --dc-green-hl: #DDF7E9;
+  --dc-accent: #5B5BF6; --dc-accent-soft: #EDEDFF;
+  --dc-bubble: #E9E9EE; --dc-mine: #5B5BF6;
+  --dc-shadow: 0 1px 2px rgba(11,11,15,0.04), 0 12px 32px -12px rgba(11,11,15,0.08);
+  --dc-shadow-lg: 0 1px 2px rgba(11,11,15,0.04), 0 24px 60px -20px rgba(11,11,15,0.18);
+  --dc-dot: rgba(11,11,15,0.09); --dc-glow: rgba(91,91,246,0.10); --dc-glow2: rgba(18,183,106,0.05); --dc-grain: .05;
+  color-scheme: light;
+}
+/* The app's older tokens, pointed at the design palette. */
+:root {
+  --c-page: var(--dc-bg); --c-card: var(--dc-surface); --c-card-gradient: var(--dc-surface);
+  --c-card-edge: var(--dc-line); --c-muted: var(--dc-hover); --c-suggestion: var(--dc-hover);
+  --c-bubble: var(--dc-bubble);
+  --c-brand: var(--dc-ink); --c-brand-deep: var(--dc-ink-hover); --c-brand-soft: var(--dc-accent-soft);
+  --c-brand-ink: var(--dc-accent); --c-on-brand: var(--dc-surface);
+  --c-glow: var(--dc-amber); --c-glow-soft: var(--dc-amber-hl); --c-glow-ink: var(--dc-amber);
+  --c-surface-dark: var(--dc-surface); --c-surface-dark-2: var(--dc-hover);
+  --c-hero: var(--dc-surface); --c-hero-edge: var(--dc-line);
+  --c-skeleton: var(--dc-hover); --c-track: var(--dc-line-strong);
+  --c-ink: var(--dc-ink); --c-ink-soft: var(--dc-text2); --c-ink-muted: var(--dc-text3);
+  --c-on-ink: var(--dc-ink); --c-icon-idle: var(--dc-text3);
+  --c-hairline: var(--dc-line); --c-line-strong: var(--dc-line-strong);
+  --c-red: var(--dc-red-dot); --c-red-ink: var(--dc-red); --c-red-tint: var(--dc-red-hl);
+  --c-green: var(--dc-green-dot); --c-green-ink: var(--dc-green); --c-green-tint: var(--dc-green-hl);
+  --c-orange: var(--dc-amber); --c-orange-ink: var(--dc-amber); --c-orange-tint: var(--dc-amber-hl);
+  --c-mark-ink: var(--dc-red);
+  --c-tabbar: var(--dc-bar); --c-tabbar-edge: var(--dc-line);
+  --c-scrim: rgba(0,0,0,0.6);
+}
+
+html, body { background: var(--dc-bg); }
+body {
+  color: var(--dc-ink); font-family: var(--font-onest), system-ui, sans-serif; line-height: normal;
+  -webkit-font-smoothing: antialiased; transition: background .25s;
+}
+h1, h2, h3 { font-family: inherit; color: inherit; line-height: normal; }
+:focus-visible { outline: 2px solid var(--dc-accent); outline-offset: 2px; }
+.dc-mono { font-family: var(--font-jbmono), ui-monospace, monospace; }
+.dc-link { color: var(--dc-ink); text-decoration: none; }
+.dc-link:hover { color: var(--dc-text2); }
+textarea:focus, input:focus { outline: none; }
+input:focus-visible, textarea:focus-visible { outline: none; }
+
+/* ---- fx.js: dot grid, grain, drifting glow, scroll progress, reveal, hover lift ---- */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(var(--dc-dot) 1px, transparent 1.2px); background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 80%);
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--dc-grain); mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.fl-glow {
+  position: fixed; z-index: 0; pointer-events: none; left: 50%; top: -38vh; width: 120vw; height: 90vh;
+  transform: translate(-50%, 0); border-radius: 50%;
+  background: radial-gradient(closest-side, var(--dc-glow), transparent 70%), radial-gradient(closest-side at 80% 60%, var(--dc-glow2), transparent 70%);
+  filter: blur(20px); animation: flDrift 18s ease-in-out infinite alternate;
+}
+.fl-progress {
+  position: fixed; left: 0; top: 0; height: 2px; width: 100%; z-index: 50; background: var(--dc-accent);
+  transform-origin: 0 50%; transform: scaleX(0); pointer-events: none;
+}
+@keyframes flDrift { 0% { margin-left: -4vw } 100% { margin-left: 4vw } }
+button, .dc-pill {
+  transition: transform .28s cubic-bezier(.2,.8,.2,1), background-color .2s, border-color .2s, color .2s, box-shadow .28s, opacity .2s;
+}
+button:not(:disabled):hover, .dc-pill:hover { transform: translateY(-1.5px); }
+.dc-pill-ink:hover { box-shadow: 0 10px 28px -10px var(--dc-accent); }
+button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.97); transition-duration: .08s; }
+.dc-lift { transition: transform .35s cubic-bezier(.2,.8,.2,1), border-color .2s, box-shadow .35s; }
+.dc-lift:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -24px rgba(0,0,0,.35); }
+/* Reveal: headings, paragraphs and cards rise in as they scroll into view.
+   CSS-only (scroll-driven animations), so content is always visible where
+   it's unsupported and nothing depends on JavaScript to un-hide it. */
+@keyframes flRise { from { opacity: 0; transform: translateY(22px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+@supports (animation-timeline: view()) {
+  main h1, main h2, main p, main [data-fx], footer {
+    animation: flRise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main h1, main h2, main p, main [data-fx], footer { animation: none !important; }
+  .fl-glow { animation: none; }
+  button:hover, a:hover, .dc-lift:hover { transform: none !important; }
+}
+
+/* ---- Top bar (Nav.dc.html) ---- */
+.dc-topnav {
+  position: sticky; top: 0; z-index: 30; background: var(--dc-bar);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--dc-line);
+}
+.dc-topnav a { text-decoration: none; }
+.dc-topnav .dc-navlink:hover { color: var(--dc-ink) !important; }
+@media (max-width: 63.999rem) { .dc-topnav { display: none; } }
+@media (max-width: 79.999rem) { .dc-topnav .dc-tools { display: none !important; } }
+
+/* ---- Page frame: every design page is a centred 1280px column. Below the
+   desktop breakpoint the design's multi-column grids stack. ---- */
+.dc-main { position: relative; z-index: 1; }
+@media (max-width: 63.999rem) {
+  .dc-main { padding: 32px 20px 64px !important; gap: 40px !important; }
+  .dc-h1 { font-size: 40px !important; }
+  .dc-split { grid-template-columns: minmax(0, 1fr) !important; }
+  .dc-sticky { position: static !important; }
+  .dc-panel { padding: 24px !important; }
+  .dc-scroll { overflow-x: auto !important; }
+  .dc-table { min-width: 880px; }
+}
+@media (max-width: 39.999rem) {
+  .dc-cols-1 { grid-template-columns: minmax(0, 1fr) !important; }
+  .batch-actions { flex-wrap: wrap; width: 100%; }
+  .batch-actions > .dc-pill { flex: 1 1 150px; min-height: 48px; height: auto !important; padding-block: 8px !important; text-align: center; white-space: normal !important; }
+  .batch-result-row { grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px 12px !important; }
+  .batch-result-badge { grid-column: 1; grid-row: 1; }
+  .batch-result-open { grid-column: 2; grid-row: 1; min-width: 44px; min-height: 44px; }
+  .batch-result-message { grid-column: 1 / -1; grid-row: 2; }
+  .batch-result-signal { grid-column: 1 / -1; grid-row: 3; }
+  .report-danger { max-width: 100%; height: auto !important; min-height: 56px; padding-block: 10px !important; white-space: normal !important; text-align: center; }
+  .report-danger > span { flex-shrink: 0; }
+}
+
+/* ---- Mobile tab bar, in the design palette ---- */
+.verification-tabbar {
+  position: fixed; z-index: 40; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  min-height: calc(68px + env(safe-area-inset-bottom));
+  padding: 5px 8px env(safe-area-inset-bottom);
+  border-top: 1px solid var(--dc-line); background: var(--dc-bar); color: var(--dc-text3);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.verification-tabbar a, .verification-tabbar button {
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 3px;
+  min-width: 0; min-height: 54px; padding: 4px; color: inherit;
+  font-size: 0.72rem; font-weight: 500; text-align: center; line-height: 1.1;
+}
+.verification-tabbar a[aria-current="page"], .verification-tabbar button[aria-expanded="true"] { color: var(--dc-ink); }
+.verification-tabbar span:not(.mobile-more-dots) { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.mobile-more-dots { font-size: 1.5rem; line-height: 20px; letter-spacing: 1px; }
+.mobile-more {
+  position: fixed; z-index: 39; left: 12px; right: 12px;
+  bottom: calc(72px + env(safe-area-inset-bottom)); max-height: min(70dvh, 520px);
+  overflow-y: auto; padding: 14px; border: 1px solid var(--dc-line); border-radius: 28px;
+  background: var(--dc-surface); box-shadow: 0 20px 60px #0008; color: var(--dc-ink);
+}
+.mobile-more-title { margin: 0 10px 8px; color: var(--dc-text3); font-size: 13px; }
+.mobile-more a { display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 8px 10px; border-top: 1px solid var(--dc-line2); }
+.mobile-more a[aria-current="page"] { color: var(--dc-accent); }
+@media (min-width: 64rem) { .mobile-more, .verification-tabbar { display: none; } }
+@media (max-width: 63.999rem) {
+  .app-shell { padding-bottom: calc(94px + env(safe-area-inset-bottom)); }
+}
+
+/* The "Report a scam" pill, from Nav.dc.html. */
+.report-pill {
+  display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 999px; font-size: 14px; font-weight: 500; white-space: nowrap;
+  background: var(--dc-red-hl); color: var(--dc-red) !important;
+}
+.report-pill[aria-current="page"] { background: var(--dc-red-dot); color: #FFFFFF !important; }
+.report-pill-dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--dc-red-dot); }
+.report-pill[aria-current="page"] .report-pill-dot { background: #FFFFFF; }
+.mobile-more a.report-pill { margin: 4px 0 8px; width: max-content; border-top: 0; min-height: 36px; }

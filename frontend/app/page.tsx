@@ -1,21 +1,15 @@
-import { Suspense } from "react";
-import CheckScreen from "@/components/check/CheckScreen";
+import type { Metadata } from "next";
+import LandingPage from "@/components/landing/LandingPage";
 
-const JSON_LD = {
-  "@context": "https://schema.org", "@type": "WebApplication",
-  name: "FraudLens AI", applicationCategory: "SecurityApplication", operatingSystem: "Any",
-  description: "Paste a suspicious SMS or message and see the scam warning signs: sender mismatch, urgency, lookalike links. Built for Mauritius, in English, French and Kreol.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+export const metadata: Metadata = {
+  title: { absolute: "FraudLens AI: catch the scam before you pay" },
+  description:
+    "FraudLens AI checks suspicious messages, links, websites and emails before you pay, built for Mauritius in English, French and Kreol. By Dhruv & Friends.",
+  alternates: { canonical: "/" },
 };
 
-export default function CheckPage() {
-  return (
-    <main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
-      {/* CheckScreen reads ?scan= / ?new=1 via useSearchParams. */}
-      <Suspense fallback={null}>
-        <CheckScreen />
-      </Suspense>
-    </main>
-  );
+// The front door (Landing.dc.html). It carries its own header, so the app's
+// top bar and tab bar step aside on this route. The web app itself is /app.
+export default function Page() {
+  return <LandingPage />;
 }

@@ -1,0 +1,80 @@
+{
+  "eyebrow": "TOOL · BEFORE PAYING",
+  "title": "Check before you pay",
+  "lede": "About to send money to someone new? Enter who you're paying and we'll check them against reported fraud and the details they gave you.",
+  "formLabel": "Payment details",
+  "methodLabel": "How are you paying?",
+  "methods": { "phone": "Juice / phone", "bank_account": "Bank account", "iban": "IBAN" },
+  "identifierLabel": { "phone": "Phone number", "bank_account": "Account number", "iban": "IBAN" },
+  "identifierPlaceholder": {
+    "phone": "e.g. 5781 2094",
+    "bank_account": "e.g. 000123456789",
+    "iban": "e.g. MU17BOMM0101101030300200000MUR"
+  },
+  "nameLabel": "Name they gave you",
+  "namePlaceholder": "Optional",
+  "amountLabel": "Amount",
+  "amountPlaceholder": "0",
+  "amountPrefix": "Rs",
+  "idleCard": {
+    "title": "What this check does",
+    "items": [
+      "Report history for this number or account",
+      "Whether the number, account or IBAN is correctly formatted",
+      "Guidance based on the purpose and amount you enter"
+    ],
+    "note": "We never move money or contact the person you're paying."
+  },
+  "reasonLabel": "What is it for?",
+  "reasons": {
+    "car": "Car / vehicle",
+    "rent_deposit": "Rent deposit",
+    "online_shop": "Online purchase",
+    "family": "Family or friend",
+    "invoice": "Invoice or bill"
+  },
+  "submit": "Check payee",
+  "checking": "Checking…",
+  "cancel": "Cancel",
+  "idleTitle": "The result will appear here.",
+  "idleBody": "Choose how you're paying and enter their number, account or IBAN, then check.",
+  "missingIdentifier": "Enter a phone number, account number or IBAN first.",
+  "invalidAmount": "Amount must be a number.",
+  "verdict": {
+    "stop": "Stop before you pay",
+    "caution": "Pause and check first",
+    "clear": "No known reports against this"
+  },
+  "verdictBody": {
+    "stop": "At least one check on this identifier failed outright. Don't send money until you've confirmed it another way.",
+    "caution": "Nothing rules this out, but something here is worth a second look before you send money.",
+    "clear": "Nothing in our report history or format checks stands out. That is not the same as a guarantee."
+  },
+  "findingsTitle": "What we checked",
+  "findings": {
+    "REPORTED": "Reported {count} time(s) by other FraudLens users.",
+    "NOT_REPORTED": "Not reported by any FraudLens user so far.",
+    "IBAN_FORMAT_INVALID": "This doesn't look like a valid IBAN.",
+    "IBAN_CHECKSUM_FAILED": "This IBAN's check digits don't add up — it may be mistyped.",
+    "IBAN_LENGTH_WRONG": "This is the wrong length for a {country} IBAN.",
+    "IBAN_FOREIGN": "This is a {country} IBAN, not a Mauritian one.",
+    "IBAN_VALID": "Correctly formatted {country} IBAN.",
+    "PHONE_VALID": "Looks like a valid Mauritian mobile number.",
+    "PHONE_NOT_MU_MOBILE": "This doesn't look like a Mauritian mobile number.",
+    "ACCOUNT_FORMAT_ODD": "This account number's format looks unusual.",
+    "ORGANISATION_ON_PERSONAL_NUMBER": "You named {organisation}, but this is a personal phone number, not a business account.",
+    "LARGE_AMOUNT": "Rs {amount} is a large amount to send this way — transfers like this are hard to reverse."
+  },
+  "caveat": "FraudLens can't confirm who owns this number, account or IBAN — only report history and whether it's correctly formatted. Always verify identity through a channel you already trust.",
+  "whatToDo": {
+    "stop": "Don't send this payment.",
+    "caution": "Verify before you send.",
+    "clear": "Verify the person independently before you send."
+  },
+  "whatToDoBody": {
+    "stop": "Contact the person or organisation on a number or address you already had — not one they just gave you — before sending anything.",
+    "caution": "Confirm who you're paying through a channel you already trust, then send only what you agreed.",
+    "clear": "A clean check isn't proof of identity. Confirm who you're paying through a channel you already trust."
+  },
+  "checkAnother": "Check another payee"
+}

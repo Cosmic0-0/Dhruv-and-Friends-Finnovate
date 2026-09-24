@@ -1,0 +1,53 @@
+{
+  "title": "Radar",
+  "lede": "What scammers are sending in Mauritius, from messages checked on FraudLens.",
+  "ranges": {
+    "7d": "7 days",
+    "30d": "30 days",
+    "12m": "12 months"
+  },
+  "rangeLabel": "Time range",
+  "caught": "Scams caught",
+  "vsPrev": "{pct}% vs previous period",
+  "noPrev": "No earlier data to compare",
+  "chartLabel": "Scams caught per {unit}",
+  "unitDay": "day",
+  "unitMonth": "month",
+  "mostCopied": "Most copied sender",
+  "shareOf": "{pct}% of flagged checks in this period",
+  "noneCopied": "No institution named yet",
+  "rising": "Rising fast",
+  "risingUp": "{n} checks, up from {prev} in the previous period",
+  "risingNew": "New this period",
+  "mostlyBy": "mostly by {channel}",
+  "noneRising": "Nothing growing faster than before",
+  "topTypes": "Top scam types",
+  "fakeLinks": "Fake links seen",
+  "pretends": "Pretends to be {brand}",
+  "imitatesUnknown": "Look-alike of an official site",
+  "times": "{n} times",
+  "once": "once",
+  "empty": "Not enough checks yet",
+  "emptyBody": "Radar fills in as people check messages. Nothing here is made up.",
+  "loading": "Loading…",
+  "error": "Couldn't load Radar right now.",
+  "retry": "Try again",
+  "coverage": "Counts only messages checked on FraudLens and flagged as a scam or suspicious. It is not a count of every scam in Mauritius.",
+  "types": {
+    "MCB_IMPERSONATION": "MCB impersonation",
+    "SBM_IMPERSONATION": "SBM impersonation",
+    "ABSA_IMPERSONATION": "Absa impersonation",
+    "BANK_ONE_IMPERSONATION": "Bank One impersonation",
+    "TELCO_PRIZE_SCAM": "Telecom prize scam",
+    "MOBILE_MONEY_FRAUD": "Mobile money fraud",
+    "FAKE_PARCEL": "Parcel & customs fees",
+    "MARKETPLACE_PAYMENT_FRAUD": "Marketplace payment fraud"
+  },
+  "channels": {
+    "sms": "SMS",
+    "whatsapp": "WhatsApp",
+    "email": "email",
+    "facebook": "Facebook",
+    "call": "phone call"
+  }
+}

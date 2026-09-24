@@ -1,0 +1,12 @@
+# Raw external datasets and files that reproduce their content are NOT redistributed
+# (MorisienMT: "released for research purposes", no explicit license found;
+#  Kaikki/Wiktionary: CC BY-SA share-alike). Recreate them with the scripts in
+#  kreol-dataset/scripts/ - see kreol-derived/README.md.
+kreol-dataset/additional/
+kreol-derived/morisienmt-*.jsonl
+kreol-derived/suspected-misaligned-morisienmt.csv
+kreol-derived/lexical-resource.jsonl
+kreol-derived/spelling-variants.classified.json
+kreol-derived/candidate-spelling-variants.csv
+evaluation/kreol/morisienmt-dev.jsonl
+.ruff_cache/

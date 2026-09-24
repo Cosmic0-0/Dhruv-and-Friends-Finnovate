@@ -1,0 +1,18 @@
+{
+  "mfe-en": {
+    "dictionary_definition": 2,
+    "duplicate": 4,
+    "natural_sentence": 8428,
+    "short_phrase": 1628,
+    "single_word_gloss": 11542,
+    "suspected_misalignment": 206
+  },
+  "mfe-fr": {
+    "dictionary_definition": 1,
+    "duplicate": 1,
+    "natural_sentence": 2575,
+    "short_phrase": 1493,
+    "single_word_gloss": 10975,
+    "suspected_misalignment": 194
+  }
+}

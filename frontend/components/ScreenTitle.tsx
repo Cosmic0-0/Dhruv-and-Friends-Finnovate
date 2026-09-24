@@ -47,18 +47,17 @@ export default function ScreenTitle({
       )}
       <div className="flex items-center justify-between gap-3">
         <h1>{heading}</h1>
-        {/* Plain <img>: a 36px static asset that must paint immediately on
-            every screen, where next/image would add a loader for no gain.
-            Hidden at lg+, where the navigation rail already carries the mark
-            and two would read as a mistake. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/brand/dhruv-and-friends.png"
-          alt={copy.settings.teamLogoAlt}
-          width={44}
-          height={44}
-          className="size-11 shrink-0 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)] lg:hidden"
-        />
+        {/* The brand mark returns to the homepage. Desktop uses the rail mark. */}
+        <Link href="/" aria-label="FraudLens home" className="shrink-0 rounded-full lg:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/brand/dhruv-and-friends.png"
+            alt=""
+            width={44}
+            height={44}
+            className="size-11 rounded-full bg-white shadow-[0_1px_4px_rgb(0_0_0_/_10%)]"
+          />
+        </Link>
       </div>
       {subtitle && <p className="text-[0.9375rem] leading-5 text-ink-muted">{subtitle}</p>}
     </header>

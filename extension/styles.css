@@ -34,9 +34,9 @@
   --danger-soft: rgb(193 89 74 / 18%);
   --neutral: #7a828c;
 
-  --font-heading: "Arial Narrow", "IBM Plex Sans Condensed", sans-serif;
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --font-heading: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 * {
@@ -96,7 +96,7 @@ section:last-of-type {
 }
 
 .section-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -212,7 +212,7 @@ section:last-of-type {
 
 .signal-type {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--ink-muted);
@@ -317,7 +317,7 @@ a.btn-link {
 .recent-item[data-state="neutral"] .dot { background: var(--neutral); }
 
 .privacy-note {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--ink-muted);
   padding: 10px 16px 14px;
   line-height: 1.5;
@@ -334,4 +334,146 @@ a.btn-link {
 
 .status-msg.success {
   color: var(--accent);
+}
+
+/* ---- Refinement pass: instrument backdrop, swatches, type ----
+   Same world as the full report: a fine grid and range rings behind
+   translucent sections, severity as a small square swatch rather than a
+   thick coloured edge, Plex throughout. */
+
+body:not(.report) {
+  position: relative;
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-color: rgb(238 240 239 / 18%) transparent;
+  scrollbar-width: thin;
+}
+
+body:not(.report)::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(22rem 14rem at 100% 0%, rgb(89 128 166 / 16%), transparent 70%),
+    linear-gradient(rgb(238 240 239 / 3.5%) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(238 240 239 / 3.5%) 1px, transparent 1px) 0 0 / 24px 24px;
+  mask-image: linear-gradient(160deg, black 0%, rgb(0 0 0 / 35%) 45%, transparent 80%);
+}
+
+body:not(.report) > * {
+  position: relative;
+  z-index: 1;
+}
+
+body:not(.report) ::selection {
+  background: rgb(89 128 166 / 45%);
+  color: var(--ink);
+}
+
+body:not(.report) :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+header.app-header {
+  padding: 16px 16px 14px;
+  background: linear-gradient(180deg, rgb(89 128 166 / 8%), transparent);
+}
+
+header.app-header h1 {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.section-label {
+  font-family: var(--font-heading);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+}
+
+.hostname {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.state-text {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.signal-item {
+  --sev: var(--neutral);
+  padding: 10px 12px;
+  background: rgb(27 31 36 / 80%);
+  border: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+}
+
+.signal-item[data-severity="high"] { --sev: var(--danger); border-left-color: var(--line); }
+.signal-item[data-severity="medium"] { --sev: var(--caution); border-left-color: var(--line); }
+.signal-item[data-severity="low"] { --sev: var(--accent); border-left-color: var(--line); }
+.signal-item[data-severity="info"] { --sev: var(--neutral); border-left-color: var(--line); }
+
+.signal-type::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  vertical-align: 0;
+  background: var(--sev);
+}
+
+button, .btn-link {
+  padding: 10px 12px;
+  background: rgb(27 31 36 / 82%);
+  transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:hover, .btn-link:hover {
+  background: rgb(33 38 45 / 92%);
+}
+
+button.primary {
+  background: rgb(89 128 166 / 20%);
+}
+
+.btn-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--ink-muted);
+  transition: color 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:hover .btn-icon,
+.btn-link:hover .btn-icon {
+  color: var(--ink);
+}
+
+button.primary .btn-icon { color: var(--ink); }
+button.primary:hover .btn-icon { transform: translateX(2px); }
+
+/* Range rings in the popup corner (thin, fading), as in the full report. */
+body:not(.report)::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  right: -150px;
+  top: -170px;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, transparent 0 47px, rgb(238 240 239 / 7%) 47px 48px);
+  mask-image: radial-gradient(circle, black 25%, transparent 70%);
 }

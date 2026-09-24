@@ -75,10 +75,12 @@ export function checkUrl(url) {
  * links to the scanned page's own site as same-origin rather than "not an
  * official domain" (see docs/API-CONTRACT.md).
  */
-export function analyzeText(text, language, pageUrl) {
+export function analyzeText(text, language, pageUrl, pageForms) {
   const body = { message: text };
   if (language) body.language = language;
   if (pageUrl) body.pageUrl = pageUrl;
+  // Scan This Page only: destination host + field kinds of password/card forms (URL-10).
+  if (pageUrl && Array.isArray(pageForms) && pageForms.length > 0) body.pageForms = pageForms.slice(0, 10);
   return post("/api/analyze", body);
 }
 

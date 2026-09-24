@@ -1,0 +1,40 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "eyebrow": "LOUTI · TOU KONVERSASION",
+  "title": "Verifie enn konversasion antie",
+  "lede": "Export enn sat WhatsApp ouswa Messenger ek met li. Nou lir li depi kumansman ziska lafin, ek marke bann moman ki kont.",
+  "upload": {
+    "label": "Met enn export sat",
+    "hint": "WhatsApp: ouver sat la, Export chat, Without media (.txt). Messenger: Download your information, enn konversasion, an JSON.",
+    "choose": "Swazir enn fisie",
+    "invalid": "Sa fisie la pa resanble enn export WhatsApp ouswa Messenger.",
+    "empty": "Nou pa finn trouv okenn mesaz dan sa export la."
+  },
+  "howTo": {
+    "title": "Kouma exporte",
+    "whatsapp": {
+      "label": "WhatsApp",
+      "android": "Android: ouver sat la, tap ⋮ → More → Export chat → Without media.",
+      "iphone": "iPhone: ouver sat la, tap non kontak la → Export Chat → Without Media."
+    },
+    "messenger": {
+      "label": "Messenger",
+      "steps": "Meta Accounts Centre → Your information and permissions → Download your information → swazir konversasion la, format JSON."
+    }
+  },
+  "lookFor": { "title": "Ki sa analiz la rode" },
+  "who": { "title": "Kikenn ou ete dan sa sat la?", "hint": "Zis mesaz lot dimoun la pou verifie; to bann la zis pou montre kontext." },
+  "submit": "Analiz konversasion",
+  "analysing": "Pe analize…",
+  "another": "Met enn lot export",
+  "header": { "with": "Konversasion avek {name}", "range": "{from} – {to}", "messages": "{n} mesaz", "days": "{n} zour", "truncated": "Zis mesaz pli resan finn analize; sa export la pli long ki seki enn sel verifikasion kapav kouver." },
+  "story": { "title": "Kouma listwar la finn sanze", "empty": "Pa finn detekte okenn etap dan sa konversasion la." },
+  "thread": { "title": "Konversasion", "me": "Ou", "flag": "{n} siny danze", "flags": "{n} siny danze" },
+  "todo": { "label": "Ki pou fer aster la" },
+  "empty": { "title": "Pankor ena konversasion sarze.", "body": "Met enn export sat anho pou get analiz complet la." },
+  "errors": {
+    "tooManyMessages": "Sa export la ena plis ki {max} mesaz; zis {max} pli resan finn analize.",
+    "network": "Ena enn problem pou lir sa fisie la. Eseye ankor."
+  },
+  "sourceNote": "Zis text sa konversasion la ki finn retir bann kod identifian ek limite an longer ki avoy pou analiz; export la limem res lor sa laparey la."
+}

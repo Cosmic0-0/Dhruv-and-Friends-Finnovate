@@ -1,0 +1,59 @@
+{
+  "eyebrow": "OUTIL · DOCUMENT",
+  "title": "Vérifier un document",
+  "lede": "Relevés bancaires, lettres et factures en PDF ou Word. Nous vérifions comment le fichier a été fabriqué et ce qu'il dit, en deux rapports distincts.",
+  "aside": {
+    "file": { "title": "Vérif. fichier", "body": "Structure, signatures, modifications" },
+    "text": { "title": "Vérif. texte", "body": "Langage d'arnaque, demandes de paiement" }
+  },
+  "whatWeInspectTitle": "Ce que nous examinons",
+  "privacyTitle": "Confidentialité de votre fichier",
+  "dropFileLabel": "Fichier à vérifier",
+  "dropTypesLabel": "PDF / DOCX",
+  "checkingFile": "Vérification du fichier…",
+  "steps": { "reading": "Lecture du fichier", "uploading": "Envoi du fichier", "analysing": "Vérification de la structure et du texte" },
+  "checkAnotherFile": "Vérifier un autre fichier",
+  "pageTag": "Page {n}",
+  "howMadeTitle": "Comment le fichier a été fabriqué",
+  "fileHistoryTitle": "Historique du fichier",
+  "whatItSaysTitle": "Ce qu'il dit",
+  "noSemanticFindings": "Aucun langage d'arnaque trouvé dans le texte du fichier.",
+  "summary": {
+    "clean": "Rien ne ressort dans la fabrication du fichier ni dans son texte.",
+    "counts": "{structural} élément(s) dans la fabrication du fichier, {semantic} dans le texte."
+  },
+  "extractedTextTitle": "Texte extrait",
+  "noExtractedText": "Aucun texte lisible n'a été trouvé dans ce fichier.",
+  "verdict": {
+    "safe": "Rien ne ressort du texte",
+    "suspicious": "Quelques signes d'alerte dans le texte",
+    "scam": "Forts signes d'arnaque"
+  },
+  "whatToDo": {
+    "safe": "Confirmez quand même avant d'agir.",
+    "suspicious": "Vérifiez avant d'agir sur ce document.",
+    "scam": "N'agissez pas sur ce document."
+  },
+  "whatToDoBody": {
+    "safe": "Un contrôle propre n'est pas une preuve. Si ce document demande de l'argent ou des identifiants, confirmez-le d'abord de façon indépendante.",
+    "suspicious": "Confirmez ce document auprès de l'organisation dont il prétend provenir, avec des coordonnées que vous trouvez vous-même.",
+    "scam": "Ne payez pas, ne signez pas et ne partagez pas d'identifiants à cause de ce fichier. Confirmez-le auprès de l'organisation dont il prétend provenir, avec des coordonnées que vous trouvez vous-même."
+  },
+  "checkAccountBeforePaying": "Vérifier ce compte avant de payer",
+  "downloadReport": "Télécharger le rapport",
+  "history": {
+    "created": "Créé",
+    "modified": "Dernière modification",
+    "revisions": "Enregistré à nouveau",
+    "signature": "Signature numérique"
+  },
+  "report": {
+    "title": "Rapport de document FraudLens",
+    "generated": "Généré",
+    "file": "Fichier",
+    "verdict": "Verdict",
+    "structural": "Comment le fichier a été fabriqué",
+    "semantic": "Ce qu'il dit",
+    "none": "Aucun trouvé."
+  }
+}

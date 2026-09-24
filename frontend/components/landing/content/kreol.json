@@ -1,0 +1,137 @@
+{
+  "_note": "Unreviewed Kreol draft. Do not describe as reviewed.",
+  "header": {
+    "home": "Lakaz FraudLens",
+    "how": "Kouma li marse",
+    "tools": "Zouti",
+    "learn": "Aprann",
+    "radar": "Radar",
+    "createdBy": "Kreye par",
+    "theme": "Sanz ant kler ek fonse",
+    "getExtension": "Gagn extension la",
+    "check": "Verifie enn mesaz",
+    "nav": "Seksion"
+  },
+  "hero": {
+    "badge": "Fer pou Moris · English, Français, Kreol",
+    "title": "Trap eskrokri la avan ou azir.",
+    "lede": "Kol enn mesaz, enn lien ouswa enn dokiman. FraudLens dir ou si li vre ouswa enn eskrokri, ek li montre ou exakteman kifer.",
+    "primary": "Verifie enn mesaz",
+    "secondary": "Gagn extension navigater la"
+  },
+  "demo": {
+    "label": "Egzanp enn verifikasion",
+    "receive": "Ou resevwar",
+    "shows": "FraudLens montre ou",
+    "channel": "SMS · 08:14",
+    "verdict": "Eskrokri",
+    "confidence": "Konfians for",
+    "reasons": [
+      [
+        "mcb-secure.top",
+        " pa MCB, vre sit la se ",
+        "mcb.mu"
+      ],
+      [
+        "Li dimann ou kod enn sel fwa, MCB zamen pa fer sa"
+      ],
+      [
+        "Li menas pou bloke kont la zordi"
+      ]
+    ],
+    "action": "Pa reponn. Apel MCB lor nimero ki lor ou kart."
+  },
+  "how": {
+    "title": "Bann prev ou kapav trouve, pa zis enn etiket.",
+    "cards": [
+      {
+        "n": "01",
+        "title": "Li lir kouma Moris ekrir",
+        "body": "Angle, Franse ek Kreol Morisien, mem kan tou le trwa dan mem mesaz."
+      },
+      {
+        "n": "02",
+        "title": "Li konn bann vre lexpediter",
+        "body": "Labank lokal, Mauritius Post, MRA ek operater mobil: zot vre ladres ek seki zot zamen dimande."
+      },
+      {
+        "n": "03",
+        "title": "Li verifie dokiman osi",
+        "body": "Li trouv siniatir ki finn kole ek sanzman ki finn fer apre ki enn relve, enn let ouswa enn fakir finn sinie."
+      }
+    ]
+  },
+  "extension": {
+    "title": "Verifie san kit paz la.",
+    "body": "Extension FraudLens verifie bann lien dan Gmail, WhatsApp Web ek Facebook avan ou klik lor zot.",
+    "chrome": "Azout dan Chrome",
+    "other": "Firefox ek Edge",
+    "badLink": "Sa lien la pa MCB",
+    "official": "Sit ofisiel"
+  },
+  "footer": {
+    "built": "FraudLens · Fer dan Moris par ",
+    "team": "Dhruv & Friends",
+    "privacy": "Konfidansialite",
+    "report": "Rapor enn eskrokri",
+    "contact": "Kontak"
+  },
+  "extensionPage": {
+    "eyebrow": "EXTENSION NAVIGATER",
+    "title": "FraudLens Link Guard",
+    "lede": "Extension la konpar sit kot ou ete ar vre ladres bann labank ek operater telekom Moris, ek li kapav verifie enn paz ouswa enn mesaz ki ou swazir kan ou dimande. Li pa ankor dan okenn magazin extension, alor ou instal li depi kod sours proze la.",
+    "chromeTitle": "Chrome ek Edge",
+    "chromeNote": "Marse lor Chrome 102 ouswa pli resan, ek lor Microsoft Edge.",
+    "steps": [
+      "Telesarz kod sours FraudLens kouma enn zip ek dezip li.",
+      "Ouver chrome://extensions (dan Edge: edge://extensions).",
+      "Aktiv Developer mode.",
+      "Klik Load unpacked ek swazir dosie extension dan proze ki finn dezipe."
+    ],
+    "download": "Telesarz kod sours (.zip)",
+    "viewSource": "Get kod extension la",
+    "firefoxTitle": "Firefox",
+    "firefoxBody": "Pa ankor siporte. Extension la fer pou navigater Chromium (service worker Manifest V3), ek li pa ankor finn prepare ni teste pou Firefox.",
+    "whatTitle": "Seki li fer",
+    "what": [
+      "Li konpar ladres sak sit ar vre domenn bann labank ek operater telekom Moris, ek li montre li lor likonn la.",
+      "Scan This Page: li lir tex vizib lor paz la, zamen bann formiler ni seki ou finn tape, ek li verifie li.",
+      "Klik drwat lor enn lien ouswa enn tex ki ou finn swazir pou verifie li.",
+      "Security Report: enn verifikasion pasif HTTPS, header ek cookie enn sit."
+    ],
+    "privacy": "Lir politik konfidansialite extension la",
+    "back": "Retourn lor FraudLens",
+    "notSupported": "Pa siporte",
+    "edgeBody": "Mem bann etap ki Chrome, lor edge://extensions."
+  },
+  "privacyPage": {
+    "eyebrow": "KONFIDANSIALITE",
+    "title": "Konfidansialite",
+    "lede": "Seki FraudLens fer ar bann mesaz ki ou verifie, dan mo sinp.",
+    "sections": [
+      {
+        "title": "Bann mesaz ki ou kole",
+        "body": "Nimero telefonn, email ek nimero kont tire dan ou navigater avan enn mesaz avoye pou lanaliz. Bann lien, domenn ek kod res, parski bann verifikasion bizin zot."
+      },
+      {
+        "title": "Kopi lekran ek dokiman",
+        "body": "Kopi lekran ek dokiman avoye kouma zot ete lor nou server. Server la lir tex la ek tir nimero telefonn, email ek nimero kont avan li analiz nanye."
+      },
+      {
+        "title": "Seki server la gard",
+        "body": "Tex ki avoye pou lanaliz servi pou fer ou rezilta ek li pa ekrir dan enn baz done. Rapor kominote se lexsepsion: zot gard kouma enn anprint enn sel sans tex ki finn maske, zamen tex la limem, ek zot efase apre 90 zour."
+      },
+      {
+        "title": "Seki res lor ou aparey",
+        "body": "Ou dernie verifikasion, ou seri Aprann ek ou paramet sov dan sa navigater la selman. Kan ou efas done sit la, zot ale."
+      },
+      {
+        "title": "Kisannla lezot trouv li",
+        "body": "Lanaliz fer lor enn model langaz ki nou mem nou eberze. Enn founiser eberze (aster la Anthropic) servi zis kan pou nou pa disponib. Nou pa vann done, nou pa met piblisite ek nou pa servi traker."
+      }
+    ],
+    "extensionPolicy": "Lir politik konfidansialite konple extension la",
+    "contact": "Ou ena kestion? Ouver enn issue lor GitHub proze la.",
+    "contactCta": "Kontakte nou lor GitHub"
+  }
+}

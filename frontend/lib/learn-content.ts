@@ -161,8 +161,11 @@ export function languagePool(items: readonly QuizItem[], lang: QuizLanguage): La
 
 // ---------- Rounds ----------
 
-export const ROUND_SIZE = 8;
-const GENUINE_PER_ROUND = 3;
+// A round is exactly one day's practice (DAILY_GOAL in lib/streak.ts), so the
+// quiz card's "MESSAGE n OF 5" / 5-segment bar always lines up with the
+// round position: no in-round number ever exceeds the total shown.
+export const ROUND_SIZE = 5;
+const GENUINE_PER_ROUND = 2;
 
 function shuffle<T>(list: T[], random: () => number): T[] {
   const a = [...list];

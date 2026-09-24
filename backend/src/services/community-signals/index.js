@@ -168,7 +168,10 @@ export function evaluateCommunitySignal(message, { sender, now = Date.now() } = 
  * message is never evidence for itself. Never throws.
  * @returns {{ riskAdjustment?: object }}
  */
-export function recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now = Date.now() }) {
+// record: false = the user opted out of sharing samples (services/sharing):
+// no evidence event is stored for this message. The risk audit row is still
+// written, because it only records how OTHER evidence changed this verdict.
+export function recordCommunityOutcome({ community, signals, decision, levelWithoutCommunity, ip, now = Date.now(), record = true }) {
   const out = {};
   try {
     if (community?.signal && community.evaluation) {
@@ -199,7 +202,7 @@ export function recordCommunityOutcome({ community, signals, decision, levelWith
       };
     }
     const decisive = decision.level === "high" || decision.level === "critical";
-    if (community?.candidate && decisive && hasDeterministicHighSignal(signals)) {
+    if (record && community?.candidate && decisive && hasDeterministicHighSignal(signals)) {
       recordAutoEvent(signals, community.candidate, ip, now);
     }
   } catch (err) {

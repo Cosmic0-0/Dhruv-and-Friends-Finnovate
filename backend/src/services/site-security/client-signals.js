@@ -17,6 +17,37 @@ function str(value, maxLen = 300) {
   return typeof value === "string" ? value.slice(0, maxLen) : "";
 }
 
+const MAX_LOCATIONS = 3;
+// Control characters (other than tab) would garble the report's code view.
+const CONTROL_CHARS_RE = /[\u0000-\u0008\u000B-\u001F\u007F]/g;
+
+/**
+ * Where in the page's code a finding comes from, as the collector recorded it:
+ * [{ file, line, code }] - file is a script URL or the page URL (inline code),
+ * line is 1-based, code is that line of source. Untrusted page data: capped,
+ * stripped of control characters, and only ever rendered as text.
+ */
+function locs(value) {
+  const out = [];
+  for (const loc of arr(value).slice(0, MAX_LOCATIONS)) {
+    const file = str(loc?.file, 300);
+    const code = str(loc?.code, 240).replace(CONTROL_CHARS_RE, "");
+    if (!file && !code) continue;
+    const line = Number.isInteger(loc?.line) && loc.line > 0 ? loc.line : undefined;
+    out.push({ file, ...(line ? { line } : {}), code });
+  }
+  return out;
+}
+
+/** Spread into a finding: adds `locations` only when there are some. */
+function withLocations(value) {
+  const found = locs(value);
+  return found.length ? { locations: found } : {};
+}
+
+/** Every location listed on a group of items (mixed content, scripts without SRI). */
+const allLocations = (items) => items.flatMap((item) => (Array.isArray(item?.locations) ? item.locations : []));
+
 // These come from a text search of the page's scripts, so they show a sink
 // is USED, not that untrusted data reaches it - most sites ship a library
 // containing innerHTML or eval somewhere. Weighted accordingly: a
@@ -50,6 +81,7 @@ export function mapClientSignals(clientSignals) {
       title: `Page uses ${name}`,
       description: `The page's rendered DOM shows use of ${name}${count ? ` (observed ${count}x)` : ""}. This is a potential injection sink if untrusted data reaches it — not a confirmed vulnerability on its own.`,
       evidence: name,
+      ...withLocations(sink.locations),
     });
   }
 
@@ -62,6 +94,7 @@ export function mapClientSignals(clientSignals) {
       title: `URL parameter "${param}" reflected unencoded in the page`,
       description: "A value from the page's own URL query string appears in the rendered DOM without apparent HTML-encoding — a common precondition for reflected XSS.",
       evidence: param,
+      ...withLocations(reflected.locations),
     });
   }
 
@@ -76,6 +109,7 @@ export function mapClientSignals(clientSignals) {
       severity: "medium",
       title: "Mixed content: HTTPS page loads HTTP resources",
       description: `${mixed.length} resource(s) load over plain HTTP on an HTTPS page, which a network attacker could tamper with.${examples.length ? ` Example: ${examples.join(", ")}` : ""}`,
+      ...withLocations(allLocations(mixed)),
     });
   }
 
@@ -89,6 +123,7 @@ export function mapClientSignals(clientSignals) {
         title: "Form submits over plain HTTP",
         description: `A form on this page submits to ${action} over unencrypted HTTP.`,
         evidence: action,
+        ...withLocations(form.locations),
       });
     } else if (form.crossOrigin) {
       findings.push({
@@ -97,6 +132,7 @@ export function mapClientSignals(clientSignals) {
         title: "Form submits to a different origin",
         description: `A form on this page submits to a different origin (${action}), worth double-checking before entering payment or credential details.`,
         evidence: action,
+        ...withLocations(form.locations),
       });
     }
   }
@@ -119,6 +155,7 @@ export function mapClientSignals(clientSignals) {
           .map((v) => str(v?.info, 200))
           .filter(Boolean)
           .join("; ") || undefined,
+      ...withLocations(lib.locations),
     });
   }
 
@@ -138,6 +175,7 @@ export function mapClientSignals(clientSignals) {
         .map((s) => str(s?.src, 200))
         .filter(Boolean)
         .join("; ") || undefined,
+      ...withLocations(allLocations(noSri)),
     });
   }
 
@@ -150,6 +188,7 @@ export function mapClientSignals(clientSignals) {
       severity: "high",
       title: "Password field on an unencrypted page",
       description: `This page shows ${passwordFields} password field(s) but was loaded over plain HTTP, so anything typed into it can be read or altered on the network.`,
+      ...withLocations(clientSignals.passwordFieldLocations),
     });
   }
 

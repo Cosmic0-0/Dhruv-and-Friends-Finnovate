@@ -1,14 +1,86 @@
 # FraudLens AI
 
-FraudLens AI helps people in Mauritius assess suspicious financial messages
-before they pay, disclose credentials, or follow a link. It combines a
-deterministic, auditable risk engine with bounded language-model analysis and
-returns the evidence behind each decision.
+FraudLens AI checks a suspicious message, link, website or email before you
+pay, type a password, or hand over an OTP. It was built for Mauritius, in
+English, French and Kreol Morisien, and it shows the evidence behind every
+answer instead of asking you to trust a percentage.
 
-The product supports English, French, and Kreol Morisien, including
-code-switched messages. It accepts pasted text and screenshots, checks links
-against a local institution registry, provides a structured action plan, and
-can connect repeated observations into privacy-minimised scam campaigns.
+Built for the Finnovate Web and AI Hackathon 2026.
+
+## The problem
+
+Phishing in Mauritius doesn't look like the phishing most security tools were
+trained on. The SMS says your MCB account is blocked, in a mix of Kreol and
+French, and links to `mcb-secure.top`. A WhatsApp voice note from "the bank"
+asks for the code it just sent you. A fake MRA refund page asks for your card.
+An invoice email to a small business arrives from a supplier's domain with one
+letter changed, and the bank details have "recently been updated".
+
+Generic scam filters miss most of this. They don't read Kreol, they don't know
+that `mcb.mu` is real and `mcb.nu` isn't, and they grade a message with a
+score nobody can explain to their grandmother. People end up checking scams
+the only way they can, by asking someone they trust. Often that's after they've
+already clicked.
+
+## Three ways in, one engine
+
+Scams reach people in three places, so FraudLens meets them in all three. Every
+client calls the same backend. None of them carries its own copy of the
+detection logic.
+
+1. **The web app.** A phone-first PWA where you paste a message, drop a
+   screenshot (OCR reads it) or upload a PDF or Word document. You get a
+   verdict, the exact words and links that triggered it, and a short plan for
+   what to do next. Before You Pay checks a payment request, and the scam
+   sandbox lets you practise spotting a scam on clearly fictional examples.
+2. **The browser extension.** It checks every site you open against the
+   Mauritius institution registry, lookalike rules, phishing and malware
+   lists, domain age and the site's certificate, and it tells you who the
+   certificate was issued to. Scan This Page reads the page and its login and
+   card forms, and the Security Report grades a site's security setup. The
+   report shows the line of code behind each finding and says whether a site
+   is badly built or actually hostile.
+3. **The Outlook add-in.** It runs inside the email a workplace receives and
+   looks for business email compromise. It flags supplier lookalike domains,
+   changed bank details, a Reply-To that doesn't match the sender, and CEO
+   requests from personal addresses.
+
+Together they cover the SMS or WhatsApp message you paste, the link you open
+and the email that lands at work.
+
+## Why it works for Mauritius
+
+**Kreol is a first-class language.** The lexicon has Kreol rules next to the
+English and French ones, and it knows negation. "Partaz ou OTP ar nou" is a
+request for your code and gets flagged. "Pa partaz ou OTP ar personn" is the
+bank's own advice and doesn't. "Ou kont pou bloke si ou pa konfirm" reads as
+the threat it is. The language model is grounded with a Kreol translation
+memory in `data/kreol-dataset/`, where every row carries its review status.
+Only rows a human reviewed feed the model, and unreviewed text is never
+presented as reviewed. Messages that jump between Kreol, French and English in
+one sentence are the normal case here, so they're treated as one.
+
+**It knows the local domains.** `data/institution-registry.json` lists the
+official domains of MCB, SBM, Absa, Bank One, my.t, Emtel and the MRA. A link
+to `internet.mcb.mu` is recognised as MCB's own site. `mcb-secure.top`,
+`mcb.nu` and `mсb.mu` (with a Cyrillic с) are caught as lookalikes, and the
+explanation names the real domain. The domain parser understands `.mu`
+suffixes like `gov.mu` and `com.mu`, and the extension looks up when each
+domain was registered, so a site set up last week stands out. It also reads
+every site's certificate and tells you who it was issued to. MCB's own site
+carries an Extended Validation certificate naming The Mauritius Commercial Bank
+Limited, and a scam copy can't get one in the bank's name. Global brands like
+PayPal and Microsoft are covered too, because Mauritians get those scams as
+well.
+
+**The AI reads language and nothing more.** The language model identifies
+tactics like urgency, threats or a request for an OTP, and it has to quote the
+exact words from the message. A quote that isn't in the message gets thrown
+out.
+The score, the verdict and the advice come from a deterministic rule engine
+with versioned rulesets, so the same message always gets the same answer and
+every point can be traced. If the model is down, slow or wrong, the rules
+still work. A live demo on bad Wi-Fi was a design constraint.
 
 ## What is implemented
 
@@ -63,7 +135,7 @@ npm run dev
 ```
 
 The frontend runs at `http://localhost:3000` and proxies `/api/*` to the backend
-at `http://localhost:4000`. Configure Ollama and the hosted fallback as described
+at `http://localhost:4000`. The landing page is `/`; the web app itself is at `/app`. Configure Ollama and the hosted fallback as described
 in [`backend/README.md`](./backend/README.md). The deterministic pipeline still
 returns an assessment when semantic analysis is unavailable.
 
@@ -116,7 +188,8 @@ ESLint is not configured yet, so there is no lint check and `frontend/` has no
 
 The application is still a hackathon prototype. It has no accounts or tenant
 isolation, uses a shared SQLite database, and exposes aggregate campaign/trend
-data publicly. The extension is configured for localhost and must have both its
-API/frontend origins and `host_permissions` updated for a deployed environment.
+data publicly. The extension points at the deployed backend
+(`https://api.fraudlens.site`). For local work, point `extension/config.js`
+and the manifest's `host_permissions` back at `http://localhost:4000`.
 Set `NEXT_PUBLIC_SITE_URL`, `BACKEND_URL`, `REPORTER_HASH_SECRET`, and a tested LLM
 fallback before sharing a production URL.

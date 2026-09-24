@@ -18,8 +18,9 @@ import { SCAM_TYPES, SCAM_STAGES, normalizeScamType, normalizeStage } from "../p
 import { SEMANTIC_CODES, SIGNAL_DEFS, makeSignal } from "../signals/registry.js";
 import { locateEvidence } from "../normalize/index.js";
 import { isBenignCredentialOrContactLanguage } from "../lexicon/index.js";
+import { channelLabel } from "../channel/index.js";
 
-export const SEMANTIC_PROMPT_VERSION = "semantic-1.2"; // 1.1: SOC-08 (bypass normal approval) added to the allowed codes. 1.2: ID-04 guidance broadened to cover an implausible claim of official authorship/publishing/distribution by a real, named organization (e.g. a page claiming to be the official distributor of a well-known brand's product with no supporting affiliation) - judged case by case by the model, not a fixed brand list.
+export const SEMANTIC_PROMPT_VERSION = "semantic-1.3"; // 1.3: optional user-reported channel line ("Received by", services/channel) - absent channel leaves the prompt identical to 1.2. 1.1: SOC-08 (bypass normal approval) added to the allowed codes. 1.2: ID-04 guidance broadened to cover an implausible claim of official authorship/publishing/distribution by a real, named organization (e.g. a page claiming to be the official distributor of a well-known brand's product with no supporting affiliation) - judged case by case by the model, not a fixed brand list.
 const MAX_SIGNALS = 8;
 
 const CODE_GUIDE = SEMANTIC_CODES.map((c) => `  ${c}: ${SIGNAL_DEFS[c].label}`).join("\n");
@@ -61,12 +62,16 @@ function fenceUntrusted(message) {
   return message.replace(/<\s*\/?\s*untrusted_message\s*>/gi, "[tag removed]");
 }
 
-export function buildSemanticPrompt(message, language) {
+export function buildSemanticPrompt(message, language, channel) {
   const { promptBlock } = getKreolGrounding(message);
+  // Only a validated channel id reaches here (services/channel); the label is
+  // ours, never user text.
+  const via = channelLabel(channel);
   return [
     SYSTEM_PROMPT,
     promptBlock ? `\n${promptBlock}` : "",
     `\nLanguage hint (may be wrong): ${language || "unspecified"}`,
+    via ? `\nThe recipient says it arrived by (context only, may be wrong; not evidence): ${via}` : "",
     `\n<untrusted_message>\n${fenceUntrusted(message)}\n</untrusted_message>`,
   ].join("\n");
 }
@@ -133,11 +138,11 @@ export function parseSemanticOutput(parsed, message) {
  * @returns {Promise<{ status: "ok"|"unavailable"|"invalid", provider?: string, model?: string,
  *   signals: object[], rejected: object[], scamType: string|null, stage: string|null, observedSender: string|null, error?: string }>}
  */
-export async function analyzeSemantics(message, { language, timeoutMs, llm = callLLM } = {}) {
+export async function analyzeSemantics(message, { language, channel, timeoutMs, llm = callLLM } = {}) {
   const empty = { signals: [], rejected: [], scamType: null, stage: null, observedSender: null };
   let response;
   try {
-    response = await llm(buildSemanticPrompt(message, language), timeoutMs ? { timeoutMs } : undefined);
+    response = await llm(buildSemanticPrompt(message, language, channel), timeoutMs ? { timeoutMs } : undefined);
   } catch (err) {
     return { status: "unavailable", ...empty, error: err.name === "AbortError" ? "timeout" : "provider_unavailable" };
   }

@@ -1,0 +1,38 @@
+{
+  "eyebrow": "APPRENDRE",
+  "title": "Apprenez à les repérer",
+  "lede": "Cinq messages inspirés de vrais cas chaque jour. Décidez si chacun est une arnaque, puis découvrez ce qui l'a trahi.",
+  "question": "Arnaque ou authentique ?",
+  "stats": {
+    "today": "Aujourd’hui",
+    "todayCount": "{done} sur {goal}",
+    "streak": "Série",
+    "unit": "jours",
+    "days": "Série de {n} jours",
+    "noStreak": "Pas encore de série",
+    "accuracy": "Précision",
+    "accuracyEmpty": "Pas encore"
+  },
+  "week": {
+    "title": "Cette semaine",
+    "streakLine": "{n} jours d’affilée",
+    "dailyGoal": "Objectif du jour"
+  },
+  "goal": {
+    "title": "Objectif du jour",
+    "more": "Encore {n}",
+    "done": "Objectif du jour atteint"
+  },
+  "rule": {
+    "title": "Règle de base",
+    "body": "Aucune banque, aucun transporteur ni aucun service public à Maurice ne vous demandera votre code à usage unique."
+  },
+  "patterns": {
+    "title": "Schémas d’arnaque courants",
+    "sub": "À quoi ça ressemble à Maurice en ce moment.",
+    "seeAll": "Voir les tendances sur Radar"
+  },
+  "senderGenuine": "Message authentique",
+  "doneToday": "Terminé pour aujourd’hui",
+  "practiceMore": "Pratiquer une autre série"
+}
