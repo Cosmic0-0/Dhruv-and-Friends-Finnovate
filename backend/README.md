@@ -94,7 +94,7 @@ wherever the backend runs (the VPS, or your own machine for local dev).
    `FALLBACK_PROVIDER` (`anthropic`, `openai`, or `openrouter`) and
    `FALLBACK_API_KEY` in `.env`, with `LLM_MODE=auto`, so the backend fails
    over to a hosted API if Ollama is unreachable or times out
-   (`LLM_TIMEOUT_MS`, currently 60s in `.env.example`). `openrouter` is a
+   (`LLM_TIMEOUT_MS`, currently 20s in `.env.example`). `openrouter` is a
    single key that can route to different models (set `OPENROUTER_MODEL`;
    see `.env.example` for the current tested default and its latency warning).
    Fallback stays inactive until a key is set — never

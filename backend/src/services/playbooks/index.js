@@ -163,6 +163,30 @@ export function normalizeScamType(raw) {
   return normalizeEnum(raw, SCAM_TYPES);
 }
 
+// Bank-impersonation types keyed by institution-registry id.
+const BANK_IMPERSONATION_TYPES = Object.freeze({
+  mcb: "MCB_IMPERSONATION",
+  sbm: "SBM_IMPERSONATION",
+  absa: "ABSA_IMPERSONATION",
+  bankone: "BANK_ONE_IMPERSONATION",
+});
+const BANK_TYPE_SET = new Set(Object.values(BANK_IMPERSONATION_TYPES));
+
+/**
+ * The model's scamType is less stable than the deterministic institution
+ * match (the same MCB message came back as BANK_ONE_IMPERSONATION on some
+ * runs). When the model picked a bank-impersonation type and the registry
+ * matched a bank, the registry decides which bank.
+ * @param {string|null} scamType normalised model scam type
+ * @param {{ id?: string }|null} institution deterministic claimed institution
+ * @returns {string|null}
+ */
+export function reconcileScamType(scamType, institution) {
+  if (!BANK_TYPE_SET.has(scamType)) return scamType;
+  const bankType = institution?.id ? BANK_IMPERSONATION_TYPES[institution.id] : undefined;
+  return bankType ?? scamType;
+}
+
 export function normalizeStage(raw) {
   return normalizeEnum(raw, SCAM_STAGES);
 }

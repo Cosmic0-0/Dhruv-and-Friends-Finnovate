@@ -20,10 +20,11 @@ are weighted against.
 - [ ] Fallback provider tested under simulated Tailscale/laptop failure.
       It works but is not reliable: on 2026-09-22 `npm run test:fallback`
       against the real analyze prompt took 19.5s to 43.8s, and one run did
-      not finish inside 35s. `LLM_TIMEOUT_MS` is 60000 in
-      `backend/.env.example` so it does not fail outright. Leave this
-      unchecked until a faster, non-reasoning fallback model is found or
-      the demo plan accepts up to about 60s per check when Ollama is down.
+      not finish inside 35s. `LLM_TIMEOUT_MS` is now 20000 (was 60000) in
+      `backend/.env.example`, so when the tailnet is down the fallback
+      usually times out and the deterministic verdict appears in about 20-40s
+      instead of up to 120s. Set the same value on the demo server. Leave
+      this unchecked until a faster, non-reasoning fallback model is found.
 - [x] Batch scan functional (`POST /api/batch-scan`). Each result carries
       the full `/api/analyze` response. Last verified live 2026-09-22
       through the local model: a 4-message batch gave the correct verdicts

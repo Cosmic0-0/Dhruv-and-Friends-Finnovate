@@ -18,12 +18,12 @@ const FALLBACK_MODELS = { anthropic: "claude-haiku-4-5-20251001", openai: "gpt-4
 // picking a bigger number: it's an open reliability risk in the free-tier
 // fallback choice, not just a timeout tuning problem - see
 // backend/.env.example's FALLBACK_PROVIDER comment and
-// npm run test:fallback before assuming this is fixed. 60s gives real
-// (not guaranteed) margin against what's been observed so far; CheckForm.tsx
-// already shows a "still working" message past 8s so the wait doesn't read
-// as a hang, but a demo-day judge waiting up to a minute per check is a real
-// presentation risk worth revisiting before relying on this path live.
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 60000;
+// npm run test:fallback before assuming this is fixed. The default is 20s:
+// Ollama with thinking off answers in ~12s, and a dead tailnet should cost
+// 20s per provider, not 60s, before the deterministic verdict appears. At
+// this budget the slow fallback usually times out, which is acceptable
+// because the rules engine owns the verdict either way.
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 20000;
 const LLM_MODE = process.env.LLM_MODE || "auto"; // local | fallback | auto
 
 const FALLBACK_CONFIGURED = Boolean(FALLBACK_API_KEY);
