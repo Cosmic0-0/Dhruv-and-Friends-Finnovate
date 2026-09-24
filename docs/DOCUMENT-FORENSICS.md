@@ -1,7 +1,9 @@
 # Document forensics
 
 Two complementary passive document-forensics paths, for different file
-types, with deliberately different output philosophies. Neither is a
+types, with deliberately different output philosophies. A third route,
+`POST /api/analyze/screenshot`, reuses the second path's Python service for
+screenshots (see the end of this file). Neither is a
 duplicate of the other; see `docs/API-CONTRACT.md` for their exact request/
 response shapes.
 
@@ -114,6 +116,19 @@ check's own `test_no_network_calls_during_run` test).
 There is no frontend entry point for this path. The web app's `/document`
 page calls only `/api/analyze/document`, so `POST /api/documents` is
 reachable through the API only.
+
+## Screenshots: `POST /api/analyze/screenshot`
+
+The screenshot route sends the image to the same Python service while it
+runs OCR. Here the service's indicators do feed a verdict: they are mapped to
+DOC-09 (TruFor), DOC-10 (ELA), DOC-11 (layout), DOC-12 (image metadata) and
+DOC-13 (signature consistency), with the service's own confidence as the
+variant, and scored by ruleset `rs-1.6` alongside the OCR text's signals
+(`backend/src/services/document-forensics-client/toSignals.js`). None of them
+reaches `high` alone; DOC-09 at high or medium confidence joins the DX-1
+interaction with an impersonation or payment signal. The image is not
+stored. The web app's Check screen currently discards this result and
+re-analyses only the OCR text (see `docs/API-CONTRACT.md` Known Gaps).
 
 ## Storage and security
 

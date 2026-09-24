@@ -55,6 +55,7 @@ backend/src/services/risk-engine/      deterministic score, level, confidence
 backend/src/services/domain-matching/  URL extraction and lookalike checks
 backend/src/services/community-signals privacy-minimised report clustering
 backend/src/services/site-security/    passive site checks with SSRF protection
+backend/src/services/kreol/            Kreol normalisation, language mix, translation
 backend/src/services/document-forensics/         PDF/DOCX forensics, feeds a verdict
 backend/src/services/document-store/             stores uploaded document bytes
 backend/src/services/document-forensics-client/  HTTP client for document-forensics/
@@ -62,8 +63,8 @@ backend/src/db/                        SQLite schema and queries
 frontend/                              Next.js PWA and all web product flows
 extension/                             Manifest V3 client of the backend API
 outlook-addin/                         Office.js read-mode client of the backend API
-document-forensics/                    optional Python service: image forgery
-                                       indicators for POST /api/documents, never a verdict
+document-forensics/                    optional Python service: image forgery checks for
+                                       screenshots (DOC-09..13) and POST /api/documents
 data/                                  registries, reviewed language data, QA data
 ```
 
@@ -86,7 +87,8 @@ projects. There is intentionally no root Node package.
 
 ## Verification
 
-Use Node 22. Run checks from each project directory:
+Use Node 22.18 or later (frontend tests run `.ts` files directly). Run checks
+from each project directory:
 
 ```bash
 cd backend && npm test

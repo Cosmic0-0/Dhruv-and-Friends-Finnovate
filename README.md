@@ -31,8 +31,9 @@ detection logic.
 1. **The web app.** A phone-first PWA where you paste a message, drop a
    screenshot (OCR reads it) or upload a PDF or Word document. You get a
    verdict, the exact words and links that triggered it, and a short plan for
-   what to do next. Before You Pay checks a payment request, and the scam
-   sandbox lets you practise spotting a scam on clearly fictional examples.
+   what to do next. Before You Pay checks the number, account or IBAN you are
+   about to pay, and the scam sandbox lets you practise spotting a scam on
+   clearly fictional examples.
 2. **The browser extension.** It checks every site you open against the
    Mauritius institution registry, lookalike rules, phishing and malware
    lists, domain age and the site's certificate, and it tells you who the
@@ -87,16 +88,17 @@ still work. A live demo on bad Wi-Fi was a design constraint.
 - Single-message analysis with a deterministic score, level, decision trace,
   and suggested actions.
 - Browser-side redaction for pasted text and server-side redaction after OCR.
-- Screenshot OCR, batch scanning, conversation analysis, and a Before You Pay
-  flow for payment context.
+- Screenshot OCR, batch scanning, whole-chat conversation analysis, and a
+  Before You Pay payee check.
 - Kreol/French/English lexicon checks plus reviewed Kreol prompt grounding.
 - Lookalike-domain, claimed-identity, template-artifact, community-wave, and
   payment-context checks.
 - Scam Journey, ScamDNA campaign graphs, Fraud Replay, and a bounded educational
   scam sandbox.
-- Document checks: PDF/DOCX structural forensics with a normal verdict, and an
-  API-only image route that returns forgery indicators from an optional
-  Python service, never a verdict.
+- Document checks: PDF/DOCX structural forensics with a normal verdict;
+  image-forensics signals on screenshots from an optional Python service; and
+  an API-only image route that returns that service's indicators, never a
+  verdict.
 - A PWA frontend and a Manifest V3 Chrome extension for link checks, page scans,
   reports, and passive site-security reports.
 
@@ -109,14 +111,16 @@ extension/     Chrome extension; calls the backend instead of duplicating detect
 outlook-addin/ Outlook Office.js read-mode task pane; calls the backend as well
 document-forensics/
                Optional local Python service for image forgery indicators
+               (screenshots and POST /api/documents)
 data/          Institution registry, reviewed language data, QA payloads, demo seeds
 docs/          API contract, demo checklist, judging rubric, and team workflow
 ```
 
 ## Run locally
 
-The backend and frontend are separate Node projects. Use Node 22; the frontend
-test suite relies on Node's native TypeScript execution.
+The backend and frontend are separate Node projects. Use Node 22.18 or later:
+the frontend test suite runs TypeScript files directly, which Node supports
+without a flag from 22.18.0.
 
 ```bash
 cd backend
@@ -147,11 +151,12 @@ npm install
 npm run dev   # https://localhost:3001
 ```
 
-Optionally, for forgery indicators on `POST /api/documents`, run the Python
-service in `document-forensics/` (Python 3.12; see its
+Optionally, for image forgery checks on screenshots and `POST /api/documents`,
+run the Python service in `document-forensics/` (Python 3.12; see its
 [README](./document-forensics/README.md) for Windows and Unix commands). The
-backend works without it: that route then reports the forensics step as
-unavailable. The PDF/DOCX document check does not use it.
+backend works without it: screenshots are then judged on their text alone and
+`/api/documents` reports the forensics step as unavailable. The PDF/DOCX
+document check does not use it.
 
 ## Verify
 
@@ -177,8 +182,11 @@ ESLint is not configured yet, so there is no lint check and `frontend/` has no
 - [`checklist.md`](./checklist.md) tracks security and launch readiness.
 - [`docs/BUILD-CHECKLIST.md`](./docs/BUILD-CHECKLIST.md) tracks demo readiness
   against the hackathon rubric.
-- [`docs/DOCUMENT-FORENSICS.md`](./docs/DOCUMENT-FORENSICS.md) explains the two
-  document paths, what each claims, and what each stores.
+- [`docs/DOCUMENT-FORENSICS.md`](./docs/DOCUMENT-FORENSICS.md) explains the
+  document and screenshot forensics paths, what each claims, and what each
+  stores.
+- [`docs/KREOL-CURRENT-STATE.md`](./docs/KREOL-CURRENT-STATE.md) describes the
+  Kreol language layer, its data provenance and its evaluation.
 - [`document-forensics/README.md`](./document-forensics/README.md) covers the
   optional Python service.
 - [`extension/README.md`](./extension/README.md) covers installation, permissions,

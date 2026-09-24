@@ -119,13 +119,17 @@ Tailscale** for local inference to work — there's no automatic wake-up.
 
 ## Document forensics service (optional)
 
-There are two document routes, and only one of them needs another process:
+Three routes look for signs of editing. Two of them use a separate Python
+service:
 
 - `POST /api/analyze/document` (PDF/DOCX) runs entirely inside this backend
   (`src/services/document-forensics/`) and returns a normal verdict.
+- `POST /api/analyze/screenshot` sends the image to the Python service while
+  it runs OCR; the service's findings become DOC-09..13 signals in the normal
+  verdict (`src/services/document-forensics-client/toSignals.js`).
 - `POST /api/documents` (PDF, PNG, JPEG, WEBP) stores the upload
-  (`src/services/document-store/`), OCRs images, and asks the separate Python
-  service in `document-forensics/` for forgery indicators
+  (`src/services/document-store/`), OCRs images, and asks the Python service
+  in `document-forensics/` for forgery indicators
   (`src/services/document-forensics-client/`). It never returns a verdict.
 
 The backend reaches the Python service over HTTP, the same way it reaches
@@ -143,8 +147,9 @@ Ollama:
 The service is optional. When it is not running, is unreachable, times out
 or returns an error, `POST /api/documents` still returns `201` with the
 stored document's id and any OCR text, and its `forensics` field is
-`{ "status": "unavailable", "reason": "..." }`. Nothing else in the backend
-depends on it.
+`{ "status": "unavailable", "reason": "..." }`. A screenshot check still
+returns a verdict from the OCR text alone, with `imageForensics.status:
+"unavailable"`. Nothing else in the backend depends on it.
 
 Setup and tests: [`document-forensics/README.md`](../document-forensics/README.md).
 What each path claims and stores: [`docs/DOCUMENT-FORENSICS.md`](../docs/DOCUMENT-FORENSICS.md).

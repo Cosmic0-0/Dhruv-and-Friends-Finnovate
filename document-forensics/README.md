@@ -2,11 +2,14 @@
 
 A local Python microservice, separate from `backend/` (Node) and `frontend/`
 (Next.js) for the same reason those two are separate projects: different
-language, different dependency footprint. Called by the Node backend over
-localhost HTTP after it stores a document's original bytes
-(`backend/src/services/document-store/`) - the same "another local process
-over HTTP" pattern the backend already uses for Ollama. Never called from a
-browser, never exposed publicly, never calls a third-party API.
+language, different dependency footprint. The Node backend calls it over
+localhost HTTP (`backend/src/services/document-forensics-client/`) in two
+places: `POST /api/documents`, after storing the upload's original bytes
+(`backend/src/services/document-store/`), and `POST /api/analyze/screenshot`,
+where the image is not stored and the findings become DOC-09..13 signals in
+the normal verdict. It is the same "another local process over HTTP" pattern
+the backend already uses for Ollama. Never called from a browser, never
+exposed publicly, never calls a third-party API.
 
 ## What this does and does not claim
 
