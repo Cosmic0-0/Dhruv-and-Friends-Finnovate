@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { analyzeStructure, inspectPdf, scanActiveContent } from "./pdf.js";
 import { parsePdfDate } from "./meta.js";
 import * as B from "./fixture-builders.js";
+import * as F from "./spec-fixtures.js";
 
 const bytes = (s) => new Uint8Array(Buffer.from(s, "latin1"));
 
@@ -106,6 +107,16 @@ test("inspectPdf: text runs carry font, size, render mode and fill", async () =>
   assert.equal(typed.renderMode, 0);
   assert.equal(typed.fill, "color");
   assert.equal(Math.round(typed.fontSize), 13);
+  assert.equal(typed.coveredByScan, false, "typed after the scan, so on top of it");
+});
+
+test("inspectPdf: text painted before the scan is covered by it, so the page is still a scan with no visible text", async () => {
+  const facts = await inspectPdf(new Uint8Array(await F.buildTextUnderImageScanPdf()));
+  const [page] = facts.pages;
+  assert.equal(page.isScanPage, true);
+  assert.ok(page.runs.length > 0);
+  assert.ok(page.runs.every((r) => r.renderMode === 0 && r.coveredByScan), "ordinary visible text, all under the scan");
+  assert.equal(page.visibleChars, 0);
 });
 
 test("inspectPdf: a scan without a text layer hands greyscale pixels to OCR", async () => {

@@ -250,13 +250,14 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
     st.x = st.lineX;
     st.y = st.lineY;
   };
-  const showText = (glyphs) => {
+  const showText = (glyphs, order) => {
     if (runs.length >= MAX_RUNS_PER_PAGE) return;
     const text = glyphText(glyphs);
     if (text === "") return;
     const m = compose(st.ctm, st.tm);
     const [x, y] = applyPoint(m, st.x, st.y + st.rise);
     runs.push({
+      order,
       text: text.slice(0, MAX_RUN_CHARS),
       font: fontNameOf(st.font),
       fontSize: Math.abs(st.fontSize) * Math.hypot(m[2], m[3]),
@@ -339,15 +340,15 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
       }
       case OPS.showText:
       case OPS.showSpacedText:
-        showText(args?.[0]);
+        showText(args?.[0], i);
         break;
       case OPS.nextLineShowText:
         moveText(0, st.leading);
-        showText(args?.[0]);
+        showText(args?.[0], i);
         break;
       case OPS.nextLineSetSpacingShowText:
         moveText(0, st.leading);
-        showText(args?.[2]);
+        showText(args?.[2], i);
         break;
       case OPS.paintImageXObject:
         paint(i, { objId: args[0], widthPx: args[1], heightPx: args[2], ctm: st.ctm, stencil: false });
@@ -378,8 +379,9 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
   return { images, runs, nonWhiteFill };
 }
 
-const isVisibleRun = (r) => r.renderMode !== 3 && r.renderMode !== 7 && r.fill === "color";
+const isVisibleRun = (r) => r.renderMode !== 3 && r.renderMode !== 7 && r.fill === "color" && !r.coveredByScan;
 const nonSpaceLength = (s) => s.replace(/\s/g, "").length;
+const inside = (b, x, y) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
 
 function resolveObject(page, objId) {
   const store = objId.startsWith("g_") ? page.commonObjs : page.objs;
@@ -415,6 +417,10 @@ function classifyPage(view, walked) {
   // The background scan is the first full-page raster painted. Further
   // full-page layers (mixed-raster-content "compact" scans) are not overlays.
   const scan = placed.filter((p) => !p.stencil && p.coverage >= FULL_PAGE_COVERAGE).sort((a, b) => a.order - b.order)[0] ?? null;
+  // Text painted BEFORE the scan, where the scan then covers it, cannot be
+  // seen: OCR software's "text under the page image" mode writes its text
+  // layer this way, in the ordinary visible render mode.
+  if (scan) for (const r of walked.runs) r.coveredByScan = r.order < scan.order && inside(scan.bbox, r.x, r.y);
   const visibleChars = walked.runs.filter(isVisibleRun).reduce((n, r) => n + nonSpaceLength(r.text), 0);
   // A full-page image under lots of real text is a designed background
   // (letterhead, Canva export), not a scan.

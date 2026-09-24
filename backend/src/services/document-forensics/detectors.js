@@ -47,7 +47,8 @@ export const VALUE_RE = new RegExp(
 
 const nonSpace = (s) => s.replace(/\s/g, "").length;
 const isHiddenMode = (r) => r.renderMode === 3 || r.renderMode === 7;
-const isVisible = (r) => !isHiddenMode(r) && r.fill === "color";
+// coveredByScan: painted before the scan image and hidden under it (pdf.js classifyPage).
+const isVisible = (r) => !isHiddenMode(r) && r.fill === "color" && !r.coveredByScan;
 const round = (n, digits = 0) => (typeof n === "number" && Number.isFinite(n) ? Number(n.toFixed(digits)) : null);
 
 /** Redacted, whitespace-collapsed, length-capped text for evidence. */

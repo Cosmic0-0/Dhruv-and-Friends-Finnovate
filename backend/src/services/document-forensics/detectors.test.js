@@ -120,6 +120,8 @@ test("DOC-05: visible text typed on a scan page, with redacted snippets; invisib
   assert.deepEqual(s.metadata.snippets, ["MUR 125,000.00", "Acct [account ending 6789]"]);
   // An OCR layer alone (render mode 3) is how legitimate searchable scans look.
   assert.deepEqual(detect(pdf({ pages: [scanPage({ runs: [run("scanned words", { renderMode: 3 })] })] })), []);
+  // Text painted before the scan and hidden under it ("text under the page image" OCR) is not typed on.
+  assert.deepEqual(detect(pdf({ pages: [scanPage({ runs: [run("MUR 125,000.00", { coveredByScan: true })] })] })), []);
   // Not a scan page (designed background) -> never DOC-05.
   assert.deepEqual(detect(pdf({ pages: [scanPage({ isScanPage: false, runs: [run("MUR 125,000.00")] })] })).filter((x) => x.code === "DOC-05"), []);
 });
