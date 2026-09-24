@@ -21,7 +21,7 @@ import { protectEntities, restoreEntities, validateEntities, validateRestored } 
 import { detectLanguageMix } from "./language.js";
 import { getKreolGrounding } from "../analysis/kreolGrounding.js";
 
-export const TRANSLATION_PROMPT_VERSION = "kreol-translate-1";
+export const TRANSLATION_PROMPT_VERSION = "kreol-translate-2";
 
 export const DIRECTIONS = Object.freeze({
   "mfe-en": { source: "mfe", target: "en", sourceName: "Mauritian Kreol (Kreol Morisien)", targetName: "English" },
@@ -36,6 +36,8 @@ const NEGATION = {
   fr: /\b(?:ne|n['’]|pas|jamais|personne|sans|aucun|aucune)\b/iu,
 };
 const PLACEHOLDER = /<[A-Z]+_\d+>/g;
+// Anything tag-shaped that is not an entity placeholder, e.g. a "<text>" copied from a prompt template.
+const STRAY_MARKUP = /<\/?[A-Za-z][^<>]{0,40}>/;
 const NONSTANDARD_SPELLING = /(?<![\p{L}\p{N}'’])(?:u|nu|pu)(?![\p{L}\p{N}'’])/iu;
 const MAX_LENGTH_FACTOR = 4;
 const MIN_WORD_RATIO = 0.3;
@@ -52,7 +54,7 @@ export function buildTranslationPrompt({ direction, protectedText, grounding, fe
   const d = DIRECTIONS[direction];
   const lines = [
     `You translate short fraud-related messages from ${d.sourceName} to ${d.targetName}.`,
-    'Return JSON only: {"translation": "<text>"}.',
+    'Return JSON only, with one key "translation" whose value is the translated message and nothing else: no tags, no labels, no notes.',
     "Rules:",
     "1. Keep every <TYPE_n> placeholder exactly as written, once each. Never invent, drop, repeat or edit a placeholder, and never write a raw number, link, amount or address yourself.",
     "2. Do not add, remove or change facts. Keep every number that is not a placeholder.",
@@ -96,6 +98,11 @@ export function validateTranslation({ direction, sourceText, protectedText, enti
   if (typeof output !== "string" || output.trim() === "") return { ok: false, problems: [{ kind: "empty_output", detail: "" }] };
 
   problems.push(...validateEntities(output, entities).problems);
+
+  // Not from the source: markup the model added (a copied template word, a stray tag).
+  if (STRAY_MARKUP.test(output.replace(PLACEHOLDER, " ")) && !STRAY_MARKUP.test(protectedText.replace(PLACEHOLDER, " "))) {
+    problems.push({ kind: "stray_markup", detail: "output contains a tag that is not in the source" });
+  }
 
   if (output.length > protectedText.length * MAX_LENGTH_FACTOR + 40) problems.push({ kind: "too_long", detail: `${output.length} chars` });
   const srcWords = wordCount(protectedText);

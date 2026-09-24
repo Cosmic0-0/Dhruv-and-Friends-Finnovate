@@ -54,6 +54,19 @@ test("a redaction token is restored to the exact value the caller sent, even if 
   assert.doesNotMatch(r.text, /<PRIV_1>/);
 });
 
+test("a copied template tag like <text> is rejected, and the retry can recover", async () => {
+  const plain = "Ou kont pou bloke zordi. Pa partaz ou OTP. Al lor <URL_1> ouswa apel <PRIV_1> aster.";
+  const stuck = await translateMessage(EN, "mfe", { provider: stub(`<text>${plain}`) });
+  assert.equal(stuck.status, "rejected");
+  assert.equal(stuck.text, null);
+  assert.ok(stuck.problems.includes("stray_markup"));
+
+  const answers = [`<text>${plain}`, plain];
+  const recovering = await translateMessage(EN, "mfe", { provider: async () => JSON.stringify({ translation: answers.shift() }) });
+  assert.equal(recovering.status, "ok");
+  assert.doesNotMatch(recovering.text, /<text>/);
+});
+
 test("Kreol message to English uses the mfe-en direction and keeps negation", async () => {
   calls.length = 0;
   const provider = recording("Your account will be blocked today. Do not share your OTP code with anyone. Call the bank now to confirm.");
