@@ -153,6 +153,18 @@ test("SOC-08 bypass-controls: EN / FR / Kreol, and a policy reminder is not a re
   assert.ok(!codes("Please follow the normal approval process.").includes("SOC-08"));
 });
 
+// SOC-10 - "wrong transfer, refund me". Real corpus examples, grounded in
+// data/test-payloads/{en,fr,kr}.json's EN-06/FR-06/KR-09.
+test("SOC-10 'wrong transfer, refund me' fires in EN/FR/Kreol, never on an unrelated 'sent'/'by mistake'", () => {
+  assert.ok(codes("Hi, I just sent Rs 3,500 to your mobile money account by mistake. Please send it back urgently to 5xxx-xxxx, that's my correct number, I need it before the bank closes today.").includes("SOC-10"));
+  assert.ok(codes("Bonjour, je viens de vous envoyer Rs 4 200 par erreur sur votre compte mobile money. Merci de me le renvoyer d'urgence au 5xxx-xxxx, c'est mon vrai numéro, j'en ai besoin avant ce soir.").includes("SOC-10"));
+  assert.ok(codes("Salut, mo finn avoy larzan par erer lor to kont la banque. Silvouple reavoyy Rs 3,000 lor sa numero-la deswit.").includes("SOC-10"));
+  // Each half of the pattern alone must not fire: neither "sent by mistake"
+  // with no refund demand, nor "send it back" with no mistaken-payment claim.
+  assert.ok(!codes("Sorry, I sent that file to the wrong group by mistake, please ignore it.").includes("SOC-10"));
+  assert.ok(!codes("Can you send it back to me once you're done reviewing it?").includes("SOC-10"));
+});
+
 // SOC-09 - deliberately brand-agnostic: only the distribution-bait wording,
 // never which company is claimed as the source (that stays with the
 // semantic model's ID-04 read; see services/analysis).

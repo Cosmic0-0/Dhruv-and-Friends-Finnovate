@@ -17,7 +17,7 @@ export default function StreakCards({ state, t }: { state: StreakState; t: Learn
   const acc = accuracyPct(state);
 
   const tile = (label: string, value: string) => (
-    <div style={{ ...card(24), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8, minWidth: 150 }} data-fx>
+    <div className="learn-stat" style={{ ...card(24), padding: "20px 24px", display: "flex", flexDirection: "column", gap: 8, minWidth: 150 }} data-fx>
       <span style={{ fontSize: 13, color: "var(--dc-text3)" }}>{label}</span>
       <span className="dc-mono" style={{ fontFamily: MONO, fontSize: 34, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1, color: "var(--dc-ink)" }}>
         {value}
@@ -26,7 +26,7 @@ export default function StreakCards({ state, t }: { state: StreakState; t: Learn
   );
 
   return (
-    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+    <div className="learn-stats" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
       {tile(t.stats.today, `${done}/${DAILY_GOAL}`)}
       {tile(t.stats.streak, `${streak} ${t.stats.unit}`)}
       {tile(t.stats.accuracy, acc === null ? "—" : `${acc}%`)}

@@ -41,7 +41,7 @@ export default function ExtensionScreen() {
               </li>
             ))}
           </ol>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="extension-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Pill href={ZIP_URL} height={48}>{t.download}</Pill>
             <Pill href={SOURCE_URL} variant="outline" height={48}>{t.viewSource}</Pill>
           </div>
@@ -90,7 +90,7 @@ export default function ExtensionScreen() {
           ))}
         </ol>
         <span style={{ fontSize: 15, lineHeight: 1.55, color: "var(--dc-text2)" }}>{t.outlookNoteWork}</span>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <div className="extension-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Pill href={OUTLOOK_MANIFEST_PATH} download="manifest.xml" height={48}>{t.outlookDownload}</Pill>
           <Pill href={OUTLOOK_GUIDE_URL} variant="outline" height={48}>{t.outlookGuide}</Pill>
         </div>

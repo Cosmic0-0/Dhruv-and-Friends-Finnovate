@@ -229,6 +229,7 @@ and never shown or scored.
 | SOC-07 | Instructions aimed at an automated checker (prompt injection) | rule (and semantic) |
 | SOC-08 | Asks to bypass normal approval / verification ("skip the usual sign-off", "no need to call to confirm") | lexicon (EN/FR/Kreol) and/or semantic |
 | SOC-09 | Free/cracked-download distribution bait ("no survey", "direct download link", "crack"/"keygen"/"serial key"). Brand-agnostic - says nothing about who is claimed as the source; combines with ID-04 (an implausible official-publisher claim) via `rs-1.3`'s IX-6 | lexicon |
+| SOC-10 | "Wrong transfer, refund me": claims money was already sent by mistake/accident and demands it back, usually to a different number. Floored to high by `rs-1.6`'s FLOOR-SOC10-MISTAKEN-PAYMENT | lexicon (EN/FR/Kreol) and/or semantic |
 | PAY-01..04, PAY-07 | Payment request, unusual method, "safe account", advance fee, bank-details change | lexicon and/or semantic |
 | PAY-05, PAY-06 | Recipient mismatch, active coaching | rule (paymentContext) |
 | SEC-01, SEC-02 | Share OTP/PIN/password/CVV (negation-aware), remote-access app | lexicon and/or semantic |
@@ -268,9 +269,17 @@ URL-10, so every other analysis scores exactly as under rs-1.4.
 `rs-1.6` (active) is `rs-1.5` plus weights for the screenshot image-forensics
 codes, keyed by the service's confidence (high / medium / low): DOC-09
 30/15/8, DOC-10 18/10/5, DOC-11 15/8/4, DOC-12 8/5/3, DOC-13 15/8/4. DX-1 also
-applies to DOC-09 at high or medium confidence. It adds no floor. Only
-`/api/analyze/screenshot` can emit DOC-09..13, so every other analysis scores
-exactly as under rs-1.5.
+applies to DOC-09 at high or medium confidence. Only `/api/analyze/screenshot`
+can emit DOC-09..13, so every other analysis scores exactly as under rs-1.5
+for those codes.
+
+`rs-1.6` also adds SOC-10 (weight 25) and floor FLOOR-SOC10-MISTAKEN-PAYMENT
+(high): the "wrong transfer, refund me" mobile-money scam had no
+deterministic anchor beyond weak urgency_language (SOC-01, 6 points), so its
+verdict rode entirely on the semantic model - unreliable with a smaller
+local LLM. There is no legitimate equivalent of a stranger demanding urgent
+repayment for a transfer the recipient never received, so SOC-10 floors
+straight to high rather than only adding points.
 
 `rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
 fingerprints) and adds the document-forensics weights and interaction DX-1

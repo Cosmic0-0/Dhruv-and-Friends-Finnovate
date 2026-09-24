@@ -342,11 +342,25 @@ export const RULESET_RS_1_6 = Object.freeze({
     "DOC-11": { variants: { high: 15, medium: 8, low: 4 }, default: 8 },
     "DOC-12": { variants: { high: 8, medium: 5, low: 3 }, default: 5 },
     "DOC-13": { variants: { high: 15, medium: 8, low: 4 }, default: 8 },
+    // SOC-10 ("wrong transfer, refund me"): see FLOOR-SOC10-MISTAKEN-PAYMENT
+    // below for why this is floored rather than left to add up with SOC-01.
+    "SOC-10": 25,
   }),
   interactions: Object.freeze([
     ...RULESET_RS_1_5.interactions,
     { id: "DX-1", points: 15, group: "document-forgery", reason: "Document forgery artefact combined with an impersonation or payment request",
       a: ["DOC-09"], aVariants: ["high", "medium"], b: IMAGE_FORENSICS_B },
+  ]),
+  floors: Object.freeze([
+    ...RULESET_RS_1_5.floors,
+    // A consistency check found this scam type had no deterministic anchor
+    // beyond generic urgency wording (SOC-01, 6 points) - nowhere near
+    // "scam", so it silently rode on the semantic model alone and a smaller
+    // local LLM sometimes missed it. There is no legitimate equivalent of a
+    // stranger demanding urgent repayment for a transfer the recipient never
+    // received, so this floors straight to "high" like PAY-03's "safe
+    // account" instruction, rather than only adding 25 points.
+    { id: "FLOOR-SOC10-MISTAKEN-PAYMENT", level: "high", reason: "Claims money was sent by mistake and demands it back", all: ["SOC-10"] },
   ]),
 });
 

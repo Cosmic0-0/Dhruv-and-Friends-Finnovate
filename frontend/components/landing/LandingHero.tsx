@@ -61,7 +61,7 @@ export function LandingHeader({ t, headerRef }: { t: Content["header"]; headerRe
 /** Butter hero: the headline, a real message box that hands off to /app, and the scanner. */
 export function Hero({ t }: { t: Content["hero"] }) {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { lang, setLang } = useLanguage();
   const [text, setText] = useState("");
 
   const go = (message: string) => {
@@ -81,6 +81,13 @@ export function Hero({ t }: { t: Content["hero"] }) {
         <span className={s.kickerDot} aria-hidden="true" />
         {t.kicker}
       </p>
+      <div role="radiogroup" aria-label={lang === "fr" ? "Langue" : lang === "kreol" ? "Lang" : "Language"} className={s.mobileLangs}>
+        {UI_LANGUAGES.map((l) => (
+          <button key={l.id} type="button" role="radio" aria-checked={lang === l.id} onClick={() => setLang(l.id)}>
+            {LANG_LABEL[l.id] ?? l.label}
+          </button>
+        ))}
+      </div>
 
       <div className={s.heroMain}>
         <h1 id="fl-hero-title" data-hero-word className={s.heroTitle}>

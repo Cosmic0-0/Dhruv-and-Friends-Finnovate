@@ -80,6 +80,11 @@
   .box { padding: 22px 20px 20px; border-radius: 28px; }
 }
 @media (max-width: 39.999rem) {
+  .hub { gap: 32px; }
+  .lede { margin-top: 14px; font-size: 16px; }
+  .box { gap: 12px; }
+  .textarea { min-height: 84px; font-size: 18px; }
+  .boxFoot { padding-top: 10px; }
   .actions, .actions > * { width: 100%; justify-content: center; }
   .art { display: none; }
 }

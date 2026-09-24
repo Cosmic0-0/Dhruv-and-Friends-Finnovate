@@ -61,9 +61,9 @@
     "message": "Bonjour, je viens de vous envoyer Rs 4 200 par erreur sur votre compte mobile money. Merci de me le renvoyer d'urgence au 5xxx-xxxx, c'est mon vrai numéro, j'en ai besoin avant ce soir.",
     "expected": {
       "verdict": "scam",
-      "signals": ["urgency_language"]
+      "signals": ["urgency_language", "mistaken_payment_reversal"]
     },
-    "notes": "Classic mobile-money 'wrong transfer, refund me' pattern (CLAUDE.md scope item 2) - no URL involved. Callback number normalized to the 5xxx-xxxx placeholder style already used in FR-07, after the Opus+Sonnet review (2026-09-22) flagged the original fully-specified number as an inconsistent, realistic-looking live Mauritius mobile number."
+    "notes": "Classic mobile-money 'wrong transfer, refund me' pattern (CLAUDE.md scope item 2) - no URL involved. Callback number normalized to the 5xxx-xxxx placeholder style already used in FR-07, after the Opus+Sonnet review (2026-09-22) flagged the original fully-specified number as an inconsistent, realistic-looking live Mauritius mobile number. A live consistency check (2026-09-24) found this pattern had no deterministic anchor beyond weak urgency_language and rode entirely on the semantic model, which a smaller local LLM sometimes missed - SOC-10/mistaken_payment_reversal (rs-1.6, floored to high) added so the verdict no longer depends on the LLM catching it."
   },
   {
     "id": "FR-07",

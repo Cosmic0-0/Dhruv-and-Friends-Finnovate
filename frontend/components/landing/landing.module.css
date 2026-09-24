@@ -92,6 +92,7 @@
 .header[data-tone="ink"] .pillSolid:hover { background: #FFE46A; border-color: #FFE46A; }
 
 .langs { display: flex; gap: 2px; font-family: var(--mono); font-size: 11px; }
+.mobileLangs { display: none; }
 .lang {
   border: 0; background: transparent; color: inherit; cursor: pointer; opacity: .5;
   padding: 6px 7px; font: inherit; text-transform: uppercase;
@@ -396,9 +397,16 @@
   .outroScanner { opacity: .3; }
 }
 @media (max-width: 39.999rem) {
-  .hero { padding-top: 96px; }
+  .hero { padding-top: 96px; grid-template-rows: auto auto 1fr auto; gap: 18px; }
   .langs { display: none; }
-  .brandWord { display: none; }
+  .team { display: none; }
+  .header { gap: 8px; }
+  .headerRight .pill { max-width: 136px; height: 40px; text-align: center; white-space: normal; line-height: 1.1; }
+  .mobileLangs { position: relative; z-index: 1; display: flex; align-items: center; gap: 4px; width: max-content; }
+  .mobileLangs button { border: 1px solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); min-height: 36px; padding: 0 11px; font-family: var(--mono); font-size: 11px; cursor: pointer; }
+  .mobileLangs button[aria-checked="true"] { background: var(--ink); color: var(--butter); }
+  .heroMain { gap: 18px; }
+  .heroLede { font-size: 16px; }
   .checkBar { flex-direction: column; align-items: stretch; padding: 12px; }
   .prompt { display: none; }
   .checkInput { padding: 8px 6px; }
@@ -406,6 +414,10 @@
   .toolGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mailBody { grid-template-columns: minmax(0, 1fr); }
   .pane { border-left: 0; border-top: 1px solid rgba(13,13,12,.12); }
+}
+@media (max-width: 22rem) {
+  .brandWord { font-size: 15px; }
+  .headerRight .pill { max-width: 116px; padding-inline: 8px; font-size: 10px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

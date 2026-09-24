@@ -29,6 +29,22 @@ test("the prompt fences the message as untrusted data and never asks for a verdi
   assert.doesNotMatch(prompt, /"verdict"|"riskScore"|"suggestedAction"/);
 });
 
+// Regression: a real FraudLens domain-registration receipt ("register
+// fraudlens.site") got flagged as SOC-07 prompt injection because the SOC-07
+// guidance's own worked example ("FraudLens has verified this") made the
+// model treat any mention of the word "FraudLens" as suspicious.
+test("the prompt tells the model observedSender also covers a requested payment/reply number", () => {
+  const prompt = buildSemanticPrompt("send it here: 5900 0012", "en");
+  assert.match(prompt, /a payment\/contact number or account the message asks the recipient to send money or reply to/);
+});
+
+test("the prompt tells the model a bare mention of FraudLens is not SOC-07 by itself", () => {
+  const prompt = buildSemanticPrompt("register fraudlens.site", "en");
+  assert.match(prompt, /is not SOC-07 by itself/);
+  assert.match(prompt, /bare mention of "FraudLens"/);
+  assert.match(prompt, /register fraudlens\.site.*no SOC-07/);
+});
+
 test("the Kreol grounding block is still included when relevant reviewed examples exist", () => {
   const prompt = buildSemanticPrompt(KREOL, "mixed");
   assert.match(prompt, /SYNTHETIC/);

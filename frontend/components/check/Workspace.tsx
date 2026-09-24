@@ -244,7 +244,7 @@ export default function Workspace({
         {/* LEFT: input card + controls, sticky */}
         <div className="dc-sticky" style={{ position: "sticky", top: 108, display: "flex", flexDirection: "column", gap: 20 }}>
           <section style={{ ...card(28, true), overflow: "hidden" }} data-fx>
-            <div style={{ display: "flex", gap: 24, padding: "18px 28px 0", borderBottom: "1px solid var(--dc-line2)" }}>
+            <div className="workspace-tabs" style={{ display: "flex", gap: 24, padding: "18px 28px 0", borderBottom: "1px solid var(--dc-line2)" }}>
               {TABS.map((tab) => {
                 const active = tab.id === mode;
                 return (
@@ -375,7 +375,7 @@ export default function Workspace({
           {mode === "link" && linkStatus === "error" && linkError && <ErrorNote message={linkError.message} />}
           {mode === "screenshot" && status === "error" && error && <ErrorNote message={error.message} />}
 
-          <div style={{ display: "flex", gap: 10 }}>
+          <div className="workspace-actions" style={{ display: "flex", gap: 10 }}>
             <Pill variant="ink" height={56} onClick={primaryOnClick} disabled={primaryDisabled} style={{ flex: 1 }}>
               {primaryLabel}
             </Pill>

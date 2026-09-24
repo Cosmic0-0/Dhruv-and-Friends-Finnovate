@@ -69,6 +69,7 @@ export default function ReportScreen() {
                   type="button"
                   aria-pressed={on}
                   onClick={() => setLvl(n)}
+                  className="report-level"
                   style={{
                     display: "grid", gridTemplateColumns: "44px minmax(0,1fr) auto", gap: 16, alignItems: "center", padding: 20,
                     borderRadius: 28, cursor: "pointer", background: "var(--dc-surface)",

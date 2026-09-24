@@ -85,7 +85,7 @@ const CHECKERBOARD: CSSProperties = {
 
 function InfoTile({ title, body }: { title: string; body: string }) {
   return (
-    <div style={{ ...card(20), padding: "16px 20px", minWidth: 170, display: "flex", flexDirection: "column", gap: 4 }}>
+    <div className="document-info-tile" style={{ ...card(20), padding: "16px 20px", minWidth: 170, display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.01em" }}>{title}</span>
       <span style={{ fontSize: 13, lineHeight: 1.4, color: "var(--dc-text3)" }}>{body}</span>
     </div>
@@ -184,7 +184,7 @@ function ResultView({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }} data-nofx>
-      <div style={{ ...card(32, true), padding: "36px 40px", display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 24 }}>
+      <div className="document-result-summary" style={{ ...card(32, true), padding: "36px 40px", display: "grid", gridTemplateColumns: "auto 1fr auto", alignItems: "center", gap: 24 }}>
         <Mark tone={VERDICT_TONE[data.verdict]} glyph={VERDICT_GLYPH[data.verdict]} size={72} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, minWidth: 0 }}>
           <span style={{ fontSize: 13, color: "var(--dc-text3)", overflowWrap: "anywhere" }}>{`${nav.common.verdict} · ${file.name}`}</span>
@@ -385,7 +385,7 @@ export default function CheckDocumentScreen() {
         title={t.title}
         lede={t.lede}
         aside={
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div className="document-info-tiles" style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
             <InfoTile title={t.aside.file.title} body={t.aside.file.body} />
             <InfoTile title={t.aside.text.title} body={t.aside.text.body} />
           </div>
@@ -405,7 +405,7 @@ export default function CheckDocumentScreen() {
       />
 
       {busy ? (
-        <div style={{ ...card(32), minHeight: 420, padding: 56, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "center" }} aria-live="polite">
+        <div className="document-progress" style={{ ...card(32), minHeight: 420, padding: 56, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "center" }} aria-live="polite">
           <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
             <span className="dc-mono" style={{ fontSize: 13, color: "var(--dc-text3)", overflowWrap: "anywhere" }}>{file?.name}</span>
             <span style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-0.04em", lineHeight: 1.05 }}>{t.checkingFile}</span>

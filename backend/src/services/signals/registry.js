@@ -55,6 +55,16 @@ export const SIGNAL_DEFS = Object.freeze({
   // (see services/analysis's broadened ID-04 guidance). Combines with ID-04
   // via risk-engine's IX-6 interaction.
   "SOC-09": { category: "social", severity: "low", legacyType: "piracy_bait", label: "Offers a free/cracked copy of normally paid or restricted software" },
+  // The "wrong transfer, refund me" mobile-money scam: the message claims
+  // the sender already paid the recipient by mistake and pressures them to
+  // send real money back, usually to a different number. No URL, no claimed
+  // institution and only generic urgency wording to anchor on otherwise, so
+  // this had no deterministic signal at all before - a live consistency
+  // check found the verdict then rode entirely on the semantic model, which
+  // did not reliably catch it. Floored to "high" in risk-engine (rs-1.6):
+  // there is no legitimate equivalent of a stranger demanding an urgent
+  // repayment for a transfer the recipient never actually received.
+  "SOC-10": { category: "social", severity: "high", legacyType: "mistaken_payment_reversal", label: "Claims money was sent by mistake and asks for it back" },
 
   "PAY-01": { category: "payment", severity: "low", legacyType: "payment_request", label: "Asks you to send money" },
   "PAY-02": { category: "payment", severity: "high", legacyType: "payment_request", label: "Unusual payment method (gift card, crypto, courier)" },
@@ -133,7 +143,7 @@ export const SIGNAL_CODES = Object.freeze(Object.keys(SIGNAL_DEFS));
 // No URL, identity-vs-domain, reputation or payment-context codes: those are
 // facts code verifies.
 export const SEMANTIC_CODES = Object.freeze([
-  "ID-04", "SOC-01", "SOC-02", "SOC-03", "SOC-04", "SOC-05", "SOC-06", "SOC-07", "SOC-08",
+  "ID-04", "SOC-01", "SOC-02", "SOC-03", "SOC-04", "SOC-05", "SOC-06", "SOC-07", "SOC-08", "SOC-10",
   "PAY-01", "PAY-02", "PAY-03", "PAY-04", "PAY-07", "SEC-01", "SEC-02",
 ]);
 

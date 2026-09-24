@@ -51,11 +51,22 @@ const SEMANTIC_TIMEOUT_MS = Number(process.env.SEMANTIC_TIMEOUT_MS) || undefined
 // "From: X" / "Sender: X" line; X ends at the line end or a sentence break.
 const OBSERVED_SENDER_RE = /^(?:from|sender|de|exp[ée]diteur)\s*:\s*([^\n]{1,60}?)(?:\.\s|\n|$)/im;
 
+// Most seed-set scam messages never label a sender line at all - the scammer
+// just gives a number to send money or a reply to ("send it here: 5900
+// 0012", "reply on this number"). That number is the actual channel being
+// used, so it is tracked as the observed sender the same way a From: line
+// would be (still grounded: it's copied verbatim out of the message text).
+const SEND_TO_RE = /\b(?:send|pay|transfer)(?:\s+it|\s+this|\s+the\s+(?:money|amount|payment))?\s+(?:here|to|on|at)\s*:?\s*([+\d][\d\s-]{4,17}\d)\b/i;
+const REPLY_ON_RE = /\breply\s+(?:here|to|on)\s*:?\s*([+\d][\d\s-]{4,17}\d)\b/i;
+
 function extractObservedSender(text) {
   const m = OBSERVED_SENDER_RE.exec(text);
-  if (!m) return null;
-  const value = m[1].trim().replace(/[.,;]+$/, "");
-  return value || null;
+  if (m) {
+    const value = m[1].trim().replace(/[.,;]+$/, "");
+    if (value) return value;
+  }
+  const contact = SEND_TO_RE.exec(text) ?? REPLY_ON_RE.exec(text);
+  return contact ? contact[1].trim() : null;
 }
 
 // Stage implied by deterministic findings, used when the semantic model

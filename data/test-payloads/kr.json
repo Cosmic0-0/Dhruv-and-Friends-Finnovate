@@ -94,9 +94,9 @@
     "message": "Salut, mo finn avoy larzan par erer lor to kont la banque. Silvouple reavoyy Rs 3,000 lor sa numero-la deswit.",
     "expected": {
       "verdict": "scam",
-      "signals": ["urgency_language"]
+      "signals": ["urgency_language", "mistaken_payment_reversal"]
     },
-    "notes": "Source: kreol-dataset FL-KM-0009 (owner_reviewed, Joshua). Mobile-money 'wrong transfer, refund me' pattern, same as EN-06/FR-06. URGENCY tagged but no IMPERSONATION/org claimed -> urgency_language only."
+    "notes": "Source: kreol-dataset FL-KM-0009 (owner_reviewed, Joshua). Mobile-money 'wrong transfer, refund me' pattern, same as EN-06/FR-06. URGENCY tagged but no IMPERSONATION/org claimed -> urgency_language only. A live consistency check (2026-09-24) found this pattern had no deterministic anchor beyond weak urgency_language and rode entirely on the semantic model, which a smaller local LLM sometimes missed - SOC-10/mistaken_payment_reversal (rs-1.6, floored to high) added so the verdict no longer depends on the LLM catching it."
   },
   {
     "id": "KR-10",

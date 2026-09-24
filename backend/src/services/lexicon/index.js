@@ -170,6 +170,16 @@ const RULES = [
   { code: "SOC-05", lang: "fr", re: /\bvous avez gagn[ée]\b|\bgagnant\b|\bloterie\b|\bremboursement\b/iu },
   { code: "SOC-05", lang: "mfe", re: /\bou(?:'nn| finn|nn) gagn(?:e)?\b|\bloterie\b|\branbours(?:e)?man\b|\bremboursement\b/iu },
 
+  // SOC-10 - "wrong transfer, refund me": claims money was already sent by
+  // mistake/accident, then demands it back. Matched across the whole
+  // message (not one clause) because the real corpus examples split the
+  // claim and the demand into separate sentences ("...by mistake. Please
+  // send it back..."). Grounded in the reviewed EN-06/FR-06/KR-09 test
+  // payloads (data/test-payloads/{en,fr,kr}.json).
+  { code: "SOC-10", lang: "en", re: /\b(?:sent|transferred|paid)\b[\s\S]{0,60}?\bby (?:mistake|accident)\b[\s\S]{0,100}?\b(?:send|transfer|pay|refund)\b[\s\S]{0,30}?\bback\b/iu },
+  { code: "SOC-10", lang: "fr", re: /\b(?:envoy|transf[ée]r|pay[ée])\w*\b[\s\S]{0,60}?\bpar erreur\b[\s\S]{0,100}?\b(?:renvoy|rembours|retourn)\w*\b/iu },
+  { code: "SOC-10", lang: "mfe", re: /\bavoy\w*\b[\s\S]{0,60}?\bpar erer\b[\s\S]{0,100}?\breavoy\w*\b/iu },
+
   // SOC-09 - free/cracked-download bait. Deliberately brand-agnostic: these
   // phrases are near-universal on pirated-software distribution pages
   // ("no survey", "direct download link" as a stand-alone selling point,

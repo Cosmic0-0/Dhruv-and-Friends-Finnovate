@@ -57,12 +57,11 @@ export default function Hub({
         />
         <div className={s.boxFoot}>
           <div className={s.actions}>
-            <button type="button" className={`${s.btn}${hasText ? "" : ` ${s.btnHot}`}`} onClick={() => onStart(t.example, true)}>
-              {t.hub.tryExample} →
-            </button>
-            <button type="button" className={`${s.btn}${hasText ? ` ${s.btnHot}` : ""}`} onClick={go} disabled={!hasText}>
-              {t.work.check}
-            </button>
+            {hasText ? (
+              <button type="button" className={`${s.btn} ${s.btnHot}`} onClick={go}>{t.work.check}</button>
+            ) : (
+              <button type="button" className={`${s.btn} ${s.btnHot}`} onClick={() => onStart(t.example, true)}>{t.hub.tryExample} →</button>
+            )}
           </div>
           <span className={s.engine}>
             <span className={s.engineDot} aria-hidden="true" />
