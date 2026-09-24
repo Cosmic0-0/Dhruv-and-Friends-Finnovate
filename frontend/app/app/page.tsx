@@ -1,5 +1,10 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import CheckScreen from "@/components/check/CheckScreen";
+
+// Without its own canonical, /app inherited the root layout's "/" and told
+// search engines it was a duplicate of the landing page.
+export const metadata: Metadata = { alternates: { canonical: "/app" } };
 
 const JSON_LD = {
   "@context": "https://schema.org", "@type": "WebApplication",
