@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { createController } from "../src/controller";
-import type { AnalyzePayload, AnalyzeResponse, ExtractionReport } from "../src/types";
+import type { AnalyzePayload, AnalyzeResponse, AnalyzeScreenshotResponse, ExtractionReport } from "../src/types";
 
 const extraction = (subject: string): ExtractionReport => ({
   bodyFormat: "text", bodyTruncated: false, quotedContextRemoved: false, headersAvailable: true,
@@ -11,6 +11,8 @@ const result = (level: AnalyzeResponse["risk"]["level"]): AnalyzeResponse => ({
   verdict: level, riskScore: 5, risk: { score: 5, level, confidence: "high" }, decision: "allow", signals: [], trace: [],
   actions: [{ id: "a", text: "Do the thing." }], analysis: { rulesetVersion: "rs", source: "email", semantic: { status: "ok" } },
 });
+const screenshotResult = (level: AnalyzeResponse["risk"]["level"]): AnalyzeScreenshotResponse => ({ ...result(level), extractedText: "OCR text" });
+const aFile = () => new File([new Uint8Array(4)], "shot.png", { type: "image/png" });
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -100,5 +102,60 @@ describe("task pane controller", () => {
     const { root, controller } = setup({ analyze: () => Promise.reject("nope") });
     await controller.run();
     expect(root.querySelector(".error-state__copy")?.textContent).toMatch(/backend is reachable/);
+  });
+});
+
+describe("screenshot analysis path", () => {
+  test("picking a screenshot shows loading, then a result with no email extraction metadata", async () => {
+    const { root, controller } = setup({
+      buildScreenshotPayload: async (file) => ({ image: `data:${file.type};base64,aGk=` }),
+      analyzeScreenshot: async () => screenshotResult("elevated"),
+    });
+    controller.showIdle();
+    expect(root.querySelector(".screenshot-button")).not.toBeNull();
+    const running = controller.runScreenshot(aFile());
+    await Promise.resolve();
+    expect(root.textContent).toContain("Analysing screenshot");
+    await running;
+    expect(root.textContent).toContain("ELEVATED RISK");
+    expect(root.querySelector(".analysed__subject")).toBeNull();
+  });
+
+  test("a rejected file (wrong type/too large) shows a retryable error without calling the API", async () => {
+    let analyzed = false;
+    const { root, controller } = setup({
+      buildScreenshotPayload: async () => { throw new Error("Choose a PNG, JPEG, or WEBP image."); },
+      analyzeScreenshot: async () => { analyzed = true; return screenshotResult("low"); },
+    });
+    await controller.runScreenshot(aFile());
+    expect(analyzed).toBe(false);
+    expect(root.textContent).toContain("Choose a PNG, JPEG, or WEBP image.");
+    expect(root.querySelector(".retry-button")).not.toBeNull();
+  });
+
+  test("selecting the current message while a screenshot analysis is in flight discards its result", async () => {
+    const slow = deferred<AnalyzeScreenshotResponse>();
+    const { root, controller } = setup({
+      buildScreenshotPayload: async () => ({ image: "data:image/png;base64,aGk=" }),
+      analyzeScreenshot: () => slow.promise,
+    });
+    const running = controller.runScreenshot(aFile());
+    await tick();
+    controller.showIdle();
+    slow.resolve(screenshotResult("critical"));
+    await running;
+    expect(root.textContent).not.toContain("CRITICAL");
+    expect(root.querySelector(".analyze-button")).not.toBeNull();
+  });
+
+  test("calling runScreenshot without configuring it fails cleanly instead of throwing", async () => {
+    const root = document.createElement("main");
+    const controller = createController({
+      root,
+      extract: async () => ({ payload: payload("hi"), extraction: extraction("S") }),
+      analyze: async () => result("low"),
+    });
+    await controller.runScreenshot(aFile());
+    expect(root.textContent).toContain("not configured");
   });
 });

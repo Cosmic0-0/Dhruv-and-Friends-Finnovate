@@ -67,6 +67,7 @@
       "document": "Document"
     },
     "placeholder": "Collez le message ici",
+    "pasteHint": "Astuce : vous pouvez aussi coller ou déposer une capture d'écran ici au lieu de taper.",
     "linkPlaceholder": "Collez le lien ici",
     "linkHint": "Nous vérifions l'adresse elle-même : à qui elle appartient, son âge, et si elle a été signalée. La page n'est pas ouverte.",
     "shotChoose": "Choisir une capture",

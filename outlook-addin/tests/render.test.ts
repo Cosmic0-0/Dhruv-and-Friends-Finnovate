@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { renderError, renderIdle, renderLoading, renderResult } from "../src/render";
-import type { AnalyzeResponse } from "../src/types";
+import type { AnalyzeResponse, AnalyzeScreenshotResponse } from "../src/types";
 
 function response(level: "low" | "high" = "high"): AnalyzeResponse {
   return {
@@ -80,5 +80,63 @@ describe("task pane rendering", () => {
     expect(root.textContent).toContain("Checking facts");
     renderError(root, "Backend unavailable", () => undefined);
     expect(root.querySelector("button")?.textContent).toBe("Try again");
+  });
+
+  test("idle screen offers a screenshot alternative that never claims uploads never happen", () => {
+    const root = document.createElement("main");
+    let picked: File | null = null;
+    renderIdle(root, () => undefined, (file) => { picked = file; });
+    const screenshotButton = root.querySelector<HTMLButtonElement>(".screenshot-button");
+    expect(screenshotButton?.textContent).toBe("Check a screenshot instead");
+    expect(root.textContent).not.toContain("Attachment contents are never uploaded.");
+    expect(root.textContent).toContain("never uploaded as an attachment");
+    expect(root.textContent).toContain("never stored");
+
+    const input = root.querySelector<HTMLInputElement>(".screenshot-input")!;
+    expect(input.accept).toContain("image/png");
+    const file = new File([new Uint8Array(4)], "shot.png", { type: "image/png" });
+    Object.defineProperty(input, "files", { value: [file] });
+    input.dispatchEvent(new Event("change"));
+    expect(picked).toBe(file);
+  });
+
+  test("idle screen without a screenshot handler renders only the email button", () => {
+    const root = document.createElement("main");
+    renderIdle(root, () => undefined);
+    expect(root.querySelector(".screenshot-button")).toBeNull();
+    expect(root.querySelector(".screenshot-input")).toBeNull();
+  });
+
+  test("loading state names the screenshot path when analysing a screenshot", () => {
+    const root = document.createElement("main");
+    renderLoading(root, "screenshot");
+    expect(root.textContent).toContain("Analysing screenshot");
+  });
+
+  function screenshotResponse(): AnalyzeScreenshotResponse {
+    return { ...response("low"), extractedText: "redacted ocr text", imageForensics: { status: "unavailable", checksRun: [], checksSkipped: [{ check: "trufor", reason: "service down" }] } };
+  }
+
+  test("a screenshot result shows a minimal analysed note instead of a fabricated email extraction", () => {
+    const root = document.createElement("main");
+    renderResult(root, screenshotResponse(), undefined, new Date(2026, 8, 24, 10, 0));
+    expect(root.textContent).toContain("Analysed screenshot");
+    expect(root.textContent).not.toContain("Analysed email");
+    expect(root.textContent).toContain("never stored");
+    expect(root.querySelector(".analysed__subject")).toBeNull();
+    expect(root.textContent).not.toContain("redacted ocr text"); // extractedText must never be shown, per the API contract
+  });
+
+  test("a screenshot result surfaces an unavailable imageForensics status like semantic status", () => {
+    const root = document.createElement("main");
+    renderResult(root, screenshotResponse());
+    expect(root.textContent).toContain("Image forensics checks were unavailable");
+  });
+
+  test("an ok imageForensics status is not called out as a problem", () => {
+    const root = document.createElement("main");
+    const okResult: AnalyzeScreenshotResponse = { ...response("low"), extractedText: "text", imageForensics: { status: "ok", checksRun: ["error_level_analysis"], checksSkipped: [] } };
+    renderResult(root, okResult);
+    expect(root.textContent).not.toContain("Image forensics checks were unavailable");
   });
 });

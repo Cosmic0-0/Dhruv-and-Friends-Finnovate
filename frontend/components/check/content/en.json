@@ -67,6 +67,7 @@
       "document": "Document"
     },
     "placeholder": "Paste the message here",
+    "pasteHint": "Tip: you can also paste or drop a screenshot here instead of typing.",
     "linkPlaceholder": "Paste the link here",
     "linkHint": "We check the address itself: who it belongs to, how old it is, and whether it has been reported. The page is not opened.",
     "shotChoose": "Choose a screenshot",

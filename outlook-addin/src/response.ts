@@ -1,4 +1,4 @@
-import { RISK_LEVELS, type AnalyzeResponse } from "./types";
+import { RISK_LEVELS, type AnalyzeResponse, type AnalyzeScreenshotResponse } from "./types";
 
 type Obj = Record<string, unknown>;
 
@@ -42,4 +42,16 @@ export function validResponse(value: unknown): value is AnalyzeResponse {
   if (!Array.isArray(actions) || !actions.every((a) => isObj(a) && isStr(a.id))) return false;
   if (!validAnalysis(analysis)) return false;
   return optional(verification, (v) => isObj(v) && optional(v.workflows, (w) => Array.isArray(w) && w.every(validWorkflow)));
+}
+
+function validImageForensics(value: unknown): boolean {
+  return isObj(value) && isStr(value.status) && optional(value.checksRun, isStrArray) &&
+    optional(value.checksSkipped, (v) => Array.isArray(v) && v.every((s) => isObj(s) && isStr(s.check) && isStr(s.reason)));
+}
+
+/** `/api/analyze/screenshot`'s response: everything `validResponse` checks, plus the OCR/forensics fields it adds. */
+export function validScreenshotResponse(value: unknown): value is AnalyzeScreenshotResponse {
+  if (!validResponse(value)) return false;
+  const extra = value as unknown as Obj;
+  return isStr(extra.extractedText) && optional(extra.imageForensics, validImageForensics);
 }

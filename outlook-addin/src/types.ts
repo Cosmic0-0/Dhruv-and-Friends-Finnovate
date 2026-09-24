@@ -31,6 +31,19 @@ export interface AnalyzePayload {
   emailContext: EmailContext;
 }
 
+export interface AnalyzeScreenshotPayload {
+  /** Base64, optionally with a `data:<mime>;base64,` prefix. Max 5MB decoded; PNG/JPEG/WEBP only. */
+  image: string;
+  language?: string;
+  shareSamples?: boolean;
+}
+
+export interface ImageForensics {
+  status: "ok" | "unavailable";
+  checksRun: string[];
+  checksSkipped: Array<{ check: string; reason: string }>;
+}
+
 export interface SignalComparison {
   field?: string;
   observed?: unknown;
@@ -93,6 +106,13 @@ export interface AnalyzeResponse {
       senderRelation?: string;
     };
   };
+}
+
+/** `/api/analyze/screenshot`'s response: the same verdict shape plus what the server actually saw and checked. */
+export interface AnalyzeScreenshotResponse extends AnalyzeResponse {
+  /** Redacted OCR output that was actually analysed. Never shown to the user, per the API contract. */
+  extractedText: string;
+  imageForensics?: ImageForensics;
 }
 
 export interface ExtractionReport {

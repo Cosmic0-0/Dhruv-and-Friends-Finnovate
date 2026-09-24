@@ -1,38 +1,56 @@
 /*
- * Shared styling for popup.html and result.html.
+ * Shared styling for popup.html and result.html (report.html adds report.css
+ * on top of this).
  *
- * Manually mirrors the palette/type direction from frontend/app/globals.css
- * (the "forensic instrument" system: steel/brass/brick severity hues at
- * muted chroma, condensed uppercase micro-labels, monospace for machine
- * data like domains, zero border-radius, hairline rules instead of cards).
- * Extension pages can't import that Tailwind theme directly, so the tokens
- * below are copied by hand — keep them in sync if the app's palette changes.
- * Read-only reference, frontend/app/globals.css itself is never edited from
- * here.
+ * Palette/shape mirrors the frontend's "dc" design system (frontend/app/
+ * globals.css --dc-* tokens, frontend/components/dc/index.tsx). Extension
+ * pages can't import that Tailwind theme directly, so the tokens below are
+ * copied by hand, dark-mode only (this popup already ran on a dedicated dark
+ * "instrument surface" rather than the app's light paper background - the dc
+ * system's own dark default fits that same call). Keep these in sync if the
+ * site's dc palette changes.
  *
- * The popup runs on the dark "instrument surface" (--color-ink) rather than
- * the app's light paper background — a compact toolbar popup reads more like
- * a security HUD in dark mode, and the app's own design doc calls the ink
- * surface out as "a dark instrument surface for real layering".
+ * Token roles carried over unchanged from the previous palette (only the
+ * hues moved): --accent is "calm / good / low-concern" throughout this file
+ * AND in report.js's chart palette (getComputedStyle reads --accent by name
+ * for the "clean area score" bar colour and "low" severity), so it now
+ * points at dc's green rather than blue. --brand is the one place the dc
+ * butter-yellow brand colour actually appears: focus rings and selection,
+ * kept apart from the red/amber/green verdict vocabulary so a focus outline
+ * is never mistaken for a verdict.
  */
 
 :root {
-  --page: #15181c;
-  --panel: #1b1f24;
-  --panel-2: #21262d;
-  --ink: #eef0ef;
-  --ink-soft: rgb(238 240 239 / 78%);
-  --ink-muted: rgb(238 240 239 / 52%);
-  --line: rgb(238 240 239 / 12%);
-  --line-strong: rgb(238 240 239 / 22%);
+  --page: #0d0d0c;
+  --panel: #161614;
+  --panel-2: #201f1c;
+  --ink: #f6f1e4;
+  --ink-soft: #c2bcac;
+  --ink-muted: #948e80;
+  --ink-faint: #635f55;
+  --line: #2a2925;
+  --line-strong: #3a3833;
 
-  --accent: #5980a6;
-  --accent-soft: rgb(89 128 166 / 16%);
-  --caution: #c99a3f;
-  --caution-soft: rgb(201 154 63 / 16%);
-  --danger: #c1594a;
-  --danger-soft: rgb(193 89 74 / 18%);
-  --neutral: #7a828c;
+  --brand: #f2d54e;
+  --brand-soft: rgba(242, 213, 78, 0.14);
+
+  --accent: #5fd98e;
+  --accent-dot: #2fbf6a;
+  --accent-soft: rgba(95, 217, 142, 0.15);
+
+  --caution: #ffa43a;
+  --caution-soft: rgba(255, 154, 31, 0.18);
+
+  --danger: #ff6a4d;
+  --danger-dot: #ff4a2e;
+  --danger-soft: rgba(255, 74, 46, 0.18);
+
+  --neutral: #948e80;
+
+  --radius-card: 16px;
+  --radius-item: 12px;
+  --radius-pill: 999px;
+  --shadow-lg: 0 30px 80px -30px rgba(0, 0, 0, 0.85);
 
   --font-heading: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif;
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -65,21 +83,21 @@ body.result-page {
 }
 
 header.app-header {
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--line-strong);
+  padding: 16px 16px 14px;
 }
 
 header.app-header h1 {
   margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: -0.015em;
   color: var(--ink);
 }
 
 header.app-header .tagline {
   margin-top: 2px;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--ink-muted);
   text-transform: uppercase;
@@ -87,21 +105,25 @@ header.app-header .tagline {
 }
 
 section {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
+  margin: 0 12px 10px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
 }
 
 section:last-of-type {
-  border-bottom: none;
+  margin-bottom: 12px;
 }
 
 .section-label {
+  font-family: var(--font-mono);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   color: var(--ink-muted);
-  margin: 0 0 8px;
+  margin: 0 0 10px;
 }
 
 .site-row {
@@ -122,9 +144,10 @@ section:last-of-type {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 9px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   border: 1px solid var(--line-strong);
   white-space: nowrap;
 }
@@ -139,16 +162,16 @@ section:last-of-type {
 .state-pill[data-state="safe"] {
   color: var(--accent);
   background: var(--accent-soft);
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .state-pill[data-state="safe"] .dot {
-  background: var(--accent);
+  background: var(--accent-dot);
 }
 
 .state-pill[data-state="suspicious"] {
   color: var(--caution);
   background: var(--caution-soft);
-  border-color: var(--caution);
+  border-color: color-mix(in srgb, var(--caution) 45%, transparent);
 }
 .state-pill[data-state="suspicious"] .dot {
   background: var(--caution);
@@ -157,27 +180,27 @@ section:last-of-type {
 .state-pill[data-state="high-risk"] {
   color: var(--danger);
   background: var(--danger-soft);
-  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 .state-pill[data-state="high-risk"] .dot {
-  background: var(--danger);
+  background: var(--danger-dot);
 }
 
 .state-pill[data-state="neutral"],
 .state-pill[data-state="unreachable"],
 .state-pill[data-state="inconclusive"] {
-  color: var(--neutral);
-  background: rgb(122 130 140 / 12%);
+  color: var(--ink-muted);
+  background: var(--panel-2);
   border-color: var(--line-strong);
 }
 .state-pill[data-state="neutral"] .dot,
 .state-pill[data-state="unreachable"] .dot,
 .state-pill[data-state="inconclusive"] .dot {
-  background: var(--neutral);
+  background: var(--ink-muted);
 }
 
 .state-text {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   font-size: 12px;
   color: var(--ink-soft);
 }
@@ -192,23 +215,17 @@ section:last-of-type {
 }
 
 .signal-item {
-  padding: 8px 10px;
-  background: var(--panel);
-  border-left: 3px solid var(--neutral);
+  --sev: var(--ink-muted);
+  padding: 9px 11px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-item);
 }
 
-.signal-item[data-severity="high"] {
-  border-left-color: var(--danger);
-}
-.signal-item[data-severity="medium"] {
-  border-left-color: var(--caution);
-}
-.signal-item[data-severity="low"] {
-  border-left-color: var(--accent);
-}
-.signal-item[data-severity="info"] {
-  border-left-color: var(--neutral);
-}
+.signal-item[data-severity="high"] { --sev: var(--danger); }
+.signal-item[data-severity="medium"] { --sev: var(--caution); }
+.signal-item[data-severity="low"] { --sev: var(--accent); }
+.signal-item[data-severity="info"] { --sev: var(--neutral); }
 
 .signal-type {
   font-family: var(--font-mono);
@@ -218,8 +235,19 @@ section:last-of-type {
   color: var(--ink-muted);
 }
 
+.signal-type::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  vertical-align: 1px;
+  border-radius: 2px;
+  background: var(--sev);
+}
+
 .signal-desc {
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 12px;
   color: var(--ink);
 }
@@ -240,19 +268,19 @@ button, .btn-link {
   font: inherit;
   cursor: pointer;
   border: 1px solid var(--line-strong);
-  background: var(--panel);
+  background: transparent;
   color: var(--ink);
-  padding: 8px 12px;
+  padding: 10px 16px;
   text-align: left;
-  border-radius: 0;
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 button:hover, .btn-link:hover {
   background: var(--panel-2);
-  border-color: var(--accent);
 }
 
 button:disabled {
@@ -261,21 +289,35 @@ button:disabled {
 }
 
 button.primary {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-  color: var(--ink);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--page);
   font-weight: 600;
 }
 
+button.primary:hover {
+  background: var(--ink-soft);
+  border-color: var(--ink-soft);
+}
+
 button.danger-outline {
-  border-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
   color: var(--danger);
   background: var(--danger-soft);
 }
 
 a.btn-link {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-soft);
   text-decoration: none;
   font-size: 12px;
+  padding: 8px 4px;
+}
+
+a.btn-link:hover {
+  background: transparent;
+  color: var(--ink);
 }
 
 .recent-list {
@@ -291,6 +333,7 @@ a.btn-link {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding: 4px 2px;
   font-size: 11px;
   color: var(--ink-muted);
 }
@@ -310,16 +353,17 @@ a.btn-link {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.recent-item[data-state="safe"] .dot { background: var(--accent); }
+.recent-item[data-state="safe"] .dot { background: var(--accent-dot); }
 .recent-item[data-state="suspicious"] .dot { background: var(--caution); }
-.recent-item[data-state="high-risk"] .dot { background: var(--danger); }
+.recent-item[data-state="high-risk"] .dot { background: var(--danger-dot); }
 .recent-item[data-state="unreachable"] .dot,
-.recent-item[data-state="neutral"] .dot { background: var(--neutral); }
+.recent-item[data-state="neutral"] .dot { background: var(--ink-faint); }
 
 .privacy-note {
   font-size: 11px;
   color: var(--ink-muted);
-  padding: 10px 16px 14px;
+  padding: 4px 16px 16px;
+  margin: 0 8px;
   line-height: 1.5;
 }
 
@@ -336,16 +380,16 @@ a.btn-link {
   color: var(--accent);
 }
 
-/* ---- Refinement pass: instrument backdrop, swatches, type ----
-   Same world as the full report: a fine grid and range rings behind
-   translucent sections, severity as a small square swatch rather than a
-   thick coloured edge, Plex throughout. */
+/* ---- Refinement pass: instrument backdrop, dot grid, type ----
+   A soft dot grid and a drifting butter-yellow glow behind translucent
+   sections, matching the site's fx.js treatment; severity reads as a small
+   square swatch rather than a thick coloured edge, Plex throughout. */
 
 body:not(.report) {
   position: relative;
   font-size: 13.5px;
   -webkit-font-smoothing: antialiased;
-  scrollbar-color: rgb(238 240 239 / 18%) transparent;
+  scrollbar-color: rgb(246 241 228 / 18%) transparent;
   scrollbar-width: thin;
 }
 
@@ -356,9 +400,9 @@ body:not(.report)::before {
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(22rem 14rem at 100% 0%, rgb(89 128 166 / 16%), transparent 70%),
-    linear-gradient(rgb(238 240 239 / 3.5%) 1px, transparent 1px) 0 0 / 24px 24px,
-    linear-gradient(90deg, rgb(238 240 239 / 3.5%) 1px, transparent 1px) 0 0 / 24px 24px;
+    radial-gradient(22rem 14rem at 100% 0%, var(--brand-soft), transparent 70%),
+    linear-gradient(rgb(246 241 228 / 4%) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgb(246 241 228 / 4%) 1px, transparent 1px) 0 0 / 24px 24px;
   mask-image: linear-gradient(160deg, black 0%, rgb(0 0 0 / 35%) 45%, transparent 80%);
 }
 
@@ -368,78 +412,13 @@ body:not(.report) > * {
 }
 
 body:not(.report) ::selection {
-  background: rgb(89 128 166 / 45%);
-  color: var(--ink);
+  background: rgba(242, 213, 78, 0.55);
+  color: var(--page);
 }
 
 body:not(.report) :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
-}
-
-header.app-header {
-  padding: 16px 16px 14px;
-  background: linear-gradient(180deg, rgb(89 128 166 / 8%), transparent);
-}
-
-header.app-header h1 {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.section-label {
-  font-family: var(--font-heading);
-  font-size: 11.5px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-
-.hostname {
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.state-text {
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.signal-item {
-  --sev: var(--neutral);
-  padding: 10px 12px;
-  background: rgb(27 31 36 / 80%);
-  border: 1px solid var(--line);
-  border-left: 1px solid var(--line);
-}
-
-.signal-item[data-severity="high"] { --sev: var(--danger); border-left-color: var(--line); }
-.signal-item[data-severity="medium"] { --sev: var(--caution); border-left-color: var(--line); }
-.signal-item[data-severity="low"] { --sev: var(--accent); border-left-color: var(--line); }
-.signal-item[data-severity="info"] { --sev: var(--neutral); border-left-color: var(--line); }
-
-.signal-type::before {
-  content: "";
-  display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 7px;
-  vertical-align: 0;
-  background: var(--sev);
-}
-
-button, .btn-link {
-  padding: 10px 12px;
-  background: rgb(27 31 36 / 82%);
-  transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), border-color 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-button:hover, .btn-link:hover {
-  background: rgb(33 38 45 / 92%);
-}
-
-button.primary {
-  background: rgb(89 128 166 / 20%);
 }
 
 .btn-icon {
@@ -460,7 +439,7 @@ button:hover .btn-icon,
   color: var(--ink);
 }
 
-button.primary .btn-icon { color: var(--ink); }
+button.primary .btn-icon { color: var(--page); }
 button.primary:hover .btn-icon { transform: translateX(2px); }
 
 /* Range rings in the popup corner (thin, fading), as in the full report. */
@@ -474,6 +453,6 @@ body:not(.report)::after {
   width: 360px;
   height: 360px;
   border-radius: 50%;
-  background: repeating-radial-gradient(circle, transparent 0 47px, rgb(238 240 239 / 7%) 47px 48px);
+  background: repeating-radial-gradient(circle, transparent 0 47px, rgb(246 241 228 / 6%) 47px 48px);
   mask-image: radial-gradient(circle, black 25%, transparent 70%);
 }

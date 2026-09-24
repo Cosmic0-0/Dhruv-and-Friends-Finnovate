@@ -2,14 +2,21 @@ import "@fontsource-variable/archivo/wdth.css";
 import "@fontsource/atkinson-hyperlegible/400.css";
 import "@fontsource/atkinson-hyperlegible/700.css";
 import "./styles.css";
-import { analyzeCurrentEmail } from "./api";
+import { analyzeCurrentEmail, analyzeScreenshot } from "./api";
 import { createController } from "./controller";
 import { buildAnalyzePayload } from "./office-adapter";
+import { buildScreenshotPayload } from "./screenshot";
 
 const root = document.querySelector<HTMLElement>("#app");
 if (!root) throw new Error("FraudLens task pane root is missing.");
 
-const controller = createController({ root, extract: () => buildAnalyzePayload(), analyze: analyzeCurrentEmail });
+const controller = createController({
+  root,
+  extract: () => buildAnalyzePayload(),
+  analyze: analyzeCurrentEmail,
+  buildScreenshotPayload,
+  analyzeScreenshot,
+});
 
 Office.onReady((info) => {
   if (info.host !== Office.HostType.Outlook) {

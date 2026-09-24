@@ -18,6 +18,14 @@ type Mode = "message" | "link" | "screenshot";
 type Status = "idle" | "loading" | "finishing" | "error";
 const CHANNELS: Channel[] = ["sms", "whatsapp", "email", "facebook", "call"];
 
+/** A pasted/dropped screenshot arrives as a file, not text — used by the message box's paste/drop handlers. */
+function imageFromClipboard(data: DataTransfer): File | null {
+  for (const item of data.items) {
+    if (item.kind === "file" && item.type.startsWith("image/")) return item.getAsFile();
+  }
+  return null;
+}
+
 export default function Workspace({
   t,
   initialText = "",
@@ -171,6 +179,14 @@ export default function Workspace({
     setLinkStatus("idle");
   }
 
+  // Lets the message box double as a screenshot drop target: paste or drop an
+  // image there and it's handed to the same screenshot pipeline as the
+  // Screenshot tab, switching modes so its progress/result show up.
+  function handleImageFile(file: File) {
+    setMode("screenshot");
+    void shot.pick(file);
+  }
+
   function clearAll() {
     setText("");
     setLinkText("");
@@ -255,10 +271,25 @@ export default function Workspace({
             </div>
 
             {mode === "message" && (
-              <div style={{ display: "flex", flexDirection: "column" }}>
+              <div
+                style={{ display: "flex", flexDirection: "column" }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith("image/")) handleImageFile(file);
+                }}
+              >
                 <textarea
                   value={text}
                   onChange={(e) => setText(e.target.value)}
+                  onPaste={(e) => {
+                    const file = imageFromClipboard(e.clipboardData);
+                    if (file) {
+                      e.preventDefault();
+                      handleImageFile(file);
+                    }
+                  }}
                   placeholder={t.work.placeholder}
                   rows={7}
                   style={{
@@ -274,10 +305,11 @@ export default function Workspace({
                     width: "100%",
                   }}
                 />
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0 28px 20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "0 28px 4px" }}>
                   <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text3)" }}>{metaText || " "}</span>
                   <span className="dc-mono" style={{ fontSize: 12, color: "var(--dc-text4)" }}>{fill(t.work.meta.chars, { n: text.length })}</span>
                 </div>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text4)", padding: "0 28px 20px" }}>{t.work.pasteHint}</p>
               </div>
             )}
 

@@ -68,6 +68,7 @@
       "document": "Dokiman"
     },
     "placeholder": "Kol mesaz la isi",
+    "pasteHint": "Tip: ou kapav osi kol ouswa depoz enn screenshot isi olie tape.",
     "linkPlaceholder": "Kol lien la isi",
     "linkHint": "Nou verifie ladres limem: pou kisannla li ete, ki laz li ena, ek si dimoun finn rapor li. Nou pa ouver paz la.",
     "shotChoose": "Swazir enn kopi lekran",

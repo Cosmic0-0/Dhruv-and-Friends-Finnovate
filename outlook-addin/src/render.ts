@@ -1,4 +1,4 @@
-import type { AnalyzeResponse, ExtractionReport, FraudSignal, SignalComparison } from "./types";
+import type { AnalyzeResponse, AnalyzeScreenshotResponse, ExtractionReport, FraudSignal, SignalComparison } from "./types";
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string): HTMLElementTagNameMap[K] => {
   const node = document.createElement(tag);
@@ -159,14 +159,28 @@ function analysedEmail(extraction: ExtractionReport, analysedAt: Date): HTMLElem
   return block;
 }
 
+/** A screenshot result has no ExtractionReport; this is its minimal equivalent. */
+function analysedScreenshot(analysedAt: Date): HTMLElement {
+  const block = el("section", "analysed");
+  block.append(el("p", "micro", "Analysed screenshot"));
+  const time = analysedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  block.append(el("p", "analysed__meta", `Screenshot checked ${time}. The image itself is never stored.`));
+  return block;
+}
+
+function isScreenshotResult(result: AnalyzeResponse): result is AnalyzeScreenshotResponse {
+  return typeof (result as Partial<AnalyzeScreenshotResponse>).extractedText === "string";
+}
+
 export function renderResult(root: HTMLElement, result: AnalyzeResponse, extraction?: ExtractionReport, analysedAt: Date = new Date(), onReanalyze?: () => void): void {
   root.replaceChildren();
+  const isScreenshot = isScreenshotResult(result);
   const shell = el("div", `result result--${result.risk.level}`);
   const masthead = el("header", "masthead masthead--compact");
   masthead.append(el("span", "brand-mark", "FL"), el("span", "brand-name", "FraudLens"));
 
   const verdict = el("section", "verdict");
-  verdict.append(el("p", "micro verdict__eyebrow", "Current email assessment"));
+  verdict.append(el("p", "micro verdict__eyebrow", isScreenshot ? "Current screenshot assessment" : "Current email assessment"));
   verdict.append(el("h1", "verdict__level", `${result.risk.level.toUpperCase()} RISK`));
   verdict.append(el("p", "verdict__message", result.risk.level === "low" ? "Continue with your normal business process." : "Verify before taking action."));
   const measure = el("div", "verdict__measure");
@@ -174,12 +188,18 @@ export function renderResult(root: HTMLElement, result: AnalyzeResponse, extract
   verdict.append(measure);
   shell.append(masthead);
   if (extraction) shell.append(analysedEmail(extraction, analysedAt));
+  else if (isScreenshot) shell.append(analysedScreenshot(analysedAt));
   shell.append(verdict, actions(result));
 
   const semanticUnavailable = result.analysis.semantic.status !== "ok";
   if (semanticUnavailable) {
     const note = el("section", "status-note");
     note.append(el("strong", undefined, "Deterministic checks completed."), document.createTextNode(" AI language analysis was unavailable; the rule-based result above is still valid."));
+    shell.append(note);
+  }
+  if (isScreenshot && result.imageForensics && result.imageForensics.status !== "ok") {
+    const note = el("section", "status-note");
+    note.append(el("strong", undefined, "Deterministic checks completed."), document.createTextNode(" Image forensics checks were unavailable; the rule-based result above is still valid."));
     shell.append(note);
   }
 
@@ -220,7 +240,7 @@ export function renderResult(root: HTMLElement, result: AnalyzeResponse, extract
   root.append(shell);
 }
 
-export function renderIdle(root: HTMLElement, onAnalyze: () => void): void {
+export function renderIdle(root: HTMLElement, onAnalyze: () => void, onScreenshot?: (file: File) => void): void {
   root.replaceChildren();
   const shell = el("div", "idle");
   const masthead = el("header", "masthead");
@@ -235,19 +255,40 @@ export function renderIdle(root: HTMLElement, onAnalyze: () => void): void {
   button.type = "button";
   button.addEventListener("click", onAnalyze);
   intro.append(button);
+
+  if (onScreenshot) {
+    const fileInput = el("input", "screenshot-input");
+    fileInput.type = "file";
+    fileInput.accept = "image/png,image/jpeg,image/webp";
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = ""; // lets the same file be picked again later
+      if (file) onScreenshot(file);
+    });
+    const screenshotButton = el("button", "screenshot-button", "Check a screenshot instead");
+    screenshotButton.type = "button";
+    screenshotButton.addEventListener("click", () => fileInput.click());
+    intro.append(screenshotButton, fileInput);
+  }
+
   const privacy = el("section", "privacy-note");
   privacy.append(el("span", "privacy-note__index", "01"));
   const privacyCopy = el("div");
-  privacyCopy.append(el("p", "micro", "Privacy boundary"), el("p", "privacy-note__copy", "Attachment contents are never uploaded. Missing headers remain unknown. FraudLens does not contact anyone or change the email."));
+  privacyCopy.append(
+    el("p", "micro", "Privacy boundary"),
+    el("p", "privacy-note__copy", "The email you're reading is analysed in place and never uploaded as an attachment. A screenshot you explicitly choose to check is the only image ever sent, and it is never stored. Missing headers remain unknown. FraudLens does not contact anyone or change the email.")
+  );
   privacy.append(privacyCopy);
   shell.append(masthead, intro, privacy);
   root.append(shell);
 }
 
-export function renderLoading(root: HTMLElement): void {
+export function renderLoading(root: HTMLElement, kind: "email" | "screenshot" = "email"): void {
   root.replaceChildren();
   const shell = el("div", "loading");
-  shell.append(el("span", "brand-mark", "FL"), el("p", "micro", "Analysing current message"), el("h1", "loading__title", "Checking facts, language, and organisation context."));
+  const label = kind === "screenshot" ? "Analysing screenshot" : "Analysing current message";
+  const title = kind === "screenshot" ? "Reading the screenshot and checking the text it contains." : "Checking facts, language, and organisation context.";
+  shell.append(el("span", "brand-mark", "FL"), el("p", "micro", label), el("h1", "loading__title", title));
   const line = el("div", "loading__line");
   line.append(el("span", "loading__fill"));
   shell.append(line, el("p", "loading__copy", "The deterministic result will still return if AI language analysis is unavailable."));
