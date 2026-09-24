@@ -44,6 +44,16 @@ test("analyzeStructure: signatures, counter-signatures, DSS appends and edits af
   assert.ok(edited.bytesAfterSignature > 100);
 });
 
+test("analyzeStructure: a /DSS entry excuses only new objects, including against pages packed in object streams", async () => {
+  // The clean native fixture keeps its page inside a compressed object stream.
+  const packed = await B.buildCleanNativePdf();
+  assert.equal(analyzeStructure(await F.editWithDss(packed, { edit: false })).unexplainedUpdates, 0, "adding /DSS alone");
+  assert.equal(analyzeStructure(await F.editWithDss(packed)).unexplainedUpdates, 1, "the update rewrites the packed page");
+  const signed = await B.buildSignedPdf();
+  assert.equal(analyzeStructure(await F.editWithDss(signed, { edit: false })).afterSignature, false);
+  assert.equal(analyzeStructure(await F.editWithDss(signed)).afterSignature, true);
+});
+
 test("parsePdfDate handles offsets and partial dates", () => {
   assert.equal(parsePdfDate("D:20260901133000+04'00'"), Date.parse("2026-09-01T09:30:00Z"));
   assert.equal(parsePdfDate("D:20260901093000Z"), Date.parse("2026-09-01T09:30:00Z"));

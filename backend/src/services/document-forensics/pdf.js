@@ -14,6 +14,7 @@
 //     digital-signature /ByteRange coverage.
 
 import path from "node:path";
+import zlib from "node:zlib";
 import { createRequire } from "node:module";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef, PDFString } from "pdf-lib";
 import { DocumentInspectError } from "./sniff.js";
@@ -69,16 +70,85 @@ const latin1 = (bytes) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.leng
 const SECTION_RE = /startxref\s+\d+\s*%%EOF/g;
 const BYTE_RANGE_RE = /\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g;
 const SIGNATURE_APPENDIX_RE = /\/(?:DSS|VRI)\b/;
+const OBJECT_RE = /(?<!\d)(\d+)\s+\d+\s+obj\b/g;
+const pagesRef = (dict) => /\/Pages\s+(\d+\s+\d+\s+R)/.exec(dict)?.[1] ?? null;
+
+/** The objects packed in an object stream (number -> text), or null when they cannot be read (encrypted, unknown filter). */
+function packedObjects(dict, streamPart) {
+  const first = Number(/\/First\s+(\d+)/.exec(dict)?.[1]);
+  const start = /^stream\r?\n/.exec(streamPart);
+  const end = streamPart.lastIndexOf("endstream");
+  if (!start || end < 0 || !Number.isInteger(first)) return null;
+  let data = Buffer.from(streamPart.slice(start[0].length, end), "latin1");
+  try {
+    if (/\/Filter\s*\[?\s*\/FlateDecode\s*\]?/.test(dict)) data = zlib.inflateSync(data, { finishFlush: zlib.constants.Z_SYNC_FLUSH });
+    else if (/\/Filter\b/.test(dict)) return null;
+  } catch {
+    return null;
+  }
+  const packed = data.toString("latin1");
+  const header = packed.slice(0, first).trim().split(/\s+/).map(Number);
+  if (header.length % 2 !== 0 || header.some((n) => !Number.isInteger(n))) return null;
+  const out = new Map();
+  for (let k = 0; k < header.length; k += 2) {
+    out.set(header[k], packed.slice(first + header[k + 1], k + 3 < header.length ? first + header[k + 3] : undefined));
+  }
+  return out;
+}
+
+/** The objects one revision defines (number -> dictionary text, object streams unpacked) and its trailer's /Info. */
+function revisionObjects(section) {
+  const objects = new Map();
+  let inspectable = true;
+  for (const m of section.matchAll(OBJECT_RE)) {
+    const bodyStart = m.index + m[0].length;
+    const endAt = section.indexOf("endobj", bodyStart);
+    const body = section.slice(bodyStart, endAt < 0 ? section.length : endAt);
+    const streamAt = body.search(/>>\s*stream\r?\n/);
+    const dict = streamAt < 0 ? body : body.slice(0, streamAt + 2);
+    objects.set(Number(m[1]), dict);
+    if (/\/Type\s*\/ObjStm\b/.test(dict)) {
+      const packed = streamAt < 0 ? null : packedObjects(dict, body.slice(body.indexOf("stream", streamAt)));
+      if (packed) for (const [n, d] of packed) objects.set(n, d);
+      else inspectable = false;
+    }
+  }
+  const info = [...section.matchAll(/\/Info\s+(\d+)\s+\d+\s+R/g)].at(-1)?.[1];
+  return { objects, inspectable, infoRef: info === undefined ? null : Number(info) };
+}
+
+/**
+ * Long-term-validation data added after signing: the revision mentions
+ * DSS/VRI and every object it defines is new, except the catalog gaining
+ * its /DSS entry (with the same page tree), the Info dictionary and the XMP
+ * metadata. Rewriting any existing page, content stream, annotation or
+ * field is an edit, whatever else the revision carries. A revision whose
+ * object streams cannot be read (encryption) is judged by the DSS/VRI
+ * mention alone.
+ */
+function validationDataOnly(rev, text, known) {
+  if (!SIGNATURE_APPENDIX_RE.test(text)) return false;
+  if (!rev.inspectable) return true;
+  for (const [num, dict] of rev.objects) {
+    const before = known.get(num);
+    if (before === undefined || num === rev.infoRef || /\/Type\s*\/Metadata\b/.test(dict)) continue;
+    if (/\/Type\s*\/Catalog\b/.test(dict) && pagesRef(dict) === pagesRef(before)) continue;
+    return false;
+  }
+  return true;
+}
 
 /**
  * Counts saved revisions and relates them to digital signatures.
  *
  * - A linearized ("fast web view") file legitimately has two sections.
  * - A revision whose end is exactly what a signature covers is that
- *   signature being added; one holding only DSS/VRI validation data is
- *   long-term-validation material added after signing. Neither is an edit.
- * - Bytes after the last signed range that are not DSS/VRI data mean the
- *   file changed after it was signed.
+ *   signature being added; one holding only DSS/VRI validation data (see
+ *   validationDataOnly) is long-term-validation material added after
+ *   signing. Neither is an edit.
+ * - A revision after the last signed range that is not validation data, or
+ *   stray bytes after the last %%EOF, mean the file changed after it was
+ *   signed.
  * @param {Uint8Array} bytes
  */
 export function analyzeStructure(bytes) {
@@ -92,20 +162,32 @@ export function analyzeStructure(bytes) {
     .map(([, , c, d]) => c + d);
   const coversSection = (end) => coverageEnds.some((cov) => cov >= end && cov <= end + 2);
 
-  let unexplainedUpdates = 0;
-  for (let i = base; i < sectionEnds.length; i++) {
-    const body = text.slice(sectionEnds[i - 1], sectionEnds[i]);
-    if (coversSection(sectionEnds[i]) || SIGNATURE_APPENDIX_RE.test(body)) continue;
-    unexplainedUpdates++;
-  }
+  // Every object defined so far (its latest definition), to tell a
+  // revision's new objects from the ones it changes.
+  const known = new Map();
+  const sections = sectionEnds.map((end, i) => {
+    const start = i === 0 ? 0 : sectionEnds[i - 1];
+    const body = text.slice(start, end);
+    const rev = revisionObjects(body);
+    const validationOnly = i >= base && validationDataOnly(rev, body, known);
+    for (const [n, d] of rev.objects) known.set(n, d);
+    return { start, end, isUpdate: i >= base, validationOnly };
+  });
+  const unexplainedUpdates = sections.filter((s) => s.isUpdate && !coversSection(s.end) && !s.validationOnly).length;
 
   let bytesAfterSignature = 0;
   let afterSignature = false;
   if (coverageEnds.length > 0) {
-    const tail = text.slice(Math.max(...coverageEnds));
+    const signedEnd = Math.max(...coverageEnds);
+    const tail = text.slice(signedEnd);
     if (tail.replace(/[\s\0]/g, "").length > 0) {
       bytesAfterSignature = tail.length;
-      afterSignature = !SIGNATURE_APPENDIX_RE.test(tail);
+      const later = sections.filter((s) => s.start >= signedEnd - 2);
+      const stray = text.slice(sectionEnds.at(-1) ?? 0);
+      const hasStray = stray.replace(/[\s\0]/g, "").length > 0;
+      afterSignature = later.length === 0 && !hasStray
+        ? !SIGNATURE_APPENDIX_RE.test(tail)
+        : later.some((s) => !s.validationOnly) || (hasStray && !SIGNATURE_APPENDIX_RE.test(stray));
     }
   }
 

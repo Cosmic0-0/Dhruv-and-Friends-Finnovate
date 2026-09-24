@@ -450,6 +450,10 @@ function objectBytes(obj) {
 export async function saveIncrementally(bytes, edit) {
   const doc = await PDFDocument.load(bytes, { updateMetadata: false });
   const ctx = doc.context;
+  // New objects are numbered past the file's /Size, as real tools do (pdf-lib
+  // forgets the numbers of the object and cross-reference streams it unpacked).
+  const size = Number([...latin1(bytes).matchAll(/\/Size\s+(\d+)/g)].at(-1)?.[1] ?? 0);
+  ctx.largestObjectNumber = Math.max(ctx.largestObjectNumber, size - 1);
   const before = new Map(ctx.enumerateIndirectObjects().map(([ref, obj]) => [ref.tag, objectBytes(obj)]));
   await edit(doc);
   await doc.flush();
@@ -486,14 +490,16 @@ export async function buildSignatureAddedInUpdatePdf() {
 }
 
 /**
- * Edits page content in an incremental update that also adds a /DSS entry to
- * the catalog, the way long-term-validation data is added after signing.
+ * One incremental update that edits page content and/or adds a /DSS entry
+ * to the catalog (rewriting the catalog, as long-term-validation tools do).
  * @param {Uint8Array} base a classic-xref PDF (signed or not)
  */
-export async function editWithDss(base, { dss = true } = {}) {
+export async function editWithDss(base, { dss = true, edit = true } = {}) {
   return saveIncrementally(base, async (d) => {
-    const helv = await d.embedFont(StandardFonts.Helvetica);
-    d.getPage(0).drawText("Amount due: MUR 95,000.00", { x: 60, y: 740, size: 12, font: helv });
+    if (edit) {
+      const helv = await d.embedFont(StandardFonts.Helvetica);
+      d.getPage(0).drawText("Amount due: MUR 95,000.00", { x: 60, y: 740, size: 12, font: helv });
+    }
     if (dss) d.catalog.set(PDFName.of("DSS"), d.context.register(d.context.obj({ Certs: [], OCSPs: [], CRLs: [] })));
   });
 }

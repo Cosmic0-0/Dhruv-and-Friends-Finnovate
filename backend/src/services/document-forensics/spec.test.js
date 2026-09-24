@@ -195,6 +195,7 @@ test("DOC-02: an edit after signing is not excused because the same update also 
   // rewrites the page is not validation data, whatever else it carries.
   const signed = await B.buildSignedPdf();
   assert.deepEqual(tags((await analyze(await B.buildSignedWithDssPdf())).signals), [], "control: a DSS-only append is silent");
+  assert.deepEqual(tags((await analyze(await F.editWithDss(signed, { edit: false }))).signals), [], "control: so is one that rewrites the catalog to add /DSS");
   assert.ok(find((await analyze(await F.editWithDss(signed, { dss: false }))).signals, "DOC-02", "after_signature"), "control: the edit alone is caught");
 
   const doc = await analyze(await F.editWithDss(signed));
@@ -205,7 +206,9 @@ test("DOC-02: an edit after signing is not excused because the same update also 
 test("DOC-02: on an unsigned file, a revision that edits the page counts even when it also carries /DSS", async () => {
   // Requirement: incremental_update is "a saved revision after the first that
   // is not a signature being added, DSS data or linearization".
-  const doc = await analyze(await F.editWithDss(await F.buildNativeClassicPdf()));
+  const native = await F.buildNativeClassicPdf();
+  assert.deepEqual(tags((await analyze(await F.editWithDss(native, { edit: false }))).signals), [], "control: adding only /DSS is not an edit");
+  const doc = await analyze(await F.editWithDss(native));
   assert.equal(doc.metadata.incrementalUpdates, 1);
   assert.ok(find(doc.signals, "DOC-02", "incremental_update"), `got [${tags(doc.signals)}]`);
 });
