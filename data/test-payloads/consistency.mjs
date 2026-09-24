@@ -96,7 +96,7 @@ async function main() {
   try {
     process.loadEnvFile(join(backendDir, ".env"));
   } catch {}
-  const { analyzeMessage } = await import(pathToFileURL(join(backendDir, "src/services/analysis/index.js")).href);
+  const { runPipeline } = await import(pathToFileURL(join(backendDir, "src/services/pipeline/index.js")).href);
 
   let cases = loadCases(set);
   if (only) cases = cases.filter((c) => only.includes(c.id));
@@ -125,7 +125,7 @@ async function main() {
       };
       const started = Date.now();
       try {
-        const r = await analyzeMessage(c.message, c.language);
+        const r = await runPipeline(c.message, { language: c.language });
         raw.push({ verdict: r.verdict, riskScore: r.riskScore, signalTypes: r.signals.map((s) => s.type), sender: r.sender, provider, ms: Date.now() - started });
       } catch (err) {
         raw.push({ error: [...llmLog, err.message].join(" -> "), ms: Date.now() - started });
