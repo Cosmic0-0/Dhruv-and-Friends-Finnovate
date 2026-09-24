@@ -1,15 +1,6 @@
 {
   "header": {
     "home": "FraudLens home",
-    "how": "How it works",
-    "tools": "Tools",
-    "learn": "Learn",
-    "radar": "Radar",
-    "createdBy": "Created by",
-    "theme": "Toggle light and dark mode",
-    "getExtension": "Get the extension",
-    "getOutlook": "Get the Outlook add-in",
-    "check": "Check a message",
     "nav": "Sections",
     "webapp": "Web app",
     "extension": "Extension",

@@ -1,15 +1,6 @@
 {
   "header": {
     "home": "Accueil FraudLens",
-    "how": "Comment ça marche",
-    "tools": "Outils",
-    "learn": "Apprendre",
-    "radar": "Radar",
-    "createdBy": "Créé par",
-    "theme": "Basculer entre mode clair et sombre",
-    "getExtension": "Obtenir l'extension",
-    "getOutlook": "Obtenir le complément Outlook",
-    "check": "Vérifier un message",
     "nav": "Sections",
     "webapp": "Application",
     "extension": "Extension",
