@@ -46,8 +46,9 @@ semantic status as unavailable.
 All text paths eventually call `runPipeline()` in
 `backend/src/services/pipeline/index.js`. A PDF/DOCX upload to
 `/api/analyze/document` also does (see "Document forensics" below): its
-structural findings join the deterministic evidence through `extraSignals`. An
-image upload to `/api/documents` does not; it returns forensic indicators only.
+structural findings join the deterministic evidence through `extraSignals`, and
+a screenshot's image-forensics findings do the same. An image upload to
+`/api/documents` does not call it; that route returns forensic indicators only.
 
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
@@ -210,7 +211,8 @@ ignores `shareSamples` and always stores the upload.
 
 - `local`: Ollama only.
 - `fallback`: one configured hosted provider only.
-- `auto`: Ollama first, then Anthropic, OpenAI, or OpenRouter when configured.
+- `auto`: Ollama first, then the one hosted provider named by `FALLBACK_PROVIDER`
+  (`anthropic`, `openai` or `openrouter`) when `FALLBACK_API_KEY` is set.
 
 Requests use deterministic sampling where the provider supports it. Ollama is
 called with JSON output and thinking disabled. Provider errors, timeouts, invalid
