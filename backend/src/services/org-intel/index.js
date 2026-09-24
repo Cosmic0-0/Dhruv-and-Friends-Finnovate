@@ -41,6 +41,7 @@ import {
   getOrgObservation,
   getOrgOutcomes,
   getSenderPeers,
+  purgeOrgData,
   recordOrgObservation,
   upsertOrgOutcome,
 } from "../../db/org.js";
@@ -60,6 +61,12 @@ export const OUTCOME_LABELS = Object.freeze([
 const BENIGN_LABELS = new Set(["legitimate", "false_positive"]);
 const FRAUD_LABELS = new Set(["confirmed_fraud", "confirmed_phishing", "confirmed_bec", "supplier_impersonation"]);
 const DAY_MS = 24 * 60 * 60 * 1000;
+// Organisation observations, indicators and analyst labels older than this
+// are deleted. Campaigns only look back CAMPAIGN_RULES.windowDays, but
+// sender history and reputation use every stored row, so the default keeps
+// half a year.
+export const ORG_RETENTION_DAYS = Number(process.env.ORG_RETENTION_DAYS) || 180;
+const PURGE_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const MAX_INDICATORS = 20;
 
 const PSEUDONYM_SECRET = process.env.ORG_PSEUDONYM_SECRET || randomBytes(32).toString("hex");
@@ -301,3 +308,24 @@ export function listCampaigns(orgId, now = Date.now()) {
   const sinceIso = new Date(now - CAMPAIGN_RULES.windowDays * DAY_MS).toISOString();
   return summariseCampaigns(orgId, getFlaggedIndicatorRows(orgId, sinceIso));
 }
+
+/** Deletes organisation rows older than ORG_RETENTION_DAYS, with their labels. */
+export function purgeExpiredOrgData(now = Date.now()) {
+  purgeOrgData(new Date(now - ORG_RETENTION_DAYS * DAY_MS).toISOString());
+}
+
+// Storage limitation: expired rows are deleted on boot and every 6h, the
+// same schedule as community evidence. unref() so this timer never keeps a
+// test process or shutdown alive.
+try {
+  purgeExpiredOrgData();
+} catch (err) {
+  console.error(`[org-intel] retention purge failed: ${err.message}`);
+}
+setInterval(() => {
+  try {
+    purgeExpiredOrgData();
+  } catch (err) {
+    console.error(`[org-intel] retention purge failed: ${err.message}`);
+  }
+}, PURGE_INTERVAL_MS).unref();

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 const { db } = await import("../../db/index.js");
 const {
   evaluateOrgIntel, extractIndicators, listCampaigns, observationId, pseudonym,
-  recordOrgEmail, recordOutcome,
+  purgeExpiredOrgData, recordOrgEmail, recordOutcome, ORG_RETENTION_DAYS,
 } = await import("./index.js");
 const { validateEmailContext } = await import("../email-context/index.js");
 
@@ -64,4 +64,23 @@ test("analyst outcomes are persisted for reputation only; no self-learning occur
   const next = evaluateOrgIntel({ orgId, inputHash: "next", indicators: [indicator], senderKey: "same-sender", senderDomain: "bad.example", recipientKey: "r2", flagged: true });
   assert.ok(next.signals.some((s) => s.code === "ORG-05"));
   assert.equal(recordOutcome({ orgId, inputHash: "first", analystId: "a", label: "auto_retrain" }).error, "invalid_label");
+});
+
+test("retention: observations, indicators and their labels older than ORG_RETENTION_DAYS are purged; newer ones stay", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = Date.parse("2026-09-24T00:00:00.000Z");
+  const old = "a".repeat(64);
+  const recent = "b".repeat(64);
+  const base = { orgId: "org", senderKey: "s", senderDomain: "x.example", recipientKey: "r", level: "high", flagged: true, indicators: [indicator] };
+  recordOrgEmail({ ...base, inputHash: old, now: now - (ORG_RETENTION_DAYS + 1) * DAY });
+  recordOrgEmail({ ...base, inputHash: recent, now: now - (ORG_RETENTION_DAYS - 1) * DAY });
+  recordOutcome({ orgId: "org", inputHash: old, analystId: "a1", label: "confirmed_phishing", now });
+  recordOutcome({ orgId: "org", inputHash: recent, analystId: "a1", label: "confirmed_phishing", now });
+
+  purgeExpiredOrgData(now);
+
+  const hashes = (table) => db.prepare(`SELECT input_hash FROM ${table} ORDER BY input_hash`).all().map((r) => r.input_hash);
+  assert.deepEqual(hashes("org_email_observations"), [recent]);
+  assert.deepEqual(hashes("org_indicators"), [recent]);
+  assert.deepEqual(hashes("org_outcomes"), [recent], "a label goes with its observation");
 });

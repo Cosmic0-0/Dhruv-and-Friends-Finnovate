@@ -296,7 +296,8 @@ SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
   observed sender identifiers and lookalike domains.
 - Organisation email observations, indicators and analyst outcome labels
   (`org_*`), keyed on HMAC pseudonyms of addresses and of the analyst's IP.
-  A purge function exists but nothing calls it, so these rows are kept.
+  They are deleted after `ORG_RETENTION_DAYS` (default 180), checked at
+  startup and every 6 hours.
 - Radar's daily counters (`radar_daily`, `radar_domain_daily`): verdict,
   scam type, claimed institution, reported channel and lookalike domain per
   Mauritius calendar day, with no text, sender or IP. Rows are tagged `live`
@@ -305,8 +306,8 @@ SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
 - Batch summary counts and cached domain registration dates.
 
 Raw message text and raw reporter IP addresses are not stored. Apart from the
-community events, audit rows and Radar counters, nothing has a retention
-period.
+community events, audit rows, organisation rows and Radar counters, nothing
+has a retention period.
 
 The web app's Settings has a "Share anonymous scam samples" switch. When it is
 off, requests carry `shareSamples: false` and the backend skips the community
