@@ -113,16 +113,16 @@ function scanScene(el: HTMLElement, pin: boolean) {
   const tl = gsap.timeline({
     defaults: { ease: "power3.out" },
     scrollTrigger: pin
-      ? { trigger: scan, start: "top top", end: "+=180%", pin: true, scrub: 0.6, anticipatePin: 1 }
+      ? { trigger: scan, start: "top top", end: "+=95%", pin: true, scrub: 0.25, anticipatePin: 1 }
       : { trigger: scan, start: "top 60%", toggleActions: "play none none reverse" },
   });
-  tl.to("[data-phone]", { y: 0, duration: 1 });
+  tl.to("[data-phone]", { y: 0, duration: 0.5 });
   marks.forEach((mark, i) => {
-    tl.to(mark, { backgroundSize: "100% 100%", duration: 0.8, ease: "power2.inOut" }, i === 0 ? ">-0.2" : ">");
-    if (calls[i]) tl.to(calls[i], { autoAlpha: 1, y: 0, duration: 0.6 }, "<0.3");
+    tl.to(mark, { backgroundSize: "100% 100%", duration: 0.45, ease: "power2.inOut" }, i === 0 ? ">-0.1" : ">");
+    if (calls[i]) tl.to(calls[i], { autoAlpha: 1, y: 0, duration: 0.35 }, "<0.15");
   });
-  tl.to("[data-verdict]", { autoAlpha: 1, scale: 1, duration: 0.6, ease: "power4.out" }, ">0.1");
-  tl.to("[data-action]", { autoAlpha: 1, y: 0, duration: 0.6 }, ">-0.2");
+  tl.to("[data-verdict]", { autoAlpha: 1, scale: 1, duration: 0.35, ease: "power4.out" }, ">0.05");
+  tl.to("[data-action]", { autoAlpha: 1, y: 0, duration: 0.35 }, ">-0.1");
 }
 
 function sharedScenes(el: HTMLElement) {
@@ -131,8 +131,10 @@ function sharedScenes(el: HTMLElement) {
   if (words.length) {
     gsap.fromTo(
       words,
-      { opacity: 0.14 },
-      { opacity: 1, stagger: 0.08, ease: "none", scrollTrigger: { trigger: "[data-manifesto]", start: "top 75%", end: "bottom 60%", scrub: true } }
+      { opacity: 0.2 },
+      // Tied to the statement itself, not the whole section: it is fully lit
+      // while it is still in the middle of the screen.
+      { opacity: 1, stagger: 0.06, ease: "none", scrollTrigger: { trigger: "[data-engine-title]", start: "top 90%", end: "top 58%", scrub: 0.3 } }
     );
   }
 

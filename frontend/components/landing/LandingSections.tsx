@@ -69,7 +69,7 @@ export function Engine({ t }: { t: Content["engine"] }) {
   return (
     <section data-manifesto data-tone="butter" className={`${s.engine} ${s.butter}`}>
       <span className={s.eyebrow}>{t.eyebrow}</span>
-      <p className={s.engineTitle}>
+      <p data-engine-title className={s.engineTitle}>
         {t.title.split(" ").map((w, i) => (
           <span key={`${w}-${i}`} data-word className={s.word}>{w}</span>
         ))}
