@@ -98,12 +98,29 @@ function resolveTarget(baseDir, target) {
   return out.join("/");
 }
 
-function hostOf(url) {
+/**
+ * Where an External attachedTemplate would be loaded from. Word records any
+ * template other than Normal this way, including one in the author's own
+ * templates folder, which is not on the reader's computer and is never
+ * fetched. Only a web address or a network share (UNC path, or a file: URL
+ * with a host) is remote. Anything that is not clearly a local path counts
+ * as remote.
+ * @returns {{ remote: boolean, host: string|null }}
+ */
+export function templateLocation(target) {
+  const t = target.trim();
+  const unc = /^(?:\\\\|\/\/)([^\\/]+)/.exec(t);
+  if (unc) return { remote: true, host: unc[1].replace(/@.*$/, "") || null };
+  if (/^[a-z]:[\\/]/i.test(t)) return { remote: false, host: null };
+  let url;
   try {
-    return new URL(url).hostname || null;
+    url = new URL(t);
   } catch {
-    return null;
+    // No scheme: a path relative to the author's own folders.
+    return { remote: false, host: null };
   }
+  if (url.protocol === "file:" && (!url.hostname || url.hostname === "localhost")) return { remote: false, host: null };
+  return { remote: true, host: url.hostname || null };
 }
 
 /**
@@ -149,10 +166,13 @@ export function inspectDocx(bytes) {
     const activeVariants = new Set();
     const activeDetails = {};
     if (names.some((n) => /(^|\/)vbaProject\.bin$/i.test(n)) || /vbaProject/i.test(contentTypes)) activeVariants.add("macro");
-    const template = settingsRels.find((r) => r.external && /\/attachedTemplate$/i.test(r.type));
+    const template = settingsRels
+      .filter((r) => r.external && /\/attachedTemplate$/i.test(r.type))
+      .map((r) => templateLocation(r.target))
+      .find((loc) => loc.remote);
     if (template) {
       activeVariants.add("external_template");
-      activeDetails.templateHost = sanitizeMeta(hostOf(template.target), 120);
+      activeDetails.templateHost = sanitizeMeta(template.host, 120);
     }
     if (names.some((n) => /(^|\/)embeddings\/oleObject\d*\.bin$/i.test(n)) || docRels.some((r) => /\/oleObject$/i.test(r.type))) {
       activeVariants.add("ole_object");

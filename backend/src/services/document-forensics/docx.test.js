@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { strToU8, zipSync } from "fflate";
-import { extractDocxText, inspectDocx, pngCanHaveAlpha } from "./docx.js";
+import { extractDocxText, inspectDocx, pngCanHaveAlpha, templateLocation } from "./docx.js";
 import { inspectDocument } from "./inspect.js";
 import { CFB_MAGIC } from "./sniff.js";
 import { readZipDirectory, readZipPart, ZIP_LIMITS } from "./zip.js";
@@ -23,6 +23,28 @@ test("macro and remote-template DOCX files are recognised without running or fet
   const tpl = inspectDocx(new Uint8Array(B.buildExternalTemplateDocx())).activeContent;
   assert.deepEqual(tpl.variants, ["external_template"]);
   assert.equal(tpl.templateHost, "templates.example.invalid");
+});
+
+test("templateLocation: web addresses and network shares are remote; the author's own disk is not", () => {
+  for (const [target, host] of [
+    ["https://templates.example.invalid/letterhead.dotm", "templates.example.invalid"],
+    ["http://203.0.113.7/t.dotm", "203.0.113.7"],
+    ["file://fileserver.example.invalid/templates/letter.dotm", "fileserver.example.invalid"],
+    ["\\\\fileserver.example.invalid\\templates\\letter.dotm", "fileserver.example.invalid"],
+    ["\\\\dav.example.invalid@SSL\\DavWWWRoot\\t.dotm", "dav.example.invalid"],
+    ["mhtml:https://templates.example.invalid/t.dotm", null],
+  ]) {
+    assert.deepEqual(templateLocation(target), { remote: true, host }, target);
+  }
+  for (const target of [
+    "file:///C:\\Users\\asample\\Documents\\Custom%20Office%20Templates\\Letter.dotx",
+    "file:///C:/Users/asample/AppData/Roaming/Microsoft/Templates/Letter.dotm",
+    "file://localhost/C:/Templates/Letter.dotx",
+    "C:\\Users\\asample\\Documents\\Letter.dotx",
+    "Templates/Letter.dotx",
+  ]) {
+    assert.deepEqual(templateLocation(target), { remote: false, host: null }, target);
+  }
 });
 
 test("floating transparent PNGs are collected with their placed size", async () => {

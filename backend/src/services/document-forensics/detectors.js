@@ -12,7 +12,7 @@ import { redact } from "../redact/index.js";
 import { matchEditingTools } from "./tools.js";
 import { LOW_RES_RATIO, MIN_TRANSPARENT_SHARE } from "./overlay.js";
 
-export const DOCUMENT_DETECTOR_VERSION = "document-1.0";
+export const DOCUMENT_DETECTOR_VERSION = "document-1.1";
 
 export const RULES = Object.freeze({
   /** DOC-03: "modified before created" only beyond this clock slack. */
