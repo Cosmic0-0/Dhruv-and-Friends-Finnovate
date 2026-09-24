@@ -454,7 +454,7 @@ export interface DocumentCopy {
   title: string;
   subtitle: string;
   intro: string;
-  /** Must describe what really happens: the file reaches the server, is analysed in memory and never stored. */
+  /** Must describe what really happens: the file reaches the server. Do not say it is never stored: a PDF's bytes are kept unless sharing is off (EXPLAINER.md). */
   privacy: string;
   drop: string;
   dropActive: string;
@@ -759,7 +759,7 @@ const RESULT_EN: Copy["result"] = {
   sentBodyScreenshot:
     "Your screenshot was sent to our server to read the text, with everything in it visible. Your result is based only on this redacted version of the text.",
   sentBodyDocument:
-    "Your file was sent to our server, analysed in memory and not stored. Account numbers, phone numbers and emails were removed from its text before this version was analysed.",
+    "Your file was sent to our server to be checked. Account numbers, phone numbers and emails were removed from its text before this version was analysed.",
   aiSource: {
     label: "Analyzed by",
     local: "Local AI model (self-hosted, on-device)",
@@ -917,7 +917,7 @@ const DOCUMENT_EN: DocumentCopy = {
   intro:
     "Upload a bank form, statement, invoice or payment confirmation. FraudLens checks how the file itself was made (pasted-on signatures, text typed onto a scan, changes after signing) and reads its text for scam warning signs.",
   privacy:
-    "Your file is sent to the FraudLens server, analysed in memory and never stored. Account numbers, phone numbers and emails are removed from its text before the text is analysed.",
+    "Your file is sent to the FraudLens server to be checked. Account numbers, phone numbers and emails are removed from its text before the text is analysed.",
   drop: "Drop a PDF or Word file here",
   dropActive: "Drop it to check",
   choose: "Choose a file",
@@ -1022,7 +1022,7 @@ const DOCUMENT_FR: DocumentCopy = {
   intro:
     "Envoyez un formulaire bancaire, un relevé, une facture ou une confirmation de paiement. FraudLens vérifie comment le fichier lui-même a été fabriqué (signature collée, texte tapé sur un scan, modification après signature) et lit son texte à la recherche de signes d'arnaque.",
   privacy:
-    "Votre fichier est envoyé au serveur FraudLens, analysé en mémoire et jamais conservé. Les numéros de compte, de téléphone et les adresses e-mail sont retirés de son texte avant l'analyse du texte.",
+    "Votre fichier est envoyé au serveur FraudLens pour être vérifié. Les numéros de compte, de téléphone et les adresses e-mail sont retirés de son texte avant l'analyse du texte.",
   drop: "Déposez un PDF ou un fichier Word ici",
   dropActive: "Déposez-le pour le vérifier",
   choose: "Choisir un fichier",
@@ -1626,7 +1626,7 @@ export const COPY: Record<UiLanguage, Copy> = {
       sentBodyScreenshot:
         "Votre capture a été envoyée à notre serveur pour lire le texte, avec tout son contenu visible. Votre résultat repose uniquement sur cette version masquée du texte.",
       sentBodyDocument:
-        "Votre fichier a été envoyé à notre serveur, analysé en mémoire et non conservé. Les numéros de compte, de téléphone et les e-mails ont été retirés de son texte avant l'analyse de cette version.",
+        "Votre fichier a été envoyé à notre serveur pour être vérifié. Les numéros de compte, de téléphone et les e-mails ont été retirés de son texte avant l'analyse de cette version.",
       aiSource: {
         label: "Analysé par",
         local: "Modèle IA local (auto-hébergé, sur l'appareil)",
