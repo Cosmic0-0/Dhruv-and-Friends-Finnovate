@@ -6,7 +6,9 @@
     "node": ">=22"
   },
   "scripts": {
+    "predev": "node scripts/pack-extension.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/pack-extension.mjs",
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",

@@ -144,16 +144,16 @@
   "extensionPage": {
     "eyebrow": "BROWSER EXTENSION",
     "title": "FraudLens Link Guard",
-    "lede": "The extension checks the site you are on against the real addresses of Mauritius banks and telecoms, and can scan a page or a selected message on request. It is not in any browser store yet, so you install it from the project's source.",
+    "lede": "The extension checks the site you are on against the real addresses of Mauritius banks and telecoms, and can scan a page or a selected message on request. It is not in any browser store yet, so you download it here and load it into your browser yourself.",
     "chromeTitle": "Chrome and Edge",
     "chromeNote": "Works in Chrome 102 or later and in Microsoft Edge.",
     "steps": [
-      "Download the FraudLens source code as a zip and unzip it.",
+      "Download the extension zip and unzip it.",
       "Open chrome://extensions (in Edge: edge://extensions).",
       "Turn on Developer mode.",
-      "Click Load unpacked and choose the extension folder inside the unzipped project."
+      "Click Load unpacked and choose the unzipped fraudlens-link-guard folder (the one with manifest.json in it)."
     ],
-    "download": "Download source (.zip)",
+    "download": "Download the extension (.zip)",
     "viewSource": "View the extension code",
     "firefoxTitle": "Firefox",
     "firefoxBody": "Not supported yet. The extension is built for Chromium browsers (Manifest V3 service worker), and it has not been packaged or tested for Firefox.",

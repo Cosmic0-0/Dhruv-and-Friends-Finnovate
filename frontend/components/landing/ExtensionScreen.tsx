@@ -7,10 +7,10 @@ import { content } from "./content";
 
 /**
  * Install page for the Link Guard extension (extension/ in the repo), in the
- * design language. There is no store listing, so installation is from source:
- * the zip is GitHub's own archive of the public repository.
+ * design language. There is no store listing, so users load it unpacked: the
+ * zip holds only extension/ and is built by scripts/pack-extension.mjs.
  */
-const ZIP_URL = `${REPO_URL}/archive/refs/heads/main.zip`;
+const ZIP_PATH = "/fraudlens-link-guard.zip";
 const SOURCE_URL = `${REPO_URL}/tree/main/extension`;
 /** Copy of outlook-addin/manifest.xml; re-copy it there whenever that file changes. */
 const OUTLOOK_MANIFEST_PATH = "/fraudlens-outlook-manifest.xml";
@@ -42,7 +42,7 @@ export default function ExtensionScreen() {
             ))}
           </ol>
           <div className="extension-actions" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Pill href={ZIP_URL} height={48}>{t.download}</Pill>
+            <Pill href={ZIP_PATH} download="fraudlens-link-guard.zip" height={48}>{t.download}</Pill>
             <Pill href={SOURCE_URL} variant="outline" height={48}>{t.viewSource}</Pill>
           </div>
         </section>

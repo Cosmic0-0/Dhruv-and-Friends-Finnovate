@@ -227,6 +227,16 @@ carry an info finding saying so.
 - `minimum_chrome_version: 102` (needed for MAIN-world injection and
   `storage.session`).
 
+## Install from the site
+
+The install page (`https://fraudlens.site/extension`) offers
+`fraudlens-link-guard.zip`, which the frontend packs from this directory on
+every `npm run dev` and `npm run build` (`frontend/scripts/pack-extension.mjs`;
+tests, `package.json` and `scripts/` are left out). Unzip it, then
+`chrome://extensions` (or `edge://extensions`) → enable Developer mode →
+"Load unpacked" → select the unzipped `fraudlens-link-guard` folder, the one
+with `manifest.json` directly inside.
+
 ## Load it locally
 
 `chrome://extensions` → enable Developer mode → "Load unpacked" → select

@@ -145,16 +145,16 @@
   "extensionPage": {
     "eyebrow": "EXTENSION NAVIGATER",
     "title": "FraudLens Link Guard",
-    "lede": "Extension la konpar sit kot ou ete ar vre ladres bann labank ek operater telekom Moris, ek li kapav verifie enn paz ouswa enn mesaz ki ou swazir kan ou dimande. Li pa ankor dan okenn magazin extension, alor ou instal li depi kod sours proze la.",
+    "lede": "Extension la konpar sit kot ou ete ar vre ladres bann labank ek operater telekom Moris, ek li kapav verifie enn paz ouswa enn mesaz ki ou swazir kan ou dimande. Li pa ankor dan okenn magazin extension, alor ou telesarz li isi ek ou instal li ou mem.",
     "chromeTitle": "Chrome ek Edge",
     "chromeNote": "Marse lor Chrome 102 ouswa pli resan, ek lor Microsoft Edge.",
     "steps": [
-      "Telesarz kod sours FraudLens kouma enn zip ek dezip li.",
+      "Telesarz zip extension la ek dezip li.",
       "Ouver chrome://extensions (dan Edge: edge://extensions).",
       "Aktiv Developer mode.",
-      "Klik Load unpacked ek swazir dosie extension dan proze ki finn dezipe."
+      "Klik Load unpacked ek swazir dosie fraudlens-link-guard ki finn dezipe (sa enn ki ena manifest.json ladan)."
     ],
-    "download": "Telesarz kod sours (.zip)",
+    "download": "Telesarz extension la (.zip)",
     "viewSource": "Get kod extension la",
     "firefoxTitle": "Firefox",
     "firefoxBody": "Pa ankor siporte. Extension la fer pou navigater Chromium (service worker Manifest V3), ek li pa ankor finn prepare ni teste pou Firefox.",
