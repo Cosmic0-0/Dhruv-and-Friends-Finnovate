@@ -28,10 +28,16 @@ export function LandingHeader({ t, headerRef }: { t: Content["header"]; headerRe
   const { lang, setLang } = useLanguage();
   return (
     <header ref={headerRef} className={s.header} data-tone="butter">
-      <Link href="/" aria-label={t.home} className={s.brand}>
-        <BrandMark className={s.brandMark} />
-        <span className={s.brandWord}>FraudLens</span>
-      </Link>
+      <div className={s.lockup}>
+        <Link href="/" aria-label={t.home} className={s.brand}>
+          <BrandMark className={s.brandMark} />
+          <span className={s.brandWord}>FraudLens</span>
+        </Link>
+        <Link href="/created-by" className={s.team} aria-label="Dhruv & Friends" title="Dhruv & Friends">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/dhruv-and-friends.png" alt="" width={32} height={32} />
+        </Link>
+      </div>
       <nav aria-label={t.nav} className={s.navPills}>
         <a href="#webapp" className={s.pill}><span>{t.webapp}</span></a>
         <a href="#extension" className={s.pill}><span>{t.extension}</span></a>
