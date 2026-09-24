@@ -138,6 +138,19 @@
         "ACCOUNT_TAKEOVER": " pour prendre le contrôle de votre compte"
       }
     },
+    "translate": {
+      "title": "Traduire ce message",
+      "to": { "mfe": "Kreol", "en": "Anglais", "fr": "Français" },
+      "working": "Traduction en cours…",
+      "note": "Traduction automatique, non relue. Le verdict de FraudLens et les passages surlignés viennent du message d'origine.",
+      "same": "Ce message est déjà dans cette langue.",
+      "undetermined": "Pas assez de mots pour savoir dans quelle langue est ce message.",
+      "unsupported": "La traduction entre ces deux langues n'est pas disponible. Le kreol fonctionne avec l'anglais ou le français.",
+      "rejected": "La traduction n'a pas passé les contrôles de sécurité de FraudLens, elle n'est donc pas affichée.",
+      "unavailable": "La traduction n'est pas disponible pour le moment. Le résultat ci-dessus n'est pas affecté.",
+      "failed": "Impossible de traduire ce message. Réessayez.",
+      "hide": "Masquer la traduction"
+    },
     "theMessage": "Le message",
     "theLink": "Le lien",
     "why": "Pourquoi",

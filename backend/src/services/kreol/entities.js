@@ -15,6 +15,9 @@ const AMOUNT_BODY = String.raw`(?:\d{1,3}(?:[ ,.  ]\d{3})+(?:[.,]\d{1,2})?|\d
 // Priority order: earlier types claim their span first; later matches that
 // overlap a claimed span are dropped.
 const PATTERNS = [
+  // Opaque token a client puts where it redacted a phone/account number, so the
+  // model never sees the value; it must come back exactly once like any entity.
+  ["priv", /<PRIV_\d+>/g],
   ["url", /\b(?:https?:\/\/|www\.)[^\s<>"'`]+[^\s<>"'`.,;:!?)\]]/giu],
   ["email", /\b[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}\b/giu],
   ["amount", new RegExp(String.raw`(?<![\p{L}\p{N}])${CURRENCY}\s?${AMOUNT_BODY}(?![\p{L}\p{N}])|(?<![\p{L}\p{N}.,])${AMOUNT_BODY}\s?(?:Rs|MUR|USD|EUR|€)(?![\p{L}\p{N}])`, "giu")],

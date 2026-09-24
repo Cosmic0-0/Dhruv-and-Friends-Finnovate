@@ -138,6 +138,19 @@
         "ACCOUNT_TAKEOVER": " to take over your account"
       }
     },
+    "translate": {
+      "title": "Translate this message",
+      "to": { "mfe": "Kreol", "en": "English", "fr": "Français" },
+      "working": "Translating…",
+      "note": "Machine translation, not reviewed. FraudLens's verdict and the highlighted evidence come from the original message.",
+      "same": "This message is already in that language.",
+      "undetermined": "Not enough words to tell which language this message is in.",
+      "unsupported": "Translation between these two languages isn't available. Kreol works with English or French.",
+      "rejected": "The translation didn't pass FraudLens's safety checks, so it isn't shown.",
+      "unavailable": "Translation isn't available right now. The result above isn't affected.",
+      "failed": "Couldn't translate this. Try again.",
+      "hide": "Hide translation"
+    },
     "theMessage": "The message",
     "theLink": "The link",
     "why": "Why",

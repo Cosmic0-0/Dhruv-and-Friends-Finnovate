@@ -330,6 +330,31 @@ export interface TextProfileResponse {
   hosts: string[];
 }
 
+// ---- POST /api/translate ----
+
+/** Kreol Morisien, English, French. */
+export type TranslateLanguage = "mfe" | "en" | "fr";
+
+export interface TranslateRequest {
+  /** 1-2000 characters; the redacted message, with redaction placeholders swapped for <PRIV_n> tokens. */
+  message: string;
+  target: TranslateLanguage;
+}
+
+/**
+ * Display-only translation of a checked message. Never evidence, never part of
+ * the verdict. `text` is non-null only when `status` is "ok" (a validated translation).
+ */
+export interface TranslateResponse {
+  status: "ok" | "same_language" | "undetermined" | "unsupported" | "rejected" | "unavailable";
+  /** The detected language of the message; null when it could not be told. */
+  source: TranslateLanguage | null;
+  target: TranslateLanguage;
+  text: string | null;
+  machineTranslated: true;
+  reviewed: false;
+}
+
 // ---- POST /api/check-sender ----
 
 export interface CheckSenderRequest {

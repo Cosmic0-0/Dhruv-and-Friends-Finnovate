@@ -22,6 +22,8 @@ import { ingestDocument, extractDocumentText } from "../services/document-store/
 import { analyzeDocumentForensics } from "../services/document-forensics-client/index.js";
 import { forensicsToSignals, IMAGE_FORENSICS_DETECTOR_VERSION } from "../services/document-forensics-client/toSignals.js";
 import { redact } from "../services/redact/index.js";
+import { callLLM } from "../services/analysis/llmClient.js";
+import { translateMessage, MAX_TRANSLATE_LENGTH, TRANSLATE_TARGETS } from "../services/kreol/messageTranslation.js";
 import { reportSender, saveBatchHistory, getReportCount, getTrendSummary } from "../db/index.js";
 import { getRadar, RADAR_RANGES } from "../services/radar/index.js";
 import { analyzeSite, UnsafeUrlError } from "../services/site-security/index.js";
@@ -56,6 +58,12 @@ const analyzeLimiter = rateLimited("too many analyze requests, try again shortly
   windowMs: 15 * 60 * 1000,
   limit: 20,
 });
+// One model call (two with the validation retry) per request, same cost class as analyze.
+const translateLimiter = rateLimited("too many translate requests, try again shortly", {
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+});
+const TRANSLATE_TIMEOUT_MS = 15_000;
 const batchLimiter = rateLimited("too many batch-scan requests, try again shortly", {
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -515,6 +523,30 @@ router.post("/text-profile", textProfileLimiter, json({ limit: "60kb" }), (req, 
     return res.status(400).json({ error: `text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
   res.json(profileText(text));
+});
+
+// Display-only translation of a message the user already checked (Kreol <->
+// English/French). Not part of analysis: /analyze never calls it and the verdict
+// never depends on it. Unvalidated model text is never returned; a model outage is
+// a 200 { status: "unavailable" }, not an error, so the result screen stays intact.
+router.post("/translate", translateLimiter, json({ limit: "20kb" }), async (req, res) => {
+  const { message, target } = req.body ?? {};
+  if (!isNonEmptyString(message)) {
+    return res.status(400).json({ error: "message is required and must be a non-empty string" });
+  }
+  if (message.length > MAX_TRANSLATE_LENGTH) {
+    return res.status(400).json({ error: `message exceeds maximum length of ${MAX_TRANSLATE_LENGTH} characters` });
+  }
+  if (!TRANSLATE_TARGETS.includes(target)) {
+    return res.status(400).json({ error: `target must be one of: ${TRANSLATE_TARGETS.join(", ")}` });
+  }
+  const provider = async ({ prompt }) => (await callLLM(prompt, { timeoutMs: TRANSLATE_TIMEOUT_MS })).text;
+  try {
+    res.json(await translateMessage(message, target, { provider }));
+  } catch (err) {
+    console.error("[translate]", err);
+    res.status(500).json({ error: "translation failed, try again shortly" });
+  }
 });
 
 // Non-LLM, synchronous domain check for the browser extension (see

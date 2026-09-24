@@ -52,6 +52,8 @@ import type {
   Signal,
   TextProfileRequest,
   TextProfileResponse,
+  TranslateRequest,
+  TranslateResponse,
   Verdict,
 } from "./types";
 
@@ -139,6 +141,8 @@ const DEFAULT_TIMEOUTS = {
   checkUrl: 20_000,
   // Pure in-memory, no LLM, no storage (POST /api/text-profile) - called on a debounce while typing.
   textProfile: 8_000,
+  // One model call, plus one validation retry, at 15s each server-side (POST /api/translate).
+  translate: 45_000,
   // Upload (up to ~13MB of base64), parsing in a worker (<=15s), OCR of up
   // to three scanned pages when there is no text layer, then the same LLM
   // analysis. Still below next.config.ts's 190s proxy timeout.
@@ -724,6 +728,28 @@ function isTextProfileResponse(v: unknown): v is TextProfileResponse {
  */
 export function textProfile(req: TextProfileRequest, opts: RequestOptions = {}): Promise<ApiResult<TextProfileResponse>> {
   return postJson("/api/text-profile", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.textProfile, isTextProfileResponse, opts.signal);
+}
+
+function isTranslateResponse(v: unknown): v is TranslateResponse {
+  const STATUSES: readonly unknown[] = ["ok", "same_language", "undetermined", "unsupported", "rejected", "unavailable"];
+  const LANGS: readonly unknown[] = ["mfe", "en", "fr"];
+  return (
+    isObj(v) &&
+    STATUSES.includes(v.status) &&
+    (v.source === null || LANGS.includes(v.source)) &&
+    LANGS.includes(v.target) &&
+    (v.status === "ok" ? isStr(v.text) : v.text === null)
+  );
+}
+
+/**
+ * Translate the message the user just checked (POST /api/translate). Display
+ * only: it is a separate call so the verdict never waits on a language model,
+ * and the answer is never evidence. Send the redacted message with redaction
+ * placeholders tokenised (lib/translate.ts).
+ */
+export function translateMessage(req: TranslateRequest, opts: RequestOptions = {}): Promise<ApiResult<TranslateResponse>> {
+  return postJson("/api/translate", req, opts.timeoutMs ?? DEFAULT_TIMEOUTS.translate, isTranslateResponse, opts.signal);
 }
 
 /**

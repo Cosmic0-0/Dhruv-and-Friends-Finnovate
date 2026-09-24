@@ -139,6 +139,19 @@
         "ACCOUNT_TAKEOVER": " pou pran ou kont"
       }
     },
+    "translate": {
+      "title": "Tradwir mesaz la",
+      "to": { "mfe": "Kreol", "en": "Angle", "fr": "Franse" },
+      "working": "Pe tradwir…",
+      "note": "Tradiksion otomatik, pa finn revize. Rezilta FraudLens ek bann pasaz ki souligne sorti dan mesaz orizinal la.",
+      "same": "Mesaz la deza dan sa langaz la.",
+      "undetermined": "Pa ase mo pou konn dan ki langaz mesaz la ete.",
+      "unsupported": "Nou pa kapav tradwir ant sa de langaz la. Kreol marse ar Angle ouswa Franse.",
+      "rejected": "Tradiksion la pa finn pas bann verifikasion sekirite FraudLens, alor nou pa montre li.",
+      "unavailable": "Tradiksion pa disponib pou l'instan. Rezilta ki anlao la pa afekte.",
+      "failed": "Nou pa finn kapav tradwir. Reesey.",
+      "hide": "Kasyer tradiksion la"
+    },
     "theMessage": "Mesaz la",
     "theLink": "Lien la",
     "why": "Kifer",

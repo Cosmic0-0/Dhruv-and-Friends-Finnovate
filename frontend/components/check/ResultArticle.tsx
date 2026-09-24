@@ -9,6 +9,7 @@ import { Pill, TONE, WhatToDoPanel } from "../dc";
 import { fill, type CheckCopy } from "./content";
 import { confidenceAndSignalsLine, numberedSignals, signalDescription, signalTitle, summaryLine, verdictTone, whatToDoSteps } from "./helpers";
 import { highlightSegments, type EvidenceMark } from "@/lib/highlight";
+import TranslatePanel from "./TranslatePanel";
 
 /**
  * The inline result article shared by the Check workspace's right column and
@@ -104,6 +105,8 @@ export default function ResultArticle({
           })}
         </p>
       </section>
+
+      <TranslatePanel result={result} t={t} />
 
       <section style={{ margin: "0 40px", borderTop: "1px solid var(--dc-line2)", padding: "28px 0", display: "flex", flexDirection: "column", gap: 4 }}>
         <span style={{ fontSize: 13, color: "var(--dc-text3)", marginBottom: 6 }}>{t.result.why}</span>

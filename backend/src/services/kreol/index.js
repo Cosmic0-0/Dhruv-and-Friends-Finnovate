@@ -3,4 +3,5 @@ export { normalizeKreol } from "./normalizer.js";
 export { detectLanguageMix, detectExplanationLanguage, isKreolDominant } from "./language.js";
 export { getVariantTable, buildVariantTable } from "./variants.js";
 export { translateText, validateTranslation, buildTranslationPrompt, parseProviderOutput, createLlmProvider, DIRECTIONS, TRANSLATION_PROMPT_VERSION } from "./translation.js";
+export { translateMessage, TRANSLATE_TARGETS, MAX_TRANSLATE_LENGTH } from "./messageTranslation.js";
 export { getKreolCopy, parseCsv } from "./copy.js";
