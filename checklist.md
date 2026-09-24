@@ -216,12 +216,10 @@ product. Judges and casual visitors notice these fast.
 - [x] **No unstyled Vite+React flash**: N/A. The stack is Next.js App
       Router with fonts from `next/font/google` (Onest, JetBrains Mono),
       self-hosted at build time.
-- [ ] **Unique page titles**: `frontend/app/layout.tsx` sets the template
-      `"%s · FraudLens AI"` and most pages set their own title. Three pages
-      also append the brand themselves (`app/batch/page.tsx`,
-      `app/sandbox/page.tsx`, `app/network/[fingerprintId]/page.tsx`), so
-      their title reads "… · FraudLens · FraudLens AI". Still true on the
-      merged code. Last verified 2026-09-24.
+- [x] **Unique page titles**: `frontend/app/layout.tsx` sets the template
+      `"%s · FraudLens AI"`; pages set only their own name (e.g. "Batch scan"
+      renders as "Batch scan · FraudLens AI"), and the landing page sets an
+      absolute title. Last verified 2026-09-24 in the built HTML.
 - [x] **Meta description**: `frontend/app/layout.tsx` sets a real
       `description`. Last verified 2026-09-24.
 - [x] **`og:image`**: `frontend/app/layout.tsx` sets `openGraph.images` and
@@ -237,8 +235,8 @@ product. Judges and casual visitors notice these fast.
       `frontend/app/layout.tsx` (`/`) and on the public pages, resolved
       against `metadataBase` (`NEXT_PUBLIC_SITE_URL`, default
       `http://localhost:3000`). `/result`, `/replay` and the network page are
-      not indexed and set none. `/app` sets none of its own, so it inherits
-      the layout's `/` canonical. Set
+      not indexed and set none. `/app` sets its own (`/app`); before
+      2026-09-24 it inherited the layout's `/`. Set
       `NEXT_PUBLIC_SITE_URL` to the real domain before sharing a URL. Last
       verified 2026-09-24.
 - [x] **`llms.txt`**: `frontend/public/llms.txt`. Last verified 2026-09-23.
