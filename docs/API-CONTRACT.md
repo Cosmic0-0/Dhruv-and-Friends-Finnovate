@@ -952,15 +952,15 @@ is registered to, so it never says whether a name matches.
 
 ```json
 {
-  "method": "string, required — \"phone\" | \"bank_account\" | \"iban\"",
-  "identifier": "string, required, non-empty, at most 64 characters — the number, account or IBAN",
-  "name": "string, optional, at most 100 characters — who the payee claims to be",
-  "amount": "number, optional, 0 to 1e12 — in rupees",
-  "purpose": "string, optional — \"car\" | \"rent_deposit\" | \"online_shop\" | \"family\" | \"invoice\""
+  "method": "string, required: \"phone\" | \"bank_account\" | \"iban\"",
+  "identifier": "string, required, non-empty, at most 64 characters: the number, account or IBAN",
+  "name": "string, optional, at most 100 characters: who the payee claims to be",
+  "amount": "number, optional, 0 to 1e12: in rupees",
+  "purpose": "string, optional: \"car\" | \"rent_deposit\" | \"online_shop\" | \"family\" | \"invoice\""
 }
 ```
 
-### Response — `200 OK`
+### Response - `200 OK`
 
 ```jsonc
 {
@@ -1088,7 +1088,7 @@ the host, and a domain-age lookup.
   "resolvedUrl": "string | null — for a known URL shortener only: where it points, read from ONE redirect response of the shortener (the destination is never fetched). Signals for the destination are included in `signals` with metadata.viaShortener set to the shortener host. null when not a shortener or unresolvable",
   "firstCertificateDays": "number | null — days since the domain's first certificate in Certificate Transparency logs (crt.sh), looked up on every check for non-official, non-trusted hosts; null when unknown",
   "certificate": "null | { validation: \"EV\" | \"OV\" | \"DV\" | null, organization: string|null, issuer: string|null, validFrom, validTo, issuedDaysAgo, expiresInDays, trusted: boolean, problem: null | \"expired\" | \"not_yet_valid\" | \"self_signed\" | \"wrong_host\" | \"untrusted\" } — read from a bare TLS handshake on EVERY https check, official sites included (the old browser green bar: EV/OV name a verified organisation). SSRF-guarded, 2.5 s timeout, cached per host for 1 h, null when unreachable or plain HTTP",
-  "version": "string — url-reputation detector version, currently \"url-rep-1.2\""
+  "version": "string, the url-reputation detector version (currently \"url-rep-1.2\")"
 }
 ```
 
