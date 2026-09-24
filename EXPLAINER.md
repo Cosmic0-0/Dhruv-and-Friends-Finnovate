@@ -387,6 +387,9 @@ so the setting must match the real topology before production use.
 ## Known limitations
 
 - There is no authentication, per-user authorization, or tenant isolation.
+- Before sharing a new production URL, set `NEXT_PUBLIC_SITE_URL`,
+  `BACKEND_URL` and `REPORTER_HASH_SECRET`, and test the LLM fallback on that
+  deployment.
 - SQLite and in-process rate limiting suit a single demo instance, not horizontal
   scaling without a shared store and database plan.
 - Semantic `scamType` and `stage` are optional and have been omitted by the local
