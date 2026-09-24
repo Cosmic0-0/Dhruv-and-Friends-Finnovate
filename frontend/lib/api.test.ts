@@ -3,7 +3,7 @@
 // error classification, including never surfacing raw backend text.
 import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { analyzeDocument, analyzeMessage, analyzeScreenshot, batchScan, checkSender, reportSender } from "./api.ts";
+import { analyzeDocument, analyzeMessage, analyzeScreenshot, batchScan, checkSender, extractScreenshotText, reportSender } from "./api.ts";
 
 type Call = { url: string; body: unknown };
 let calls: Call[] = [];
@@ -52,9 +52,23 @@ test("screenshot request body matches the contract: { image, language }", async 
   assert.deepEqual(calls[0].body, { image: "data:image/jpeg;base64,AAAA", language: "kreol" });
 });
 
-test("screenshot success needs only extractedText", async () => {
+test("analyzeScreenshot's verdict is the result shown, so it must be a full analysis", async () => {
   stub(200, { extractedText: "MCB ALERT: ..." });
-  const res = await analyzeScreenshot({ image: "x" });
+  let res = await analyzeScreenshot({ image: "x" });
+  assert.equal(res.ok, false, "text alone is not a usable result");
+
+  stub(200, { extractedText: "MCB ALERT: ...", ...verdict });
+  res = await analyzeScreenshot({ image: "x" });
+  assert.equal(res.ok, true);
+  assert.equal(res.ok && res.data.verdict, "scam");
+  assert.equal(res.ok && res.data.extractedText, "MCB ALERT: ...");
+});
+
+test("extractScreenshotText asks for OCR only and needs only extractedText", async () => {
+  stub(200, { extractedText: "MCB ALERT: ..." });
+  const res = await extractScreenshotText({ image: "x", language: "en" });
+  assert.equal(calls[0].url, "/api/analyze/screenshot");
+  assert.deepEqual(calls[0].body, { image: "x", language: "en", ocrOnly: true });
   assert.equal(res.ok, true);
   assert.equal(res.ok && res.data.extractedText, "MCB ALERT: ...");
 });

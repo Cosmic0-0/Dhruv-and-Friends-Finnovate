@@ -187,6 +187,12 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   const { image, language } = req.body;
   const sharing = parseShareSamples(req.body.shareSamples);
   if (sharing.error) return res.status(400).json({ error: sharing.error });
+  // ocrOnly: true returns just the redacted text - no image forensics, no
+  // analysis, nothing recorded. For callers that let the user edit the text
+  // and analyse it afterwards (the web app's Batch screen), so a screenshot
+  // is not analysed twice.
+  const { ocrOnly = false } = req.body;
+  if (typeof ocrOnly !== "boolean") return res.status(400).json({ error: "ocrOnly must be a boolean" });
   if (!isNonEmptyString(image)) {
     return res.status(400).json({ error: "image is required and must be a base64-encoded string" });
   }
@@ -218,7 +224,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   try {
     [extractedText, forensics] = await Promise.all([
       extractTextFromImage(buffer),
-      analyzeDocumentForensics({ buffer, mimeType }),
+      ocrOnly ? null : analyzeDocumentForensics({ buffer, mimeType }),
     ]);
   } catch (err) {
     console.error(err);
@@ -238,6 +244,7 @@ router.post("/analyze/screenshot", analyzeLimiter, json({ limit: "8mb" }), async
   if (redactedText.length > MAX_MESSAGE_LENGTH) {
     return res.status(400).json({ error: `extracted text exceeds maximum length of ${MAX_MESSAGE_LENGTH} characters` });
   }
+  if (ocrOnly) return res.json({ extractedText: redactedText });
 
   try {
     const result = await runPipeline(redactedText, {

@@ -31,6 +31,7 @@ import type {
   AnalyzeResponse,
   AnalyzeScreenshotRequest,
   AnalyzeScreenshotResponse,
+  ScreenshotTextResponse,
   BatchScanRequest,
   BatchScanResponse,
   BatchScanResult,
@@ -393,13 +394,13 @@ function isConversationResponse(v: unknown): v is ConversationResponse {
   );
 }
 
-/**
- * Only `extractedText` is checked: it's the only field the UI uses. The
- * server's verdict in the same response is ignored by design (the user
- * reviews the text first; see AnalyzeScreenshotResponse), so a malformed
- * verdict part must not throw away a perfectly good extraction.
- */
+/** The Check screen shows this verdict, so it must be a full analysis. */
 function isAnalyzeScreenshotResponse(v: unknown): v is AnalyzeScreenshotResponse {
+  return isAnalyzeResponse(v) && isStr((v as { extractedText?: unknown }).extractedText);
+}
+
+/** OCR-only mode: `extractedText` is the whole response. */
+function isScreenshotTextResponse(v: unknown): v is ScreenshotTextResponse {
   return isObj(v) && isStr(v.extractedText);
 }
 
@@ -544,6 +545,24 @@ export function analyzeScreenshot(
     withSharing(req),
     opts.timeoutMs ?? DEFAULT_TIMEOUTS.screenshot,
     isAnalyzeScreenshotResponse,
+    opts.signal,
+  );
+}
+
+/**
+ * OCR only (POST /api/analyze/screenshot with ocrOnly: true): the redacted
+ * text, with no analysis and nothing recorded. For Batch, where the user
+ * reviews the text and the batch is analysed afterwards.
+ */
+export function extractScreenshotText(
+  req: AnalyzeScreenshotRequest,
+  opts: RequestOptions = {},
+): Promise<ApiResult<ScreenshotTextResponse>> {
+  return postJson(
+    "/api/analyze/screenshot",
+    { ...req, ocrOnly: true },
+    opts.timeoutMs ?? DEFAULT_TIMEOUTS.screenshot,
+    isScreenshotTextResponse,
     opts.signal,
   );
 }

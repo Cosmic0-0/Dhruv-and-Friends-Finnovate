@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { analyzeMessage, checkUrl, textProfile, type ApiError } from "@/lib/api";
 import { redact } from "@/lib/redact";
 import { addRecentCheck, saveResult, type StoredResult } from "@/lib/storage";
-import { MAX_MESSAGE_LENGTH, type Channel, type CheckUrlResponse } from "@/lib/types";
+import { MAX_MESSAGE_LENGTH, type AnalyzeScreenshotResponse, type Channel, type CheckUrlResponse } from "@/lib/types";
 import { useLanguage } from "../LanguageProvider";
 import { card, chipStyle, MONO, Pill } from "../dc";
 import { ScreenshotRow, useScreenshot } from "../ScreenshotUpload";
@@ -46,8 +46,11 @@ export default function Workspace({
   const abortRef = useRef<AbortController | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [screenshotText, setScreenshotText] = useState("");
-  const shot = useScreenshot({ lang, onText: (extracted) => setScreenshotText(extracted) });
+  // The screenshot route's own verdict (text + image forensics), shown as-is
+  // on Check. Re-sending its OCR text to /api/analyze would drop the image
+  // signals and spend a second analysis.
+  const [screenshotResult, setScreenshotResult] = useState<AnalyzeScreenshotResponse | null>(null);
+  const shot = useScreenshot({ lang, onResult: setScreenshotResult });
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -102,7 +105,7 @@ export default function Workspace({
     if (controller.signal.aborted) return;
     if (res.ok) {
       const at = Date.now();
-      const stored: StoredResult = { response: res.data, redacted, redactions, language: lang, at, source: overrideText !== undefined ? "screenshot" : "typed" };
+      const stored: StoredResult = { response: res.data, redacted, redactions, language: lang, at, source: "typed" };
       saveResult(stored);
       addRecentCheck({ text: redacted, verdict: res.data.verdict, at });
       setStatus("finishing");
@@ -115,6 +118,22 @@ export default function Workspace({
     if (res.error.kind === "aborted") return;
     setError(res.error);
     setStatus("error");
+  }
+
+  function showScreenshotResult() {
+    if (!screenshotResult || loading) return;
+    // Already redacted server-side, so there is no local placeholder mapping.
+    const redacted = screenshotResult.extractedText;
+    const at = Date.now();
+    const stored: StoredResult = { response: screenshotResult, redacted, redactions: [], language: lang, at, source: "screenshot" };
+    saveResult(stored);
+    addRecentCheck({ text: redacted, verdict: screenshotResult.verdict, at });
+    setError(null);
+    setStatus("finishing");
+    setTimeout(() => {
+      setResult(stored);
+      setStatus("idle");
+    }, SUCCESS_DELAY_MS);
   }
 
   async function submitLink() {
@@ -152,6 +171,7 @@ export default function Workspace({
     setLinkError(null);
     setMeta(null);
     shot.remove();
+    setScreenshotResult(null);
   }
 
   const metaText = [
@@ -173,8 +193,8 @@ export default function Workspace({
   const primaryLabel =
     mode === "link" ? (linkStatus === "loading" ? `${t.work.checkLink}…` : t.work.checkLink) : loading ? `${t.work.check}…` : t.work.check;
   const primaryDisabled =
-    mode === "link" ? !linkText.trim() || linkStatus === "loading" : mode === "screenshot" ? shot.state.phase !== "done" || loading : !text.trim() || loading;
-  const primaryOnClick = mode === "link" ? () => void submitLink() : mode === "screenshot" ? () => void submitMessage(screenshotText) : () => void submitMessage();
+    mode === "link" ? !linkText.trim() || linkStatus === "loading" : mode === "screenshot" ? shot.state.phase !== "done" || !screenshotResult || loading : !text.trim() || loading;
+  const primaryOnClick = mode === "link" ? () => void submitLink() : mode === "screenshot" ? showScreenshotResult : () => void submitMessage();
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
@@ -291,7 +311,7 @@ export default function Workspace({
                   {t.work.shotChoose}
                 </Pill>
                 <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", lineHeight: 1.5 }}>{t.work.shotHint}</p>
-                <ScreenshotRow state={shot.state} copy={copy} onRemove={shot.remove} onRetry={shot.retry} onTypeInstead={() => setMode("message")} />
+                <ScreenshotRow state={shot.state} copy={copy} onRemove={() => { shot.remove(); setScreenshotResult(null); }} onRetry={shot.retry} onTypeInstead={() => setMode("message")} />
                 {shot.state.phase === "done" && <p style={{ margin: 0, fontSize: 13, color: "var(--dc-accent)" }}>{t.work.shotReady}</p>}
               </div>
             )}
@@ -366,8 +386,6 @@ export default function Workspace({
     </div>
   );
 }
-
-/** Screenshot OCR's own text never rendered — this reads it back only to hand to submitMessage. */
 
 function ErrorNote({ message }: { message: string }) {
   return (

@@ -141,6 +141,8 @@ before any real data touches a demo.
         playbooks, non-negative integer `turnIndex`.
       - `/api/campaign/:fingerprintId`: IDs over 300 characters get `400`.
       - `/api/trends`: `range`, when present, must be `7d`, `30d` or `12m`.
+      - `/api/analyze/screenshot`: `ocrOnly`, when present, must be a
+        boolean.
 - [x] **Escape user content** before rendering it in the UI. User text
       (message body, signal evidence, sender) is rendered through React
       text nodes. The two `dangerouslySetInnerHTML` uses

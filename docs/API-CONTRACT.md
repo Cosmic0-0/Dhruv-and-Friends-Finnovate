@@ -495,7 +495,8 @@ fired.
 {
   "image": "string, required — base64-encoded image bytes, max 5MB decoded. A `data:<mime>;base64,` prefix is accepted and stripped if present.",
   "language": "string, optional — same free-form hint as /api/analyze",
-  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\""
+  "shareSamples": "boolean, optional, default true — see /api/analyze \"Sharing samples\"",
+  "ocrOnly": "boolean, optional, default false. true: run OCR and redaction only and return { extractedText } (see below)"
 }
 ```
 
@@ -518,11 +519,17 @@ The full `/api/analyze` response (see above) plus:
 }
 ```
 
-The UI never shows `extractedText` to the user - the screenshot thumbnail is
-the only visible confirmation of what was scanned. The text is held in
-memory client-side and submitted to `/api/analyze` once "Check" is pressed.
-`imageForensics` is transparency about what ran, not a second verdict — its
-actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
+The web app's Check screen shows this response as the result. It never shows
+`extractedText`; the screenshot thumbnail is the visible confirmation of what
+was scanned. `imageForensics` is transparency about what ran, not a second
+verdict: its actual findings are already in `signals[]` as `DOC-09`..`DOC-13`.
+
+With `ocrOnly: true` the response is only `{ "extractedText": "string" }`: the
+redacted OCR text, with no image forensics, no analysis and nothing recorded,
+so `shareSamples` has no effect. The web app's Batch screen uses it, because
+the user reviews and can edit the text there and the batch is analysed
+afterwards. A non-boolean `ocrOnly` is `400 { "error": "ocrOnly must be a
+boolean" }`.
 
 ### Errors
 
@@ -1339,13 +1346,11 @@ otherwise.
   needs `ORG_ANALYST_TOKEN`, but every analyst holds the same token and
   analysts are told apart only by IP pseudonym. `GET /api/org/campaigns`
   stays public.
-- **The web app discards screenshot image forensics.** The Check screen
-  (`frontend/components/ScreenshotUpload.tsx`,
-  `frontend/components/check/Workspace.tsx`) keeps only `extractedText` from
-  `/api/analyze/screenshot` and then sends that text to `/api/analyze`. The
-  verdict it shows therefore never includes DOC-09..13, and each screenshot
-  uses two requests from the analyze rate-limit counter and two semantic-model
-  calls.
+- **A screenshot is analysed as soon as it is picked.** The web app's Check
+  screen sends it to `/api/analyze/screenshot` when the user chooses the
+  image and shows that result when they press Check, so the analysis (and,
+  unless sharing is off, its recording) happens even if they never press
+  Check.
 - **`POST /api/documents` ignores `shareSamples`.** It always stores the
   upload, unlike `/api/analyze/document`.
 - **Radar mixes seeded demo counts with live ones.** `npm run seed:radar`

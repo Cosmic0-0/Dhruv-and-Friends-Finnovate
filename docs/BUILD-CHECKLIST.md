@@ -31,14 +31,12 @@ are weighted against.
 - [x] OCR ingestion functional (screenshot upload → extracted text →
       analysis). `frontend/components/ScreenshotUpload.tsx` compresses the
       image client-side and posts it to `/api/analyze/screenshot`;
-      `frontend/components/check/Workspace.tsx` keeps the OCR text in
-      memory, not shown, and sends it to `/api/analyze` when the user
-      presses Check. That second call means the verdict shown ignores the
-      screenshot's image-forensics signals (DOC-09..13); see
-      `docs/API-CONTRACT.md` Known Gaps. The backend path was last verified
-      live on 2026-09-22 with a generated PNG and the local model (about
-      9s), before image forensics was added; the current UI flow has not
-      been verified live.
+      `frontend/components/check/Workspace.tsx` shows that response's
+      verdict, including any DOC-09..13 image-forensics signals, when the
+      user presses Check. The OCR text is never shown. On 2026-09-24 the
+      route was checked with real OCR on a generated PNG (full mode and
+      `ocrOnly`, with the LLM and the forensics service unreachable); the UI
+      flow has not been verified in a browser.
 - [x] Document forensics (`POST /api/analyze/document`, `/document` in the
       web app). Last verified 2026-09-23:
       - Backend tests cover every DOC detector, each demo fixture end to end
