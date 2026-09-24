@@ -1379,7 +1379,9 @@ otherwise.
 - **OCR quality reaches the engine only for documents.** The document route
   passes `ocrQuality` when it had to OCR a scan. The screenshot route does
   not compute it.
-- **`/api/analyze/screenshot` has no HTTP-level automated test.**
+- **`/api/analyze/screenshot`'s HTTP-level test covers only `ocrOnly`
+  validation** (`backend/src/routes/sharing.test.js`); the OCR → forensics →
+  analysis happy path is untested at the HTTP layer.
   `backend/src/services/ocr/index.test.js` covers `extractTextFromImage` and
   `cleanExtractedText` directly.
 - **Tesseract has no Kreol Morisien language pack.** OCR runs with
