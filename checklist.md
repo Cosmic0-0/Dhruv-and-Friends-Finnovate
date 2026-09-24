@@ -47,10 +47,11 @@ before any real data touches a demo.
 - [ ] **Enforce server-side auth** on every endpoint that reads or writes
       stored data. Not satisfied: there is no auth middleware in
       `backend/src/index.js` or `backend/src/routes/index.js`, and every
-      route is open. This includes `POST /api/org/outcomes`, where any caller
-      can label an organisation observation as `legitimate` or
-      `false_positive`, which removes it from that organisation's campaign
-      counts. Last verified 2026-09-23.
+      route is open to anyone except `POST /api/org/outcomes`, which needs
+      the shared `ORG_ANALYST_TOKEN` bearer token (and is off when it is not
+      set). A label there can drop an observation from the organisation's
+      campaign counts, which is why it was closed first. Last verified
+      2026-09-24.
 - [ ] **Lock record access**: a user can only fetch their own records, not
       enumerate others' by ID. Not satisfied, but no route reads a user's
       history or a stored document by ID today. Public reads are aggregate or

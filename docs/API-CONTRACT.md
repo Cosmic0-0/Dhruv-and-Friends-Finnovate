@@ -14,7 +14,9 @@ Every route with a body declares its own JSON body limit. A body over it gets
 `413 { "error": "request body is too large" }`, and malformed JSON gets
 `400 { "error": "invalid JSON body" }` (`backend/src/services/http-errors`).
 Rate limits are per client IP and return `429` with a JSON `error` and
-standard `RateLimit-*` headers. There is no authentication on any route.
+standard `RateLimit-*` headers. There is no user authentication. The only
+route that needs a credential is `POST /api/org/outcomes` (a shared analyst
+token, see that route).
 
 | Method and path | Body limit | Rate limit |
 |---|---|---|
@@ -1239,7 +1241,12 @@ database returns `"campaigns": []`.
 Records an analyst's outcome label for an email the organisation already
 analysed. One label per analyst per observation; a later label from the same
 analyst replaces the earlier one. The analyst is identified by an HMAC
-pseudonym of the client IP. There is no authentication.
+pseudonym of the client IP.
+
+The request must carry `Authorization: Bearer <ORG_ANALYST_TOKEN>`, the
+shared token set in the backend's environment. When `ORG_ANALYST_TOKEN` is
+not set, the route is disabled and always answers `403`. No current client
+calls this route.
 
 ### Request
 
@@ -1271,6 +1278,8 @@ compatibility, `confirmed_fraud` and `suspicious_unconfirmed`.
 |---|---|---|
 | `400` | `{ "error": "observationId must be a 64-character hexadecimal identifier" }` | missing or malformed `observationId` |
 | `400` | `{ "error": "label must be one of: ..." }` | `label` not in the list |
+| `401` | `{ "error": "analyst token required" }` | missing `Authorization` header, or the token does not match |
+| `403` | `{ "error": "analyst outcomes are not enabled on this server" }` | `ORG_ANALYST_TOKEN` is not set on the server |
 | `404` | `{ "error": "organisation observation not found" }` | no stored observation with that id |
 | `429` | `{ "error": "too many report submissions from this address, try again later" }` | shares the 5 req/hour counter with `/api/report` |
 
@@ -1326,10 +1335,10 @@ otherwise.
   `shareSamples: false`) `POST /api/analyze/document` store original file
   bytes in SQLite, unencrypted, with no retention period and no delete route.
   No route returns them.
-- **Organisation outcomes are unauthenticated.** Any caller can post a
-  `legitimate` or `false_positive` label for an observation id, which removes
-  that observation from `GET /api/org/campaigns` counts. The only protection
-  is the shared 5 req/hour report limit.
+- **Organisation outcomes use one shared token.** `POST /api/org/outcomes`
+  needs `ORG_ANALYST_TOKEN`, but every analyst holds the same token and
+  analysts are told apart only by IP pseudonym. `GET /api/org/campaigns`
+  stays public.
 - **The web app discards screenshot image forensics.** The Check screen
   (`frontend/components/ScreenshotUpload.tsx`,
   `frontend/components/check/Workspace.tsx`) keeps only `extractedText` from

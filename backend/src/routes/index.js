@@ -2,6 +2,7 @@ import { nextSandboxTurn, MAX_SANDBOX_TURNS } from "../services/sandbox/index.js
 import { PLAYBOOKS, normalizeScamType, normalizeStage } from "../services/playbooks/index.js";
 import { getFingerprintMatches } from "../services/scam-dna/index.js";
 import { recordUserReport } from "../services/community-signals/index.js";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { Router, json } from "express";
 import rateLimit from "express-rate-limit";
 import { assessUrl } from "../services/url-reputation/index.js";
@@ -620,7 +621,25 @@ router.get("/org/campaigns", checkSenderLimiter, (_req, res) => {
   });
 });
 
+// Analyst labels change what GET /api/org/campaigns shows (a "legitimate"
+// or "false_positive" consensus drops an observation), so writing one needs
+// the shared ORG_ANALYST_TOKEN as a bearer token. With no token configured
+// the route is off. Read per request so tests and restarts pick it up.
+function analystTokenStatus(req) {
+  const expected = process.env.ORG_ANALYST_TOKEN;
+  if (!expected) return "disabled";
+  const match = /^Bearer (.+)$/.exec(req.get("authorization") ?? "");
+  if (!match) return "missing";
+  // Compare fixed-length digests so the check takes the same time whatever
+  // the supplied token's length or content.
+  const digest = (v) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(digest(match[1]), digest(expected)) ? "ok" : "missing";
+}
+
 router.post("/org/outcomes", reportLimiter, json({ limit: "10kb" }), (req, res) => {
+  const auth = analystTokenStatus(req);
+  if (auth === "disabled") return res.status(403).json({ error: "analyst outcomes are not enabled on this server" });
+  if (auth !== "ok") return res.status(401).json({ error: "analyst token required" });
   const { observationId, label } = req.body ?? {};
   if (typeof observationId !== "string" || !/^[a-f0-9]{64}$/.test(observationId)) {
     return res.status(400).json({ error: "observationId must be a 64-character hexadecimal identifier" });
