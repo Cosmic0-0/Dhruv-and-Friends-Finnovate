@@ -120,6 +120,8 @@ test("DOC-05: visible text typed on a scan page, with redacted snippets; invisib
   assert.deepEqual(s.metadata.snippets, ["MUR 125,000.00", "Acct [account ending 6789]"]);
   // An OCR layer alone (render mode 3) is how legitimate searchable scans look.
   assert.deepEqual(detect(pdf({ pages: [scanPage({ runs: [run("scanned words", { renderMode: 3 })] })] })), []);
+  // Text painted before the scan and hidden under it ("text under the page image" OCR) is not typed on.
+  assert.deepEqual(detect(pdf({ pages: [scanPage({ runs: [run("MUR 125,000.00", { coveredByScan: true })] })] })), []);
   // Not a scan page (designed background) -> never DOC-05.
   assert.deepEqual(detect(pdf({ pages: [scanPage({ isScanPage: false, runs: [run("MUR 125,000.00")] })] })).filter((x) => x.code === "DOC-05"), []);
 });
@@ -132,8 +134,11 @@ test("DOC-06: hidden text on native pages only; white text only where nothing co
   assert.deepEqual(detect(pdf({ pages: [native({ nonWhiteFill: true, runs: [run(hidden, { fill: "white" })] })] })), [], "white on a coloured banner");
   assert.deepEqual(codes(detect(pdf({ pages: [native({ runs: [run(hidden, { fontSize: 0.4 })] })] }))), ["DOC-06:tiny_font"]);
   assert.deepEqual(detect(pdf({ pages: [native({ runs: [run("short", { renderMode: 3 })] })] })), [], "below the minimum length");
-  // A scanned page's invisible OCR layer is legitimate.
+  // A scanned page's invisible OCR layer is legitimate, and so is one over a partial-page photo.
   assert.deepEqual(detect(pdf({ pages: [scanPage({ runs: [run(hidden, { renderMode: 3 })] })] })), []);
+  assert.deepEqual(detect(pdf({ pages: [native({ imageCount: 1, runs: [run(hidden, { renderMode: 3, overImage: true })] })] })), []);
+  // Being over an image excuses only invisible text, not white or tiny text.
+  assert.deepEqual(codes(detect(pdf({ pages: [native({ runs: [run(hidden, { fontSize: 0.4, overImage: true })] })] }))), ["DOC-06:tiny_font"]);
 });
 
 test("DOC-07: one signal per kind of active content, with honest severities", () => {

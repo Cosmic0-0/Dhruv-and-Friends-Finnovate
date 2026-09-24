@@ -14,12 +14,13 @@
 //     digital-signature /ByteRange coverage.
 
 import path from "node:path";
+import zlib from "node:zlib";
 import { createRequire } from "node:module";
 import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef, PDFString } from "pdf-lib";
 import { DocumentInspectError } from "./sniff.js";
 import { parseIsoDate, parsePdfDate, sanitizeMeta } from "./meta.js";
 import {
-  FULL_PAGE_COVERAGE, IDENTITY, LOW_RES_RATIO, OVERLAY_MIN_AREA, OVERLAY_MIN_PIXELS, SCAN_MAX_VISIBLE_CHARS,
+  FULL_PAGE_COVERAGE, IDENTITY, LOW_RES_RATIO, OCR_IMAGE_MIN_COVERAGE, OVERLAY_MIN_AREA, OVERLAY_MIN_PIXELS, SCAN_MAX_VISIBLE_CHARS,
   alphaStats, applyPoint, compose, coverage, effectiveDpi, intersects, placementFromCtm, toGray,
 } from "./overlay.js";
 
@@ -69,16 +70,85 @@ const latin1 = (bytes) => Buffer.from(bytes.buffer, bytes.byteOffset, bytes.leng
 const SECTION_RE = /startxref\s+\d+\s*%%EOF/g;
 const BYTE_RANGE_RE = /\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g;
 const SIGNATURE_APPENDIX_RE = /\/(?:DSS|VRI)\b/;
+const OBJECT_RE = /(?<!\d)(\d+)\s+\d+\s+obj\b/g;
+const pagesRef = (dict) => /\/Pages\s+(\d+\s+\d+\s+R)/.exec(dict)?.[1] ?? null;
+
+/** The objects packed in an object stream (number -> text), or null when they cannot be read (encrypted, unknown filter). */
+function packedObjects(dict, streamPart) {
+  const first = Number(/\/First\s+(\d+)/.exec(dict)?.[1]);
+  const start = /^stream\r?\n/.exec(streamPart);
+  const end = streamPart.lastIndexOf("endstream");
+  if (!start || end < 0 || !Number.isInteger(first)) return null;
+  let data = Buffer.from(streamPart.slice(start[0].length, end), "latin1");
+  try {
+    if (/\/Filter\s*\[?\s*\/FlateDecode\s*\]?/.test(dict)) data = zlib.inflateSync(data, { finishFlush: zlib.constants.Z_SYNC_FLUSH });
+    else if (/\/Filter\b/.test(dict)) return null;
+  } catch {
+    return null;
+  }
+  const packed = data.toString("latin1");
+  const header = packed.slice(0, first).trim().split(/\s+/).map(Number);
+  if (header.length % 2 !== 0 || header.some((n) => !Number.isInteger(n))) return null;
+  const out = new Map();
+  for (let k = 0; k < header.length; k += 2) {
+    out.set(header[k], packed.slice(first + header[k + 1], k + 3 < header.length ? first + header[k + 3] : undefined));
+  }
+  return out;
+}
+
+/** The objects one revision defines (number -> dictionary text, object streams unpacked) and its trailer's /Info. */
+function revisionObjects(section) {
+  const objects = new Map();
+  let inspectable = true;
+  for (const m of section.matchAll(OBJECT_RE)) {
+    const bodyStart = m.index + m[0].length;
+    const endAt = section.indexOf("endobj", bodyStart);
+    const body = section.slice(bodyStart, endAt < 0 ? section.length : endAt);
+    const streamAt = body.search(/>>\s*stream\r?\n/);
+    const dict = streamAt < 0 ? body : body.slice(0, streamAt + 2);
+    objects.set(Number(m[1]), dict);
+    if (/\/Type\s*\/ObjStm\b/.test(dict)) {
+      const packed = streamAt < 0 ? null : packedObjects(dict, body.slice(body.indexOf("stream", streamAt)));
+      if (packed) for (const [n, d] of packed) objects.set(n, d);
+      else inspectable = false;
+    }
+  }
+  const info = [...section.matchAll(/\/Info\s+(\d+)\s+\d+\s+R/g)].at(-1)?.[1];
+  return { objects, inspectable, infoRef: info === undefined ? null : Number(info) };
+}
+
+/**
+ * Long-term-validation data added after signing: the revision mentions
+ * DSS/VRI and every object it defines is new, except the catalog gaining
+ * its /DSS entry (with the same page tree), the Info dictionary and the XMP
+ * metadata. Rewriting any existing page, content stream, annotation or
+ * field is an edit, whatever else the revision carries. A revision whose
+ * object streams cannot be read (encryption) is judged by the DSS/VRI
+ * mention alone.
+ */
+function validationDataOnly(rev, text, known) {
+  if (!SIGNATURE_APPENDIX_RE.test(text)) return false;
+  if (!rev.inspectable) return true;
+  for (const [num, dict] of rev.objects) {
+    const before = known.get(num);
+    if (before === undefined || num === rev.infoRef || /\/Type\s*\/Metadata\b/.test(dict)) continue;
+    if (/\/Type\s*\/Catalog\b/.test(dict) && pagesRef(dict) === pagesRef(before)) continue;
+    return false;
+  }
+  return true;
+}
 
 /**
  * Counts saved revisions and relates them to digital signatures.
  *
  * - A linearized ("fast web view") file legitimately has two sections.
  * - A revision whose end is exactly what a signature covers is that
- *   signature being added; one holding only DSS/VRI validation data is
- *   long-term-validation material added after signing. Neither is an edit.
- * - Bytes after the last signed range that are not DSS/VRI data mean the
- *   file changed after it was signed.
+ *   signature being added; one holding only DSS/VRI validation data (see
+ *   validationDataOnly) is long-term-validation material added after
+ *   signing. Neither is an edit.
+ * - A revision after the last signed range that is not validation data, or
+ *   stray bytes after the last %%EOF, mean the file changed after it was
+ *   signed.
  * @param {Uint8Array} bytes
  */
 export function analyzeStructure(bytes) {
@@ -92,20 +162,32 @@ export function analyzeStructure(bytes) {
     .map(([, , c, d]) => c + d);
   const coversSection = (end) => coverageEnds.some((cov) => cov >= end && cov <= end + 2);
 
-  let unexplainedUpdates = 0;
-  for (let i = base; i < sectionEnds.length; i++) {
-    const body = text.slice(sectionEnds[i - 1], sectionEnds[i]);
-    if (coversSection(sectionEnds[i]) || SIGNATURE_APPENDIX_RE.test(body)) continue;
-    unexplainedUpdates++;
-  }
+  // Every object defined so far (its latest definition), to tell a
+  // revision's new objects from the ones it changes.
+  const known = new Map();
+  const sections = sectionEnds.map((end, i) => {
+    const start = i === 0 ? 0 : sectionEnds[i - 1];
+    const body = text.slice(start, end);
+    const rev = revisionObjects(body);
+    const validationOnly = i >= base && validationDataOnly(rev, body, known);
+    for (const [n, d] of rev.objects) known.set(n, d);
+    return { start, end, isUpdate: i >= base, validationOnly };
+  });
+  const unexplainedUpdates = sections.filter((s) => s.isUpdate && !coversSection(s.end) && !s.validationOnly).length;
 
   let bytesAfterSignature = 0;
   let afterSignature = false;
   if (coverageEnds.length > 0) {
-    const tail = text.slice(Math.max(...coverageEnds));
+    const signedEnd = Math.max(...coverageEnds);
+    const tail = text.slice(signedEnd);
     if (tail.replace(/[\s\0]/g, "").length > 0) {
       bytesAfterSignature = tail.length;
-      afterSignature = !SIGNATURE_APPENDIX_RE.test(tail);
+      const later = sections.filter((s) => s.start >= signedEnd - 2);
+      const stray = text.slice(sectionEnds.at(-1) ?? 0);
+      const hasStray = stray.replace(/[\s\0]/g, "").length > 0;
+      afterSignature = later.length === 0 && !hasStray
+        ? !SIGNATURE_APPENDIX_RE.test(tail)
+        : later.some((s) => !s.validationOnly) || (hasStray && !SIGNATURE_APPENDIX_RE.test(stray));
     }
   }
 
@@ -227,18 +309,23 @@ function glyphText(glyphs) {
   return text;
 }
 
+const initialState = () => ({
+  ctm: IDENTITY, fill: "#000000", renderMode: 0, font: null, fontSize: 0, tm: IDENTITY, lineX: 0, lineY: 0, x: 0, y: 0, leading: 0, rise: 0, annotation: false,
+});
+
 /**
  * Replays the graphics state over pdf.js's operator list and records every
  * image paint (with its CTM) and every text show (with its render mode,
  * font, effective size, fill and position), plus whether any non-white area
- * was filled.
+ * was filled. Images and text drawn by an annotation's appearance (a stamp,
+ * typed-on text, a filled field) are marked `annotation: true`.
  */
 export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) => id) {
   const FILL_OPS = new Set([OPS.fill, OPS.eoFill, OPS.fillStroke, OPS.eoFillStroke, OPS.closeFillStroke, OPS.closeEOFillStroke, OPS.rawFillPath]);
   const images = [];
   const runs = [];
   let nonWhiteFill = false;
-  let st = { ctm: IDENTITY, fill: "#000000", renderMode: 0, font: null, fontSize: 0, tm: IDENTITY, lineX: 0, lineY: 0, x: 0, y: 0, leading: 0, rise: 0 };
+  let st = initialState();
   const stack = [];
   const save = () => stack.push({ ...st });
   const restore = () => {
@@ -250,13 +337,14 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
     st.x = st.lineX;
     st.y = st.lineY;
   };
-  const showText = (glyphs) => {
+  const showText = (glyphs, order) => {
     if (runs.length >= MAX_RUNS_PER_PAGE) return;
     const text = glyphText(glyphs);
     if (text === "") return;
     const m = compose(st.ctm, st.tm);
     const [x, y] = applyPoint(m, st.x, st.y + st.rise);
     runs.push({
+      order,
       text: text.slice(0, MAX_RUN_CHARS),
       font: fontNameOf(st.font),
       fontSize: Math.abs(st.fontSize) * Math.hypot(m[2], m[3]),
@@ -264,9 +352,10 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
       fill: fillClass(st.fill),
       x,
       y,
+      annotation: st.annotation,
     });
   };
-  const paint = (order, entry) => images.push({ order, ...entry });
+  const paint = (order, entry) => images.push({ order, ...entry, annotation: st.annotation });
 
   for (let i = 0; i < fnArray.length; i++) {
     const fn = fnArray[i];
@@ -290,6 +379,22 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
         break;
       }
       case OPS.paintFormXObjectEnd:
+        restore();
+        break;
+      case OPS.beginAnnotation: {
+        // A viewer draws the appearance over the page from a fresh graphics
+        // state, through the annotation's transform (its box onto Rect) and
+        // then its appearance /Matrix.
+        save();
+        let ctm = IDENTITY;
+        for (const m of [args?.[2], args?.[3]]) {
+          const mm = matrixArg(m ? [m] : null);
+          if (mm) ctm = compose(ctm, mm);
+        }
+        st = { ...initialState(), ctm, annotation: true };
+        break;
+      }
+      case OPS.endAnnotation:
         restore();
         break;
       case OPS.setFillRGBColor:
@@ -339,15 +444,15 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
       }
       case OPS.showText:
       case OPS.showSpacedText:
-        showText(args?.[0]);
+        showText(args?.[0], i);
         break;
       case OPS.nextLineShowText:
         moveText(0, st.leading);
-        showText(args?.[0]);
+        showText(args?.[0], i);
         break;
       case OPS.nextLineSetSpacingShowText:
         moveText(0, st.leading);
-        showText(args?.[2]);
+        showText(args?.[2], i);
         break;
       case OPS.paintImageXObject:
         paint(i, { objId: args[0], widthPx: args[1], heightPx: args[2], ctm: st.ctm, stencil: false });
@@ -366,20 +471,21 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
         if (args?.[0]) paint(i, { widthPx: args[0].width, heightPx: args[0].height, ctm: st.ctm, stencil: true });
         break;
       case OPS.constructPath:
-        if (FILL_OPS.has(args?.[0]) && fillClass(st.fill) === "color") nonWhiteFill = true;
+        if (FILL_OPS.has(args?.[0]) && fillClass(st.fill) === "color" && !st.annotation) nonWhiteFill = true;
         break;
       case OPS.shadingFill:
-        nonWhiteFill = true;
+        if (!st.annotation) nonWhiteFill = true;
         break;
       default:
-        if (FILL_OPS.has(fn) && fillClass(st.fill) === "color") nonWhiteFill = true;
+        if (FILL_OPS.has(fn) && fillClass(st.fill) === "color" && !st.annotation) nonWhiteFill = true;
     }
   }
   return { images, runs, nonWhiteFill };
 }
 
-const isVisibleRun = (r) => r.renderMode !== 3 && r.renderMode !== 7 && r.fill === "color";
+const isVisibleRun = (r) => r.renderMode !== 3 && r.renderMode !== 7 && r.fill === "color" && !r.coveredByScan;
 const nonSpaceLength = (s) => s.replace(/\s/g, "").length;
+const inside = (b, x, y) => x >= b[0] && x <= b[2] && y >= b[1] && y <= b[3];
 
 function resolveObject(page, objId) {
   const store = objId.startsWith("g_") ? page.commonObjs : page.objs;
@@ -404,7 +510,9 @@ async function imageData(page, img) {
 
 /**
  * Geometry for one page: which image is the scan, whether the page is a scan
- * at all, and which images were drawn on top of it.
+ * at all, and which images were drawn on top of it. The page itself (scan,
+ * scan-or-designed, OCR photos) is judged from its content alone;
+ * annotations only add what is drawn on top of it.
  */
 function classifyPage(view, walked) {
   const pageArea = Math.max(1, (view[2] - view[0]) * (view[3] - view[1]));
@@ -412,10 +520,18 @@ function classifyPage(view, walked) {
     const p = placementFromCtm(img.ctm);
     return { ...img, ...p, coverage: coverage(p.bbox, view) };
   });
+  const content = placed.filter((p) => !p.annotation);
   // The background scan is the first full-page raster painted. Further
   // full-page layers (mixed-raster-content "compact" scans) are not overlays.
-  const scan = placed.filter((p) => !p.stencil && p.coverage >= FULL_PAGE_COVERAGE).sort((a, b) => a.order - b.order)[0] ?? null;
-  const visibleChars = walked.runs.filter(isVisibleRun).reduce((n, r) => n + nonSpaceLength(r.text), 0);
+  const scan = content.filter((p) => !p.stencil && p.coverage >= FULL_PAGE_COVERAGE).sort((a, b) => a.order - b.order)[0] ?? null;
+  // Text painted BEFORE the scan, where the scan then covers it, cannot be
+  // seen: OCR software's "text under the page image" mode writes its text
+  // layer this way, in the ordinary visible render mode.
+  if (scan) for (const r of walked.runs) r.coveredByScan = r.order < scan.order && inside(scan.bbox, r.x, r.y);
+  // Text over a sizeable image: when invisible, that is the image's OCR layer.
+  const photos = content.filter((p) => !p.stencil && p.coverage >= OCR_IMAGE_MIN_COVERAGE);
+  for (const r of walked.runs) r.overImage = photos.some((p) => inside(p.bbox, r.x, r.y));
+  const visibleChars = walked.runs.filter((r) => !r.annotation && isVisibleRun(r)).reduce((n, r) => n + nonSpaceLength(r.text), 0);
   // A full-page image under lots of real text is a designed background
   // (letterhead, Canva export), not a scan.
   const isScanPage = Boolean(scan) && visibleChars <= SCAN_MAX_VISIBLE_CHARS;
@@ -534,7 +650,9 @@ export async function inspectPdf(bytes) {
         const content = await page.getTextContent();
         textParts.push(content.items.map((it) => (it.str ?? "") + (it.hasEOL ? "\n" : "")).join(""));
 
-        const ol = await page.getOperatorList({ annotationMode: pdfjs.AnnotationMode.DISABLE });
+        // Annotations included: a signature stamp or typed-on text added in
+        // Preview, Acrobat or an online editor is drawn over the page too.
+        const ol = await page.getOperatorList({ annotationMode: pdfjs.AnnotationMode.ENABLE });
         const fontNameOf = (id) => {
           if (!id) return null;
           if (!fontNames.has(id)) {
@@ -556,7 +674,7 @@ export async function inspectPdf(bytes) {
             ? { widthPx: cls.scan.widthPx, heightPx: cls.scan.heightPx, dpi: effectiveDpi(cls.scan.widthPx, cls.scan.heightPx, cls.scan.widthPt, cls.scan.heightPt) }
             : null,
           isScanPage: cls.isScanPage,
-          imageCount: cls.placed.length,
+          imageCount: cls.placed.filter((p) => !p.annotation).length,
           nonWhiteFill: walked.nonWhiteFill,
           visibleChars: cls.visibleChars,
           overlays: cls.isScanPage ? await describeOverlays(page, n, cls, previewPool) : [],

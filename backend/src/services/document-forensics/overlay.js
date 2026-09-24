@@ -17,6 +17,12 @@ export const OVERLAY_MIN_AREA = 0.001;
 export const OVERLAY_MIN_PIXELS = 8;
 /** A page with a full-page image AND more visible text than this is a designed page, not a scan. */
 export const SCAN_MAX_VISIBLE_CHARS = 400;
+/**
+ * Invisible text over an image covering at least this share of the page is
+ * that image's OCR layer (a photo or partial-page scan of text), not hidden
+ * text. Small images such as logos do not excuse invisible text.
+ */
+export const OCR_IMAGE_MIN_COVERAGE = 0.1;
 /** An image "has transparency" when at least this share of its pixels is not fully opaque. */
 export const MIN_TRANSPARENT_SHARE = 0.01;
 

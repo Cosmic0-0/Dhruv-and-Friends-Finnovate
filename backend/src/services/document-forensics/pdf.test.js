@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { analyzeStructure, inspectPdf, scanActiveContent } from "./pdf.js";
 import { parsePdfDate } from "./meta.js";
 import * as B from "./fixture-builders.js";
+import * as F from "./spec-fixtures.js";
 
 const bytes = (s) => new Uint8Array(Buffer.from(s, "latin1"));
 
@@ -41,6 +42,16 @@ test("analyzeStructure: signatures, counter-signatures, DSS appends and edits af
   const edited = analyzeStructure(await B.buildEditedAfterSigningPdf());
   assert.equal(edited.afterSignature, true);
   assert.ok(edited.bytesAfterSignature > 100);
+});
+
+test("analyzeStructure: a /DSS entry excuses only new objects, including against pages packed in object streams", async () => {
+  // The clean native fixture keeps its page inside a compressed object stream.
+  const packed = await B.buildCleanNativePdf();
+  assert.equal(analyzeStructure(await F.editWithDss(packed, { edit: false })).unexplainedUpdates, 0, "adding /DSS alone");
+  assert.equal(analyzeStructure(await F.editWithDss(packed)).unexplainedUpdates, 1, "the update rewrites the packed page");
+  const signed = await B.buildSignedPdf();
+  assert.equal(analyzeStructure(await F.editWithDss(signed, { edit: false })).afterSignature, false);
+  assert.equal(analyzeStructure(await F.editWithDss(signed)).afterSignature, true);
 });
 
 test("parsePdfDate handles offsets and partial dates", () => {
@@ -106,6 +117,38 @@ test("inspectPdf: text runs carry font, size, render mode and fill", async () =>
   assert.equal(typed.renderMode, 0);
   assert.equal(typed.fill, "color");
   assert.equal(Math.round(typed.fontSize), 13);
+  assert.equal(typed.coveredByScan, false, "typed after the scan, so on top of it");
+});
+
+test("inspectPdf: annotation appearances are read and marked, without changing how the page is judged", async () => {
+  // A Stamp annotation's image is an overlay on the scan, placed where the annotation's Rect puts it.
+  const stamp = await inspectPdf(new Uint8Array(await F.buildSignatureStampAnnotationPdf()));
+  assert.equal(stamp.pages[0].isScanPage, true);
+  assert.equal(stamp.pages[0].imageCount, 1, "the stamp is not page content");
+  const [o] = stamp.pages[0].overlays;
+  assert.equal(Math.round(o.effectiveDpi), 48);
+  // Filled form fields are read as annotation text, not as page text.
+  const form = await inspectPdf(new Uint8Array(await F.buildFilledFormPdf()));
+  const values = form.pages[0].runs.filter((r) => r.annotation).map((r) => r.text.trim());
+  assert.deepEqual(values.sort(), ["01/09/2026", "MUR 1,250.00"]);
+  assert.ok(form.pages[0].runs.filter((r) => !r.annotation).every((r) => r.font === "Times-Roman"));
+});
+
+test("inspectPdf: text over a sizeable image is marked overImage; text over a small logo is not", async () => {
+  const photo = await inspectPdf(new Uint8Array(await F.buildOcrPhotoWithMarginsPdf()));
+  assert.equal(photo.pages[0].scan, null, "the photo covers about 70% of the page, so it is not a full-page scan");
+  assert.ok(photo.pages[0].runs.every((r) => r.renderMode === 3 && r.overImage));
+  const logo = await inspectPdf(new Uint8Array(await F.buildHiddenTextOverLogoPdf()));
+  assert.ok(logo.pages[0].runs.every((r) => !r.overImage));
+});
+
+test("inspectPdf: text painted before the scan is covered by it, so the page is still a scan with no visible text", async () => {
+  const facts = await inspectPdf(new Uint8Array(await F.buildTextUnderImageScanPdf()));
+  const [page] = facts.pages;
+  assert.equal(page.isScanPage, true);
+  assert.ok(page.runs.length > 0);
+  assert.ok(page.runs.every((r) => r.renderMode === 0 && r.coveredByScan), "ordinary visible text, all under the scan");
+  assert.equal(page.visibleChars, 0);
 });
 
 test("inspectPdf: a scan without a text layer hands greyscale pixels to OCR", async () => {

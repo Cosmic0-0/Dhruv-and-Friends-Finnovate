@@ -12,7 +12,7 @@ import { redact } from "../redact/index.js";
 import { matchEditingTools } from "./tools.js";
 import { LOW_RES_RATIO, MIN_TRANSPARENT_SHARE } from "./overlay.js";
 
-export const DOCUMENT_DETECTOR_VERSION = "document-1.0";
+export const DOCUMENT_DETECTOR_VERSION = "document-1.1";
 
 export const RULES = Object.freeze({
   /** DOC-03: "modified before created" only beyond this clock slack. */
@@ -47,7 +47,8 @@ export const VALUE_RE = new RegExp(
 
 const nonSpace = (s) => s.replace(/\s/g, "").length;
 const isHiddenMode = (r) => r.renderMode === 3 || r.renderMode === 7;
-const isVisible = (r) => !isHiddenMode(r) && r.fill === "color";
+// coveredByScan: painted before the scan image and hidden under it (pdf.js classifyPage).
+const isVisible = (r) => !isHiddenMode(r) && r.fill === "color" && !r.coveredByScan;
 const round = (n, digits = 0) => (typeof n === "number" && Number.isFinite(n) ? Number(n.toFixed(digits)) : null);
 
 /** Redacted, whitespace-collapsed, length-capped text for evidence. */
@@ -256,9 +257,11 @@ function doc06(facts) {
   for (const page of facts.pages ?? []) {
     // OCR'd scans legitimately put invisible text over the page image.
     if (page.scan) continue;
-    const runs = page.runs ?? [];
+    // Page content only: annotation text (filled fields, comments) is shown by viewers.
+    const runs = (page.runs ?? []).filter((r) => !r.annotation);
     const groups = [
-      ["invisible_render_mode", runs.filter(isHiddenMode), "drawn invisibly"],
+      // Invisible text over a photo or partial-page scan is its OCR layer (overImage, pdf.js classifyPage).
+      ["invisible_render_mode", runs.filter((r) => isHiddenMode(r) && !r.overImage), "drawn invisibly"],
       // White text only counts when nothing coloured is painted on the page:
       // white-on-a-dark-banner is ordinary design.
       ["white_text", page.imageCount === 0 && !page.nonWhiteFill ? runs.filter((r) => !isHiddenMode(r) && r.fill === "white") : [], "drawn in white on a white page"],
@@ -313,7 +316,8 @@ function doc07(facts) {
  */
 export function fontOutliers(page) {
   const { minItems, dominantShare, maxOutlierItems } = RULES.fontOutlier;
-  const items = mergeRuns((page.runs ?? []).filter(isVisible)).filter((it) => nonSpace(it.text) > 0);
+  // Page content only: form-field values in their own font are ordinary.
+  const items = mergeRuns((page.runs ?? []).filter((r) => isVisible(r) && !r.annotation)).filter((it) => nonSpace(it.text) > 0);
   if (items.length < minItems) return [];
   const counts = new Map();
   for (const it of items) {

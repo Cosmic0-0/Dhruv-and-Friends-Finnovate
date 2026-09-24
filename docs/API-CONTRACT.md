@@ -163,7 +163,7 @@ non-boolean value is a `400 { "error": "shareSamples must be a boolean" }`.
     "rulesetVersion": "rs-1.6",
     "source": "pasted_text" | "screenshot" | "batch" | "email" | "document" | "conversation",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.2", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)", "imageForensics": "image-forensics-1.0 (only for screenshots)" },
+    "detectorVersions": { "url": "url-2.2", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.1 (only for documents)", "imageForensics": "image-forensics-1.0 (only for screenshots)" },
     "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.3", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
     "channel": "sms | whatsapp | email | facebook | call — optional, only when the request sent `channel`",
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
@@ -626,7 +626,7 @@ type/claimed-identity counts) that text checks record.
 ### Response - `200 OK`
 
 The full `/api/analyze` response (`analysis.source: "document"`,
-`analysis.detectorVersions.document: "document-1.0"`) plus:
+`analysis.detectorVersions.document: "document-1.1"`) plus:
 
 ```jsonc
 {
@@ -665,7 +665,7 @@ The full `/api/analyze` response (`analysis.source: "document"`,
 A DOC-04 signal that has a preview carries `metadata.previewIndex`, its index in
 `document.previews`.
 
-#### Document reason codes (detector `document-1.0`, weights from `rs-1.4`, unchanged in `rs-1.6`)
+#### Document reason codes (detector `document-1.1`, weights from `rs-1.4`, unchanged in `rs-1.6`)
 
 Each one is a warning sign, not proof. All of them are `sourceType: "rule"` and
 `category: "document_integrity"`, which feeds `riskCategories.technical_risk`.
@@ -674,13 +674,13 @@ Their legacy `type` has the form `document_*`.
 | Code | Emitted when (evidence required) | rs-1.4 points |
 |---|---|---|
 | DOC-01 | Producer/Creator (Info or XMP), or the DOCX Application/creator fields, name a consumer editing or design tool from `CONSUMER_EDITING_TOOLS` (Canva, iLovePDF, Smallpdf, Sejda, PDFescape, PDF24, Photoshop, GIMP, ...). Word, LibreOffice, scanners and PDF libraries are never flagged. The tools are in `metadata.tools`. | 10 |
-| DOC-02 | `after_signature`: bytes were appended after the last signed `/ByteRange`, and they are not DSS/VRI validation data. `incremental_update`: there is a saved revision after the first that is not a signature being added, DSS data or linearization. | 30 / 8 |
+| DOC-02 | `after_signature`: bytes were appended after the last signed `/ByteRange`, and they are not DSS/VRI validation data. `incremental_update`: there is a saved revision after the first that is not a signature being added, DSS data or linearization. A revision is DSS/VRI validation data only when it mentions `/DSS` or `/VRI` and every object it defines is new, apart from the catalog (with the same page tree), the Info dictionary and XMP metadata. Rewriting any existing page, content, annotation or field makes it an edit. A revision whose object streams cannot be read (an encrypted file) is judged by the mention alone. | 30 / 8 |
 | DOC-03 | `mod_before_create` (by more than 60s), `future_date` (more than 24h ahead), or `producer_mismatch` (the Info and XMP producers share no word) | 6 |
-| DOC-04 | Only on a **scan page**, meaning a raster covering at least 85% of the page with at most 400 visible text characters. Fires on an image drawn over the scan. `transparent_overlay`: at least 1% of its pixels are transparent. `resolution_mismatch`: below 0.5x the scan's dpi. `overlay`: neither. Stencil masks at or above the scan's dpi (compact/MRC scans) and extra full-page layers are ignored. The DOCX variant `docx_transparent_image` is a floating (`wp:anchor`) PNG with transparency. | 25 / 20 / 10 / 8 |
-| DOC-05 | Visible text (render mode not 3/7, not white) drawn on a scan page. The evidence is up to 3 redacted snippets of up to 120 characters each. | 20 |
-| DOC-06 | At least 20 hidden characters on a page without a full-page image. Variants: `invisible_render_mode`, `white_text` (only on pages with no images and no coloured fills), `tiny_font` (under 1pt). The hidden text also flows into the pipeline, where SOC-07 can fire. | 10 |
-| DOC-07 | PDF: `javascript`, `launch_action`, `embedded_file`, or `submit_form` to an external URL. Found by enumerating every object, including compressed object streams. DOCX: `macro` (`vbaProject.bin`), `external_template` (an attachedTemplate with `TargetMode="External"`; the host is in `metadata.host`), or `ole_object`. Nothing is executed or fetched. | 20 / 30 / 10 / 15; 30 / 30 / 15 |
-| DOC-08 | Native pages only. Needs at least 10 visible text items, with one font family on at least half of them. Fires on an amount, account number, IBAN or date item in a family used by at most 2 items. Bold or italic of the same family never counts. The fonts are in `metadata.font` and `metadata.dominantFont`. | 12 |
+| DOC-04 | Only on a **scan page**, meaning a raster covering at least 85% of the page with at most 400 visible text characters (both judged from the page content; annotations never change them). Fires on an image drawn over the scan, including one drawn by an annotation's appearance (a signature stamp added in macOS Preview or Acrobat). `transparent_overlay`: at least 1% of its pixels are transparent. `resolution_mismatch`: below 0.5x the scan's dpi. `overlay`: neither. Stencil masks at or above the scan's dpi (compact/MRC scans) and extra full-page layers are ignored. The DOCX variant `docx_transparent_image` is a floating (`wp:anchor`) PNG with transparency. | 25 / 20 / 10 / 8 |
+| DOC-05 | Visible text (render mode not 3/7, not white) drawn on a scan page, including text drawn by an annotation (typed-on FreeText, a filled form field). Text painted before the scan and covered by it (OCR software's "text under the page image" mode) is not visible and never counts, here or in the 400-character scan-page test. The evidence is up to 3 redacted snippets of up to 120 characters each. | 20 |
+| DOC-06 | At least 20 hidden characters in the content of a page without a full-page image (annotations do not count). Invisible text lying over an image that covers at least 10% of the page is that image's OCR layer (a photo or partial-page scan) and does not count; over a smaller image such as a logo it still does. Variants: `invisible_render_mode`, `white_text` (only on pages with no images and no coloured fills), `tiny_font` (under 1pt). The hidden text also flows into the pipeline, where SOC-07 can fire. | 10 |
+| DOC-07 | PDF: `javascript`, `launch_action`, `embedded_file`, or `submit_form` to an external URL. Found by enumerating every object, including compressed object streams, except in a permissions-only encrypted file, whose object streams are not read (see the limits below). DOCX: `macro` (`vbaProject.bin`), `external_template` (an attachedTemplate with `TargetMode="External"` that points at a web address or a network share; the host is in `metadata.host`. A template path on the author's own computer, such as `file:///C:/...`, is how Word records any custom template and is not flagged), or `ole_object`. Nothing is executed or fetched. | 20 / 30 / 10 / 15; 30 / 30 / 15 |
+| DOC-08 | Native pages only, page content only (filled form fields and other annotations do not count). Needs at least 10 visible text items, with one font family on at least half of them. Fires on an amount, account number, IBAN or date item in a family used by at most 2 items. Bold or italic of the same family never counts. The fonts are in `metadata.font` and `metadata.dominantFont`. | 12 |
 
 - Several variants of the same code make one finding, at the strongest weight
   (normal dedupe).
@@ -1457,8 +1457,8 @@ otherwise.
   - A forgery that was printed and scanned again leaves no structural trace.
   - There is no error-level analysis or ML model on this route (the Python
     service used by `/api/documents` has them).
-  - PDF annotations (e.g. form fields filled on a scan) and XFA forms are not
-    inspected.
+  - PDF annotations count only as images or text drawn on a scan (DOC-04,
+    DOC-05); XFA forms are not inspected.
   - For PDFs with permissions-only encryption, the active-content scan is
     best-effort: their compressed object streams are ciphertext to the object
     enumerator.
