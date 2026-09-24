@@ -454,11 +454,13 @@ not installed on the machine, so every Node check ran on Node 24.18.0.
 | `outlook-addin`: `npm run build`, `npm run validate` | both pass; the manifest is valid |
 | `extension`: `npm test` | 46 tests, all pass |
 | `extension`: `npm run check:retire` | passes; vendored Retire.js data fetched 2026-09-23 |
-| `document-forensics`: `python -m pytest` | not run: no Python 3.12 on the machine |
+| `document-forensics`: `python -m pytest --ignore=tests/test_layout.py` | Python 3.12.10, base requirements only (no PyTorch): 48 passed, 2 skipped (TruFor weights absent); the 8 layout tests need PyTorch to load |
+| `backend`: `npm run test:fallback` | passes: forced Ollama down, served by OpenRouter `liquid/lfm-2.5-2.6b:free` in 25.2s (60s budget), response matched the schema |
 
-Not run on that date: `npm run test:fallback` and `npm run eval:kreol:translate`
-(both need a reachable model), the Outlook live fixture smoke test (it needs a
-running backend), and a frontend lint (ESLint is not configured).
+Not run on that date: `npm run eval:kreol:translate` (it needs the Ollama
+model, and this machine's Tailscale was not connected), the Outlook live
+fixture smoke test (it needs a running backend), and a frontend lint (ESLint
+is not configured).
 
 These checks validate code paths and contracts. They do not replace a real-model
 run, OCR sample, browser interaction pass, extension smoke test, or fallback test
