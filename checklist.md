@@ -95,10 +95,12 @@ before any real data touches a demo.
       so one IP re-reporting can't create a cluster. The raw `reportCount`
       is still a per-sender tally protected only by the rate limit. Last
       verified 2026-09-23.
-- [x] **Parameterize all DB queries**: every query in `backend/src/db/`
-      uses `?` placeholders through `better-sqlite3`'s `prepare()`. The one
-      interpolated string (`backend/src/db/org.js`) builds a list of `?`
-      placeholders, not values. Last verified 2026-09-23.
+- [x] **Parameterize all DB queries**: every query (`backend/src/db/`,
+      `backend/src/services/scam-dna/`, `backend/src/services/radar/`) passes
+      values through `?` placeholders in `better-sqlite3`'s `prepare()`. The
+      three interpolated strings, all in `backend/src/db/org.js`, only build a
+      list of `?` placeholders for an `IN (...)` clause, never values. Last
+      verified 2026-09-24.
 - [x] **Validate all input** server-side: every route with a body declares
       its own `express.json()` limit, and a body over it gets a generic JSON
       `413`; malformed JSON gets `400`. From `backend/src/routes/index.js`,
