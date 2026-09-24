@@ -69,24 +69,26 @@ The response includes both the compatibility fields (`verdict`, `riskScore`,
 
 ## Document forensics
 
-There are two document routes. They take different file types and make
-different kinds of claim; `docs/DOCUMENT-FORENSICS.md` compares them.
+Three routes look at how a file or image was made, not only at what it says.
+`docs/DOCUMENT-FORENSICS.md` compares them.
 
 | Route | Files | Where it runs | Output |
 |---|---|---|---|
-| `POST /api/analyze/document` | PDF, DOCX | Node: `backend/src/services/document-forensics/` | `DOC-*` signals and a normal verdict |
-| `POST /api/documents` | PDF, PNG, JPEG, WEBP | Node stores the bytes (`document-store/`) and OCRs images; the optional Python service `document-forensics/` runs the checks, called through `document-forensics-client/` | Indicators with a confidence label, never a verdict |
+| `POST /api/analyze/document` | PDF, DOCX | Node: `backend/src/services/document-forensics/` | DOC-01..08 signals and a normal verdict |
+| `POST /api/analyze/screenshot` | PNG, JPEG, WEBP | OCR in Node, plus the optional Python service `document-forensics/` through `document-forensics-client/` | DOC-09..13 signals alongside the text signals, one normal verdict |
+| `POST /api/documents` | PDF, PNG, JPEG, WEBP | Node stores the bytes (`document-store/`) and OCRs images; the Python service runs the checks | Indicators with a confidence label, never a verdict |
 
-The web app's `/document` page uses only the first route. The second is
-reachable through the API only.
+The web app's `/document` page uses only the first route, and its screenshot
+upload uses the second (see "Known limitations" for how it uses the result).
+`/api/documents` is reachable through the API only.
 
 ### PDF/DOCX: `POST /api/analyze/document`
 
 `POST /api/analyze/document` checks a PDF or Word (.docx) file that feels off,
 such as a bank form, statement, invoice or payment confirmation. It looks at
 how the **file itself** was made, not only what it says. Each finding is a
-normal deterministic signal (DOC-01..08, ruleset `rs-1.4`). The result is
-still one verdict from the same risk engine.
+normal deterministic signal (DOC-01..08, weighted since ruleset `rs-1.4`).
+The result is still one verdict from the same risk engine.
 
 ```text
 upload (base64 JSON, <=10MB) -> magic-byte type check (never the file name)
@@ -156,6 +158,19 @@ returned.
 
 The fixtures in `data/test-payloads/documents/` demonstrate each case.
 
+### Screenshots: `POST /api/analyze/screenshot`
+
+The screenshot route runs OCR and sends the same image to the Python service
+at the same time. The service's findings are mapped to DOC-09 (TruFor),
+DOC-10 (error-level analysis), DOC-11 (layout mismatch), DOC-12 (image
+metadata) and DOC-13 (signature inconsistency) by
+`backend/src/services/document-forensics-client/toSignals.js`, with the
+service's own confidence as the signal variant. They join the OCR text's
+signals in one `runPipeline()` run, scored by ruleset `rs-1.6`, so the verdict
+covers both the words and the image. The image is not stored. When the service
+is down, the check still succeeds with text signals only, and
+`imageForensics.status` says `"unavailable"`.
+
 ### Images: `POST /api/documents`
 
 This route is for a photographed document, such as a phone photo of a bank
@@ -186,7 +201,8 @@ behaviour on real documents is not well understood yet.
 
 The Python service is optional. When it is down, slow or failing, the upload
 still succeeds and `forensics.status` is `"unavailable"`.
-`GET /health/document-forensics` reports whether it is reachable.
+`GET /health/document-forensics` reports whether it is reachable. This route
+ignores `shareSamples` and always stores the upload.
 
 ## Model transport
 
@@ -215,8 +231,10 @@ Run `npm run test:fallback` on the actual demo machine shortly before presenting
   handling selected negation and legitimate-notification cases.
 - Identity consistency compares the claimed organization with linked domains and
   structured payment recipients.
-- Payment context lets the Before You Pay flow add recipient mismatch and active
-  coaching signals that cannot be inferred reliably from message text alone.
+- Payment context (`paymentContext` on `/api/analyze`) adds recipient mismatch
+  and active coaching signals that cannot be inferred reliably from message
+  text alone. No current client sends it; Before You Pay uses the separate
+  `/api/check-payee` check.
 - Email context lets the Outlook add-in supply sender, Reply-To, Return-Path,
   authentication, attachment, and link metadata. These fields are evaluated by
   deterministic code and are not sent to the LLM.
@@ -233,6 +251,10 @@ evidence is capped, and strong decisions require deterministic corroboration.
 The semantic prompt supports English, French, and Kreol Morisien. For relevant
 Kreol input, `kreolGrounding.js` retrieves a small set of reviewed corpus and
 translation-memory entries. Draft or rejected entries are not used by default.
+The Kreol language layer (`backend/src/services/kreol/`: spelling
+normalisation for matching, mixed-language detection, entity-protecting
+translation) is described in `docs/KREOL-CURRENT-STATE.md`. Evidence is always
+quoted from the original text, never from a normalised or translated copy.
 
 Language support is broader than prompt grounding: the deterministic lexicon also
 contains language-specific patterns. Changes to Kreol data must preserve its
@@ -247,17 +269,20 @@ must reach the backend for OCR; the server redacts the extracted text before the
 analysis pipeline sees it.
 
 The OCR route accepts PNG, JPEG, and WEBP content up to 5 MB after decoding and
-checks magic bytes. Tesseract runs in memory. OCR text is returned to the user for
-review before the normal text-analysis request is made.
+checks magic bytes. Tesseract runs in memory, and the image is also sent to the
+local Python forensics service; neither stores it. The web app does not show
+the OCR text: the screenshot thumbnail is the visible input, and the text is
+sent to `/api/analyze` when the user presses Check.
 
 SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
 
 - Uploaded documents, as original bytes (`documents` table). `POST
   /api/documents` stores every accepted PDF, PNG, JPEG or WEBP upload with its
   client-supplied file name, MIME type, size, SHA-256 and receive time. `POST
-  /api/analyze/document` stores PDF uploads the same way, without a file name.
-  These can be bank statements or identity documents. They are stored
-  unencrypted, no route returns them, and nothing deletes them.
+  /api/analyze/document` stores PDF uploads the same way, without a file name,
+  unless the request says `shareSamples: false`. These can be bank statements
+  or identity documents. They are stored unencrypted, no route returns them,
+  and nothing deletes them.
 - Sender report counts keyed on the reported identifier (`reports`). A
   phone-shaped identifier is stored as its normalised digits.
 - Privacy-minimised report events (fingerprints of redacted text and an HMAC
@@ -270,10 +295,22 @@ SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
 - Organisation email observations, indicators and analyst outcome labels
   (`org_*`), keyed on HMAC pseudonyms of addresses and of the analyst's IP.
   A purge function exists but nothing calls it, so these rows are kept.
+- Radar's daily counters (`radar_daily`, `radar_domain_daily`): verdict,
+  scam type, claimed institution, reported channel and lookalike domain per
+  Mauritius calendar day, with no text, sender or IP. Rows are tagged `live`
+  or `demo_seed` (from `npm run seed:radar`) and deleted after
+  `RADAR_RETENTION_DAYS` (default 730), checked at startup and on a timer.
 - Batch summary counts and cached domain registration dates.
 
 Raw message text and raw reporter IP addresses are not stored. Apart from the
-community events and audit rows, nothing has a retention period.
+community events, audit rows and Radar counters, nothing has a retention
+period.
+
+The web app's Settings has a "Share anonymous scam samples" switch. When it is
+off, requests carry `shareSamples: false` and the backend skips the community
+event, ScamDNA, Radar, organisation and batch-history writes for that request,
+and does not store a document sent to `/api/analyze/document`.
+`/api/documents` and `/api/report` are not affected.
 
 The prototype has no accounts or tenant isolation. Campaigns, trends, and sender
 report counts should be treated as public demo data. Do not add user history APIs
@@ -281,28 +318,38 @@ until an authentication and ownership model exists.
 
 ## Product surfaces
 
-The Next.js frontend provides:
+The Next.js frontend serves a landing page at `/` and the web app at `/app`.
+The app provides:
 
-- Check: paste/type or screenshot intake and the main result view.
+- Check (`/app`): paste or type a message, check a link, or upload a
+  screenshot, then the main result view. A small `/api/text-profile` call
+  labels the pasted text's language and link count while the user types.
 - Document check: upload a PDF or Word file. The result screen adds a
   "Document integrity" panel with the file's facts, its findings in plain
   words, and previews of images found pasted onto a scan.
-- Before You Pay: structured payment-context questions.
-- Conversation: per-message analysis with the furthest observed journey stage.
+- Before You Pay (`/safepay`): the `/api/check-payee` payee check (report
+  count, number/IBAN format, an organisation name on a personal number, a
+  large amount).
+- Conversation: the whole chat goes to `/api/analyze/conversation` and gets
+  one verdict, with each flagged message and the journey stages marked.
 - Batch: up to 50 messages with aggregate results and observed campaign groups.
 - Replay: a staged explanation of the evidence already returned by the backend.
 - Network: a React Flow graph for stored ScamDNA observations.
 - Sandbox: a bounded, fictional scam sequence grounded in backend playbooks.
-- Learn, Trends, Settings, recent checks, simple mode, and shareable safety cards.
+- Report (`/report`): a static guide to Mauritian reporting channels. It
+  sends nothing to the backend.
+- Learn, Radar (`/trends`), Settings, recent checks, simple mode, and
+  shareable safety cards.
+- Information pages: `/extension`, `/privacy`, `/created-by`.
 
 Results and recent checks are browser-local. The backend does not provide user
 accounts or personal history synchronization.
 
 The Chrome extension calls the same backend for URL, text, report, and site
 security checks. It does not contain its own fraud classifier. Page scanning is an
-explicit user action. The extension is currently configured for
-`http://localhost:4000` and `http://localhost:3000`; deployment requires updating
-`extension/config.js` and the manifest `host_permissions` together.
+explicit user action. The extension is configured for the deployed site
+(`https://api.fraudlens.site` and `https://fraudlens.site`); local work requires
+changing `extension/config.js` and the manifest `host_permissions` together.
 
 The Outlook read-mode task pane sends the open message body and bounded metadata
 to the same `/api/analyze` route. It does not scan the mailbox, download attachment
@@ -353,8 +400,13 @@ so the setting must match the real topology before production use.
   lint check.
 - Node 22 is declared but not enforced: each Node project's `package.json` has
   `"engines": { "node": ">=22" }` and the root `.nvmrc` says `22`, but npm only
-  warns on a mismatch. Frontend tests need it because they run TypeScript
-  directly through Node.
+  warns on a mismatch. The frontend tests run TypeScript files directly, which
+  Node supports without a flag only from 22.18.0, so `>=22` also admits
+  22.0-22.17, which cannot run them.
+- The web app's screenshot flow discards the image-forensics result. It keeps
+  only the OCR text from `/api/analyze/screenshot` and sends that text to
+  `/api/analyze`, so the verdict shown never includes DOC-09..13, and each
+  screenshot costs two analyze requests and two semantic-model calls.
 - Accessibility and responsive behavior need a final real-browser pass across the
   result, screenshot, document, batch, conversation, network, and extension flows.
 - Document forensics finds warning signs, not proof. On both paths, metadata
@@ -362,15 +414,16 @@ so the setting must match the real topology before production use.
   leaves no structural trace.
 - PDF/DOCX path (`/api/analyze/document`, Node):
   - It has no error-level analysis and no ML forgery model. Those exist only
-    in the Python service used by `/api/documents`, which this route does
-    not call.
+    in the Python service used by `/api/documents` and
+    `/api/analyze/screenshot`, which this route does not call.
   - PDF annotations and XFA forms are not inspected.
   - Legitimate e-signing tools can also place transparent signature images on a
     scan, which is why that finding alone is ELEVATED ("verify first"), not HIGH.
   - For PDFs with permissions-only encryption, the active-content scan is
     best-effort.
   - Only the first 10 pages are inspected, and at most 3 scanned pages are OCR'd.
-- Image path (`/api/documents`, Python service):
+- Image paths (`/api/documents` and `/api/analyze/screenshot`, Python
+  service):
   - ELA only applies to images with JPEG compression history; it is skipped
     for others.
   - TruFor has produced false positives on synthetic, non-photographic input.
@@ -379,29 +432,30 @@ so the setting must match the real topology before production use.
     `document-forensics/tests/fixtures/templates/`.
   - The checks are calibrated against a handful of fixtures, not tuned on
     real-world documents.
-  - There is no web UI for this route yet.
+  - There is no web UI for `/api/documents`.
 
 ## Verification baseline
 
-Run on 2026-09-23. Node 22 was not installed on the machine, so every Node
-check ran on Node 24.18.0.
+Run on 2026-09-24 on the merge of `origin/main` into `caellum`. Node 22 was
+not installed on the machine, so every Node check ran on Node 24.18.0.
 
 | Check | Result |
 |---|---|
-| `backend`: `npm test` | 485 tests, 485 pass (localhost binding allowed) |
-| `backend`: `npm run eval` | runs; 84 cases, deterministic mode, ruleset `rs-1.4`: 46 TP, 0 FP, 21 TN, 17 FN (precision 100%, recall 73.0%) |
-| `frontend`: `npm test` | 95 tests in 10 files, all pass |
+| `backend`: `npm test` | 626 tests, 626 pass (localhost binding allowed) |
+| `backend`: `npm run eval` | runs; 84 cases, deterministic mode, ruleset `rs-1.6`: 46 TP, 0 FP, 21 TN, 17 FN (precision 100%, recall 73.0%) |
+| `backend`: `npm run eval:kreol` | runs; 88 fraud cases, 95.5% pass (dev 100%, heldout 88.2%), 4 failures. The fixtures are AI-drafted and unreviewed, so this is not a reviewed benchmark. |
+| `frontend`: `npm test` | 98 tests in 10 files, all pass |
 | `frontend`: `npm run typecheck` | passes |
-| `frontend`: `npm run build` | passes; 17 static pages generated |
+| `frontend`: `npm run build` | passes; 22 static pages generated |
 | `outlook-addin`: `npm test` | 77 tests in 11 files, all pass |
 | `outlook-addin`: `npm run build`, `npm run validate` | both pass; the manifest is valid |
-| `extension`: `npm test` | 40 tests, all pass |
+| `extension`: `npm test` | 46 tests, all pass |
 | `extension`: `npm run check:retire` | passes; vendored Retire.js data fetched 2026-09-23 |
-| `document-forensics`: `python -m pytest` | not run: no Python 3.12 virtualenv on the machine |
+| `document-forensics`: `python -m pytest` | not run: no Python 3.12 on the machine |
 
-Not run on that date: `npm run test:fallback` (it calls the hosted fallback
-provider), the Outlook live fixture smoke test (it needs a running backend),
-and a frontend lint (ESLint is not configured).
+Not run on that date: `npm run test:fallback` and `npm run eval:kreol:translate`
+(both need a reachable model), the Outlook live fixture smoke test (it needs a
+running backend), and a frontend lint (ESLint is not configured).
 
 These checks validate code paths and contracts. They do not replace a real-model
 run, OCR sample, browser interaction pass, extension smoke test, or fallback test

@@ -100,7 +100,9 @@ assessment**; `analysis.semantic.status` says which.
 prose for the LLM): `method` in {gift_card, voucher, crypto,
 money_transfer_service} → `PAY-02`; `recipient` not matching
 `claimedOrganisation` → `PAY-05`; `onCallNow: true` → `PAY-06`. An invalid
-`paymentContext` returns `400` with a field-specific message.
+`paymentContext` returns `400` with a field-specific message. No current
+client (web app, extension, Outlook add-in) sends `paymentContext`; the web
+app's Before You Pay screen uses `POST /api/check-payee` instead.
 
 #### Sharing samples (`shareSamples`)
 
