@@ -4,8 +4,7 @@
 `backend/src/routes/index.js`, `backend/src/services/pipeline/index.js`, and
 `backend/src/index.js`. Shapes change only additively, and only when this
 file and every consumer (frontend, extension, Outlook add-in) are updated
-together. Where the implementation returns something this file does not
-describe, the route's section says so under "Contract gap".
+together.
 
 Base URL: `http://localhost:4000` in local dev (`PORT` in `.env`).
 
@@ -22,11 +21,14 @@ standard `RateLimit-*` headers. There is no authentication on any route.
 | `POST /api/analyze` | 300kb | 20 / 15 min (analyze) |
 | `POST /api/analyze/screenshot` | 8mb | 20 / 15 min (analyze) |
 | `POST /api/analyze/document` | 14mb | 20 / 15 min (analyze) |
+| `POST /api/analyze/conversation` | 3mb | 20 / 15 min (its own counter) |
 | `POST /api/documents` | 20mb | 15 / 15 min |
 | `POST /api/batch-scan` | 300kb | 10 / 15 min |
+| `POST /api/text-profile` | 60kb | 600 / 15 min |
 | `POST /api/check-url` | 10kb | 120 / 15 min |
 | `POST /api/analyze-site` | 300kb | 15 / 15 min |
 | `POST /api/check-sender` | 10kb | 120 / 15 min (read) |
+| `POST /api/check-payee` | 10kb | 120 / 15 min (read) |
 | `POST /api/report` | 300kb | 5 / hour (report) |
 | `GET /api/campaign/:fingerprintId` | none | 120 / 15 min (read) |
 | `GET /api/org/campaigns` | none | 120 / 15 min (read) |
@@ -42,21 +44,13 @@ Routes marked "(analyze)", "(read)" or "(report)" share one limiter per
 group, and so one counter per IP: for example, five `/api/org/outcomes` calls
 use up the same hourly budget as five `/api/report` calls.
 
-> **ADDITIVE CHANGE (2026-09-24): image forensics for screenshots.**
-> `POST /api/analyze/screenshot` now also runs the uploaded image through the
-> local Python document-forensics service (TruFor/ELA/layout/EXIF/signature)
-> concurrently with OCR, not just OCR alone. New reason codes `DOC-09`..`DOC-13`
-> (`document-forensics-client/toSignals.js`), ruleset `rs-1.6` (rs-1.0..1.5
-> unchanged and selectable), a new `imageForensics` response field (see that
-> route below). `analysis.detectorVersions.imageForensics` is added when any
-> of these signals fired. No existing field changed type or meaning.
-
 ## `POST /api/analyze`
 
 The same response is returned by `/api/analyze/screenshot` (plus
-`extractedText`), by `/api/analyze/document` (plus `documentId`,
-`extractedText` and `document`) and by each `/api/batch-scan` result, because
-all of them call one function: `runPipeline()` in
+`extractedText` and `imageForensics`), by `/api/analyze/document` (plus
+`documentId`, `extractedText` and `document`), by `/api/analyze/conversation`
+(plus `conversation`) and by each `/api/batch-scan` result, because all of
+them call one function: `runPipeline()` in
 `backend/src/services/pipeline/index.js`.
 
 The compatibility fields are computed by the deterministic engine, never by
@@ -65,7 +59,7 @@ the LLM:
 - `verdict` is derived from the risk level (`low → safe`,
   `elevated → suspicious`, `high|critical → scam`).
 - `riskScore` is the deterministic rule score from the active ruleset
-  (`rs-1.4`). It is always present.
+  (`rs-1.6`). It is always present.
 - `suggestedAction` is a fixed policy key (`"block_sender, report_to_bank"` |
   `"verify_official_channel"` | `"none"`) set by `services/interventions`.
   Concrete advice is in `actions[]` (`{ id, text }`).
@@ -110,13 +104,17 @@ money_transfer_service} → `PAY-02`; `recipient` not matching
 
 #### Sharing samples (`shareSamples`)
 
-Accepted by `/api/analyze`, `/api/analyze/screenshot`, `/api/analyze/document`
-and `/api/batch-scan` (`backend/src/services/sharing`). By default an analysis
-may add to FraudLens's shared evidence: a community evidence event (message
-fingerprint hashes, normalised sender, claimed brand, lookalike hosts, a
-hashed reporter IP — never the message text), a ScamDNA observation (claimed
-identity, sender, lookalike domains), a batch's summary counts, and, for
-`/api/analyze/document`, the uploaded file's original bytes. The web app's
+Accepted by `/api/analyze`, `/api/analyze/screenshot`, `/api/analyze/document`,
+`/api/analyze/conversation` and `/api/batch-scan`
+(`backend/src/services/sharing`). By default an analysis may add to
+FraudLens's shared evidence: a community evidence event (message fingerprint
+hashes, normalised sender, claimed brand, lookalike hosts, a hashed reporter
+IP, never the message text), a ScamDNA observation (claimed identity, sender,
+lookalike domains), Radar's daily counters, an organisation email observation
+(email analyses only), a batch's summary counts, and, for
+`/api/analyze/document`, the uploaded file's original bytes.
+`POST /api/documents` does not accept `shareSamples` and always stores the
+upload. The web app's
 Settings → "Share anonymous scam samples" sends `shareSamples: false` when
 turned off; the backend then skips all of those writes. The analysis itself
 is unchanged: existing community evidence and known ScamDNA campaigns are
@@ -157,10 +155,10 @@ non-boolean value is a `400 { "error": "shareSamples must be a boolean" }`.
   "journey": { "currentStage": "...", "likelyNextStages": [ { "stage": "...", "reason": "..." } ] },
   "scamDna": { "...": "unchanged" },
   "analysis": {
-    "rulesetVersion": "rs-1.5",
-    "source": "pasted_text" | "screenshot" | "batch" | "email" | "document",
+    "rulesetVersion": "rs-1.6",
+    "source": "pasted_text" | "screenshot" | "batch" | "email" | "document" | "conversation",
     "inputHash": "sha256 of the normalised (already redacted) text",
-    "detectorVersions": { "url": "url-2.2", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)" },
+    "detectorVersions": { "url": "url-2.2", "lexicon": "lexicon-1.1", "institutions": "institutions-1.0", "community": "wave-rules-v2", "interventions": "interventions-1.2", "email": "email-1.1 (only for email)", "organisation": "org-identity-1.0", "verification": "verification-1.0", "document": "document-1.0 (only for documents)", "imageForensics": "image-forensics-1.0 (only for screenshots)" },
     "semantic": { "status": "ok" | "unavailable" | "invalid" | "skipped", "model": "string, optional", "provider": "string, optional", "promptVersion": "semantic-1.3", "rejectedSignals": 0, "error": "timeout | provider_unavailable | invalid_json | schema_mismatch, optional" },
     "channel": "sms | whatsapp | email | facebook | call — optional, only when the request sent `channel`",
     "email": { /* only when emailContext was sent - see "Email analysis" */ }
@@ -234,8 +232,9 @@ and never shown or scored.
 | REP-04, REP-05 | Confirmed scam template / known-malicious URL (reserved for intel feeds; floors exist) | intel |
 | EMAIL-01..EMAIL-10 | Workplace email evidence from `emailContext` - see "Email analysis" | rule (emailContext + demo registries) |
 | DOC-01..DOC-08 | Structural evidence in an uploaded PDF/DOCX - see `POST /api/analyze/document` | rule (document forensics) |
+| DOC-09..DOC-13 | Image-forensics findings on a screenshot from the Python service: TruFor (09), error-level analysis (10), layout mismatch (11), image metadata (12), signature inconsistency (13); `metadata.variant` is the service's confidence (high/medium/low) - see `POST /api/analyze/screenshot` | rule (image forensics, `document-forensics-client/toSignals.js`) |
 
-#### Risk engine (`backend/src/services/risk-engine`, ruleset `rs-1.5`)
+#### Risk engine (`backend/src/services/risk-engine`, active ruleset `rs-1.6`)
 
 `rs-1.1` = `rs-1.0` with every weight, cap, interaction, floor and band
 unchanged, plus SOC-08, the EMAIL-* weights / interactions / floor and the
@@ -256,10 +255,17 @@ inflated to reach "high" on its own: that still needs an actual technical
 or payment/credential fact (e.g. a download-unlock fee reaching "high"
 through the existing IX-1, since ID-04 is already in its `a` list).
 
-`rs-1.5` (active) is `rs-1.4` plus URL-10 (weight 30) and floor
+`rs-1.5` is `rs-1.4` plus URL-10 (weight 30) and floor
 FLOOR-URL10-CREDENTIAL-FORM (high, requires a claimed institution). Nothing
 else changes, and only Scan This Page requests with `pageForms` can emit
 URL-10, so every other analysis scores exactly as under rs-1.4.
+
+`rs-1.6` (active) is `rs-1.5` plus weights for the screenshot image-forensics
+codes, keyed by the service's confidence (high / medium / low): DOC-09
+30/15/8, DOC-10 18/10/5, DOC-11 15/8/4, DOC-12 8/5/3, DOC-13 15/8/4. DX-1 also
+applies to DOC-09 at high or medium confidence. It adds no floor. Only
+`/api/analyze/screenshot` can emit DOC-09..13, so every other analysis scores
+exactly as under rs-1.5.
 
 `rs-1.4` keeps `rs-1.0`..`rs-1.3` frozen (a test pins their content
 fingerprints) and adds the document-forensics weights and interaction DX-1
@@ -464,18 +470,20 @@ Screenshot/OCR ingestion (`backend/src/services/ocr/`, tesseract.js
 through the same `runPipeline()` as `/api/analyze` (with
 `analysis.source: "screenshot"`). The image is not stored.
 
-**Additive (2026-09-24).** The image also goes through the local Python
-document-forensics service (`backend/src/services/document-forensics-client/`
-— TruFor, Error Level Analysis, Donut layout comparison, EXIF/metadata,
-signature consistency) concurrently with OCR. Its findings become ordinary
-`DOC-09`..`DOC-13` entries in `signals[]` (via
-`document-forensics-client/toSignals.js`, `rs-1.6`), the same "extraSignals
-feed runPipeline()" pattern `/api/analyze/document` uses for PDF/DOCX — one
-deterministic verdict covering both the message's language and the image
-itself, not two separate checks. The LLM still only ever sees the redacted
-OCR text, never the image or the forensic facts. A down/slow forensics
-service degrades to no extra signals (never fails the request); see
-`imageForensics.status` in the response.
+The image also goes through the local Python document-forensics service
+(`backend/src/services/document-forensics-client/`: TruFor, Error Level
+Analysis, Donut layout comparison, EXIF/metadata, signature consistency)
+concurrently with OCR. Its findings become ordinary `DOC-09`..`DOC-13`
+entries in `signals[]` (via `document-forensics-client/toSignals.js`, scored
+by `rs-1.6`), the same "extraSignals feed runPipeline()" pattern
+`/api/analyze/document` uses for PDF/DOCX, so one deterministic verdict covers
+both the message's language and the image itself. The LLM only ever sees the
+redacted OCR text, never the image or the forensic facts. A down or slow
+forensics service degrades to no extra signals and never fails the request;
+see `imageForensics.status` in the response.
+`analysis.detectorVersions.imageForensics` (`"image-forensics-1.0"`) is
+present on every screenshot response, whether or not a DOC-09..13 signal
+fired.
 
 ### Request
 
@@ -536,7 +544,8 @@ also runs the document's text through the same `runPipeline()` as every
 other route.
 
 The result is **one deterministic verdict**. The structural findings are
-ordinary `DOC-*` entries in `signals[]`, scored by `rs-1.4`. The LLM sees
+ordinary `DOC-*` entries in `signals[]`, scored by the active ruleset (their
+weights were added in `rs-1.4` and are unchanged since). The LLM sees
 only the redacted text, never the file, its images or the forensic facts.
 An LLM outage still returns `200` with the full deterministic verdict.
 
@@ -635,7 +644,7 @@ The full `/api/analyze` response (`analysis.source: "document"`,
 A DOC-04 signal that has a preview carries `metadata.previewIndex`, its index in
 `document.previews`.
 
-#### Document reason codes (detector `document-1.0`, ruleset `rs-1.4`)
+#### Document reason codes (detector `document-1.0`, weights from `rs-1.4`, unchanged in `rs-1.6`)
 
 Each one is a warning sign, not proof. All of them are `sourceType: "rule"` and
 `category: "document_integrity"`, which feeds `riskCategories.technical_risk`.
@@ -929,6 +938,60 @@ arbitrary identifier instead of only one the LLM extracted.
 | `400` | `{ "error": "sender is required and must be a non-empty string" }` | `sender` missing, not a string, or empty/whitespace-only |
 | `429` | `{ "error": "too many check-sender requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min, same bucket size as `/api/check-url`) |
 
+## `POST /api/check-payee`
+
+The "Before paying" payee check (`backend/src/services/payee-check`). It is
+deterministic: no LLM and no outbound call. Like `/api/check-sender` it is
+read-only; the lookup never counts as a report, and the identifier, name and
+amount are neither stored nor logged. It cannot know who an account or number
+is registered to, so it never says whether a name matches.
+
+### Request
+
+```json
+{
+  "method": "string, required — \"phone\" | \"bank_account\" | \"iban\"",
+  "identifier": "string, required, non-empty, at most 64 characters — the number, account or IBAN",
+  "name": "string, optional, at most 100 characters — who the payee claims to be",
+  "amount": "number, optional, 0 to 1e12 — in rupees",
+  "purpose": "string, optional — \"car\" | \"rent_deposit\" | \"online_shop\" | \"family\" | \"invoice\""
+}
+```
+
+### Response — `200 OK`
+
+```jsonc
+{
+  "method": "phone",                   // echoed
+  "purpose": "online_shop",            // echoed, only when sent
+  "verdict": "stop" | "caution" | "clear", // stop if any finding is red, caution if any is amber
+  "findings": [ { "code": "PHONE_VALID", "severity": "red" | "amber" | "ok", "params": { } } ],
+  "reportCount": 0                     // same count /api/check-sender returns for the identifier
+}
+```
+
+Finding codes: `REPORTED` (red, reported at least once), `NOT_REPORTED`
+(ok); for an IBAN `IBAN_FORMAT_INVALID`, `IBAN_CHECKSUM_FAILED`,
+`IBAN_LENGTH_WRONG` (red), `IBAN_FOREIGN` (amber) or `IBAN_VALID` (ok); for
+a phone `PHONE_VALID` (ok, an 8-digit Mauritian mobile starting with 5) or
+`PHONE_NOT_MU_MOBILE` (amber); for a bank account `ACCOUNT_FORMAT_ODD`
+(amber, not 6-20 digits); `ORGANISATION_ON_PERSONAL_NUMBER` (amber, `name`
+names a registry institution on a phone payee); `LARGE_AMOUNT` (amber,
+`amount` of Rs 50,000 or more).
+
+### Errors
+
+| Status | Body | When |
+|---|---|---|
+| `400` | `{ "error": "request body must be an object" }` | body is not a JSON object |
+| `400` | `{ "error": "method must be one of: phone, bank_account, iban" }` | missing or unknown `method` |
+| `400` | `{ "error": "identifier is required and must be a non-empty string" }` | missing or empty `identifier` |
+| `400` | `{ "error": "identifier exceeds maximum length of 64 characters" }` | `identifier` over 64 characters |
+| `400` | `{ "error": "name must be a string of at most 100 characters" }` | invalid `name` |
+| `400` | `{ "error": "amount must be a non-negative number" }` | invalid `amount` |
+| `400` | `{ "error": "purpose must be one of: car, rent_deposit, online_shop, family, invoice" }` | unknown `purpose` |
+| `429` | `{ "error": "too many check-sender requests, try again shortly" }` | shares the 120 req/15min read counter |
+
 ## `POST /api/report`
 
 ### Request
@@ -1015,7 +1078,7 @@ the host, and a domain-age lookup.
   "url": "string — echoed back from the request",
   "host": "string | null — normalized hostname, null when the url can't be parsed",
   "flagged": "boolean — true if any signal fired",
-  "signals": "[signal] — same shape as /api/analyze signals: lookalike (URL-01..04), shortener / raw IP / @ disguise (URL-05..07), known-phishing list (REP-05), new domain (URL-09), repeated reports (REP-03)",
+  "signals": "[signal] — same shape as /api/analyze signals: lookalike (URL-01..04), shortener / raw IP / @ disguise (URL-05..07), known-phishing list (REP-05), new domain (URL-09), repeated reports (REP-03), tunnel / dynamic-DNS host (URL-11), certificate problem (CERT-01), days-old certificate on a lookalike (CERT-02)",
   "reportCount": "number — user reports for this host (0 for official/trusted hosts)",
   "officialInstitution": "string | null — display name when the host is an institution's official domain",
   "trusted": "boolean — host is on data/trusted-domains.json",
@@ -1023,7 +1086,7 @@ the host, and a domain-age lookup.
   "resolvedUrl": "string | null — for a known URL shortener only: where it points, read from ONE redirect response of the shortener (the destination is never fetched). Signals for the destination are included in `signals` with metadata.viaShortener set to the shortener host. null when not a shortener or unresolvable",
   "firstCertificateDays": "number | null — days since the domain's first certificate in Certificate Transparency logs (crt.sh), looked up on every check for non-official, non-trusted hosts; null when unknown",
   "certificate": "null | { validation: \"EV\" | \"OV\" | \"DV\" | null, organization: string|null, issuer: string|null, validFrom, validTo, issuedDaysAgo, expiresInDays, trusted: boolean, problem: null | \"expired\" | \"not_yet_valid\" | \"self_signed\" | \"wrong_host\" | \"untrusted\" } — read from a bare TLS handshake on EVERY https check, official sites included (the old browser green bar: EV/OV name a verified organisation). SSRF-guarded, 2.5 s timeout, cached per host for 1 h, null when unreachable or plain HTTP",
-  "version": "string"
+  "version": "string — url-reputation detector version, currently \"url-rep-1.2\""
 }
 ```
 
@@ -1048,22 +1111,6 @@ timeout (`services/url-reputation/short-links.js`).
 | `400` | `{ "error": "url exceeds maximum length of 2048 characters" }` | `url.length > 2048` |
 | `429` | `{ "error": "too many check-url requests, try again shortly" }` | per-IP rate limit exceeded (120 req/15min) |
 | `500` | `{ "error": "link check failed, try again shortly" }` | unexpected internal error |
-
-**Contract gap (open).** The implementation returns more than the response
-above describes, and the extension already reads the extra fields
-(`extension/api.js`, `extension/popup.js`):
-
-- Top-level fields not listed above: `host` (string or null),
-  `reportCount` (number), `officialInstitution` (string or null), `trusted`
-  (boolean), `domainAgeDays` (number or null) and `version`
-  (`"url-rep-1.0"`).
-- Each `signals[]` item is a full Signal object (see `/api/analyze`), and
-  `type` is not always `"lookalike_url"`: link-hygiene, threat-intel and
-  domain-age findings carry their own types and codes.
-
-The frontend/UI owner, extension owner and backend owner should agree
-whether to document these fields as part of the contract or to narrow the
-response.
 
 ## `POST /api/analyze-site`
 
@@ -1273,16 +1320,26 @@ otherwise.
 
 - **No authentication on any route.** There is no user or session concept.
   See `checklist.md` § Security.
-- **Stored documents.** `POST /api/documents` and (for PDFs)
-  `POST /api/analyze/document` store original file bytes in SQLite,
-  unencrypted, with no retention period and no delete route. No route
-  returns them.
+- **Stored documents.** `POST /api/documents` and (for PDFs, unless
+  `shareSamples: false`) `POST /api/analyze/document` store original file
+  bytes in SQLite, unencrypted, with no retention period and no delete route.
+  No route returns them.
 - **Organisation outcomes are unauthenticated.** Any caller can post a
   `legitimate` or `false_positive` label for an observation id, which removes
   that observation from `GET /api/org/campaigns` counts. The only protection
   is the shared 5 req/hour report limit.
-- **`POST /api/check-url` returns more than this contract describes.** See
-  that route's "Contract gap".
+- **The web app discards screenshot image forensics.** The Check screen
+  (`frontend/components/ScreenshotUpload.tsx`,
+  `frontend/components/check/Workspace.tsx`) keeps only `extractedText` from
+  `/api/analyze/screenshot` and then sends that text to `/api/analyze`. The
+  verdict it shows therefore never includes DOC-09..13, and each screenshot
+  uses two requests from the analyze rate-limit counter and two semantic-model
+  calls.
+- **`POST /api/documents` ignores `shareSamples`.** It always stores the
+  upload, unlike `/api/analyze/document`.
+- **Radar mixes seeded demo counts with live ones.** `npm run seed:radar`
+  writes rows tagged `demo_seed`; `GET /api/trends?range=` sums both sources
+  and the response does not say which part is seeded.
 - **`POST /api/documents` echoes an internal error.** `forensics.reason` is
   the error message from the call to the Python service, which can include up
   to 200 characters of that service's error body.
@@ -1411,6 +1468,8 @@ lookalike domain, institution it imitates, count). Only `scam`/`suspicious`
 checks are counted; no text, sender, IP or pseudonym is stored; requests with
 `shareSamples: false` record nothing; rows are purged after
 `RADAR_RETENTION_DAYS` (default 730). Days are Mauritius calendar days (UTC+4).
+Each row carries a `source` of `live` or `demo_seed` (written by
+`npm run seed:radar` in `backend/`); the aggregates below add both together.
 
 ```ts
 radar?: {
