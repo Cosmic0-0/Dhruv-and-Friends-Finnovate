@@ -19,7 +19,7 @@ import { PDFArray, PDFDict, PDFDocument, PDFHexString, PDFName, PDFRef, PDFStrin
 import { DocumentInspectError } from "./sniff.js";
 import { parseIsoDate, parsePdfDate, sanitizeMeta } from "./meta.js";
 import {
-  FULL_PAGE_COVERAGE, IDENTITY, LOW_RES_RATIO, OVERLAY_MIN_AREA, OVERLAY_MIN_PIXELS, SCAN_MAX_VISIBLE_CHARS,
+  FULL_PAGE_COVERAGE, IDENTITY, LOW_RES_RATIO, OCR_IMAGE_MIN_COVERAGE, OVERLAY_MIN_AREA, OVERLAY_MIN_PIXELS, SCAN_MAX_VISIBLE_CHARS,
   alphaStats, applyPoint, compose, coverage, effectiveDpi, intersects, placementFromCtm, toGray,
 } from "./overlay.js";
 
@@ -421,6 +421,9 @@ function classifyPage(view, walked) {
   // seen: OCR software's "text under the page image" mode writes its text
   // layer this way, in the ordinary visible render mode.
   if (scan) for (const r of walked.runs) r.coveredByScan = r.order < scan.order && inside(scan.bbox, r.x, r.y);
+  // Text over a sizeable image: when invisible, that is the image's OCR layer.
+  const photos = placed.filter((p) => !p.stencil && p.coverage >= OCR_IMAGE_MIN_COVERAGE);
+  for (const r of walked.runs) r.overImage = photos.some((p) => inside(p.bbox, r.x, r.y));
   const visibleChars = walked.runs.filter(isVisibleRun).reduce((n, r) => n + nonSpaceLength(r.text), 0);
   // A full-page image under lots of real text is a designed background
   // (letterhead, Canva export), not a scan.

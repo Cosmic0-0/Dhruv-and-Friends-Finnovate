@@ -110,6 +110,14 @@ test("inspectPdf: text runs carry font, size, render mode and fill", async () =>
   assert.equal(typed.coveredByScan, false, "typed after the scan, so on top of it");
 });
 
+test("inspectPdf: text over a sizeable image is marked overImage; text over a small logo is not", async () => {
+  const photo = await inspectPdf(new Uint8Array(await F.buildOcrPhotoWithMarginsPdf()));
+  assert.equal(photo.pages[0].scan, null, "the photo covers about 70% of the page, so it is not a full-page scan");
+  assert.ok(photo.pages[0].runs.every((r) => r.renderMode === 3 && r.overImage));
+  const logo = await inspectPdf(new Uint8Array(await F.buildHiddenTextOverLogoPdf()));
+  assert.ok(logo.pages[0].runs.every((r) => !r.overImage));
+});
+
 test("inspectPdf: text painted before the scan is covered by it, so the page is still a scan with no visible text", async () => {
   const facts = await inspectPdf(new Uint8Array(await F.buildTextUnderImageScanPdf()));
   const [page] = facts.pages;

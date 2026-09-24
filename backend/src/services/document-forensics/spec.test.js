@@ -167,6 +167,11 @@ test("DOC-06: an OCR'd photo covering most but not all of the page (a receipt wi
   assert.deepEqual(tags(doc.signals), []);
 });
 
+test("DOC-06: invisible text over a small logo is still hidden text - a logo is not a photo of text", async () => {
+  const doc = await analyze(await F.buildHiddenTextOverLogoPdf());
+  assert.deepEqual(tags(doc.signals), ["DOC-06:invisible_render_mode"]);
+});
+
 test("DOC-06: hidden text also reaches the verdict, where SOC-07 flags the instruction in it", async () => {
   const doc = await analyze(await B.buildHiddenTextPdf());
   assert.ok(find(doc.signals, "DOC-06", "invisible_render_mode"));

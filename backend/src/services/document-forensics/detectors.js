@@ -259,7 +259,8 @@ function doc06(facts) {
     if (page.scan) continue;
     const runs = page.runs ?? [];
     const groups = [
-      ["invisible_render_mode", runs.filter(isHiddenMode), "drawn invisibly"],
+      // Invisible text over a photo or partial-page scan is its OCR layer (overImage, pdf.js classifyPage).
+      ["invisible_render_mode", runs.filter((r) => isHiddenMode(r) && !r.overImage), "drawn invisibly"],
       // White text only counts when nothing coloured is painted on the page:
       // white-on-a-dark-banner is ordinary design.
       ["white_text", page.imageCount === 0 && !page.nonWhiteFill ? runs.filter((r) => !isHiddenMode(r) && r.fill === "white") : [], "drawn in white on a white page"],
