@@ -27,6 +27,7 @@ token, see that route).
 | `POST /api/documents` | 20mb | 15 / 15 min |
 | `POST /api/batch-scan` | 300kb | 10 / 15 min |
 | `POST /api/text-profile` | 60kb | 600 / 15 min |
+| `POST /api/translate` | 20kb | 20 / 15 min (its own counter) |
 | `POST /api/check-url` | 10kb | 120 / 15 min |
 | `POST /api/analyze-site` | 300kb | 15 / 15 min |
 | `POST /api/check-sender` | 10kb | 120 / 15 min (read) |
@@ -1063,6 +1064,58 @@ Response `200`:
 
 Errors: `400` when `text` is missing, not a string or over 5000 characters;
 `429` over 600 requests / 15 min per IP.
+
+## `POST /api/translate`
+
+Display-only translation of a message the user has already checked, for the web
+Check result's "Translate this message" panel. It is a side channel:
+`/api/analyze` never calls it, the verdict never depends on it, and nothing it
+returns is evidence. It uses the model through the same transport as analysis
+(`callLLM`, 15 s per attempt, one validation retry), so a request can take up
+to about 30 s.
+
+Request:
+
+```json
+{ "message": "string, required, 1-2000 characters", "target": "mfe | en | fr" }
+```
+
+The web client sends the redacted message with each redaction placeholder
+replaced by an opaque `<PRIV_n>` token (`frontend/lib/translate.ts`), so phone
+and account numbers never reach the model. A `<PRIV_n>` token is protected like
+any other entity (URL, amount, code): the answer is rejected if one is dropped,
+duplicated or invented, and the client restores the real value for display.
+
+The source language is detected server-side (`services/kreol/language.js`).
+Supported pairs are Kreol ↔ English and Kreol ↔ French; English ↔ French is not.
+
+Response `200` (always, including when no translation is produced):
+
+```json
+{
+  "status": "ok | same_language | undetermined | unsupported | rejected | unavailable",
+  "source": "mfe | en | fr | null",
+  "target": "mfe | en | fr",
+  "text": "string when status is ok, otherwise null",
+  "problems": ["validation reasons; empty unless status is rejected"],
+  "machineTranslated": true,
+  "reviewed": false
+}
+```
+
+| `status` | Meaning |
+|---|---|
+| `ok` | `text` passed every check: entities, negation, numbers, target language, spelling convention. |
+| `same_language` | The message is already in `target`; no model call. |
+| `undetermined` | No language markers in the message, so no direction is guessed; no model call. |
+| `unsupported` | The pair is not offered (English ↔ French). |
+| `rejected` | The model answer failed validation twice; `text` is `null`. Unvalidated model text is never returned. |
+| `unavailable` | No model reachable or it errored. Provider detail is not exposed. |
+
+Errors: `400` when `message` is missing, not a string, blank or over 2000
+characters, or `target` is not one of `mfe`, `en`, `fr`; `429` over 20 requests
+/ 15 min per IP; `500` `{ "error": "translation failed, try again shortly" }`
+only for an unexpected server fault.
 
 ## `POST /api/check-url`
 

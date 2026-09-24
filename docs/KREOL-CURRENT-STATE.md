@@ -24,7 +24,8 @@ signals -> deterministic risk engine -> decision -> template explanation
 
 Anything derived (a normalised copy, an English meaning, a translation) is a
 parallel representation used for matching or display. It is never the evidence
-and never the verdict. Translation is not called by `/api/analyze`.
+and never the verdict. Translation is not called by `/api/analyze`; the only
+product use is the separate, on-demand `POST /api/translate` (see below).
 
 ## Modules (`backend/src/services/kreol/`)
 
@@ -35,6 +36,7 @@ and never the verdict. Translation is not called by `/api/analyze`.
 | `normalizer.js` | Matching-only respelling: `nu/pu/u`, `inn/in/'nn` after a pronoun, accents. Never touches entities or negation words. Returns `originalText`, `normalizedText`, `changes[]` and `toOriginal()` |
 | `language.js` | `detectLanguageMix(text)` -> `{ primary, languages, mixed, scores, kreolStrong }` for `en` / `fr` / `mfe`. `lexicon.detectLanguage()` keeps its old `en|fr|kreol` shape by delegating to it |
 | `translation.js` | Auxiliary translate/generate runtime with an injected provider and strict output validation |
+| `messageTranslation.js` | `translateMessage(text, target)`: detects the message's language, picks a supported direction and calls `translateText`; behind `POST /api/translate` |
 | `copy.js` | Reviewable Kreol copy for signal labels and actions; serves only human-reviewed text |
 | `metrics.js` | chrF |
 
@@ -77,6 +79,16 @@ source text -> protect entities -> retrieve reviewed terms/examples
 - A rejected answer is retried once with the reasons; after that the result is
   `status: "rejected"` with `text: null`. Unvalidated model text is never returned.
 - With no provider the result is `status: "unavailable"`.
+- **In the product:** `POST /api/translate` (`messageTranslation.js`) backs the
+  "Translate this message" panel on the web Check result. It runs only when the
+  user clicks, after the verdict is already shown, and shows the answer under a
+  "machine translation, not reviewed" label. Supported: Kreol <-> English and
+  Kreol <-> French; the message's language is detected, not chosen by the user.
+  The web client sends the redacted message with redaction placeholders swapped for
+  opaque `<PRIV_n>` tokens, which `entities.js` protects like any entity. A model
+  outage returns `status: "unavailable"` and the result screen is unaffected.
+  Messages over 2000 characters are not offered translation (no partial
+  translations). The extension and Outlook add-in do not call it.
 - **Status:** the runtime and its safety envelope are implemented and tested with a
   stub provider. Live quality is not measured: run
   `npm run eval:kreol:translate` (needs a reachable model). Without one it reports
