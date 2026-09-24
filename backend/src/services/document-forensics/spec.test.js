@@ -129,6 +129,13 @@ test("DOC-05: an amount typed over a scan as a FreeText annotation (PDFescape, A
   assert.equal(s.metadata.page, 1);
 });
 
+test("annotations only add to scan checks: filled-in fields on a native form are not odd-font edits or hidden text", async () => {
+  // The field values (an amount and a date) are in Helvetica on a Times page:
+  // as page content that would be DOC-08, but filling in a form is normal.
+  const doc = await analyze(await F.buildFilledFormPdf());
+  assert.deepEqual(tags(doc.signals), []);
+});
+
 test("DOC-05: a searchable scan whose OCR text lies UNDER the page image (FineReader, OmniPage) has nothing typed onto it", async () => {
   // Requirement: DOC-05 is text drawn ON a scan. Here the recognised text is
   // painted first and the full-page scan covers it, so no reader can see

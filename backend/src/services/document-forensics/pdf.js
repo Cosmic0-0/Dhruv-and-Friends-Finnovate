@@ -227,18 +227,23 @@ function glyphText(glyphs) {
   return text;
 }
 
+const initialState = () => ({
+  ctm: IDENTITY, fill: "#000000", renderMode: 0, font: null, fontSize: 0, tm: IDENTITY, lineX: 0, lineY: 0, x: 0, y: 0, leading: 0, rise: 0, annotation: false,
+});
+
 /**
  * Replays the graphics state over pdf.js's operator list and records every
  * image paint (with its CTM) and every text show (with its render mode,
  * font, effective size, fill and position), plus whether any non-white area
- * was filled.
+ * was filled. Images and text drawn by an annotation's appearance (a stamp,
+ * typed-on text, a filled field) are marked `annotation: true`.
  */
 export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) => id) {
   const FILL_OPS = new Set([OPS.fill, OPS.eoFill, OPS.fillStroke, OPS.eoFillStroke, OPS.closeFillStroke, OPS.closeEOFillStroke, OPS.rawFillPath]);
   const images = [];
   const runs = [];
   let nonWhiteFill = false;
-  let st = { ctm: IDENTITY, fill: "#000000", renderMode: 0, font: null, fontSize: 0, tm: IDENTITY, lineX: 0, lineY: 0, x: 0, y: 0, leading: 0, rise: 0 };
+  let st = initialState();
   const stack = [];
   const save = () => stack.push({ ...st });
   const restore = () => {
@@ -265,9 +270,10 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
       fill: fillClass(st.fill),
       x,
       y,
+      annotation: st.annotation,
     });
   };
-  const paint = (order, entry) => images.push({ order, ...entry });
+  const paint = (order, entry) => images.push({ order, ...entry, annotation: st.annotation });
 
   for (let i = 0; i < fnArray.length; i++) {
     const fn = fnArray[i];
@@ -291,6 +297,22 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
         break;
       }
       case OPS.paintFormXObjectEnd:
+        restore();
+        break;
+      case OPS.beginAnnotation: {
+        // A viewer draws the appearance over the page from a fresh graphics
+        // state, through the annotation's transform (its box onto Rect) and
+        // then its appearance /Matrix.
+        save();
+        let ctm = IDENTITY;
+        for (const m of [args?.[2], args?.[3]]) {
+          const mm = matrixArg(m ? [m] : null);
+          if (mm) ctm = compose(ctm, mm);
+        }
+        st = { ...initialState(), ctm, annotation: true };
+        break;
+      }
+      case OPS.endAnnotation:
         restore();
         break;
       case OPS.setFillRGBColor:
@@ -367,13 +389,13 @@ export function walkOperatorList({ fnArray, argsArray }, OPS, fontNameOf = (id) 
         if (args?.[0]) paint(i, { widthPx: args[0].width, heightPx: args[0].height, ctm: st.ctm, stencil: true });
         break;
       case OPS.constructPath:
-        if (FILL_OPS.has(args?.[0]) && fillClass(st.fill) === "color") nonWhiteFill = true;
+        if (FILL_OPS.has(args?.[0]) && fillClass(st.fill) === "color" && !st.annotation) nonWhiteFill = true;
         break;
       case OPS.shadingFill:
-        nonWhiteFill = true;
+        if (!st.annotation) nonWhiteFill = true;
         break;
       default:
-        if (FILL_OPS.has(fn) && fillClass(st.fill) === "color") nonWhiteFill = true;
+        if (FILL_OPS.has(fn) && fillClass(st.fill) === "color" && !st.annotation) nonWhiteFill = true;
     }
   }
   return { images, runs, nonWhiteFill };
@@ -406,7 +428,9 @@ async function imageData(page, img) {
 
 /**
  * Geometry for one page: which image is the scan, whether the page is a scan
- * at all, and which images were drawn on top of it.
+ * at all, and which images were drawn on top of it. The page itself (scan,
+ * scan-or-designed, OCR photos) is judged from its content alone;
+ * annotations only add what is drawn on top of it.
  */
 function classifyPage(view, walked) {
   const pageArea = Math.max(1, (view[2] - view[0]) * (view[3] - view[1]));
@@ -414,17 +438,18 @@ function classifyPage(view, walked) {
     const p = placementFromCtm(img.ctm);
     return { ...img, ...p, coverage: coverage(p.bbox, view) };
   });
+  const content = placed.filter((p) => !p.annotation);
   // The background scan is the first full-page raster painted. Further
   // full-page layers (mixed-raster-content "compact" scans) are not overlays.
-  const scan = placed.filter((p) => !p.stencil && p.coverage >= FULL_PAGE_COVERAGE).sort((a, b) => a.order - b.order)[0] ?? null;
+  const scan = content.filter((p) => !p.stencil && p.coverage >= FULL_PAGE_COVERAGE).sort((a, b) => a.order - b.order)[0] ?? null;
   // Text painted BEFORE the scan, where the scan then covers it, cannot be
   // seen: OCR software's "text under the page image" mode writes its text
   // layer this way, in the ordinary visible render mode.
   if (scan) for (const r of walked.runs) r.coveredByScan = r.order < scan.order && inside(scan.bbox, r.x, r.y);
   // Text over a sizeable image: when invisible, that is the image's OCR layer.
-  const photos = placed.filter((p) => !p.stencil && p.coverage >= OCR_IMAGE_MIN_COVERAGE);
+  const photos = content.filter((p) => !p.stencil && p.coverage >= OCR_IMAGE_MIN_COVERAGE);
   for (const r of walked.runs) r.overImage = photos.some((p) => inside(p.bbox, r.x, r.y));
-  const visibleChars = walked.runs.filter(isVisibleRun).reduce((n, r) => n + nonSpaceLength(r.text), 0);
+  const visibleChars = walked.runs.filter((r) => !r.annotation && isVisibleRun(r)).reduce((n, r) => n + nonSpaceLength(r.text), 0);
   // A full-page image under lots of real text is a designed background
   // (letterhead, Canva export), not a scan.
   const isScanPage = Boolean(scan) && visibleChars <= SCAN_MAX_VISIBLE_CHARS;
@@ -543,7 +568,9 @@ export async function inspectPdf(bytes) {
         const content = await page.getTextContent();
         textParts.push(content.items.map((it) => (it.str ?? "") + (it.hasEOL ? "\n" : "")).join(""));
 
-        const ol = await page.getOperatorList({ annotationMode: pdfjs.AnnotationMode.DISABLE });
+        // Annotations included: a signature stamp or typed-on text added in
+        // Preview, Acrobat or an online editor is drawn over the page too.
+        const ol = await page.getOperatorList({ annotationMode: pdfjs.AnnotationMode.ENABLE });
         const fontNameOf = (id) => {
           if (!id) return null;
           if (!fontNames.has(id)) {
@@ -565,7 +592,7 @@ export async function inspectPdf(bytes) {
             ? { widthPx: cls.scan.widthPx, heightPx: cls.scan.heightPx, dpi: effectiveDpi(cls.scan.widthPx, cls.scan.heightPx, cls.scan.widthPt, cls.scan.heightPt) }
             : null,
           isScanPage: cls.isScanPage,
-          imageCount: cls.placed.length,
+          imageCount: cls.placed.filter((p) => !p.annotation).length,
           nonWhiteFill: walked.nonWhiteFill,
           visibleChars: cls.visibleChars,
           overlays: cls.isScanPage ? await describeOverlays(page, n, cls, previewPool) : [],

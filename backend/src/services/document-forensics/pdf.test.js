@@ -110,6 +110,20 @@ test("inspectPdf: text runs carry font, size, render mode and fill", async () =>
   assert.equal(typed.coveredByScan, false, "typed after the scan, so on top of it");
 });
 
+test("inspectPdf: annotation appearances are read and marked, without changing how the page is judged", async () => {
+  // A Stamp annotation's image is an overlay on the scan, placed where the annotation's Rect puts it.
+  const stamp = await inspectPdf(new Uint8Array(await F.buildSignatureStampAnnotationPdf()));
+  assert.equal(stamp.pages[0].isScanPage, true);
+  assert.equal(stamp.pages[0].imageCount, 1, "the stamp is not page content");
+  const [o] = stamp.pages[0].overlays;
+  assert.equal(Math.round(o.effectiveDpi), 48);
+  // Filled form fields are read as annotation text, not as page text.
+  const form = await inspectPdf(new Uint8Array(await F.buildFilledFormPdf()));
+  const values = form.pages[0].runs.filter((r) => r.annotation).map((r) => r.text.trim());
+  assert.deepEqual(values.sort(), ["01/09/2026", "MUR 1,250.00"]);
+  assert.ok(form.pages[0].runs.filter((r) => !r.annotation).every((r) => r.font === "Times-Roman"));
+});
+
 test("inspectPdf: text over a sizeable image is marked overImage; text over a small logo is not", async () => {
   const photo = await inspectPdf(new Uint8Array(await F.buildOcrPhotoWithMarginsPdf()));
   assert.equal(photo.pages[0].scan, null, "the photo covers about 70% of the page, so it is not a full-page scan");

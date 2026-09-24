@@ -324,6 +324,28 @@ export async function buildOcrPhotoWithMarginsPdf() {
   return save(doc);
 }
 
+/**
+ * A native fillable form (body text in Times) whose amount and date fields
+ * were filled in: pdf-lib draws the field values in Helvetica, as viewers
+ * and form tools do.
+ */
+export async function buildFilledFormPdf() {
+  const doc = await newDoc(WORD);
+  const page = doc.addPage([...A4]);
+  const times = await doc.embedFont(StandardFonts.TimesRoman);
+  NATIVE_LINES.forEach((line, i) => page.drawText(line, { x: 60, y: 780 - i * 22, size: 11, font: times }));
+  page.drawText("Amount to transfer:", { x: 60, y: 520, size: 11, font: times });
+  page.drawText("Requested date:", { x: 60, y: 490, size: 11, font: times });
+  const form = doc.getForm();
+  const helv = await doc.embedFont(StandardFonts.Helvetica);
+  for (const [name, value, y] of [["amount", "MUR 1,250.00", 516], ["date", "01/09/2026", 486]]) {
+    const field = form.createTextField(name);
+    field.setText(value);
+    field.addToPage(page, { x: 200, y, width: 160, height: 18, font: helv });
+  }
+  return save(doc);
+}
+
 /** A native page with a small logo and an invisible instruction to automated checkers placed over the logo. */
 export async function buildHiddenTextOverLogoPdf() {
   const doc = await newDoc(WORD);

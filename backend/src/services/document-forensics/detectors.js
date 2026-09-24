@@ -257,7 +257,8 @@ function doc06(facts) {
   for (const page of facts.pages ?? []) {
     // OCR'd scans legitimately put invisible text over the page image.
     if (page.scan) continue;
-    const runs = page.runs ?? [];
+    // Page content only: annotation text (filled fields, comments) is shown by viewers.
+    const runs = (page.runs ?? []).filter((r) => !r.annotation);
     const groups = [
       // Invisible text over a photo or partial-page scan is its OCR layer (overImage, pdf.js classifyPage).
       ["invisible_render_mode", runs.filter((r) => isHiddenMode(r) && !r.overImage), "drawn invisibly"],
@@ -315,7 +316,8 @@ function doc07(facts) {
  */
 export function fontOutliers(page) {
   const { minItems, dominantShare, maxOutlierItems } = RULES.fontOutlier;
-  const items = mergeRuns((page.runs ?? []).filter(isVisible)).filter((it) => nonSpace(it.text) > 0);
+  // Page content only: form-field values in their own font are ordinary.
+  const items = mergeRuns((page.runs ?? []).filter((r) => isVisible(r) && !r.annotation)).filter((it) => nonSpace(it.text) > 0);
   if (items.length < minItems) return [];
   const counts = new Map();
   for (const it of items) {
