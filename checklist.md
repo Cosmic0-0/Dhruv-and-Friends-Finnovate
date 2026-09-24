@@ -173,19 +173,16 @@ before any real data touches a demo.
         used for the type. The original bytes are always stored, whatever
         `shareSamples` says (see "Encrypt sensitive data at rest"), and are
         never served back.
-- [ ] **Trim API responses**: no raw LLM prompt, stack trace or DB row
+- [x] **Trim API responses**: no raw LLM prompt, stack trace or DB row
       internals in responses. Route failures return a fixed
       `{ "error": "..." }` and log the real error server-side, and the final
       error handler (`backend/src/services/http-errors`) returns generic
       `400`/`413`/`500` bodies. Email metadata (`messageId`, Return-Path, raw
-      headers) is never echoed or sent to the LLM. **One exception:**
-      `POST /api/documents` returns `forensics.reason`, the internal error
-      message from the Python service call, which can include up to 200
-      characters of that service's error body
-      (`backend/src/services/document-forensics-client/index.js`). The
-      screenshot route's `imageForensics` returns only status and check
-      names, not the reason. Last
-      verified 2026-09-23.
+      headers) is never echoed or sent to the LLM. `POST /api/documents`'
+      `forensics.reason` is a fixed code (`unreachable`, `timeout` or
+      `service_error`); the Python service's error text is logged only
+      (`backend/src/services/document-forensics-client/index.js`). Last
+      verified 2026-09-24.
 - [x] **Add security headers**: `helmet()` is mounted in
       `backend/src/index.js` before the API router and sets CSP,
       `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS

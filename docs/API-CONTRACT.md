@@ -731,7 +731,7 @@ WEBP, regardless of anything the client or `filename` claims.
   "extractedText": "string | null — redacted OCR text for an image document; always null for a PDF (its text layer, if any, is read by the metadata/PDF forensics check instead)",
   "forensics": {
     "status": "\"ok\" | \"unavailable\"",
-    "reason": "string, only present when status is \"unavailable\" — the forensics service was unreachable, timed out, or errored. Never fails the request (see Reliability below).",
+    "reason": "string, only present when status is \"unavailable\": \"unreachable\" | \"timeout\" | \"service_error\". A fixed code; the underlying error is logged server-side only. Never fails the request (see Reliability below).",
     "report": {
       "_": "only present when status is \"ok\" — see document-forensics/app/models.py's ForensicsReport for the source of truth; this is that schema's fields camelCased at the Node boundary (backend/src/services/document-forensics-client/index.js), e.g. checks_run -> checksRun",
       "documentId": "string | null",
@@ -1342,9 +1342,6 @@ otherwise.
 - **Radar mixes seeded demo counts with live ones.** `npm run seed:radar`
   writes rows tagged `demo_seed`; `GET /api/trends?range=` sums both sources
   and the response does not say which part is seeded.
-- **`POST /api/documents` echoes an internal error.** `forensics.reason` is
-  the error message from the call to the Python service, which can include up
-  to 200 characters of that service's error body.
 - **Email analysis is read-mode only (`outlook-addin/`).** It analyses only
   the selected message after the user clicks the task-pane button. There is
   no Microsoft Graph integration or mailbox polling. The supplier registry and

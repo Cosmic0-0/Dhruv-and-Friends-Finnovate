@@ -55,15 +55,24 @@ test("analyzeDocumentForensics degrades to unavailable, never throws, when the s
 
   const result = await analyzeDocumentForensics({ buffer: Buffer.from("fake"), mimeType: "image/jpeg" });
   assert.equal(result.status, "unavailable");
-  assert.match(result.reason, /ECONNREFUSED/);
+  // A fixed code, never the transport error text (address, port, stack).
+  assert.equal(result.reason, "unreachable");
 });
 
-test("analyzeDocumentForensics degrades to unavailable on a non-2xx response", async () => {
-  globalThis.fetch = async () => new Response("bad request", { status: 400 });
+test("analyzeDocumentForensics degrades to unavailable on a non-2xx response, without echoing the service's body", async () => {
+  globalThis.fetch = async () => new Response("Traceback (most recent call last): internal detail", { status: 500 });
 
   const result = await analyzeDocumentForensics({ buffer: Buffer.from("fake"), mimeType: "image/png" });
   assert.equal(result.status, "unavailable");
-  assert.match(result.reason, /400/);
+  assert.equal(result.reason, "service_error");
+});
+
+test("analyzeDocumentForensics treats an unparsable 200 body as a service error", async () => {
+  globalThis.fetch = async () => new Response("not json", { status: 200 });
+
+  const result = await analyzeDocumentForensics({ buffer: Buffer.from("fake"), mimeType: "image/png" });
+  assert.equal(result.status, "unavailable");
+  assert.equal(result.reason, "service_error");
 });
 
 test("analyzeDocumentForensics degrades to unavailable on timeout, without hanging the caller", async () => {
@@ -74,6 +83,7 @@ test("analyzeDocumentForensics degrades to unavailable on timeout, without hangi
 
   const result = await analyzeDocumentForensics({ buffer: Buffer.from("fake"), mimeType: "image/jpeg", timeoutMs: 10 });
   assert.equal(result.status, "unavailable");
+  assert.equal(result.reason, "timeout");
 });
 
 test("analyzeDocumentForensics never sends a document without a mimeType field the service can sniff-validate against", async () => {
