@@ -55,14 +55,18 @@
 }
 .header > * { pointer-events: auto; }
 .header[data-tone="ink"] { color: var(--butter); }
-.header[data-scrolled="true"] { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-.header[data-scrolled="true"][data-tone="butter"] { background: rgba(242, 213, 78, 0.9); border-bottom: 1px solid var(--line-on-butter); }
-.header[data-scrolled="true"][data-tone="ink"] { background: rgba(13, 13, 12, 0.86); border-bottom: 1px solid var(--line-on-ink); }
+.header { backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.header[data-tone="butter"] { background: rgba(242, 213, 78, 0.94); border-bottom: 1px solid var(--line-on-butter); }
+.header[data-tone="ink"] { background: rgba(13, 13, 12, 0.9); border-bottom: 1px solid var(--line-on-ink); }
+.lockup { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .brand { display: flex; align-items: center; gap: 10px; color: inherit; text-decoration: none; }
+.team { display: block; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: #fff; box-shadow: 0 0 0 1px currentColor; transition: box-shadow .2s; }
+.team img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.team:hover { box-shadow: 0 0 0 2px currentColor; }
 .brandMark { width: 30px; height: 30px; flex-shrink: 0; }
 .brandWord { font-weight: 650; font-size: 18px; letter-spacing: -0.03em; }
-.navPills { display: flex; gap: 4px; }
-.headerRight { display: flex; align-items: center; gap: 10px; }
+.navPills { display: flex; gap: 4px; min-width: 0; }
+.headerRight { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 
 .pill {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -72,16 +76,20 @@
   text-transform: uppercase; text-decoration: none; white-space: nowrap; cursor: pointer;
   transition: background-color .2s, color .2s, border-color .2s;
 }
-.pill:hover { background: currentColor; }
+.pill:hover { background: var(--ink); border-color: var(--ink); }
 .pill:hover > span { color: var(--butter); }
+.header[data-tone="ink"] .pill:hover { background: var(--butter); border-color: var(--butter); }
 .header[data-tone="ink"] .pill:hover > span { color: var(--ink); }
+/* Header nav links are quiet: an outline on hover, the text stays put. */
 .navPills .pill { border-color: transparent; }
-.navPills .pill:hover { background: transparent; border-color: currentColor; }
-.navPills .pill:hover > span { color: inherit; }
+.header .navPills .pill:hover { background: transparent; border-color: currentColor; }
+.header .navPills .pill:hover > span { color: inherit; }
 .pillSolid { background: var(--ink); border-color: var(--ink); }
 .pillSolid > span { color: var(--butter); }
+.pillSolid:hover { background: #262521; border-color: #262521; }
 .header[data-tone="ink"] .pillSolid { background: var(--butter); border-color: var(--butter); }
 .header[data-tone="ink"] .pillSolid > span { color: var(--ink); }
+.header[data-tone="ink"] .pillSolid:hover { background: #FFE46A; border-color: #FFE46A; }
 
 .langs { display: flex; gap: 2px; font-family: var(--mono); font-size: 11px; }
 .lang {
@@ -348,6 +356,9 @@
 .footerLinks .pill { height: 32px; font-size: 11px; }
 .footerLinks .pill:hover > span { color: var(--ink); }
 .footer a.teamLink { color: var(--butter); text-decoration: none; }
+.footerBrand { display: flex; align-items: center; gap: 14px; }
+.footerLogo { display: block; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; background: #fff; flex-shrink: 0; }
+.footerLogo img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
 /* ----------------------------------------------------------- preloader */
 .preloader {
@@ -372,7 +383,7 @@
 .clipLine { display: block; overflow: hidden; padding-bottom: .06em; }
 
 /* ---------------------------------------------------------- responsive */
-@media (max-width: 71.999rem) {
+@media (max-width: 79.999rem) {
   .navPills { display: none; }
 }
 @media (max-width: 63.999rem) {

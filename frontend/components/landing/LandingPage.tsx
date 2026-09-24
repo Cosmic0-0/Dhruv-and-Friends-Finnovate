@@ -59,9 +59,15 @@ export function LandingFooter() {
   return (
     <footer className={`${s.footer} fl-landing-footer`}>
       <div className={s.footerInner}>
-        <span>
-          {f.built}
-          <Link href="/created-by" className={s.teamLink}>{f.team}</Link>
+        <span className={s.footerBrand}>
+          <Link href="/created-by" className={s.footerLogo} aria-label={f.team}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/dhruv-and-friends.png" alt="" width={44} height={44} />
+          </Link>
+          <span>
+            {f.built}
+            <Link href="/created-by" className={s.teamLink}>{f.team}</Link>
+          </span>
         </span>
         <div className={s.footerLinks}>
           <Link href="/privacy" className={s.pill}><span>{f.privacy}</span></Link>
