@@ -11,8 +11,9 @@ only the page's own JS context can see) versus what stays server-side.
 ## What's here
 
 - `manifest.json` — MV3 manifest.
-  - `host_permissions`: `http://localhost:4000/*` (dev backend); update it
-    alongside `config.js#API_BASE_URL` for a deployed backend.
+  - `host_permissions`: `https://api.fraudlens.site/*` (the deployed
+    backend); change it together with `config.js#API_BASE_URL` to use a
+    local backend (`http://localhost:4000/*`).
   - `permissions`: `tabs` (background reads `tab.url` on every
     navigate/activate for the automatic per-tab check), `contextMenus`
     (right-click "Check selected text" / "Check link"), `storage` (recent
@@ -229,10 +230,12 @@ carry an info finding saying so.
 ## Load it locally
 
 `chrome://extensions` → enable Developer mode → "Load unpacked" → select
-this `extension/` directory. Requires the backend running at
-`http://localhost:4000` (or wherever `config.js` points), and, for the "Open
-in FraudLens" link, the frontend running at `http://localhost:3000` (or
-wherever `config.js#FRONTEND_ORIGIN` points).
+this `extension/` directory. As committed, it talks to the deployed backend
+(`https://api.fraudlens.site`) and opens the "Open in FraudLens" link on
+`https://fraudlens.site`. To test against a local backend and frontend, point
+`config.js#API_BASE_URL` and `FRONTEND_ORIGIN` at `http://localhost:4000` and
+`http://localhost:3000`, and change the manifest's `host_permissions` to
+match.
 
 ## Feature status (Phase 14/15 of the project brief)
 
@@ -248,7 +251,7 @@ wherever `config.js#FRONTEND_ORIGIN` points).
 | 14H financial-form warning | **Deferred, out of scope for this pass** | Too invasive for the time available, per the task brief — no code for this exists |
 | 14I report this site | Done | `POST /api/report` with the current hostname as `sender` — see limitation below |
 | 14J recent checks | Done | `history.js`, `chrome.storage.local`, 15-entry cap, no text ever stored |
-| 14K web app handoff | Done | "Open in FraudLens" opens the web app with `?scan=<capped text>`, which its check screen pre-fills (`frontend/components/CheckForm.tsx`) |
+| 14K web app handoff | Done | "Open in FraudLens" opens the web app with `?scan=<capped text>`, which its check screen pre-fills (`frontend/components/check/CheckScreen.tsx`) |
 | 14L privacy copy | Done | Shown in both `popup.html` and `result.html` |
 | Security Report | Done — orchestration unit-tested; report page visually checked in a browser preview; **re-run the checklist item below in the real extension** | `collect-signals.js` + `security-report.js` + `report.html` + `vendor/retire-js-*` + `POST /api/analyze-site` |
 
@@ -398,6 +401,6 @@ flow uses, now running on the URL bar instead of pasted text. For the newer
 Phase 14 features, follow with a right-click "Check link with FraudLens" on
 a lookalike link found on a page (no navigation needed), then a "Scan This
 Page" on a page containing a pasted scam-style message to show the inline
-banner. Coordinate with Caellum's demo script (`data/test-payloads/`) so
+banner. Coordinate with the QA owner's demo script (`data/test-payloads/`) so
 this beat is sequenced with the rest of the walkthrough rather than
 improvised.

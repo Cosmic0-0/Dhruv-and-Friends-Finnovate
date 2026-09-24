@@ -1,7 +1,9 @@
 # Document forensics
 
 Two complementary passive document-forensics paths, for different file
-types, with deliberately different output philosophies. Neither is a
+types, with deliberately different output philosophies. A third route,
+`POST /api/analyze/screenshot`, reuses the second path's Python service for
+screenshots (see the end of this file). Neither is a
 duplicate of the other; see `docs/API-CONTRACT.md` for their exact request/
 response shapes.
 
@@ -16,18 +18,15 @@ detector in this app — this path **does** produce one deterministic
 verdict (`safe`/`suspicious`/`scam`), the same architecture as a
 URL-lookalike or impersonation signal.
 
-**2026-09-23: `FLOOR-DOC-FORGED-INSTITUTION` was removed.** It forced a hard
-`high`/`scam` verdict when a pasted-image or typed-on-scan signal appeared
-alongside a claimed institution, with no human review. That's a strong,
-automated claim for a heuristic structural detector to make on its own —
-concretely, this repo's separate image-forensics ML path (below) produced a
-real false positive during testing (a synthetic, genuinely clean test image
-flagged as tampered), which is the direct evidence behind removing the
-floor rather than merely documenting a theoretical risk. `DOC-*` signals
-still score real points via their own weights and the `DX-1` interaction
-(combined with an actual impersonation/payment signal) — they just never
-force the verdict on their own. See `docs/API-CONTRACT.md`'s
-`/api/analyze/document` section for the current rule table.
+There is no document-specific floor. A pasted-image or typed-on-scan signal
+next to a claimed institution does not force a `high`/`scam` verdict on its
+own, because these are heuristic pattern matches on documents that vary for
+innocent reasons, and a false "this document is forged" is costly. The
+image-forensics ML path below has produced a false positive on a synthetic,
+clean test image, which is one concrete example of that risk. `DOC-*`
+signals score through their own weights and the `DX-1` interaction (a
+forgery artefact combined with an impersonation or payment signal). See
+`docs/API-CONTRACT.md`'s `/api/analyze/document` section for the rule table.
 
 ## `POST /api/documents` — images, indicators only, no verdict
 
@@ -98,8 +97,8 @@ gating logic.
    use only** - see `document-forensics/vendor/trufor/LICENSE.txt` before
    any commercial use of this feature. Known to false-positive on
    non-photographic/synthetic input (observed directly during this
-   feature's testing) - the reason `/api/analyze/document`'s equivalent
-   floor rule was removed, see above.
+   feature's testing), one reason `/api/analyze/document` has no
+   document-specific floor (see above).
 4. **Layout/template comparison** (`checks/layout.py`) - a local Donut
    model (`naver-clova-ix/donut-base-finetuned-docvqa`) identifies what a
    document claims to be (institution, document type); a separate
@@ -114,13 +113,40 @@ All four run entirely locally (PyTorch/transformers for stages 3-4) - no
 third-party API call, no network access at inference time (see each
 check's own `test_no_network_calls_during_run` test).
 
-There is currently no frontend entry point for this path (Caelum's
-`/document` page only calls `/api/analyze/document`) - it's reachable via
-the API only, pending a UI for standalone image uploads.
+There is no frontend entry point for this path. The web app's `/document`
+page calls only `/api/analyze/document`, so `POST /api/documents` is
+reachable through the API only.
 
-## Security
+## Screenshots: `POST /api/analyze/screenshot`
 
-There is no public endpoint that returns a stored document's raw bytes -
-see `docs/API-CONTRACT.md`'s `/api/documents` section. A stored document
-can contain a bank statement or an ID, and this backend has no per-user
-auth layer.
+The screenshot route sends the image to the same Python service while it
+runs OCR. Here the service's indicators do feed a verdict: they are mapped to
+DOC-09 (TruFor), DOC-10 (ELA), DOC-11 (layout), DOC-12 (image metadata) and
+DOC-13 (signature consistency), with the service's own confidence as the
+variant, and scored by ruleset `rs-1.6` alongside the OCR text's signals
+(`backend/src/services/document-forensics-client/toSignals.js`). None of them
+reaches `high` alone; DOC-09 at high or medium confidence joins the DX-1
+interaction with an impersonation or payment signal. The image is not
+stored. The web app's Check screen currently discards this result and
+re-analyses only the OCR text (see `docs/API-CONTRACT.md` Known Gaps).
+
+## Storage and security
+
+Both routes keep a copy of the uploaded file in the backend's SQLite
+database (`documents` table, written by
+`backend/src/services/document-store/`):
+
+- `POST /api/documents` stores every accepted upload (PDF, PNG, JPEG, WEBP)
+  with its original bytes, the client-supplied file name, MIME type, size,
+  SHA-256 and receive time.
+- `POST /api/analyze/document` stores the original bytes of a PDF upload
+  the same way, without a file name. A DOCX is not stored, because the
+  document store only accepts PDF and image types, so `documentId` is `null`
+  for a DOCX. The parsed text and previews are never stored.
+
+The bytes are stored unencrypted. Nothing deletes them: there is no
+retention period and no delete route. There is no public endpoint that
+returns a stored document's bytes (see `docs/API-CONTRACT.md`'s
+`/api/documents` section); they are read back only inside the backend, for
+OCR. A stored document can be a bank statement or an ID, and the backend
+has no per-user authentication, so treat the database file as sensitive.

@@ -54,6 +54,14 @@ whole analysis.
 - Failures (offline, timeout, unreadable body, invalid response) show a
   plain-language message and **Try again** without reloading the add-in.
 
+## Design context
+
+The task pane's design context (users, brand personality, aesthetic
+direction, design principles) is in [`.impeccable.md`](../.impeccable.md) at
+the repository root. It sits there because the `impeccable` Claude Code
+plugin, enabled in `.claude/settings.json`, reads it from the root. Update it
+when the task pane's audience or visual direction changes.
+
 ## Local setup and sideload
 
 Requirements: Node.js, Outlook on the web/new Outlook/classic Outlook/Mac,

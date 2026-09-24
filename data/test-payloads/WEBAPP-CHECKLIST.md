@@ -1,9 +1,9 @@
 # Web app: test checklist
 
-Owner: **Caellum**. Updated 2026-09-23 for round 2 against `caellum` @
-`04ae58f` (PR #12 merged: the UI owner's desktop layout with the side menu).
-The two unmerged commits on `oleg` ("Secondary screens", "iPhone pass") are
-not covered.
+Owner: **QA owner**. Updated 2026-09-23 for round 2 against `04ae58f`
+(PR #12 merged: the UI owner's desktop layout with the side menu). Two
+commits that were then still unmerged on the frontend/UI owner's branch
+("Secondary screens", "iPhone pass") are not covered.
 
 Tick each box as you go. **Expect** is what should happen. Items marked
 **(auto)** are covered by `webapp-ui.mjs` (see the end of this file), so you
@@ -20,12 +20,13 @@ both: the script uses 1280 px and 360 px.
 ## 0. Setup (about 5 minutes)
 
 1. **Backend.** `backend/.env` points the AI at `localhost`, so override it
-   (the AI machine is `kshitij-fedora`; run `tailscale status` first, hosts
-   move). Either run `sh data/test-payloads/restart-backend.sh` in Git Bash,
-   or:
+   (the AI runs on the team's tailnet Ollama host, see `backend/README.md`
+   Local LLM Setup; run `tailscale status` first, hosts move). Either run
+   `AI_URL=http://<tailnet-ollama-host>:11434 sh data/test-payloads/restart-backend.sh`
+   in Git Bash, or:
    ```
    cd backend
-   $env:OLLAMA_URL="http://100.91.27.102:11434"; npm start
+   $env:OLLAMA_URL="http://<tailnet-ollama-host>:11434"; npm start
    ```
    Open http://localhost:4000/health/llm. Expect `"reachable":true`.
 2. **Web app.** `frontend/.env` sends requests to the shared VPS backend.
@@ -249,7 +250,10 @@ screen ("About to pay someone?") and the Radar tab's Tools.
 restarts the backend itself to reset limits, with `restart-backend.sh`
 (kills whatever listens on :4000, starts the backend with the AI host, and
 lets `AI_URL` / `AI_MODE` override it for the "AI down" tests; needs Git
-Bash on Windows). One-time setup: `npm install --no-save puppeteer`.
+Bash on Windows). The restart script has no default AI host, so export
+`OLLAMA_URL` (the team's tailnet Ollama host, see `backend/README.md` Local
+LLM Setup) in the shell you run `webapp-ui.mjs` from. One-time setup:
+`npm install --no-save puppeteer`.
 
 ```
 cd data/test-payloads

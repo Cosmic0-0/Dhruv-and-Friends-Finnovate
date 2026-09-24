@@ -1,6 +1,6 @@
 # Browser extension: test checklist
 
-Owner: **Caellum**. Written 2026-09-23 against `main` @ `94781c2` (extension v0.3.0). Updated for round 2 against `caellum` @ `878da43`.
+Owner: **QA owner**. Written 2026-09-23 against `main` @ `94781c2` (extension v0.3.0). Updated for round 2 against `878da43`.
 Problems found in round 1 are findings #19–#30 (`git show 8fa64d8:data/test-payloads/FINDINGS.md`, section "Extension test"), all but #27 confirmed in Chrome.
 
 Tick each box as you go. **Expect** is what should happen. **Known issue**
@@ -16,7 +16,7 @@ Use four terminals.
    when you start (this doesn't edit the file):
    ```
    cd backend
-   $env:OLLAMA_URL="http://100.91.27.102:11434"; npm start
+   $env:OLLAMA_URL="http://<tailnet-ollama-host>:11434"; npm start
    ```
    Check it: open http://localhost:4000/health/llm. You should see `"reachable":true`.
    If `npm start` says `Cannot find package 'sharp'`, run `npm install` first.

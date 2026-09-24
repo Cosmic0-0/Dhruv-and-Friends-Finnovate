@@ -43,9 +43,12 @@ semantic status as unavailable.
 
 ## Analysis flow
 
-All text paths eventually call `backend/src/services/pipeline/runPipeline`. A
-document upload also does (see "Document forensics" below): its structural
-findings join the deterministic evidence through `extraSignals`.
+All text paths eventually call `runPipeline()` in
+`backend/src/services/pipeline/index.js`. A PDF/DOCX upload to
+`/api/analyze/document` also does (see "Document forensics" below): its
+structural findings join the deterministic evidence through `extraSignals`, and
+a screenshot's image-forensics findings do the same. An image upload to
+`/api/documents` does not call it; that route returns forensic indicators only.
 
 1. Normalize text and compute a non-reversible input hash.
 2. Extract the claimed institution from the shared registry.
@@ -67,11 +70,26 @@ The response includes both the compatibility fields (`verdict`, `riskScore`,
 
 ## Document forensics
 
+Three routes look at how a file or image was made, not only at what it says.
+`docs/DOCUMENT-FORENSICS.md` compares them.
+
+| Route | Files | Where it runs | Output |
+|---|---|---|---|
+| `POST /api/analyze/document` | PDF, DOCX | Node: `backend/src/services/document-forensics/` | DOC-01..08 signals and a normal verdict |
+| `POST /api/analyze/screenshot` | PNG, JPEG, WEBP | OCR in Node, plus the optional Python service `document-forensics/` through `document-forensics-client/` | DOC-09..13 signals alongside the text signals, one normal verdict |
+| `POST /api/documents` | PDF, PNG, JPEG, WEBP | Node stores the bytes (`document-store/`) and OCRs images; the Python service runs the checks | Indicators with a confidence label, never a verdict |
+
+The web app's `/document` page uses only the first route, and its screenshot
+upload uses the second (see "Known limitations" for how it uses the result).
+`/api/documents` is reachable through the API only.
+
+### PDF/DOCX: `POST /api/analyze/document`
+
 `POST /api/analyze/document` checks a PDF or Word (.docx) file that feels off,
 such as a bank form, statement, invoice or payment confirmation. It looks at
 how the **file itself** was made, not only what it says. Each finding is a
-normal deterministic signal (DOC-01..08, ruleset `rs-1.4`). The result is
-still one verdict from the same risk engine.
+normal deterministic signal (DOC-01..08, weighted since ruleset `rs-1.4`).
+The result is still one verdict from the same risk engine.
 
 ```text
 upload (base64 JSON, <=10MB) -> magic-byte type check (never the file name)
@@ -118,11 +136,13 @@ image size, and resource tables read from the installed package, never the
 network.
 
 **Privacy.** The file must reach the server, as screenshots do. It is parsed in
-memory, never written to disk and never stored. The same goes for its text and
-previews. The LLM receives only the redacted text, never the file, its images or
-the forensic facts. The response returns tool names and dates from the metadata.
-Author and "last saved by" fields are read only to match against the
-editing-tool list, and are never returned.
+memory, and its text and previews are never stored. A PDF's original bytes are
+stored in SQLite, the same way `/api/documents` stores uploads (see "OCR,
+privacy, and storage" below); a DOCX is not stored. The LLM receives only the
+redacted text, never the file, its images or the forensic facts. The response
+returns tool names and dates from the metadata. Author and "last saved by"
+fields are read only to match against the editing-tool list, and are never
+returned.
 
 **False-positive guards.**
 
@@ -139,13 +159,60 @@ editing-tool list, and are never returned.
 
 The fixtures in `data/test-payloads/documents/` demonstrate each case.
 
+### Screenshots: `POST /api/analyze/screenshot`
+
+The screenshot route runs OCR and sends the same image to the Python service
+at the same time. The service's findings are mapped to DOC-09 (TruFor),
+DOC-10 (error-level analysis), DOC-11 (layout mismatch), DOC-12 (image
+metadata) and DOC-13 (signature inconsistency) by
+`backend/src/services/document-forensics-client/toSignals.js`, with the
+service's own confidence as the signal variant. They join the OCR text's
+signals in one `runPipeline()` run, scored by ruleset `rs-1.6`, so the verdict
+covers both the words and the image. The image is not stored. When the service
+is down, the check still succeeds with text signals only, and
+`imageForensics.status` says `"unavailable"`.
+
+### Images: `POST /api/documents`
+
+This route is for a photographed document, such as a phone photo of a bank
+statement, which the PDF/DOCX route does not accept.
+
+```text
+upload (base64 JSON, <=15MB decoded) -> magic-byte type check (PDF/PNG/JPEG/WEBP)
+  -> store the original bytes in SQLite (document-store)
+  -> in parallel:
+       OCR of the stored image (images only) -> redact()
+       POST to the Python service (document-forensics/, default 127.0.0.1:8081)
+  -> 201 { documentId, mimeType, byteLength, receivedAt, extractedText, forensics }
+```
+
+The Python service runs up to four checks, cheapest first, and only moves to
+a more expensive one when the earlier checks were inconclusive: metadata and
+PDF structure, error-level analysis (ELA), TruFor forgery localisation, then
+a Donut layout comparison against known templates. TruFor and Donut are
+local models.
+
+The response never contains a verdict, a risk score or signals, and this
+route does not call `runPipeline()`. The service reports indicators, each
+with a confidence label, and says "no tampering indicators found" when it
+has none, never "authentic" or "verified". A signature check reports only
+the internal consistency of the signature strokes; it never identifies a
+signer. This route stays conservative because the ML checks' false-positive
+behaviour on real documents is not well understood yet.
+
+The Python service is optional. When it is down, slow or failing, the upload
+still succeeds and `forensics.status` is `"unavailable"`.
+`GET /health/document-forensics` reports whether it is reachable. This route
+ignores `shareSamples` and always stores the upload.
+
 ## Model transport
 
 `backend/src/services/analysis/llmClient.js` supports three modes:
 
 - `local`: Ollama only.
 - `fallback`: one configured hosted provider only.
-- `auto`: Ollama first, then Anthropic, OpenAI, or OpenRouter when configured.
+- `auto`: Ollama first, then the one hosted provider named by `FALLBACK_PROVIDER`
+  (`anthropic`, `openai` or `openrouter`) when `FALLBACK_API_KEY` is set.
 
 Requests use deterministic sampling where the provider supports it. Ollama is
 called with JSON output and thinking disabled. Provider errors, timeouts, invalid
@@ -166,8 +233,10 @@ Run `npm run test:fallback` on the actual demo machine shortly before presenting
   handling selected negation and legitimate-notification cases.
 - Identity consistency compares the claimed organization with linked domains and
   structured payment recipients.
-- Payment context lets the Before You Pay flow add recipient mismatch and active
-  coaching signals that cannot be inferred reliably from message text alone.
+- Payment context (`paymentContext` on `/api/analyze`) adds recipient mismatch
+  and active coaching signals that cannot be inferred reliably from message
+  text alone. No current client sends it; Before You Pay uses the separate
+  `/api/check-payee` check.
 - Email context lets the Outlook add-in supply sender, Reply-To, Return-Path,
   authentication, attachment, and link metadata. These fields are evaluated by
   deterministic code and are not sent to the LLM.
@@ -184,6 +253,10 @@ evidence is capped, and strong decisions require deterministic corroboration.
 The semantic prompt supports English, French, and Kreol Morisien. For relevant
 Kreol input, `kreolGrounding.js` retrieves a small set of reviewed corpus and
 translation-memory entries. Draft or rejected entries are not used by default.
+The Kreol language layer (`backend/src/services/kreol/`: spelling
+normalisation for matching, mixed-language detection, entity-protecting
+translation) is described in `docs/KREOL-CURRENT-STATE.md`. Evidence is always
+quoted from the original text, never from a normalised or translated copy.
 
 Language support is broader than prompt grounding: the deterministic lexicon also
 contains language-specific patterns. Changes to Kreol data must preserve its
@@ -198,12 +271,48 @@ must reach the backend for OCR; the server redacts the extracted text before the
 analysis pipeline sees it.
 
 The OCR route accepts PNG, JPEG, and WEBP content up to 5 MB after decoding and
-checks magic bytes. Tesseract runs in memory. OCR text is returned to the user for
-review before the normal text-analysis request is made.
+checks magic bytes. Tesseract runs in memory, and the image is also sent to the
+local Python forensics service; neither stores it. The web app does not show
+the OCR text: the screenshot thumbnail is the visible input, and the text is
+sent to `/api/analyze` when the user presses Check.
 
-SQLite stores aggregate report counts, privacy-minimised report events and audit
-rows, batch summaries, cached domain ages, and campaign graph observations. Raw
-message text and raw reporter IP addresses are not stored in those tables.
+SQLite (`DATABASE_URL`, default `backend/fraudlens.db`) stores:
+
+- Uploaded documents, as original bytes (`documents` table). `POST
+  /api/documents` stores every accepted PDF, PNG, JPEG or WEBP upload with its
+  client-supplied file name, MIME type, size, SHA-256 and receive time. `POST
+  /api/analyze/document` stores PDF uploads the same way, without a file name,
+  unless the request says `shareSamples: false`. These can be bank statements
+  or identity documents. They are stored unencrypted, no route returns them,
+  and nothing deletes them.
+- Sender report counts keyed on the reported identifier (`reports`). A
+  phone-shaped identifier is stored as its normalised digits.
+- Privacy-minimised report events (fingerprints of redacted text and an HMAC
+  pseudonym of the reporter's IP) and risk audit rows. These are deleted
+  after `COMMUNITY_EVENT_RETENTION_DAYS` (default 90) and
+  `COMMUNITY_AUDIT_RETENTION_DAYS` (default 180), checked at startup and
+  every 6 hours.
+- Campaign graph observations (`scam_dna*`): scam type, claimed identity,
+  observed sender identifiers and lookalike domains.
+- Organisation email observations, indicators and analyst outcome labels
+  (`org_*`), keyed on HMAC pseudonyms of addresses and of the analyst's IP.
+  A purge function exists but nothing calls it, so these rows are kept.
+- Radar's daily counters (`radar_daily`, `radar_domain_daily`): verdict,
+  scam type, claimed institution, reported channel and lookalike domain per
+  Mauritius calendar day, with no text, sender or IP. Rows are tagged `live`
+  or `demo_seed` (from `npm run seed:radar`) and deleted after
+  `RADAR_RETENTION_DAYS` (default 730), checked at startup and on a timer.
+- Batch summary counts and cached domain registration dates.
+
+Raw message text and raw reporter IP addresses are not stored. Apart from the
+community events, audit rows and Radar counters, nothing has a retention
+period.
+
+The web app's Settings has a "Share anonymous scam samples" switch. When it is
+off, requests carry `shareSamples: false` and the backend skips the community
+event, ScamDNA, Radar, organisation and batch-history writes for that request,
+and does not store a document sent to `/api/analyze/document`.
+`/api/documents` and `/api/report` are not affected.
 
 The prototype has no accounts or tenant isolation. Campaigns, trends, and sender
 report counts should be treated as public demo data. Do not add user history APIs
@@ -211,28 +320,38 @@ until an authentication and ownership model exists.
 
 ## Product surfaces
 
-The Next.js frontend provides:
+The Next.js frontend serves a landing page at `/` and the web app at `/app`.
+The app provides:
 
-- Check: paste/type or screenshot intake and the main result view.
+- Check (`/app`): paste or type a message, check a link, or upload a
+  screenshot, then the main result view. A small `/api/text-profile` call
+  labels the pasted text's language and link count while the user types.
 - Document check: upload a PDF or Word file. The result screen adds a
   "Document integrity" panel with the file's facts, its findings in plain
   words, and previews of images found pasted onto a scan.
-- Before You Pay: structured payment-context questions.
-- Conversation: per-message analysis with the furthest observed journey stage.
+- Before You Pay (`/safepay`): the `/api/check-payee` payee check (report
+  count, number/IBAN format, an organisation name on a personal number, a
+  large amount).
+- Conversation: the whole chat goes to `/api/analyze/conversation` and gets
+  one verdict, with each flagged message and the journey stages marked.
 - Batch: up to 50 messages with aggregate results and observed campaign groups.
 - Replay: a staged explanation of the evidence already returned by the backend.
 - Network: a React Flow graph for stored ScamDNA observations.
 - Sandbox: a bounded, fictional scam sequence grounded in backend playbooks.
-- Learn, Trends, Settings, recent checks, simple mode, and shareable safety cards.
+- Report (`/report`): a static guide to Mauritian reporting channels. It
+  sends nothing to the backend.
+- Learn, Radar (`/trends`), Settings, recent checks, simple mode, and
+  shareable safety cards.
+- Information pages: `/extension`, `/privacy`, `/created-by`.
 
 Results and recent checks are browser-local. The backend does not provide user
 accounts or personal history synchronization.
 
 The Chrome extension calls the same backend for URL, text, report, and site
 security checks. It does not contain its own fraud classifier. Page scanning is an
-explicit user action. The extension is currently configured for
-`http://localhost:4000` and `http://localhost:3000`; deployment requires updating
-`extension/config.js` and the manifest `host_permissions` together.
+explicit user action. The extension is configured for the deployed site
+(`https://api.fraudlens.site` and `https://fraudlens.site`); local work requires
+changing `extension/config.js` and the manifest `host_permissions` together.
 
 The Outlook read-mode task pane sends the open message body and bounded metadata
 to the same `/api/analyze` route. It does not scan the mailbox, download attachment
@@ -273,39 +392,72 @@ so the setting must match the real topology before production use.
   the configured demo model rather than assuming unit tests prove model behavior.
 - The hosted fallback must be tested with a real key; mocked tests only prove
   routing and validation.
-- The extension has extensive automated syntax/logic coverage only through shared
-  backend tests and manual steps; it still needs a load-unpacked browser smoke test.
+- The extension has its own `npm test` suite in `extension/` (manifest
+  permissions, content script, popup states, tab state, security report), and
+  its detection logic is covered by the backend tests because it calls the
+  backend. It still needs a load-unpacked browser smoke test.
 - Outlook support depends on what each client exposes through Office.js. Missing
   authentication headers remain unknown rather than being treated as failures.
-- ESLint is not configured. `npm run lint` prompts interactively and is not a CI
-  check.
-- The project does not declare/enforce Node 22, although frontend tests require it.
+- ESLint is not configured, and `frontend/` has no `lint` script. There is no
+  lint check.
+- Node 22 is declared but not enforced: each Node project's `package.json` has
+  `"engines": { "node": ">=22" }` and the root `.nvmrc` says `22`, but npm only
+  warns on a mismatch. The frontend tests run TypeScript files directly, which
+  Node supports without a flag only from 22.18.0, so `>=22` also admits
+  22.0-22.17, which cannot run them.
+- The web app's screenshot flow discards the image-forensics result. It keeps
+  only the OCR text from `/api/analyze/screenshot` and sends that text to
+  `/api/analyze`, so the verdict shown never includes DOC-09..13, and each
+  screenshot costs two analyze requests and two semantic-model calls.
 - Accessibility and responsive behavior need a final real-browser pass across the
   result, screenshot, document, batch, conversation, network, and extension flows.
-- Document forensics finds warning signs, not proof:
-  - Metadata can be stripped or forged.
-  - A forgery that was printed and scanned again leaves no structural trace.
-  - There is no pixel-level error-level analysis.
+- Document forensics finds warning signs, not proof. On both paths, metadata
+  can be stripped or forged, and a forgery that was printed and scanned again
+  leaves no structural trace.
+- PDF/DOCX path (`/api/analyze/document`, Node):
+  - It has no error-level analysis and no ML forgery model. Those exist only
+    in the Python service used by `/api/documents` and
+    `/api/analyze/screenshot`, which this route does not call.
   - PDF annotations and XFA forms are not inspected.
   - Legitimate e-signing tools can also place transparent signature images on a
     scan, which is why that finding alone is ELEVATED ("verify first"), not HIGH.
   - For PDFs with permissions-only encryption, the active-content scan is
     best-effort.
+  - Only the first 10 pages are inspected, and at most 3 scanned pages are OCR'd.
+- Image paths (`/api/documents` and `/api/analyze/screenshot`, Python
+  service):
+  - ELA only applies to images with JPEG compression history; it is skipped
+    for others.
+  - TruFor has produced false positives on synthetic, non-photographic input.
+    Its pretrained weights are licensed for nonprofit use only.
+  - The layout comparison knows only the few templates in
+    `document-forensics/tests/fixtures/templates/`.
+  - The checks are calibrated against a handful of fixtures, not tuned on
+    real-world documents.
+  - There is no web UI for `/api/documents`.
 
 ## Verification baseline
 
-As of 2026-09-23 in the current worktree:
+Run on 2026-09-24 on the merge of `origin/main` into `caellum`. Node 22 was
+not installed on the machine, so every Node check ran on Node 24.18.0.
 
-- Backend: 469 tests pass when localhost binding is allowed (run on Node
-  24.18, the version installed on the build machine; the project targets 22).
-- Backend: the 84-case deterministic eval (`npm run eval`) gives identical
-  results under rs-1.3 and rs-1.4, and `npm run test:fallback` passes.
-- Frontend: all 10 test files (95 tests) pass.
-- Frontend: `npm run typecheck` passes.
-- Frontend: `npm run build` passes and generates all 17 app routes.
-- Outlook add-in: run `npm test`, `npm run build`, and `npm run validate` in
-  `outlook-addin/`; the live fixture smoke test additionally requires the backend.
-- Frontend lint: unavailable until ESLint is configured.
+| Check | Result |
+|---|---|
+| `backend`: `npm test` | 626 tests, 626 pass (localhost binding allowed) |
+| `backend`: `npm run eval` | runs; 84 cases, deterministic mode, ruleset `rs-1.6`: 46 TP, 0 FP, 21 TN, 17 FN (precision 100%, recall 73.0%) |
+| `backend`: `npm run eval:kreol` | runs; 88 fraud cases, 95.5% pass (dev 100%, heldout 88.2%), 4 failures. The fixtures are AI-drafted and unreviewed, so this is not a reviewed benchmark. |
+| `frontend`: `npm test` | 98 tests in 10 files, all pass |
+| `frontend`: `npm run typecheck` | passes |
+| `frontend`: `npm run build` | passes; 22 static pages generated |
+| `outlook-addin`: `npm test` | 77 tests in 11 files, all pass |
+| `outlook-addin`: `npm run build`, `npm run validate` | both pass; the manifest is valid |
+| `extension`: `npm test` | 46 tests, all pass |
+| `extension`: `npm run check:retire` | passes; vendored Retire.js data fetched 2026-09-23 |
+| `document-forensics`: `python -m pytest` | not run: no Python 3.12 on the machine |
+
+Not run on that date: `npm run test:fallback` and `npm run eval:kreol:translate`
+(both need a reachable model), the Outlook live fixture smoke test (it needs a
+running backend), and a frontend lint (ESLint is not configured).
 
 These checks validate code paths and contracts. They do not replace a real-model
 run, OCR sample, browser interaction pass, extension smoke test, or fallback test

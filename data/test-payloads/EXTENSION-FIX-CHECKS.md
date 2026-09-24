@@ -16,7 +16,7 @@ The script only checks outcomes. It doesn't care *how* you fix something.
 ```
 # 1. Backend (the AI URL override is needed while backend/.env says localhost)
 cd backend
-$env:OLLAMA_URL="http://100.91.27.102:11434"; npm start
+$env:OLLAMA_URL="http://<tailnet-ollama-host>:11434"; npm start
 
 # 2. API checks (#19, #20, #24, #25, #29), about 30 seconds
 cd data/test-payloads

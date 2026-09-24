@@ -55,15 +55,21 @@ backend/src/services/risk-engine/      deterministic score, level, confidence
 backend/src/services/domain-matching/  URL extraction and lookalike checks
 backend/src/services/community-signals privacy-minimised report clustering
 backend/src/services/site-security/    passive site checks with SSRF protection
+backend/src/services/kreol/            Kreol normalisation, language mix, translation
+backend/src/services/document-forensics/         PDF/DOCX forensics, feeds a verdict
+backend/src/services/document-store/             stores uploaded document bytes
+backend/src/services/document-forensics-client/  HTTP client for document-forensics/
 backend/src/db/                        SQLite schema and queries
 frontend/                              Next.js PWA and all web product flows
 extension/                             Manifest V3 client of the backend API
 outlook-addin/                         Office.js read-mode client of the backend API
+document-forensics/                    optional Python service: image forgery checks for
+                                       screenshots (DOC-09..13) and POST /api/documents
 data/                                  registries, reviewed language data, QA data
 ```
 
-The backend and frontend are separate Node projects. There is intentionally no
-root Node package.
+`backend/`, `frontend/`, `outlook-addin/` and `extension/` are separate Node
+projects. There is intentionally no root Node package.
 
 ## API and coding conventions
 
@@ -81,7 +87,8 @@ root Node package.
 
 ## Verification
 
-Use Node 22. Run checks from each project directory:
+Use Node 22.18 or later (frontend tests run `.ts` files directly). Run checks
+from each project directory:
 
 ```bash
 cd backend && npm test
@@ -91,12 +98,14 @@ cd frontend && npm run build
 cd outlook-addin && npm test
 cd outlook-addin && npm run build
 cd outlook-addin && npm run validate
+cd extension && npm test
+cd document-forensics && python -m pytest   # Python 3.12 venv, see its README
 ```
 
 Route tests bind temporary localhost servers and may need network-sandbox
 permission. Frontend tests do not run under Node 20 because they are TypeScript
-files executed directly by Node. ESLint is not configured yet, so `npm run lint`
-is currently interactive and must not be cited as a passing automated check.
+files executed directly by Node. ESLint is not configured yet, and `frontend/`
+has no `lint` script; do not cite linting as a passing check.
 
 Before a demo, also run `npm run test:fallback` in `backend/`, check
 `GET /health/llm`, exercise at least one real English/French/Kreol message, and

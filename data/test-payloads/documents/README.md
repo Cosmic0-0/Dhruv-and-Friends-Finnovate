@@ -14,8 +14,8 @@ build the same files in memory, so the tests never depend on these copies.
 
 **Everything here is fictional.** "Northbridge Savings Bank" does not exist,
 and "A. Sample" is not a person. The MCB-branded form says "SAMPLE - FICTIONAL
-TEST DOCUMENT - NOT ISSUED BY MCB" on the page. MCB is used only because the
-forged-institution rule needs a registry institution to be claimed. The
+TEST DOCUMENT - NOT ISSUED BY MCB" on the page. MCB is used only so that the
+form claims a registry institution, as a real forgery would. The
 "macro" is inert placeholder bytes. The remote template points at a reserved
 `.invalid` host, so it can never resolve.
 

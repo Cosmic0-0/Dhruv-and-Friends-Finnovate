@@ -1,294 +1,279 @@
 # FraudLens AI — Launch Checklist
 
-Working checklist for the 72-hour build. Check items off as they're satisfied.
-This file is the source of truth for "are we production-credible" — see
-`CLAUDE.md` for the instruction to periodically re-check the codebase against it.
+Security and launch-readiness status. Each item states the current state and
+the date it was last checked against the code. Check an item off only when it
+is satisfied.
 
 ## 1. Security
 
-Baseline hardening — required before any real message content or reported
-sender data touches the demo, since the app ingests untrusted user input
-(pasted messages, screenshots, sender reports) by design.
+Baseline hardening. The app ingests untrusted input by design (pasted
+messages, screenshots, uploaded documents, sender reports), so these apply
+before any real data touches a demo.
 
-- [x] **Hide API keys** — verified 2026-09-22: `FALLBACK_API_KEY`,
-      `OLLAMA_URL`, `DATABASE_URL` are all read from `process.env`
-      (`backend/src/services/analysis/llmClient.js`, `backend/src/db/index.js`),
-      `.env` is gitignored, nothing hardcoded in source. OCR service keys
-      don't exist yet — recheck when `backend/src/services/ocr/` lands.
-- [x] **Purge git secrets** — verified 2026-09-22: scanned full history
-      (`git log --all -p`) for `backend/.env` and common key prefixes
-      (`sk-ant-`, `sk-proj-`, `sk-or-v1-`, `AIzaSy`, `AKIA...`) — nothing
-      found. `.env`, `*.db`, `*.traineddata` are all gitignored and untracked
-      (`backend/.gitignore`). Rerun if a secret is ever suspected of landing
-      in a commit.
-- [x] **Use a scoped/public-safe DB key** — N/A by architecture, verified
-      2026-09-22: the frontend never talks to the DB directly (no Supabase/
-      direct-DB client SDK) — all reads/writes go through backend routes
-      (`backend/src/db/index.js`), so no DB key is ever shipped to the
-      client. Recheck if the frontend ever gets a direct-DB integration.
-- [ ] **Enable row-level security** (or equivalent access rules) on the
-      reports/batch-history tables so one user's data can't be read or
-      edited by another through a misconfigured query. Not satisfied
-      2026-09-22: single shared SQLite file (`backend/fraudlens.db`), no
-      per-user/session scoping concept exists at all yet (no auth — see
-      below), so there's no notion of "another user's row" to isolate.
-- [ ] **Encrypt sensitive data at rest** — anything that could identify a
-      reporter or contain raw message content in the DB. Not satisfied
-      2026-09-22, but risk surface is smaller than the sketch assumed:
-      `backend/src/db/index.js`'s `reports` table stores only a normalized
-      sender identifier + count (no message text, no `reportedBy` — see
-      `docs/API-CONTRACT.md` Known Gaps), and `batch_history` stores only
-      aggregate counts. No raw message content or reporter identity is
-      persisted anywhere today, so there's currently nothing sensitive at
-      rest to encrypt — recheck if `reportedBy`/message content is ever
-      added to the schema.
-- [ ] **Enforce server-side auth** on every endpoint that reads/writes
-      report or batch-history data — never trust a client-supplied user ID.
-      Not satisfied 2026-09-22: no auth middleware anywhere in
-      `backend/src/index.js` or `backend/src/routes/index.js`, every route
-      is fully open (also flagged in `docs/API-CONTRACT.md` Known Gaps).
-- [ ] **Lock record access** — a user (or anonymous session) can only fetch
-      their own batch scan history, not enumerate others' by ID. Not
-      satisfied 2026-09-22, though currently low-risk: no route exists yet
-      that reads batch history or reports *by ID* at all
-      (`backend/src/routes/index.js` only inserts/aggregates) — recheck the
-      moment a "my history" read endpoint is added, since auth must land
-      before it does.
-- [x] **Block field tampering** — verified 2026-09-22: `verdict`/`signals`
-      always come from `analyzeMessage()` + `checkUrls()`, never from
-      `req.body`; `reportCount` is always re-read from SQLite in
-      `reportSender()` (`backend/src/db/index.js`), never trusted from the
-      client. Recheck if either route starts accepting these as input.
-- [ ] **Secure session cookies** — `HttpOnly`, `Secure`, `SameSite` set
-      appropriately if sessions are used. N/A as of 2026-09-22: no
-      cookie/session middleware exists anywhere in the stack (no
-      `cookie-parser`/`express-session` in `backend/package.json`). Recheck
-      the moment any session concept is introduced.
-- [ ] **Hash passwords** with a strong algorithm (bcrypt/argon2) — only
-      applies if the hackathon build adds real user accounts. N/A as of
-      2026-09-22: no user accounts exist anywhere in the codebase.
-- [x] **Rate limit sensitive endpoints** — especially `/api/analyze`,
-      `/api/batch-scan`, and `/api/report`, to stop abuse of the LLM call
-      path and the crowdsourced report feed. Implemented 2026-09-22:
-      `express-rate-limit`, applied per-route in
-      `backend/src/routes/index.js` — 20 req/15min for `/api/analyze` and
-      `/api/analyze/screenshot`, 10 req/15min for `/api/batch-scan`,
-      120 req/15min for `/api/check-url`, 5 req/hour for `/api/report`. All
-      keyed per-IP (`app.set("trust proxy", 1)` in `backend/src/index.js` so
-      the real client IP is used behind a deploy proxy), 429 on exceeding.
+- [x] **Hide API keys**: `FALLBACK_API_KEY`, `OLLAMA_URL`, `DATABASE_URL`
+      and the other settings are read from `process.env`
+      (`backend/src/services/analysis/llmClient.js`, `backend/src/db/index.js`).
+      `.env` is gitignored and nothing is hardcoded in source. The OCR
+      service uses no key. Last verified 2026-09-23.
+- [x] **Purge git secrets**: the full history (`git log --all -p`) has no
+      match for common key prefixes (`sk-ant-`, `sk-proj-`, `sk-or-v1-`,
+      `AIzaSy`, `AKIA`), and `backend/.env`, `*.db` and `*.traineddata` have
+      never been committed. Rerun if a secret is ever suspected of landing in
+      a commit. Last verified 2026-09-23.
+- [x] **Use a scoped/public-safe DB key**: N/A by architecture. The frontend
+      never talks to the database; all reads and writes go through backend
+      routes, so no database key reaches a client. Last verified 2026-09-23.
+- [ ] **Enable row-level security** (or equivalent access rules) so one
+      user's data can't be read or edited by another. Not satisfied: one
+      shared SQLite file (`DATABASE_URL`, default `backend/fraudlens.db`) and
+      no user or session concept, so there is no notion of "another user's
+      row" to isolate. Last verified 2026-09-23.
+- [ ] **Encrypt sensitive data at rest**: anything that could identify a
+      reporter or contain raw message content in the DB. **Not satisfied**
+      (verified 2026-09-23). The `documents` table
+      (`backend/src/db/index.js`, written by
+      `backend/src/services/document-store/`) holds the original bytes of
+      every accepted `POST /api/documents` upload (PDF/PNG/JPEG/WEBP, with
+      its client-supplied file name) and of every PDF sent to
+      `POST /api/analyze/document` without `shareSamples: false`. These can be bank statements or ID
+      documents. They are stored unencrypted, with no retention period and
+      no delete path, in a database any route can write to without
+      authentication. No route returns the stored bytes. The other tables
+      hold no raw message text and no raw reporter IP: `reports` keeps a
+      normalised sender identifier and a count, report events keep
+      fingerprints and an HMAC pseudonym of the reporter, Radar keeps daily
+      counters, and `batch_history` keeps aggregate counts. Screenshots are
+      not stored. Re-verified on the merged code 2026-09-24.
+- [ ] **Enforce server-side auth** on every endpoint that reads or writes
+      stored data. Not satisfied: there is no auth middleware in
+      `backend/src/index.js` or `backend/src/routes/index.js`, and every
+      route is open. This includes `POST /api/org/outcomes`, where any caller
+      can label an organisation observation as `legitimate` or
+      `false_positive`, which removes it from that organisation's campaign
+      counts. Last verified 2026-09-23.
+- [ ] **Lock record access**: a user can only fetch their own records, not
+      enumerate others' by ID. Not satisfied, but no route reads a user's
+      history or a stored document by ID today. Public reads are aggregate or
+      campaign-level (`/api/trends`, `/api/campaign/:fingerprintId`,
+      `/api/org/campaigns`). Auth must land before any "my history" or
+      document-retrieval route. Last verified 2026-09-23.
+- [x] **Block field tampering**: verdicts, scores, signals and actions are
+      computed by `runPipeline()` (`backend/src/services/pipeline/`) and
+      never read from `req.body`. `reportCount` is always re-read from SQLite.
+      Last verified 2026-09-23.
+- [ ] **Secure session cookies**: N/A. There is no cookie or session
+      middleware (`backend/package.json` has no `cookie-parser` or
+      `express-session`). Recheck when any session concept is added. Last
+      verified 2026-09-23.
+- [ ] **Hash passwords** with bcrypt/argon2: N/A. There are no user
+      accounts. Last verified 2026-09-23.
+- [x] **Rate limit sensitive endpoints**: `express-rate-limit`, per client
+      IP (`app.set("trust proxy", 1)` in `backend/src/index.js`), `429` with a
+      JSON error. Routes that share a limiter share one counter per IP.
+      From `backend/src/routes/index.js` and
+      `backend/src/routes/conversation.js`, last verified 2026-09-24:
+
+      | Limiter | Limit | Routes (shared counter) |
+      |---|---|---|
+      | `analyzeLimiter` | 20 / 15 min | `POST /api/analyze`, `POST /api/analyze/screenshot`, `POST /api/analyze/document` |
+      | `conversationLimiter` | 20 / 15 min | `POST /api/analyze/conversation` (its own counter) |
+      | `batchLimiter` | 10 / 15 min | `POST /api/batch-scan` |
+      | `textProfileLimiter` | 600 / 15 min | `POST /api/text-profile` |
+      | `documentLimiter` | 15 / 15 min | `POST /api/documents` |
+      | `checkUrlLimiter` | 120 / 15 min | `POST /api/check-url` |
+      | `checkSenderLimiter` | 120 / 15 min | `POST /api/check-sender`, `POST /api/check-payee`, `GET /api/campaign/:fingerprintId`, `GET /api/org/campaigns`, `GET /api/trends`, `GET /api/sandbox/playbooks` |
+      | `reportLimiter` | 5 / hour | `POST /api/report`, `POST /api/org/outcomes` |
+      | `siteSecurityLimiter` | 15 / 15 min | `POST /api/analyze-site` |
+      | `sandboxLimiter` | 30 / 15 min | `POST /api/sandbox/next` |
+
+      `GET /health`, `GET /health/llm` and `GET /health/document-forensics`
+      have no limit. The limits are in-process, so they reset on restart and
+      are not shared between instances.
 - [x] **Add bot protection** on the report endpoint so the crowdsourced
-      threat feed can't be trivially poisoned with fake reports. Implemented
-      2026-09-22: `/api/report` gets a much tighter limit than the other
-      routes (5 req/hour/IP vs. 20/15min) via the same `express-rate-limit`
-      middleware (`backend/src/routes/index.js`) — no CAPTCHA/challenge
-      added, a strict per-IP throttle is the practical deterrent for a
-      hackathon build; revisit if the report feed still gets gamed in
-      testing. Strengthened 2026-09-23 (`joshua` branch): community
-      cluster/wave detection (`backend/src/services/community-signals`)
-      counts only DISTINCT pseudonymous reporters (HMAC of IP), never
-      official identities (`MCB`, `my.t`, ...) or redaction placeholders as
-      sender keys, never boosts messages linking only official domains, and
-      ignores machine-only evidence - so one IP re-reporting can't create a
-      cluster. The legacy `reportCount` itself is still a raw per-sender
-      tally, protected only by the 5/hour limit.
-- [x] **Parameterize all DB queries** — verified 2026-09-22: every query in
-      `backend/src/db/index.js` uses `?` placeholders via `better-sqlite3`'s
-      `.prepare().run()`, no string concatenation.
-- [x] **Validate all input** server-side — verified 2026-09-22:
-      `/api/analyze`, `/api/batch-scan`, `/api/report`, `/api/check-url`, and
-      `/api/analyze/screenshot` all reject missing/empty/oversized/
-      wrong-type input server-side (`backend/src/routes/index.js`), 400 on
-      failure. Recheck if any route's validation logic changes.
-      Rechecked 2026-09-23: `/api/analyze` now also validates the optional
-      `emailContext` (`backend/src/services/email-context`: types, address
-      syntax, list sizes, auth-result enum) and `paymentContext.accountNumber`
-      (kept as last 4 digits only), 400 with a field-specific message.
-- [x] **Escape user content** before rendering it back in the UI (verdict
-      display, flagged-signal view, batch results) to prevent stored/reflected
-      XSS from a malicious pasted message. Reverified 2026-09-23: every place user
-      text (message body, signal evidence, sender) is rendered
-      (`components/ResultView.tsx`, `components/result/parts.tsx`,
-      `components/result/sections.tsx`) goes through plain JSX text nodes,
-      which React escapes by default. The two `dangerouslySetInnerHTML` uses
-      contain fixed application-authored theme and JSON-LD strings, never
-      analysis or user content.
-- [x] **Restrict file uploads** (screenshot ingestion) — verified
-      2026-09-22: `/api/analyze/screenshot` (`backend/src/routes/index.js`)
-      caps decoded image size at 5MB, sniffs PNG/JPEG/WEBP by magic bytes
-      rather than trusting the client (there is no client-supplied MIME
-      field at all), and the buffer is only ever handed to the tesseract.js
-      worker in memory — never written to disk or served back, so there's
-      no stored-file execution surface to strip.
-      Extended 2026-09-23 for document uploads (`POST /api/analyze/document`,
-      `backend/src/services/document-forensics`):
-      - The type comes from magic bytes only (`%PDF-`, or a ZIP whose
-        `[Content_Types].xml` declares a Word main document). The
-        client's file name is ignored and never echoed.
-      - Limits are 10MB decoded and a 14MB JSON body. A body over any route's
-        limit gets a generic JSON 413.
-      - Parsing runs only inside a `worker_threads` worker with a 256MB heap
-        limit and a 15s hard timeout. On a timeout, OOM or crash the worker
-        is terminated and the client gets a generic "could not be read".
-        At most 2 documents are analysed at once; a third gets 503.
-      - The ZIP central directory is checked first (at most 500 entries and
-        50MB declared uncompressed). Only named parts are inflated, each
-        under a hard output cap enforced while inflating, so a zip that lies
-        about its sizes still stops (tested).
-      - Nothing is written to disk. Macros and remote templates are only
-        detected, never run or fetched.
-      - pdf.js runs without font eval, system fonts, XFA or network access, and
-        with image size capped. sharp inputs are capped with
-        `limitInputPixels`.
-      - Previews are PNG data URLs of at most 256px. The frontend drops any
-        preview that isn't a small `data:image/png` URL before rendering it.
-- [x] **Trim API responses** — don't leak internal fields (raw LLM prompt,
-      stack traces, DB row internals) in `/api/analyze`, `/api/batch-scan`,
-      or `/api/report` responses. The malformed-JSON HTML-stack-trace leak
-      found during the first QA pass was already closed. Fixed
-      2026-09-22: `/api/analyze` and `/api/analyze/screenshot` no longer
-      pass through raw `err.message` — both now return a generic
-      `{ "error": "..." }` and log the real error server-side with
-      `console.error` (`backend/src/routes/index.js`). `/api/batch-scan`'s
-      **per-message** `explanation` field uses a short user-facing failure
-      message rather than a stack trace or internal path.
-      Rechecked 2026-09-23 for `emailContext`: `messageId`, Return-Path and
-      raw header values are never echoed; the response carries only
-      per-signal evidence (the sender/Reply-To address, masked account
-      last-4) and `analysis.email` (which evidence was supplied, which checks
-      ran). None of the email metadata is sent to the LLM.
-- [x] **Add security headers** (CSP, `X-Content-Type-Options`,
-      `X-Frame-Options` / frame-ancestors, `Referrer-Policy`). Implemented
-      2026-09-22: `helmet()` mounted in `backend/src/index.js` before the API
-      router, sets CSP, `X-Content-Type-Options`, `X-Frame-Options`,
-      `Referrer-Policy`, HSTS, and related headers on every response.
-      Verified via `curl -i http://localhost:4000/health`.
-- [x] **Force HTTPS** in production/deployment config. Implemented
-      2026-09-22: `backend/src/index.js` redirects to `https://` when
-      `NODE_ENV=production` and `x-forwarded-proto: http` (the header a
-      TLS-terminating proxy sets), and `helmet()`'s default HSTS header
-      (`max-age=31536000; includeSubDomains`) reinforces it for repeat
-      visits. Depends on the deploy host actually setting
-      `x-forwarded-proto` (Vercel/Render/Railway/Heroku all do) — reverify
-      once the real deployment target is picked.
-- [x] **Scan dependencies** for known vulnerabilities (`npm audit` or
-      equivalent) before the final demo build. Rechecked 2026-09-23 after
-      adding `pdfjs-dist` 6.3.289, `pdf-lib` 1.17.1 and `fflate` 0.8.3
-      (pinned exactly): `backend` `npm audit --omit=dev` reports 0
-      vulnerabilities. Reverified 2026-09-22:
-      `backend`: 0 vulnerabilities (`npm audit --omit=dev`, including the
-      newly added `express-rate-limit`/`helmet`). `frontend`: now installed
-      and scanned — 0 vulnerabilities (`npm audit --omit=dev`).
-      Rechecked 2026-09-23: `outlook-addin` reports 0 vulnerabilities too;
-      the Office manifest tool's vulnerable transitive `adm-zip` is pinned to
-      its compatible patched 0.6.1 release through an npm override.
-- [x] **Restrict Outlook CORS to explicit origins.** `/api` keeps non-browser
-      clients unchanged, permits only the exact comma-separated HTTPS origins
-      in `OUTLOOK_ADDIN_ORIGINS`, and defaults in development only to
-      `https://localhost:3001`. Unknown preflights receive 403.
+      feed can't be trivially poisoned. `/api/report` has the tightest limit
+      (5 per hour per IP); there is no CAPTCHA. Community cluster/wave
+      detection (`backend/src/services/community-signals`) counts only
+      distinct pseudonymous reporters (HMAC of the IP), never counts official
+      identities or redaction placeholders as senders, never boosts messages
+      that link only to official domains, and ignores machine-only evidence,
+      so one IP re-reporting can't create a cluster. The raw `reportCount`
+      is still a per-sender tally protected only by the rate limit. Last
+      verified 2026-09-23.
+- [x] **Parameterize all DB queries**: every query (`backend/src/db/`,
+      `backend/src/services/scam-dna/`, `backend/src/services/radar/`) passes
+      values through `?` placeholders in `better-sqlite3`'s `prepare()`. The
+      three interpolated strings, all in `backend/src/db/org.js`, only build a
+      list of `?` placeholders for an `IN (...)` clause, never values. Last
+      verified 2026-09-24.
+- [x] **Validate all input** server-side: every route with a body declares
+      its own `express.json()` limit, and a body over it gets a generic JSON
+      `413`; malformed JSON gets `400`. From `backend/src/routes/`, last
+      verified 2026-09-24:
+      - `/api/analyze` (300kb): non-empty `message` ≤ 5000 characters;
+        optional `paymentContext` and `emailContext` are validated field by
+        field (`backend/src/services/payment-context`,
+        `backend/src/services/email-context`), and an account number is kept
+        as its last 4 digits. `pageForms` (at most 10 entries), `channel`
+        (fixed list) and `shareSamples` (boolean) are validated too.
+      - `/api/analyze/conversation` (3mb): 1-500 messages, each `from`
+        `"me"` or `"them"` with non-empty text ≤ 5000 characters, at least
+        one `"them"` message.
+      - `/api/text-profile` (60kb): `text` must be a string ≤ 5000
+        characters.
+      - `/api/check-payee` (10kb): `method` from a fixed list, non-empty
+        `identifier` ≤ 64 characters, optional `name` ≤ 100 characters,
+        `amount` 0 to 1e12, `purpose` from a fixed list.
+      - `/api/analyze/screenshot` (8mb) and `/api/analyze/document` (14mb),
+        `/api/documents` (20mb): see "Restrict file uploads".
+      - `/api/batch-scan` (300kb): 1-50 non-empty strings, each ≤ 5000
+        characters.
+      - `/api/check-url` (10kb): non-empty `url` ≤ 2048 characters.
+      - `/api/analyze-site` (300kb): non-empty `url`, then the SSRF guard;
+        `clientSignals` is loosely validated and capped.
+      - `/api/check-sender` (10kb) and `/api/report` (300kb): non-empty
+        `sender`. There is no length cap on `sender` beyond the body limit.
+        A report's optional `message` is fingerprinted only when it is a
+        string ≤ 5000 characters.
+      - `/api/org/outcomes` (10kb): `observationId` must be 64 hex
+        characters and `label` one of the fixed outcome labels.
+      - `/api/sandbox/next` (10kb): `scamType` and `stage` from the fixed
+        playbooks, non-negative integer `turnIndex`.
+      - `/api/campaign/:fingerprintId`: IDs over 300 characters get `400`.
+      - `/api/trends`: `range`, when present, must be `7d`, `30d` or `12m`.
+- [x] **Escape user content** before rendering it in the UI. User text
+      (message body, signal evidence, sender) is rendered through React
+      text nodes. The two `dangerouslySetInnerHTML` uses
+      (`frontend/app/layout.tsx`, `frontend/app/page.tsx`) contain a fixed
+      theme script and fixed JSON-LD, never user content. Last verified
+      2026-09-23.
+- [x] **Restrict file uploads**: the type always comes from magic bytes,
+      never from a client-supplied MIME type or file name. Last verified
+      2026-09-24.
+      - `POST /api/analyze/screenshot`: PNG, JPEG or WEBP, ≤ 5MB decoded,
+        8mb JSON body. The image is OCR'd in memory and sent to the local
+        Python forensics service; neither stores it.
+      - `POST /api/analyze/document`: PDF (`%PDF-`) or a ZIP whose
+        `[Content_Types].xml` declares a Word main document; ≤ 10MB decoded,
+        14mb JSON body. The file name is ignored and never echoed. Parsing
+        runs only in a `worker_threads` worker with a 256MB heap and a 15s
+        hard timeout; on a timeout, OOM or crash the worker is terminated and
+        the client gets a generic "could not be read". At most 2 documents
+        are analysed at once; a third gets `503`. The ZIP central directory
+        is checked first (at most 500 entries and 50MB declared
+        uncompressed), and each inflated part has a hard output cap. Macros
+        and remote templates are detected, never run or fetched. pdf.js runs
+        without font eval, system fonts, XFA or network access, with image
+        size capped; sharp inputs are capped with `limitInputPixels`.
+        Previews are PNG data URLs of at most 256px, and the frontend drops
+        any preview that isn't a small `data:image/png` URL. A PDF's original
+        bytes are stored unless `shareSamples: false` (see "Encrypt sensitive
+        data at rest").
+      - `POST /api/documents`: PDF, PNG, JPEG or WEBP, ≤ 15MB decoded, 20mb
+        JSON body; `filename` is cut to 255 characters and stored, never
+        used for the type. The original bytes are always stored, whatever
+        `shareSamples` says (see "Encrypt sensitive data at rest"), and are
+        never served back.
+- [ ] **Trim API responses**: no raw LLM prompt, stack trace or DB row
+      internals in responses. Route failures return a fixed
+      `{ "error": "..." }` and log the real error server-side, and the final
+      error handler (`backend/src/services/http-errors`) returns generic
+      `400`/`413`/`500` bodies. Email metadata (`messageId`, Return-Path, raw
+      headers) is never echoed or sent to the LLM. **One exception:**
+      `POST /api/documents` returns `forensics.reason`, the internal error
+      message from the Python service call, which can include up to 200
+      characters of that service's error body
+      (`backend/src/services/document-forensics-client/index.js`). The
+      screenshot route's `imageForensics` returns only status and check
+      names, not the reason. Last
+      verified 2026-09-23.
+- [x] **Add security headers**: `helmet()` is mounted in
+      `backend/src/index.js` before the API router and sets CSP,
+      `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, HSTS
+      and related headers on every response. Last verified in code
+      2026-09-23.
+- [x] **Force HTTPS** in production: `backend/src/index.js` redirects to
+      `https://` when `NODE_ENV=production` and `x-forwarded-proto` is
+      `http`, and helmet's HSTS header covers repeat visits. This depends on
+      the deploy proxy setting `x-forwarded-proto`; reverify on the real
+      deployment target. Last verified in code 2026-09-23.
+- [x] **Scan dependencies**: `npm audit --omit=dev` reports 0
+      vulnerabilities in `backend`, `frontend` and `outlook-addin`. The Office
+      manifest tool's vulnerable transitive `adm-zip` is pinned to the patched
+      0.6.1 through an npm override in `outlook-addin/package.json`. Last
+      verified 2026-09-23.
+- [x] **Restrict Outlook CORS to explicit origins**: `/api` keeps
+      non-browser clients unchanged, permits only the exact comma-separated
+      HTTPS origins in `OUTLOOK_ADDIN_ORIGINS`, and defaults in development
+      only to `https://localhost:3001`. Unknown preflights receive `403`.
 
 ## 2. Production-Credibility Signals ("don't look vibecoded")
 
 Things that make a hackathon app read as thrown-together rather than a real
 product. Judges and casual visitors notice these fast.
 
-- [x] **View-source isn't empty** — verified 2026-09-22: `frontend/app/page.tsx`,
-      `app/result/page.tsx`, `app/learn/page.tsx`, `app/trends/page.tsx` and
-      `app/layout.tsx` are all plain server components (no `"use client"` at
-      the top), so Next.js App Router SSRs real markup for each route.
-- [x] **Custom 404 page** exists instead of the framework default.
-      Implemented 2026-09-22: `frontend/app/not-found.tsx`, branded with
-      `AppHeader` and a link back to `/`. Verified via `next build` +
-      `next start` — a nonexistent path returns 404 with this page, not
-      Next's default.
-- [x] **No unstyled Vite+React flash** — N/A, verified 2026-09-22: stack is
-      Next.js App Router (not Vite/CRA); fonts load via `next/font/google`
-      with `display: "swap"` (`frontend/app/layout.tsx`), so there's no raw
-      unbranded scaffold flash to fix.
-- [x] **Unique page titles** — verified 2026-09-22: `frontend/app/layout.tsx`
-      sets a title template (`"%s · FraudLens AI"`) with a distinct home
-      default; `app/result/page.tsx` → `"Result"`, `app/learn/page.tsx` →
-      `"Learn"`, `app/trends/page.tsx` → `"Trends"`, each via its own
-      `export const metadata`.
-- [x] **Meta description** present on the main page(s). Verified 2026-09-22:
-      `frontend/app/layout.tsx:22-23,28` sets a real `description` string.
-- [x] **`og:image`** set for link previews (Slack/demo sharing). Verified
-      2026-09-22: `frontend/app/layout.tsx:39-48` sets `openGraph.images`
-      (and a matching `twitter.images`) pointing at `/icons/icon-512.png`.
-- [x] **Structured data** (schema.org / JSON-LD) on the landing page if
-      time allows — low priority for a hackathon demo. Implemented
-      2026-09-22: `frontend/app/page.tsx` renders a `WebApplication` JSON-LD
-      block (name, category, description, free `Offer`) via a static
-      `<script type="application/ld+json">` — content is a fixed constant,
-      not user input, so no escaping concern.
-- [x] **Exactly one `<h1>` per page** — verified 2026-09-22: home
-      (`app/page.tsx`), Learn (`components/learn/LearnScreen.tsx` — the
-      interactive quiz that replaced the old static-glossary
-      `LearnContent.tsx`), Trends
-      (`components/TrendsContent.tsx`) each render one `<h1>`; the result page
-      (`components/ResultView.tsx`) renders exactly one of two mutually
-      exclusive `<h1>`s (the "missing result" state at line 38, or
-      `VerdictBanner`'s `<h1 id="verdict-label">` in
-      `components/result/parts.tsx:64`) depending on whether a result is
-      loaded — never both at once.
-- [x] **Canonical tag** present if the app is deployed under a real domain.
-      Implemented 2026-09-22: `alternates: { canonical: "/" }` added to
-      `frontend/app/layout.tsx`, and `/learn`/`/trends` each set their own
-      `alternates.canonical` — resolves against `metadataBase`
-      (`NEXT_PUBLIC_SITE_URL`, currently defaulting to `localhost:3000`).
-      Correct once `NEXT_PUBLIC_SITE_URL` is set to the real deploy domain —
-      recheck that env var is set before sharing the demo URL.
-- [x] **`llms.txt`** present (optional, only if time allows). Added
-      2026-09-22: `frontend/public/llms.txt`.
-- [x] **`robots.txt` doesn't block everything** — don't accidentally
-      disallow all crawlers/AI agents from the deployed demo. Implemented
-      2026-09-22: `frontend/app/robots.ts` allows `/` for all user agents,
-      disallows only `/result` (query-param-driven per-check content,
-      already `noindex` — see below), and points `sitemap` at
-      `/sitemap.xml`. Verified via `curl http://localhost:3001/robots.txt`.
-- [x] **Favicon** set (not the framework default). Verified 2026-09-22:
-      `frontend/public/icons/favicon-32.png` + `icon-192.png` referenced in
-      `app/layout.tsx:33-36`, custom-branded (not Next.js's default icon).
-- [x] **`sitemap.xml`** present for the deployed app. Reverified
-      2026-09-23: `frontend/app/sitemap.ts` lists the public tool and content routes
-      (deliberately excludes `/result`, which is `noindex`). Verified via
-      `curl http://localhost:3001/sitemap.xml`.
-- [x] **`lang` attribute** set correctly on `<html>` — notable here since
-      the app is explicitly multilingual (English/French/Kreol); the
-      attribute should reflect the active UI language, not be hardcoded.
-      Verified 2026-09-22: SSR default is `lang="en"`
-      (`frontend/app/layout.tsx:67`), and
-      `components/LanguageProvider.tsx:29` syncs
-      `document.documentElement.lang` to the active language's `htmlLang`
-      on every language change — the SSR default is a fine first-paint
-      fallback since it's corrected immediately on hydration.
-- [x] **Alt text** on all images (screenshot previews, icons, verdict
-      badges) — also an accessibility requirement, not just SEO. Icons
-      (including the screenshot-upload icon, `components/icons.tsx`'s
-      `ImageIcon`) are inline SVG, no alt needed. The one raw `<img>` in the
-      app — the attached-screenshot thumbnail preview
-      (`frontend/components/ScreenshotUpload.tsx`, added with the
-      screenshot-upload wiring in `f2b375a`) — sets `alt={copy.shot.alt}`,
-      a real localized string, not empty/decorative. Recheck if another
-      `<img>` is added elsewhere.
-- [x] **No exposed source maps** in the production build. Verified
-      2026-09-22: `frontend/next.config.ts:22` sets
-      `productionBrowserSourceMaps: false`.
-- [ ] **No console errors** on any page in the normal user flow (paste
-      message → verdict, upload screenshot → verdict, batch scan → summary).
-      Partially verified 2026-09-22: live-exercised paste → verdict (`/`
-      → `/result`, through the real fallback LLM path), the Learn quiz
-      flow, and `/trends`, all with DevTools console tracking on — zero
-      errors on any of them, only harmless Next.js dev Fast Refresh logs.
-      Screenshot upload is wired up but not yet live-verified console-clean end
-      to end. A batch UI now exists at `/batch`; it also still needs a populated
-      real-browser console check.
-- [x] **JS bundle isn't massive** — check bundle size before the demo;
-      trim unused dependencies (especially anything pulled in for the LLM
-      or OCR call that isn't needed client-side). Reverified 2026-09-23:
-      `next build` shows 103 kB shared JS; most routes load 131–147 kB, while
-      the React Flow campaign page loads 181 kB — no LLM/OCR
-      dependency is bundled client-side (`tesseract.js` and the LLM client
-      are backend-only, `backend/src/services/`).
+- [x] **View-source isn't empty**: every `frontend/app/**/page.tsx` and
+      `frontend/app/layout.tsx` is a server component (no `"use client"`),
+      so Next.js renders real markup. Last verified 2026-09-24.
+- [x] **Custom 404 page**: `frontend/app/not-found.tsx`. Last verified
+      2026-09-23.
+- [x] **No unstyled Vite+React flash**: N/A. The stack is Next.js App
+      Router with fonts from `next/font/google` (Onest, JetBrains Mono),
+      self-hosted at build time.
+- [ ] **Unique page titles**: `frontend/app/layout.tsx` sets the template
+      `"%s · FraudLens AI"` and most pages set their own title. Three pages
+      also append the brand themselves (`app/batch/page.tsx`,
+      `app/sandbox/page.tsx`, `app/network/[fingerprintId]/page.tsx`), so
+      their title reads "… · FraudLens · FraudLens AI". Still true on the
+      merged code. Last verified 2026-09-24.
+- [x] **Meta description**: `frontend/app/layout.tsx` sets a real
+      `description`. Last verified 2026-09-24.
+- [x] **`og:image`**: `frontend/app/layout.tsx` sets `openGraph.images` and
+      `twitter.images` to `/icons/icon-512.png`. Last verified 2026-09-24.
+- [x] **Structured data**: `frontend/app/app/page.tsx` (the web app at
+      `/app`) renders a fixed `WebApplication` JSON-LD block. The landing
+      page at `/` has none. Last verified 2026-09-24.
+- [ ] **Exactly one `<h1>` per page**: last verified 2026-09-22, before the
+      redesign, for home, Learn, Trends and Result only. No page has been
+      checked in a browser since the redesign and the new landing, report,
+      extension, privacy and created-by pages.
+- [x] **Canonical tag**: `alternates.canonical` is set in
+      `frontend/app/layout.tsx` (`/`) and on the public pages, resolved
+      against `metadataBase` (`NEXT_PUBLIC_SITE_URL`, default
+      `http://localhost:3000`). `/result`, `/replay` and the network page are
+      not indexed and set none. `/app` sets none of its own, so it inherits
+      the layout's `/` canonical. Set
+      `NEXT_PUBLIC_SITE_URL` to the real domain before sharing a URL. Last
+      verified 2026-09-24.
+- [x] **`llms.txt`**: `frontend/public/llms.txt`. Last verified 2026-09-23.
+- [x] **`robots.txt` doesn't block everything**: `frontend/app/robots.ts`
+      allows `/` for all user agents, disallows only `/result`, and points at
+      `/sitemap.xml`. Last verified 2026-09-24.
+- [x] **Favicon**: `frontend/public/icons/favicon-32.png` and
+      `icon-192.png`, referenced from `frontend/app/layout.tsx`. Last
+      verified 2026-09-24.
+- [x] **`sitemap.xml`**: `frontend/app/sitemap.ts` lists the landing page,
+      `/app` and the public tool and content routes, and excludes `/result`.
+      Last verified 2026-09-24.
+- [x] **`lang` attribute**: the server renders `lang="en"` and
+      `frontend/components/LanguageProvider.tsx` sets
+      `document.documentElement.lang` to the active language on every
+      change. Last verified 2026-09-24.
+- [x] **Alt text**: every raw `<img>` has an `alt`. Content images use
+      localized text (the screenshot thumbnail, document previews, team
+      photos on `/created-by`); the small logo mark next to the brand name
+      (`frontend/components/TopNav.tsx`, `frontend/components/ScreenTitle.tsx`,
+      `frontend/components/landing/LandingPage.tsx`) uses `alt=""` because
+      it is decorative. Last verified 2026-09-24.
+- [x] **No exposed source maps**: `frontend/next.config.ts` sets
+      `productionBrowserSourceMaps: false`. Last verified 2026-09-24.
+- [ ] **No console errors** on any page in the normal user flow. Last
+      checked 2026-09-22: paste → verdict, the Learn quiz and `/trends` had
+      no console errors. Screenshot upload, document check and `/batch`
+      still need a real-browser console check.
+- [x] **JS bundle isn't massive**: `next build` shows 103 kB of shared JS;
+      routes load 141-169 kB, and the React Flow network page loads 192 kB.
+      No LLM or OCR dependency is bundled client-side (`tesseract.js` and
+      the LLM client are backend-only). Last verified 2026-09-24.
 
 ## 3. Browser extension — Security Report (`POST /api/analyze-site`)
 
@@ -296,40 +281,46 @@ The Security Report makes this backend send requests to arbitrary
 third-party sites on a user's behalf, so it carries its own abuse and
 honesty requirements on top of section 1.
 
-- [x] **Passive only** — verified 2026-09-23: one GET of the page, a TLS
-      handshake, one GET each of a fixed path list (`.git/HEAD`, `.env`,
-      phpMyAdmin, admin paths, `/.well-known/security.txt`, own source maps).
-      No crafted input, no fuzzing, no wordlists
-      (`backend/src/services/site-security/index.js` header).
-- [x] **SSRF guard on every hop** — `url-safety.js` blocks private/loopback/
-      link-local/CGNAT/reserved ranges and `fetcher.js` re-validates each
-      redirect target, not just the first URL.
-- [ ] **Can't be used as a scanning proxy** — NOT satisfied as of
-      2026-09-23: the per-target budget, result cache, concurrency cap and
-      optional key/Origin gate were built and then removed at the product
-      owner's request, along with the fetch time limit. Only the per-client-IP
-      limit (15/15min) remains, so a script can still make this server send
-      ~12 requests per report to any public site, and a site that never
-      answers keeps a report waiting. Revisit before any public deployment.
-- [x] **Extension permissions minimal and enforced** — `manifest.test.js`
-      fails the build on any extra permission, a broad host permission,
-      `content_scripts`, `web_accessible_resources`, remote or inline scripts,
-      or a CSP weaker than `script-src 'self'; object-src 'none'`.
-- [ ] **Host permission points at the deployed backend** — still
-      `http://localhost:4000/*`. Update `manifest.json` and
-      `config.js#API_BASE_URL` together (the test checks they match).
-- [x] **Vulnerability data has an update path** — `npm run update:retire` in
+- [x] **Passive only**: one GET of the page, a plain-HTTP redirect probe,
+      a TLS handshake, one GET each of a fixed path list (`.git/HEAD`,
+      `.env`, phpMyAdmin, admin paths, `/.well-known/security.txt`, own
+      source maps), and one GET of the privacy-policy page the site links
+      to. The report also runs the `/api/check-url` reputation lookup
+      (capped at 5 s), which queries RDAP, Certificate Transparency logs and,
+      when configured, Google Safe Browsing rather than the site. No crafted
+      input, no fuzzing, no wordlists
+      (`backend/src/services/site-security/index.js` header). Last verified
+      2026-09-24.
+- [x] **SSRF guard on every hop**: `url-safety.js` blocks private,
+      loopback, link-local, CGNAT and reserved ranges, and `fetcher.js`
+      re-validates each redirect target, not just the first URL.
+- [ ] **Can't be used as a scanning proxy**: not satisfied. There is no
+      per-target budget, result cache, concurrency cap, key/Origin gate or
+      default fetch time limit; these were removed at the product owner's
+      request. Only the per-client-IP limit (15 / 15 min) remains, so a script
+      can make this server send about a dozen requests per report to any
+      public site, and a site that never answers keeps a report waiting
+      unless `SITE_SECURITY_TIMEOUT_MS` is set. Revisit before any public
+      deployment.
+- [x] **Extension permissions minimal and enforced**: `manifest.test.js`
+      fails `npm test` on any extra permission, a broad host permission,
+      `content_scripts`, `web_accessible_resources`, remote or inline
+      scripts, or a CSP weaker than `script-src 'self'; object-src 'none'`.
+- [x] **Host permission points at the deployed backend**:
+      `extension/manifest.json` allows `https://api.fraudlens.site/*` and
+      `extension/config.js` sets `API_BASE_URL` to the same origin (the test
+      checks they match). For local work, change both back to
+      `http://localhost:4000`. Last verified 2026-09-24.
+- [x] **Vulnerability data has an update path**: `npm run update:retire` in
       `extension/` regenerates `vendor/retire-js-dataset.js` from upstream
       Retire.js (29 libraries, fetched 2026-09-23); `npm run check:retire`
       exits 1 past 120 days, and stale data is disclosed in the report.
-- [x] **Report never claims more than it saw** — findings are "possible"
+- [x] **Report never claims more than it saw**: findings are "possible"
       weaknesses, a failed page-side collection degrades to server-only
       results with a coverage note, areas that weren't checked show "Not
       checked" rather than "Clean", and every check is listed with pass/fail.
-- [x] **Orchestration is tested** — `extension/security-report.test.js`
+- [x] **Orchestration is tested**: `extension/security-report.test.js`
       covers the collector-failure regression, MAIN-world failure, backend
       failure and report storage (session storage only).
-- [ ] **Live pass in the real extension** — the full-screen report was
-      checked in a browser preview with a real backend report; run
-      `extension/README.md` checklist item 11 in the loaded extension before
-      the demo.
+- [ ] **Live pass in the real extension**: run `extension/README.md`
+      checklist item 11 in the loaded extension before the demo.

@@ -2,11 +2,14 @@
 
 A local Python microservice, separate from `backend/` (Node) and `frontend/`
 (Next.js) for the same reason those two are separate projects: different
-language, different dependency footprint. Called by the Node backend over
-localhost HTTP after it stores a document's original bytes
-(`backend/src/services/document-store/`) - the same "another local process
-over HTTP" pattern the backend already uses for Ollama. Never called from a
-browser, never exposed publicly, never calls a third-party API.
+language, different dependency footprint. The Node backend calls it over
+localhost HTTP (`backend/src/services/document-forensics-client/`) in two
+places: `POST /api/documents`, after storing the upload's original bytes
+(`backend/src/services/document-store/`), and `POST /api/analyze/screenshot`,
+where the image is not stored and the findings become DOC-09..13 signals in
+the normal verdict. It is the same "another local process over HTTP" pattern
+the backend already uses for Ollama. Never called from a browser, never
+exposed publicly, never calls a third-party API.
 
 ## What this does and does not claim
 
@@ -98,6 +101,31 @@ python3.12 -m venv .venv
 ./.venv/bin/python -m app.main      # or: ./.venv/bin/uvicorn app.main:app --port 8081
 ```
 
+On Windows the virtualenv puts its executables under `.venv\Scripts\`
+instead of `.venv/bin/`. From PowerShell, with Python 3.12 installed through
+the `py` launcher:
+
+```powershell
+cd document-forensics
+py -3.12 -m venv .venv
+.venv\Scripts\python -m pip install -r requirements-base.txt
+
+# Stage 3 (TruFor), optional:
+.venv\Scripts\python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+.venv\Scripts\python -m pip install -r requirements-trufor.txt
+
+# Stage 4 (layout), optional:
+.venv\Scripts\python -m pip install -r requirements-layout.txt
+
+.venv\Scripts\python -m pytest
+.venv\Scripts\python -m app.main    # or: .venv\Scripts\uvicorn app.main:app --port 8081
+```
+
+`app.main` listens on `127.0.0.1` only, on `PORT` (default 8081). The Node
+backend finds it through `DOCUMENT_FORENSICS_URL` (default
+`http://127.0.0.1:8081`); see `backend/README.md` for what the backend does
+when this service is not running.
+
 Install `torch`/`torchvision` together in one `pip install` call, not two
 separate ones - installing them separately can resolve a version pair whose
 native extensions don't actually match (`RuntimeError: operator
@@ -106,10 +134,13 @@ reports success.
 
 ## Implementation status
 
-All four checks are real, local-model implementations, not stubs - every
-one is independently verified end-to-end against real weights, not just
-mocked. `./.venv/bin/python -m pytest` is 55 tests, all passing, with all
-four checks' dependencies installed.
+All four checks are real, local-model implementations, not stubs. Each
+check has its own test module (`tests/test_<check>.py`) plus fixtures under
+`tests/fixtures/`. The suite has 56 test functions; one is parametrised over
+three MIME types, so pytest collects 58 cases. The TruFor and layout tests
+that load a model are skipped, not failed, when the weights are missing. The count was last
+checked on 2026-09-23 by reading the test files; the suite was not run then
+because no Python 3.12 virtualenv was available.
 
 | Stage | Module | Status |
 |---|---|---|
@@ -123,4 +154,3 @@ Each module's docstring documents its own scope and honest limitations
 (calibration basis, what a heuristic is/isn't proven against, etc.) - read
 the module before relying on its output, this is a first pass calibrated
 against a handful of fixtures, not a tuned production detector.
-own test module (`tests/test_<check>.py`) plus fixtures.
