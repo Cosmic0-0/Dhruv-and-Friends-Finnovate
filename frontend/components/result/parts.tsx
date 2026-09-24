@@ -1,24 +1,20 @@
-import { Fragment } from "react";
+import { Fragment, type CSSProperties } from "react";
 import Link from "next/link";
 import type { Copy } from "@/lib/i18n";
 import { highlightSegments, type EvidenceMark } from "@/lib/highlight";
-import type { AnalyzeResponse, Verdict } from "@/lib/types";
-import { getRiskDisplay, getVerdictBandIndex, getVerdictDisplay, VERDICT_BANDS } from "@/lib/verdict";
+import type { AnalyzeResponse, Severity, Verdict } from "@/lib/types";
+import { card, Pill, TONE, type Tone } from "../dc";
 import ScreenTitle from "../ScreenTitle";
 
-/** Small secondary section label used across the result screen. */
+/** Small 13px/text3 section label, matching components/check/ResultArticle.tsx's own labels ("The message", "Why", ...). */
 export function SectionLabel({ children, id }: { children: React.ReactNode; id?: string }) {
   return (
-    <h2 id={id} className="micro text-ink-muted">
+    <h2 id={id} style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)", fontWeight: 400 }}>
       {children}
     </h2>
   );
 }
 
-/**
- * The result screen's header: back to Check, the large title, and the sender
- * line beneath it (design/mockup/Result-Scam.png).
- */
 export function ResultHeader({ copy, sender, subtitle }: { copy: Copy; sender?: string; subtitle?: string }) {
   return (
     <ScreenTitle
@@ -29,124 +25,50 @@ export function ResultHeader({ copy, sender, subtitle }: { copy: Copy; sender?: 
   );
 }
 
-export function VerdictBanner({
-  response,
-  label,
-  copy,
-}: {
-  response: AnalyzeResponse;
-  label: string;
-  copy: Copy;
-}) {
-  const display = getVerdictDisplay(response.verdict);
-  const bandIndex = getVerdictBandIndex(response.verdict);
-  // Only a backend-supplied riskScore is ever shown; none is derived here.
-  const risk = getRiskDisplay(response);
-  return (
-    <section className={`px-5 py-6 text-white ${display.classes.bg}`} aria-labelledby="verdict-label">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="micro text-white/60">{copy.result.title}</p>
-          <h1 id="verdict-label" className="mt-2.5 text-[2.5rem] leading-none text-white">
-            {label}
-          </h1>
-          <p className="data mt-2.5 text-white/75">{copy.result.warningSigns(response.signals.length)}</p>
-        </div>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.75}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="size-8 shrink-0 text-white/80"
-        >
-          {display.icon.paths.map((d) => (
-            <path key={d} d={d} />
-          ))}
-        </svg>
-      </div>
-
-      <SeverityGauge bandIndex={bandIndex} />
-
-      {/* Only when the API returned riskScore (getRiskDisplay): never derived client-side. */}
-      {risk.showScore && <RiskMeter score={risk.score} label={copy.result.risk(risk.score)} />}
-
-      {response.verdict === "scam" && (
-        <p className="mt-4 border-t border-white/20 pt-4 text-[0.9375rem] leading-snug text-white">
-          {copy.result.scamAdvice}
-        </p>
-      )}
-    </section>
-  );
-}
-
-/**
- * The mockup's "Risk system": a three-band scale (safe / suspicious / scam)
- * instead of a stoplight or a bare percentage. Severity is encoded twice —
- * position (which slot) and shape (the reached band is taller) — so it reads
- * before the label does, and still reads without colour.
- *
- * Reinforcement only: the verdict is already announced in text above, so this
- * is aria-hidden rather than a second, redundant announcement.
- */
-function SeverityGauge({ bandIndex }: { bandIndex: number }) {
-  return (
-    <div aria-hidden="true" className="mt-5 flex items-end gap-1">
-      {VERDICT_BANDS.map((band, i) => {
-        const reached = i <= bandIndex;
-        const current = i === bandIndex;
-        return (
-          <div
-            key={band}
-            className={`flex-1 ${current ? "h-2.5" : "h-1"} ${reached ? "bg-white" : "bg-white/25"}`}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-/**
- * The backend's riskScore (0–100) on a measuring scale: a filled bar with
- * quarter ticks, in the same instrument language as the band gauge above.
- * The score is printed once, as text, so it doesn't depend on the bar.
- */
-function RiskMeter({ score, label }: { score: number; label: string }) {
-  return (
-    <div className="mt-4 flex flex-col gap-2.5 border-t border-white/20 pt-3">
-      <p className="data text-white/85">{label}</p>
-      <div
-        role="meter"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={score}
-        aria-label={label}
-        className="relative h-2 bg-white/20"
-      >
-        <div className="absolute inset-y-0 left-0 bg-white" style={{ width: `${score}%` }} />
-        {[25, 50, 75].map((t) => (
-          <span key={t} aria-hidden="true" className="absolute inset-y-0 w-px bg-surface-dark/25" style={{ left: `${t}%` }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-const MARK_TONE: Record<Exclude<Verdict, "safe">, string> = {
-  scam: "bg-danger-soft decoration-danger",
-  suspicious: "bg-caution-soft decoration-caution-bright",
+export const srOnly: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0,0,0,0)",
+  whiteSpace: "nowrap",
+  border: 0,
 };
 
+/** Severity → dc tone. Low severity reads as neutral grey rather than a fourth colour. */
+export function severityTone(sev: Severity): { fg: string; dot: string; hl: string } {
+  if (sev === "high") return TONE.red;
+  if (sev === "medium") return TONE.amber;
+  return { fg: "var(--dc-text3)", dot: "var(--dc-line-strong)", hl: "var(--dc-hover)" };
+}
+
+/** Plain "← ..." back link (components/check/Workspace.tsx's own back button style). */
+export function BackLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} style={{ alignSelf: "flex-start", fontSize: 14, color: "var(--dc-text2)", textDecoration: "none" }}>
+      {label}
+    </Link>
+  );
+}
+
+/** No stored result (or nothing to replay): a dc card with a way back into the product. */
+export function MissingResult({ title, body, cta, href }: { title: string; body: string; cta: string; href: string }) {
+  return (
+    <div style={{ ...card(32), padding: 36, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 14 }}>
+      <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, letterSpacing: "-0.04em" }}>{title}</h1>
+      <p style={{ margin: 0, fontSize: 16, lineHeight: 1.5, color: "var(--dc-text2)" }}>{body}</p>
+      <Pill href={href}>{cta}</Pill>
+    </div>
+  );
+}
+
 /**
- * The user's ORIGINAL text, with signal evidence highlighted ("Scam X-Ray").
- * highlightSegments only splits the text (never alters it), and unmatched
- * evidence is ignored. A highlighted span that carries an evidence-row id
- * (every mark built from response.signals does) is a link to that row in
- * the "Why FraudLens flagged this" section below, with its signal title as
- * the hover/tap hint — so a judge can tap a highlighted phrase and see
- * exactly which finding it triggered, without a separate popover system.
+ * The user's ORIGINAL text, with signal evidence highlighted ("Scam X-Ray"),
+ * styled like ResultArticle's "The message" section. highlightSegments only
+ * splits the text (never alters it); a highlighted span carrying an evidence
+ * id links to that row in the "Why" list below.
  */
 export function MessageCard({
   text,
@@ -163,46 +85,35 @@ export function MessageCard({
   title?: string;
 }) {
   const segments = verdict === "safe" ? [{ text }] : highlightSegments(text, marks);
-  const tone = verdict === "safe" ? "" : MARK_TONE[verdict];
-  const markClasses = `rounded-[3px] px-0.5 underline decoration-2 underline-offset-[3px] [box-decoration-break:clone] text-[var(--c-mark-ink)] ${tone}`;
   const hasHighlights = segments.some((s) => s.severity);
-  // The verdict is carried by the bubble's own edge rather than a badge beside
-  // it, so the thing being judged is the thing that is marked.
-  const edge =
-    verdict === "scam" ? "var(--color-danger)" : verdict === "suspicious" ? "var(--color-caution)" : "var(--color-safe)";
   return (
-    <section className="flex flex-col gap-2" aria-labelledby="message-label">
-      {/* `title` lets document forensics label this as extracted text rather
-          than a pasted message. */}
+    <section style={{ ...card(28, true), padding: "32px 32px 28px", display: "flex", flexDirection: "column", gap: 14 }} aria-labelledby="message-label">
       <SectionLabel id="message-label">{title ?? copy.result.messageYouSent}</SectionLabel>
-      {/*
-       * The message itself, annotated in place. This is the product: not a
-       * report about the text, but the text with the damning parts marked.
-       * Set in the system font, because that is how it arrived.
-       */}
-      <p
-        className="bubble bubble-verdict"
-        style={{ "--bubble-edge": edge } as React.CSSProperties}
-      >
+      <p style={{ margin: 0, fontSize: 17, lineHeight: 1.85, color: "var(--dc-text-body)", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
         {segments.map((s, i) => {
           if (!s.severity) return <Fragment key={i}>{s.text}</Fragment>;
-          // 3px is an inline text-highlight radius, not a surface — intentionally
-          // outside the sharp-corner rule that applies to every real surface.
+          const tone = s.severity === "low" ? undefined : TONE[s.severity === "high" ? "red" : "amber"];
+          const style: CSSProperties = {
+            background: tone?.hl ?? "transparent",
+            color: tone?.fg ?? "inherit",
+            borderBottom: `2px solid ${tone?.fg ?? "var(--dc-line-strong)"}`,
+            padding: "0 1px",
+          };
           if (s.id) {
             return (
-              <a key={i} href={`#${s.id}`} title={s.label} className={`${markClasses} hover:brightness-95`}>
+              <a key={i} href={`#${s.id}`} title={s.label} style={{ ...style, textDecoration: "none" }}>
                 {s.text}
               </a>
             );
           }
           return (
-            <mark key={i} className={markClasses}>
+            <mark key={i} style={style}>
               {s.text}
             </mark>
           );
         })}
       </p>
-      {hasHighlights && <p className="text-[0.8125rem] text-ink-muted">{copy.result.xrayHint}</p>}
+      {hasHighlights && <p style={{ margin: 0, fontSize: 13, color: "var(--dc-text3)" }}>{copy.result.xrayHint}</p>}
     </section>
   );
 }
@@ -217,6 +128,7 @@ export function aiSourceLabel(semantic: SemanticInfo | undefined, copy: Copy): s
   return copy.result.aiSource.unavailable;
 }
 
+/** "What was sent for analysis": the redacted text that actually left the device, as a dc disclosure card. */
 export function SentPanel({
   redacted,
   fromScreenshot,
@@ -225,6 +137,7 @@ export function SentPanel({
   copy,
 }: {
   redacted: string;
+  /** The text came from a screenshot: the image itself also left the device. */
   fromScreenshot: boolean;
   /** The text came from an uploaded document: the file itself went to the server. */
   fromDocument?: boolean;
@@ -232,25 +145,46 @@ export function SentPanel({
   copy: Copy;
 }) {
   return (
-    <details className="sheet group">
-      <summary className="micro pressable flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 text-ink-muted">
+    <details style={{ ...card(28), overflow: "hidden" }}>
+      <summary
+        style={{
+          listStyle: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "18px 28px",
+          fontSize: 15,
+          color: "var(--dc-text2)",
+        }}
+      >
         {copy.result.sentTitle}
-        <span aria-hidden="true" className="text-[0.875rem] group-open:hidden">
+        <span aria-hidden="true" className="dc-mono" style={{ fontSize: 16, color: "var(--dc-text3)" }}>
           +
         </span>
-        <span aria-hidden="true" className="hidden text-[0.875rem] group-open:inline">
-          −
-        </span>
       </summary>
-      <div className="px-5 py-4">
-        {/* "Only this version left your phone" is false when the text came from a screenshot. */}
-        <p className="text-sm text-ink-muted">
+      <div style={{ borderTop: "1px solid var(--dc-line2)", padding: "20px 28px 26px", display: "flex", flexDirection: "column", gap: 10 }}>
+        <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, color: "var(--dc-text2)" }}>
           {fromDocument ? copy.result.sentBodyDocument : fromScreenshot ? copy.result.sentBodyScreenshot : copy.result.sentBody}
         </p>
-        <p className="data mt-3 rounded-2xl bg-muted-surface px-3.5 py-3 whitespace-pre-wrap text-ink-soft [overflow-wrap:anywhere]">
+        <p
+          className="dc-mono"
+          style={{
+            margin: 0,
+            fontSize: 13,
+            lineHeight: 1.6,
+            color: "var(--dc-text2)",
+            background: "var(--dc-hover)",
+            borderRadius: 16,
+            padding: "14px 16px",
+            whiteSpace: "pre-wrap",
+            overflowWrap: "anywhere",
+          }}
+        >
           {redacted}
         </p>
-        <p className="micro-sm mt-3 text-ink-muted">
+        <p style={{ margin: 0, fontSize: 12, color: "var(--dc-text3)" }}>
           {copy.result.aiSource.label}: {aiSourceLabel(analysis?.semantic, copy)}
         </p>
       </div>
@@ -260,11 +194,10 @@ export function SentPanel({
 
 export function CheckAnotherButton({ copy }: { copy: Copy }) {
   return (
-    <Link
-      href="/app"
-      className="btn pressable w-full bg-primary text-on-primary"
-    >
-      {copy.result.checkAnother}
-    </Link>
+    <div style={{ display: "flex", justifyContent: "center" }}>
+      <Pill href="/app" height={56}>
+        {copy.result.checkAnother}
+      </Pill>
+    </div>
   );
 }

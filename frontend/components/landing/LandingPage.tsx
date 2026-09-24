@@ -47,7 +47,7 @@ export default function LandingPage() {
             <Link href="/" aria-label={t.header.home} className="dc-link" style={{ display: "flex", alignItems: "center", gap: 10 }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/icons/icon-192.png" alt="" width={28} height={28} style={{ width: 28, height: 28, borderRadius: 8, display: "block" }} />
-              <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.03em" }}>FraudLens</span>
+              <span className={s.wordmark} style={{ fontSize: 17, fontWeight: 600, letterSpacing: "-0.03em" }}>FraudLens</span>
             </Link>
             <nav aria-label={t.header.nav} className={s.nav} style={{ display: "flex", gap: 22, fontSize: 14, whiteSpace: "nowrap" }}>
               <a href="#how" className={s.navLink} style={{ color: "var(--dc-text2)" }}>{t.header.how}</a>

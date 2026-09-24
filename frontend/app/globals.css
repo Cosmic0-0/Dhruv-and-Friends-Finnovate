@@ -1075,6 +1075,15 @@ button:not(:disabled):active, .dc-pill:active { transform: translateY(0) scale(.
 }
 @media (max-width: 39.999rem) {
   .dc-cols-1 { grid-template-columns: minmax(0, 1fr) !important; }
+  .batch-actions { flex-wrap: wrap; width: 100%; }
+  .batch-actions > .dc-pill { flex: 1 1 150px; min-height: 48px; height: auto !important; padding-block: 8px !important; text-align: center; white-space: normal !important; }
+  .batch-result-row { grid-template-columns: minmax(0, 1fr) auto !important; gap: 8px 12px !important; }
+  .batch-result-badge { grid-column: 1; grid-row: 1; }
+  .batch-result-open { grid-column: 2; grid-row: 1; min-width: 44px; min-height: 44px; }
+  .batch-result-message { grid-column: 1 / -1; grid-row: 2; }
+  .batch-result-signal { grid-column: 1 / -1; grid-row: 3; }
+  .report-danger { max-width: 100%; height: auto !important; min-height: 56px; padding-block: 10px !important; white-space: normal !important; text-align: center; }
+  .report-danger > span { flex-shrink: 0; }
 }
 
 /* ---- Mobile tab bar, in the design palette ---- */

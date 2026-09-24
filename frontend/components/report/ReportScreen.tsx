@@ -48,6 +48,7 @@ export default function ReportScreen() {
           </div>
           <a
             href="tel:999"
+            className="report-danger"
             style={{ height: 56, padding: "0 24px", borderRadius: 999, background: "var(--dc-red-hl)", color: "var(--dc-red)", fontSize: 15, fontWeight: 600, display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap" }}
           >
             <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: "var(--dc-red-dot)" }} />

@@ -160,7 +160,7 @@ export default function BatchScreen() {
         title={t.title}
         lede={t.lede}
         aside={
-          <div style={{ display: "flex", gap: 12 }}>
+          <div className="batch-actions" style={{ display: "flex", gap: 12 }}>
             <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => { void addFiles(e.target.files); e.target.value = ""; }} />
             <Pill variant="outline" height={48} onClick={() => fileInput.current?.click()}>
               {t.modes.screenshots}
@@ -310,8 +310,9 @@ function BatchRow({
   const top = !failed ? [...row.result.signals].sort((a, b) => (b.severity === "high" ? 1 : 0) - (a.severity === "high" ? 1 : 0))[0] : undefined;
   const rowStyle: CSSProperties = { display: "grid", gridTemplateColumns: "120px 1fr 0.8fr 24px", gap: 24, alignItems: "center", padding: "22px 0", borderBottom: last ? "none" : "1px solid var(--dc-line2)" };
   return (
-    <div style={rowStyle}>
+    <div className="batch-result-row" style={rowStyle}>
       <span
+        className="batch-result-badge"
         style={{
           display: "inline-flex", alignItems: "center", gap: 6, width: "fit-content", height: 32, padding: "0 12px",
           borderRadius: 999, fontSize: 13, fontWeight: 500,
@@ -321,17 +322,17 @@ function BatchRow({
         <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: tone ? TONE[tone].dot : "var(--dc-text3)" }} />
         {failed ? unknownLabel : display!.label}
       </span>
-      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+      <div className="batch-result-message" style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
         <span className="dc-mono" style={{ fontSize: 13, color: "var(--dc-text3)" }}>{row.from}</span>
         <span style={{ fontSize: 16, color: "var(--dc-ink)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {row.text.replace(/\s+/g, " ").trim()}
         </span>
       </div>
-      <span style={{ fontSize: 14, color: "var(--dc-text2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span className="batch-result-signal" style={{ fontSize: 14, color: "var(--dc-text2)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {top ? signalTitle(top.type, copy, lang) : ""}
       </span>
       {!failed ? (
-        <button type="button" onClick={onOpen} aria-label={openLabel} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--dc-text4)" }}>
+        <button className="batch-result-open" type="button" onClick={onOpen} aria-label={openLabel} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--dc-text4)" }}>
           ›
         </button>
       ) : (

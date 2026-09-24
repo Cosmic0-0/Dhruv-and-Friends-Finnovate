@@ -2,14 +2,24 @@
 // what FraudLens has flagged, for the web Radar page.
 //
 // Storage is two daily COUNTER tables, not events: one row per
-// (day, verdict, scam type, claimed institution, channel) and one per
-// (day, lookalike domain, institution it imitates), each with a count. No
-// message text, no sender, no IP, no reporter pseudonym is stored here - only
-// the taxonomy values the pipeline already derived (and that ScamDNA already
-// keeps), bucketed by day. Rows are purged after RADAR_RETENTION_DAYS
-// (default 730, so a 12-month range can still be compared with the previous
-// 12 months). A request with shareSamples: false records nothing
-// (services/sharing; the pipeline passes record: false).
+// (day, verdict, scam type, claimed institution, channel, source) and one per
+// (day, lookalike domain, institution it imitates, source), each with a
+// count. No message text, no sender, no IP, no reporter pseudonym is stored
+// here - only the taxonomy values the pipeline already derived (and that
+// ScamDNA already keeps), bucketed by day. Rows are purged after
+// RADAR_RETENTION_DAYS (default 730, so a 12-month range can still be
+// compared with the previous 12 months). A request with shareSamples: false
+// records nothing (services/sharing; the pipeline passes record: false).
+//
+// `source` ('live' | 'demo_seed') separates real observations from
+// disclosed demo data (scripts/seed-radar-demo.js) - the same honesty
+// pattern scripts/seed-wave-demo.js already uses for the community-wave
+// demo: synthetic rows are tagged, auditable, and removable with
+// `--clear` without touching real counts that land on the same
+// day/verdict/taxonomy. getRadar() sums both sources (so a seeded demo
+// actually looks populated, matching how seeded wave reports also feed
+// real scoring output) - say so out loud when showing seeded data live,
+// same rule the wave-demo script states.
 //
 // Every number returned is a SUM over those rows. An empty database returns
 // zeros and empty lists; the client shows that as an empty state, never as
@@ -24,6 +34,48 @@ const MU_OFFSET_MS = 4 * 60 * 60 * 1000;
 const RETENTION_DAYS = Number(process.env.RADAR_RETENTION_DAYS) || 730;
 
 export const RADAR_RANGES = Object.freeze(["7d", "30d", "12m"]);
+export const RADAR_SOURCES = Object.freeze(["live", "demo_seed"]);
+
+// `source` changes each primary key. Copy existing counters as live data in
+// one transaction so a deploy preserves observations and can retry safely.
+const hasOldDaily = db.prepare("PRAGMA table_info(radar_daily)").all().some((c) => c.name === "day") &&
+  !db.prepare("PRAGMA table_info(radar_daily)").all().some((c) => c.name === "source");
+const hasOldDomains = db.prepare("PRAGMA table_info(radar_domain_daily)").all().some((c) => c.name === "day") &&
+  !db.prepare("PRAGMA table_info(radar_domain_daily)").all().some((c) => c.name === "source");
+if (hasOldDaily || hasOldDomains) {
+  db.transaction(() => {
+    if (hasOldDaily) {
+      db.exec(`
+        ALTER TABLE radar_daily RENAME TO radar_daily_before_source;
+        CREATE TABLE radar_daily (
+          day TEXT NOT NULL, verdict TEXT NOT NULL CHECK (verdict IN ('scam', 'suspicious')),
+          scam_type TEXT NOT NULL DEFAULT '', claimed_identity TEXT NOT NULL DEFAULT '',
+          channel TEXT NOT NULL DEFAULT '',
+          source TEXT NOT NULL DEFAULT 'live' CHECK (source IN ('live', 'demo_seed')),
+          count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (day, verdict, scam_type, claimed_identity, channel, source)
+        );
+        INSERT INTO radar_daily (day, verdict, scam_type, claimed_identity, channel, source, count)
+          SELECT day, verdict, scam_type, claimed_identity, channel, 'live', count FROM radar_daily_before_source;
+        DROP TABLE radar_daily_before_source;
+      `);
+    }
+    if (hasOldDomains) {
+      db.exec(`
+        ALTER TABLE radar_domain_daily RENAME TO radar_domain_daily_before_source;
+        CREATE TABLE radar_domain_daily (
+          day TEXT NOT NULL, domain TEXT NOT NULL, imitates TEXT NOT NULL DEFAULT '',
+          source TEXT NOT NULL DEFAULT 'live' CHECK (source IN ('live', 'demo_seed')),
+          count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (day, domain, imitates, source)
+        );
+        INSERT INTO radar_domain_daily (day, domain, imitates, source, count)
+          SELECT day, domain, imitates, 'live', count FROM radar_domain_daily_before_source;
+        DROP TABLE radar_domain_daily_before_source;
+      `);
+    }
+  })();
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS radar_daily (
@@ -32,15 +84,17 @@ db.exec(`
     scam_type TEXT NOT NULL DEFAULT '',
     claimed_identity TEXT NOT NULL DEFAULT '',
     channel TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'live' CHECK (source IN ('live', 'demo_seed')),
     count INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (day, verdict, scam_type, claimed_identity, channel)
+    PRIMARY KEY (day, verdict, scam_type, claimed_identity, channel, source)
   );
   CREATE TABLE IF NOT EXISTS radar_domain_daily (
     day TEXT NOT NULL,
     domain TEXT NOT NULL,
     imitates TEXT NOT NULL DEFAULT '',
+    source TEXT NOT NULL DEFAULT 'live' CHECK (source IN ('live', 'demo_seed')),
     count INTEGER NOT NULL DEFAULT 0,
-    PRIMARY KEY (day, domain, imitates)
+    PRIMARY KEY (day, domain, imitates, source)
   );
 `);
 
@@ -57,10 +111,15 @@ const isPlaceholder = (v) => /\[(?:phone|redacted|account|email|card|otp)/i.test
  * Adds one flagged check to the daily counters. Safe results are not
  * counted (Radar is about what scammers send). Never throws.
  * @param {object} result pipeline result (verdict, scamProfile, signals, analysis.channel)
+ * @param {number} [now] observation time; also picks the Mauritius calendar day
+ * @param {"live"|"demo_seed"} [source] "live" for real pipeline calls (the
+ *   only caller in production code); scripts/seed-radar-demo.js passes
+ *   "demo_seed" explicitly so seeded rows stay tagged and removable.
  */
-export function recordRadarObservation(result, now = Date.now()) {
+export function recordRadarObservation(result, now = Date.now(), source = "live") {
   try {
     if (!result || (result.verdict !== "scam" && result.verdict !== "suspicious")) return false;
+    if (!RADAR_SOURCES.includes(source)) throw new Error(`unknown radar source: ${source}`);
     const day = muDay(now);
     const scamType = clean(result.scamProfile?.type, 60);
     let identity = clean(result.scamProfile?.claimedIdentity);
@@ -78,18 +137,18 @@ export function recordRadarObservation(result, now = Date.now()) {
 
     db.transaction(() => {
       db.prepare(
-        `INSERT INTO radar_daily (day, verdict, scam_type, claimed_identity, channel, count) VALUES (?, ?, ?, ?, ?, 1)
-         ON CONFLICT(day, verdict, scam_type, claimed_identity, channel) DO UPDATE SET count = count + 1`
-      ).run(day, result.verdict, scamType, identity, channel);
+        `INSERT INTO radar_daily (day, verdict, scam_type, claimed_identity, channel, source, count) VALUES (?, ?, ?, ?, ?, ?, 1)
+         ON CONFLICT(day, verdict, scam_type, claimed_identity, channel, source) DO UPDATE SET count = count + 1`
+      ).run(day, result.verdict, scamType, identity, channel, source);
       const seen = new Set();
       for (const l of lookalikes) {
         const key = `${l.domain}\u0000${l.imitates}`;
         if (seen.has(key)) continue;
         seen.add(key);
         db.prepare(
-          `INSERT INTO radar_domain_daily (day, domain, imitates, count) VALUES (?, ?, ?, 1)
-           ON CONFLICT(day, domain, imitates) DO UPDATE SET count = count + 1`
-        ).run(day, l.domain, l.imitates);
+          `INSERT INTO radar_domain_daily (day, domain, imitates, source, count) VALUES (?, ?, ?, ?, 1)
+           ON CONFLICT(day, domain, imitates, source) DO UPDATE SET count = count + 1`
+        ).run(day, l.domain, l.imitates, source);
       }
     })();
     return true;

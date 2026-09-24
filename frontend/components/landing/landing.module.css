@@ -24,3 +24,6 @@
   .extCtas { flex-direction: column; }
   .extCtas > * { justify-content: center; }
 }
+@media (max-width: 22.499rem) {
+  .wordmark { display: none; }
+}
